@@ -47,7 +47,7 @@
      overflowing off the edge of a phone screen, with enough gap that
      wrapped rows don't look cramped */
   [style*="display:flex"] { flex-wrap: wrap; row-gap: 10px; }
-  .topbar-inner, .portal-account-menu, .welcome-splash-inner { flex-wrap: nowrap; } /* exceptions that must stay in one line */
+   .topbar-inner, .portal-account-menu { flex-wrap: nowrap; } /* exceptions that must stay in one line */
 
   /* buttons/links get a real touch target */
   .btn, button, .nav a { min-height: 40px; }
@@ -70,8 +70,6 @@
 @media (max-width: 380px) {
   .topbar-inner, .wrap { padding-left: 12px !important; padding-right: 12px !important; }
   .pill { display: none; } /* "Administration" / build badges — logo + nav matter more on the smallest screens */
-  .welcome-splash-logo { height: 32px !important; }
-  .welcome-splash-greeting { font-size: 21px !important; }
 }
 
 /* nav row: horizontal scroll instead of wrap/overlap when there isn't
