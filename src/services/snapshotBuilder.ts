@@ -809,6 +809,7 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
   };
 
   let priorScore: number | null = null;
+  let priorPayload: any = null;
   if (!filter.site && !filter.income) {
     const periodKey = filter.period ?? currentPeriod();
     const prior = await prisma.scoreSnapshot.findFirst({
@@ -816,7 +817,12 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
       orderBy: { period: "desc" },
     });
     priorScore = prior?.optimiseScore ?? null;
+    priorPayload = prior?.payload ?? null;
   }
+
+  const priorKpis = priorPayload?.kpis ?? {};
+  const metricDelta = (current: number | null, previous: number | null): number | null =>
+    current != null && previous != null ? Number((current - previous).toFixed(1)) : null;
 
   const sectionAvailability = {
     workforce: headcountDataAvailable,
@@ -965,10 +971,10 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
       guided: { rand: rand(guided.rand), employees: guided.employees, label: "Self-managed via guidance", note: "educated on prescription where no arrangement was affordable" },
     },
     kpis: {
-      takeUp: { pct: kpiAvailability.takeUp ? pct(enrolled) : null, enrolled: kpiAvailability.takeUp ? enrolled : null, available: kpiAvailability.takeUp },
-      activated: { pct: kpiAvailability.activated ? pct(activated) : null, count: kpiAvailability.activated ? activated : null, available: kpiAvailability.activated },
-      monthlySaving: { rand: kpiAvailability.monthlySaving ? rand(cumulativeMonthlySaving) : null, perHead: kpiAvailability.monthlySaving ? rand(averagePerActive) : null, available: kpiAvailability.monthlySaving },
-      avgRating: { val: kpiAvailability.avgRating ? Number(avgRating.toFixed(1)) : null, responses: kpiAvailability.avgRating ? ratingResponses : null, available: kpiAvailability.avgRating },
+      takeUp: { pct: kpiAvailability.takeUp ? pct(enrolled) : null, enrolled: kpiAvailability.takeUp ? enrolled : null, delta: metricDelta(kpiAvailability.takeUp ? pct(enrolled) : null, priorKpis.takeUp?.pct), available: kpiAvailability.takeUp },
+      activated: { pct: kpiAvailability.activated ? pct(activated) : null, count: kpiAvailability.activated ? activated : null, delta: metricDelta(kpiAvailability.activated ? pct(activated) : null, priorKpis.activated?.pct), available: kpiAvailability.activated },
+      monthlySaving: { rand: kpiAvailability.monthlySaving ? rand(cumulativeMonthlySaving) : null, perHead: kpiAvailability.monthlySaving ? rand(averagePerActive) : null, delta: metricDelta(kpiAvailability.monthlySaving ? rand(cumulativeMonthlySaving) : null, priorKpis.monthlySaving?.rand), available: kpiAvailability.monthlySaving },
+      avgRating: { val: kpiAvailability.avgRating ? Number(avgRating.toFixed(1)) : null, responses: kpiAvailability.avgRating ? ratingResponses : null, delta: metricDelta(kpiAvailability.avgRating ? Number(avgRating.toFixed(1)) : null, priorKpis.avgRating?.val), available: kpiAvailability.avgRating },
     },
     funnel: [
       { label: "Eligible workforce", sub: "as at range end", n: headcountDataAvailable ? headcount : null, pct: headcountDataAvailable ? 100 : null, available: headcountDataAvailable },
