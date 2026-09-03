@@ -1855,6 +1855,7 @@ function applyState(){
     updateContextLine();
     const ep0=document.getElementById('exec-period');
     if(ep0) ep0.textContent=((DATA.filterContext&&DATA.filterContext.label)||'Latest')+' · at a glance';
+    applyThemeToVisuals();
     return;
   }
   const p=PERIOD[STATE.period], f=p.f;
@@ -1938,6 +1939,7 @@ function applyState(){
   wireMetricTips(document.getElementById('employer-view'));
   updateContextLine();
   const ep=document.getElementById('exec-period'); if(ep) ep.textContent=PERIOD[STATE.period].label+' · at a glance';
+  applyThemeToVisuals();
 }
 
 function updateContextLine(){
@@ -2640,9 +2642,12 @@ function applyTheme(theme){
   const root=document.documentElement.style;
   const hex=c=>c?('#'+String(c).replace(/^#/,'')):null;
   const baseName='empower-fin Dashboard Portal';
-  if(theme.accentColor){ root.setProperty('--blue', hex(theme.accentColor)); root.setProperty('--blue-d', shade(theme.accentColor,-18)); }
-  if(theme.navyColor){ root.setProperty('--navy', hex(theme.navyColor)); }
-  if(theme.primaryColor){ root.setProperty('--ice', tint(theme.primaryColor,92)); }
+  const primary=hex(theme.primaryColor)||'#32217c', accent=hex(theme.accentColor)||'#b15be8', navy=hex(theme.navyColor)||primary;
+  root.setProperty('--brand-primary',primary); root.setProperty('--brand-accent',accent); root.setProperty('--brand-navy',navy);
+  root.setProperty('--blue',accent); root.setProperty('--blue-d',shade(accent,-18)); root.setProperty('--navy',primary);
+  root.setProperty('--navy-deep',shade(navy,-22)); root.setProperty('--ice',tint(primary,92)); root.setProperty('--ice-2',tint(primary,96));
+  root.setProperty('--line',tint(primary,84)); root.setProperty('--line-soft',tint(primary,94));
+  window.__PORTAL_THEME__={primary,accent,navy};
   const brandName=document.getElementById('channel-brand-name');
   if(theme.logoDataUrl){
     document.querySelectorAll('.logo img, .topbar .logo img').forEach(img=>{ img.src=theme.logoDataUrl; });
@@ -2655,6 +2660,20 @@ function applyTheme(theme){
     const sub=document.querySelector('.head-sub');
     if(sub) sub.textContent=theme.tagline;
   }
+  applyThemeToVisuals();
+}
+
+function applyThemeToVisuals(){
+  const theme=window.__PORTAL_THEME__; if(!theme) return;
+  const replacements={'#B15BE8':'var(--brand-accent)','#b15be8':'var(--brand-accent)','#8E42BD':'var(--blue-d)','#8e42bd':'var(--blue-d)','#32217C':'var(--brand-primary)','#32217c':'var(--brand-primary)','#330A36':'var(--brand-navy)','#0D2A47':'var(--navy-deep)','#F3EFFF':'var(--ice)','#f3efff':'var(--ice)','#F4F9FD':'var(--ice-2)','#f4f9fd':'var(--ice-2)','#E8E1F7':'var(--line)','#e8e1f7':'var(--line)','#F7F4FF':'var(--line-soft)','#f7f4ff':'var(--line-soft)'};
+  document.querySelectorAll('[style]').forEach(node=>{
+    let style=node.getAttribute('style')||'';
+    Object.entries(replacements).forEach(([from,to])=>{ style=style.replaceAll(from,to); });
+    node.setAttribute('style',style);
+  });
+  document.querySelectorAll('svg [stroke],svg [fill],svg [stop-color]').forEach(node=>['stroke','fill','stop-color'].forEach(attr=>{
+    const replacement=replacements[node.getAttribute(attr)]; if(replacement) node.setAttribute(attr,replacement);
+  }));
 }
 // darken a hex colour by pct (negative) for the hover/darker accent
 function shade(hex,pct){
