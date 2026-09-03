@@ -58,10 +58,19 @@ export async function exportScoreSnapshotsCsv(employerId?: string) {
   const rows = await prisma.scoreSnapshot.findMany({
     where: employerId ? { employerId } : {},
     orderBy: [{ employerId: "asc" }, { period: "desc" }],
-    select: { employerId: true, period: true, optimiseScore: true, headcount: true, asAt: true },
+    select: { employerId: true, period: true, optimiseScore: true, payload: true, asAt: true },
     take: 50000,
   });
-  return toCsv(rows as any, ["employerId", "period", "optimiseScore", "headcount", "asAt"]);
+  const mapped = rows.map((row) => ({
+    employerId: row.employerId,
+    period: row.period,
+    optimiseScore: row.optimiseScore,
+    headcount: typeof row.payload === "object" && row.payload !== null && "headcount" in row.payload
+      ? (row.payload as { headcount?: unknown }).headcount
+      : null,
+    asAt: row.asAt,
+  }));
+  return toCsv(mapped, ["employerId", "period", "optimiseScore", "headcount", "asAt"]);
 }
 
 export async function exportUsersCsv() {
