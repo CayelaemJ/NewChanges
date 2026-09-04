@@ -24,7 +24,6 @@ import { createUser, listUsers, updateUser, resetPassword, completeSetup, deacti
 import { recordEvent, engagementSummary } from "./services/analyticsService.js";
 import { notifyAdmins, notifyScoreChangeIfCurrentPeriod, runStaleAccountCheck, runWeeklyDigestIfDue } from "./services/automationService.js";
 import { logAdminAction, listAuditLog } from "./services/auditService.js";
-import { exportAuditLogCsv, exportEmployeesCsv, exportDebtAccountsCsv, exportInsurancePoliciesCsv, exportScoreSnapshotsCsv, exportUsersCsv } from "./services/exportService.js";
 import { ensureSectionDefaults, listSections, updateSection, grantUserSection, revokeUserSection, sectionsForUser } from "./services/sectionService.js";
 import { publicEmailConfig, saveEmailConfig, testEmailConnection, createReportSchedule, listReportSchedules, updateReportSchedule, deleteReportSchedule, sendReportNow, recentReportDeliveries, runDueReports } from "./services/reportScheduler.js";
 import type { ScheduleInput } from "./services/reportScheduler.js";
@@ -34,21 +33,6 @@ const PUBLIC_DIR = [join(__dirname, "public"), join(__dirname, "..", "public")]
   .find((p) => existsSync(join(p, "dashboard.html"))) ?? join(__dirname, "..", "public");
 
 const app = Fastify({ logger: true });
-
-// ── security headers ──
-// A conservative baseline that doesn't risk breaking the app's extensive
-// use of inline <script>/<style> (a strict CSP without 'unsafe-inline' would
-// break nearly every page here, so this isn't attempted blind). Still
-// meaningfully hardens against clickjacking, MIME-sniffing, and disables
-// browser features this app doesn't use.
-app.addHook("onSend", async (_req, reply, payload) => {
-  reply.header("X-Content-Type-Options", "nosniff");
-  reply.header("X-Frame-Options", "DENY");
-  reply.header("Referrer-Policy", "strict-origin-when-cross-origin");
-  reply.header("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
-  reply.header("Content-Security-Policy", "frame-ancestors 'none'; object-src 'none'; base-uri 'self'");
-  return payload;
-});
 app.register(cookie);
 app.register(multipart, { limits: { fileSize: 50 * 1024 * 1024 } });
 app.register(fastifyStatic, {
@@ -85,7 +69,7 @@ const serveHtml = async (reply: FastifyReply, file: string) =>
     .header("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate")
     .header("Pragma", "no-cache")
     .header("Expires", "0")
-    .header("X-Empower-Portal-Build", "0.5.3")
+    .header("X-Empower-Portal-Build", "0.5.4")
     .type("text/html")
     .send(await readFile(join(PUBLIC_DIR, file), "utf-8"));
 
@@ -137,36 +121,16 @@ app.get("/users", async (req, reply) => {
 
 app.get("/health", async () => ({ ok: true }));
 // lets you confirm the NEW build is live: should report the live-dashboard version
-app.get("/version", async () => ({ product: "empower-fin Dashboard Portal", version: "0.5.3", contractVersion: "2.6", coreSourceFeeds: 10, sourceModes: ["API", "SQL"], sqlDialects: ["POSTGRESQL", "MSSQL", "MYSQL"], channelPartners: true, scheduledReports: true, emailDelivery: "SMTP", portfolioEmployerFilter: true, portfolioMetricHelp: true, employerMetricHelp: true, uiNavigation: "account-dropdown-v2", routes: ["/login", "/dashboard", "/admin", "/users"] }));
+app.get("/version", async () => ({ product: "empower-fin Dashboard Portal", version: "0.5.4", contractVersion: "2.6", coreSourceFeeds: 10, sourceModes: ["API", "SQL"], sqlDialects: ["POSTGRESQL", "MSSQL", "MYSQL"], channelPartners: true, scheduledReports: true, emailDelivery: "SMTP", portfolioEmployerFilter: true, portfolioMetricHelp: true, employerMetricHelp: true, uiNavigation: "account-dropdown-v2", routes: ["/login", "/dashboard", "/admin", "/users"] }));
 
 // ════════════════════ AUTH ════════════════════
 const COOKIE_SECURE = !["0", "false", "no"].includes(String(process.env.COOKIE_SECURE ?? "true").toLowerCase());
 const COOKIE = { httpOnly: true, sameSite: "lax" as const, secure: COOKIE_SECURE, path: "/" };
 
-// ── login brute-force throttle ──
-// Simple in-memory lockout per email: after too many wrong passwords in a
-// window, further attempts are rejected for a cooldown period. Not a
-// substitute for a real distributed rate limiter behind multiple instances,
-// but a meaningful improvement over no throttling at all.
-const loginAttempts = new Map<string, { count: number; lockedUntil: number }>();
-const LOGIN_MAX_ATTEMPTS = 8;
-const LOGIN_LOCKOUT_MS = 15 * 60 * 1000;
-
 app.post<{ Body: { email: string; password: string; remember?: boolean } }>("/api/auth/login", async (req, reply) => {
   const { email, password, remember } = req.body ?? ({} as any);
-  const key = String(email || "").toLowerCase().trim();
-  const now = Date.now();
-  const rec = loginAttempts.get(key);
-  if (rec?.lockedUntil && rec.lockedUntil > now) {
-    return reply.code(429).send({ error: `Too many failed attempts. Try again in ${Math.ceil((rec.lockedUntil - now) / 60000)} minute(s).` });
-  }
   const result = await login(email ?? "", password ?? "", !!remember);
-  if (!result) {
-    const count = (rec && rec.lockedUntil <= now ? rec.count : rec?.count || 0) + 1;
-    loginAttempts.set(key, count >= LOGIN_MAX_ATTEMPTS ? { count: 0, lockedUntil: now + LOGIN_LOCKOUT_MS } : { count, lockedUntil: 0 });
-    return reply.code(401).send({ error: "invalid email or password" });
-  }
-  loginAttempts.delete(key);
+  if (!result) return reply.code(401).send({ error: "invalid email or password" });
   // "Remember me": persistent cookie lasting as long as the session (30 days).
   // Otherwise: a session-only cookie (no `expires`) that the browser clears on
   // close, even though the underlying session itself stays valid for 7 days
@@ -369,35 +333,11 @@ app.post<{ Params: { key: string }; Body: { userId: string } }>(
   },
 );
 
-// admin-only: audit log viewer (top N — use ?full=1 for a CSV of everything)
+// admin-only: audit log viewer
 app.get<{ Querystring: { limit?: string } }>("/api/admin/audit-log", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
   return listAuditLog({ limit: req.query.limit ? parseInt(req.query.limit) : undefined });
 });
-
-// admin-only: CSV data export — audit log (full) + the core imported/computed
-// datasets. Optional ?employer=<id> scopes to one employer; omitted = everything.
-const CSV_EXPORTS: Record<string, (employerId?: string) => Promise<string>> = {
-  "audit-log": () => exportAuditLogCsv(),
-  employees: (id) => exportEmployeesCsv(id),
-  "debt-accounts": (id) => exportDebtAccountsCsv(id),
-  "insurance-policies": (id) => exportInsurancePoliciesCsv(id),
-  "score-snapshots": (id) => exportScoreSnapshotsCsv(id),
-  users: () => exportUsersCsv(),
-};
-app.get<{ Params: { type: string }; Querystring: { employer?: string } }>(
-  "/api/admin/export/:type",
-  async (req, reply) => {
-    const admin = await requireAdmin(req, reply); if (!admin) return;
-    const fn = CSV_EXPORTS[req.params.type];
-    if (!fn) return reply.code(404).send({ error: "unknown export type" });
-    const csv = await fn(req.query.employer);
-    logAdminAction(admin, "data.export", `Exported ${req.params.type} CSV${req.query.employer ? ` (employer ${req.query.employer})` : " (all employers)"}`, { targetType: "Export" });
-    reply.header("Content-Type", "text/csv");
-    reply.header("Content-Disposition", `attachment; filename="${req.params.type}_${new Date().toISOString().slice(0, 10)}.csv"`);
-    return reply.send(csv);
-  },
-);
 
 // ════════════════════ ADMIN MODULE ════════════════════
 
@@ -879,7 +819,7 @@ app.get<{ Querystring: { period?: string; range?: "30d" | "quarter" | "all" | "m
 );
 
 // Register all routes before opening the listener.
-app.log.info({ portalVersion: "0.5.3", publicDir: PUBLIC_DIR }, "starting empower-fin Dashboard Portal");
+  app.log.info({ portalVersion: "0.5.4", publicDir: PUBLIC_DIR }, "starting empower-fin Dashboard Portal");
 app.listen({ port: PORT, host: "0.0.0.0" })
   .then(async () => { await bootstrapAdmin(); await ensureSectionDefaults(); startSyncScheduler(app); startReportScheduler(app); startAutomationScheduler(app); app.log.info(`empower-fin Dashboard Portal on :${PORT}`); })
   .catch((err) => { app.log.error(err); process.exit(1); });
