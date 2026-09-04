@@ -66,6 +66,8 @@ html.portal-dark .source-mode-card:hover{background:#202f40!important;border-col
 html.portal-dark .source-mode-card.on{background:#263548!important;border-color:#c58af0!important;}
 html.portal-dark .source-mode-icon{background:#263548!important;color:#d5a9f5!important;}
 html.portal-dark .portal-account-avatar{background:linear-gradient(135deg,#7d2fa3,#39204f);}
+html.portal-dark .topbar img[src*="logo"],
+html.portal-dark .welcome-splash-logo{filter:brightness(0) invert(1);}
 html.portal-dark .portal-nav-link.is-active{background:#202f40;color:#fff;border-color:#46596d;}
 html.portal-dark .metric-info{background:#263548;color:#f0dfff;border-color:#8c6aaa;}
 html.portal-dark .funnel-bar-bg,
