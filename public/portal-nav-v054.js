@@ -11,19 +11,25 @@
   const THEME_KEY='empower-fin-theme';
 
   function isDark(){ return document.body?.classList.contains('portal-dark'); }
-  function applyTheme(){
-    const dark=localStorage.getItem(THEME_KEY)==='dark';
+  function readTheme(){
+    try{ return localStorage.getItem(THEME_KEY)==='dark'; }catch(_){ return false; }
+  }
+  function applyTheme(dark=readTheme()){
     document.documentElement.classList.toggle('portal-dark',dark);
     document.body?.classList.toggle('portal-dark',dark);
     return dark;
   }
   function toggleTheme(){
     const dark=!isDark();
-    localStorage.setItem(THEME_KEY,dark?'dark':'light');
-    applyTheme();
+    try{ localStorage.setItem(THEME_KEY,dark?'dark':'light'); }catch(_){ /* session-only fallback */ }
+    applyTheme(dark);
     document.querySelectorAll('[data-portal-theme-toggle]').forEach(button=>{
       button.setAttribute('aria-pressed',String(dark));
-      button.querySelector('[data-portal-theme-label]').textContent=dark?'Light mode':'Dark mode';
+      const label=button.querySelector('[data-portal-theme-label]');
+      if(label) label.textContent=dark?'Light mode':'Dark mode';
+      const mode=dark?'light':'dark';
+      button.setAttribute('title',`Use ${mode} mode`);
+      button.setAttribute('aria-label',`Use ${mode} mode`);
     });
   }
   applyTheme();
