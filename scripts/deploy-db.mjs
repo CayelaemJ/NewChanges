@@ -6,7 +6,11 @@ const prisma = join(process.cwd(), "node_modules", ".bin", process.platform === 
 const resetRequested = ["1", "true", "yes"].includes(String(process.env.PRELIVE_RESET_DATABASE ?? "").toLowerCase());
 
 function run(args) {
-  const result = spawnSync(prisma, args, { stdio: "inherit", env: process.env });
+  const env = {
+    ...process.env,
+    PRISMA_HIDE_UPDATE_MESSAGE: process.env.PRISMA_HIDE_UPDATE_MESSAGE ?? "1",
+  };
+  const result = spawnSync(prisma, args, { stdio: "inherit", env });
   if (result.error) {
     console.error(result.error);
     return 1;
