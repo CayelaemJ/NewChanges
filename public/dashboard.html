@@ -1185,6 +1185,7 @@ const EMPLOYER_METRIC_INFO = {
   incomeReach:{ title:'Reach by income band', text:'Shows which income bands the programme is reaching among activated employees.', formula:'Activated employees grouped by payroll income band.' },
   ratingDistribution:{ title:'Average rating & distribution', text:'Shows the mean employee rating and the spread of 1 to 5 star responses.', formula:'Mean and frequency distribution of post-journey star ratings.' },
   fiveStarPct:{ title:'5-star share', text:'Share of post-journey ratings that received the highest 5-star rating.', formula:'5-star ratings ÷ all ratings × 100.' },
+  nps:{ title:'Net Promoter Score', text:'The balance between employees giving the highest rating and those giving a 1–3 rating.', formula:'% rating 5 − % ratings 1–3.' },
   debtStates:{ title:'How problem debt is being handled', text:'Separates problem debt into active intervention, debt being challenged and guidance-only cases so the states are not overstated.', formula:'Balances and employee counts are grouped by the current intervention state.' },
   debtActive:{ title:'Under active intervention', text:'Arrears where a settlement or reduced-instalment arrangement has actually been sent.', formula:'Balances and distinct employees where an arrangement has been dispatched.' },
   debtChallenged:{ title:'Being challenged', text:'Potentially prescribed debt that is being formally contested.', formula:'Balances and distinct employees with a lodged prescription challenge.' },
@@ -1223,6 +1224,7 @@ const PORTFOLIO_METRIC_INFO = {
   arrears:{ title:'Arrears %', text:'Share of platform users whose debt is visible and who are currently in arrears.', formula:'Users in arrears ÷ users with visible debt × 100. Lower is better.' },
   rating:{ title:'Average experience rating', text:'Average end-of-journey star rating received from employees.', formula:'Mean of post-journey ratings from 1 to 5.' },
   fiveStarPct:{ title:'5-star share', text:'Share of all post-journey ratings that received the highest 5-star rating.', formula:'5-star ratings ÷ all ratings × 100.' },
+  nps:{ title:'Net Promoter Score', text:'The balance between employees giving the highest rating and those giving a 1–3 rating.', formula:'% rating 5 − % ratings 1–3.' },
   measureGuide:{ title:'What these measures mean', text:'Portfolio measures use the same dated source records and calculation rules as the corresponding employer dashboard metrics. Select employers to recalculate the portfolio cards, heatmap and league table for that subset.', formula:'Missing source data is shown as unavailable and is excluded from averages/rankings rather than treated as zero.' }
 };
 const PORTFOLIO_KPI_INFO = {
@@ -1585,6 +1587,7 @@ function renderRatings(){
     <div class="rating-hero"><div class="rating-big">${rt.avg.toFixed(1)}</div><div><div class="rating-stars">★★★★★</div><div style="font-size:11.5px;color:#8497a7;font-weight:700;margin-top:2px">${rt.responses.toLocaleString()} ratings</div></div></div>
     <div class="rating-bars">${bars}</div>
     <div class="rating-share-pill"><div><div class="l">5-star ratings ${employerInfoButton('fiveStarPct')}</div></div><div class="v">${rt.fiveStarPct}%</div></div>
+    <div class="rating-share-pill"><div><div class="l">Net Promoter Score ${employerInfoButton('nps')}</div></div><div class="v">${rt.nps == null ? '—' : rt.nps}</div></div>
   </div>`));
 }
 
