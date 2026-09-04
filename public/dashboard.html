@@ -7,8 +7,6 @@
 <link rel="stylesheet" href="/static/portal-nav-v054.css?v=0.5.4">
 <link rel="stylesheet" href="/static/ui-enhance-v1.css?v=1">
 <link rel="stylesheet" href="/static/responsive-v1.css?v=1">
-<link rel="stylesheet" href="/static/dark-mode-v1.css?v=1">
-<script src="/static/dark-mode-v1.js?v=1"></script>
 <title>empower-fin Dashboard Portal — Employer Insights</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap');
@@ -129,7 +127,6 @@
   .kpi-sub{margin-top:11px;font-size:12px;color:var(--grey);display:flex;align-items:center;gap:7px;}
   .delta{font-weight:800;font-size:11.5px;padding:3px 8px;border-radius:7px;display:inline-flex;align-items:center;gap:3px;}
   .delta.up{color:var(--green);background:var(--green-soft);}
-  .delta.down{color:#c53b2d;background:#fff0ee;}
   .delta.flat{color:var(--grey);background:var(--ice);}
   .kpi-spark{position:absolute;right:0;bottom:0;width:46%;height:54px;opacity:.9;}
 
@@ -423,19 +420,19 @@
   }
 
   /* ── executive summary band ── */
-  .exec-band{background:linear-gradient(135deg,var(--navy-deep),var(--navy) 55%,var(--blue-d));border-radius:var(--radius);padding:22px 26px;box-shadow:var(--shadow-lg);color:#fff;margin-top:4px;}
+  .exec-band{background:linear-gradient(135deg,#0d2a47,#2b1b68 55%,#682487);border-radius:var(--radius);padding:22px 26px;box-shadow:var(--shadow-lg);color:#fff;margin-top:4px;}
   .exec-head{display:flex;align-items:center;gap:13px;margin-bottom:18px;}
   .exec-pulse{width:9px;height:9px;border-radius:50%;background:#3ddc91;box-shadow:0 0 0 4px rgba(61,220,145,.25);animation:pulse 2s infinite;}
   @keyframes pulse{0%,100%{box-shadow:0 0 0 4px rgba(61,220,145,.25);}50%{box-shadow:0 0 0 7px rgba(61,220,145,.08);}}
-  .exec-title{font-family:'Fraunces',serif;font-weight:600;font-size:18px;letter-spacing:-.3px;}
-  .exec-sub{font-size:11.5px;color:#aacdec;font-weight:600;margin-top:2px;}
+  .exec-title{font-family:'Fraunces',serif;font-weight:600;font-size:18px;letter-spacing:-.3px;color:#fff;}
+  .exec-sub{font-size:11.5px;color:#e3f0fb;font-weight:600;margin-top:2px;}
   .exec-verdict{margin-left:auto;font-size:12.5px;font-weight:800;color:#3ddc91;background:rgba(61,220,145,.12);border:1px solid rgba(61,220,145,.3);padding:7px 13px;border-radius:9px;}
   .exec-verdict span{font-size:10px;}
   .exec-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;}
   .exec-item{display:flex;gap:9px;align-items:flex-start;}
   .exec-item svg{flex-shrink:0;margin-top:3px;background:rgba(61,220,145,.14);border-radius:6px;padding:2px;width:19px;height:19px;}
-  .exec-v{font-family:'Fraunces',serif;font-weight:600;font-size:21px;letter-spacing:-.5px;line-height:1.05;}
-  .exec-l{font-size:10.5px;color:#aacdec;font-weight:600;line-height:1.3;margin-top:3px;}
+  .exec-v{font-family:'Fraunces',serif;font-weight:600;font-size:21px;letter-spacing:-.5px;line-height:1.05;color:#fff;}
+  .exec-l{font-size:10.5px;color:#e3f0fb;font-weight:600;line-height:1.3;margin-top:3px;}
   @media(max-width:1080px){ .exec-grid{grid-template-columns:repeat(2,1fr);} }
 
   /* ── wellness score ── */
@@ -487,28 +484,29 @@
   .theme-row .theme-n{display:block;grid-column:2;grid-row:1/3;align-self:center;text-align:right;font-size:14px;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums;}
   @media(max-width:1080px){ .theme-grid{grid-template-columns:1fr;} .chat-jrow{grid-template-columns:150px 1fr 90px;} }
 
-  @media(max-width:640px){
-    .head-actions{width:100%;justify-content:flex-start;}
-    .head-actions .btn{flex:1;min-width:0;}
-    .filters{display:grid!important;grid-template-columns:1fr;align-items:stretch!important;}
-    .filters .filter-tag,.filters select{width:100%;max-width:none;box-sizing:border-box;}
-    .g-4,.exec-grid,.stress-grid,.opp-grid{grid-template-columns:1fr!important;}
-    .stat-strip{display:grid;grid-template-columns:1fr 1fr;}
-    .stat-cell{min-width:0;border-right:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft);padding:13px 12px;}
-    .stat-cell:nth-child(2n){border-right:none;}
-    .stat-cell:nth-last-child(-n+2){border-bottom:none;}
-    .wd-row{grid-template-columns:1fr 34px;gap:6px 10px;}
-    .wd-row .wd-track{grid-column:1/-1;grid-row:2;}
-    .trend-row{grid-template-columns:26px 1fr;gap:9px;}
-    .trend-stat{grid-column:2;text-align:left;display:flex;gap:8px;align-items:baseline;}
-    .chat-jrow{grid-template-columns:1fr 64px;gap:5px;}
-    .chat-jrow .jbar{grid-column:1/-1;grid-row:2;}
-    .pf-chip{min-width:0;}
-  }
-
+  /* ── welcome splash (shown briefly right after sign-in) ── */
+  #welcome-splash{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:radial-gradient(1200px 700px at 50% -10%, rgba(177,91,232,.18), transparent 60%), linear-gradient(160deg,#f3f7fb 0%,#eef2ff 100%);transition:opacity .45s ease, visibility .45s ease;}
+  #welcome-splash.hide{opacity:0;visibility:hidden;pointer-events:none;}
+  .welcome-splash-inner{text-align:center;}
+  .welcome-splash-logo{height:40px;width:auto;margin-bottom:22px;opacity:.94;}
+  .welcome-splash-spinner{width:32px;height:32px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--blue);margin:0 auto 20px;animation:welcome-spin .8s linear infinite;}
+  @keyframes welcome-spin{to{transform:rotate(360deg);}}
+  .welcome-splash-greeting{font-family:'Fraunces',serif;font-weight:600;font-size:26px;color:var(--navy);}
+  .welcome-splash-sub{margin-top:6px;font-size:13.5px;color:var(--grey);font-weight:600;}
 </style>
 </head>
 <body data-portal-build="0.5.3">
+
+<!-- ════════════════════════ WELCOME SPLASH ════════════════════════ -->
+<div id="welcome-splash">
+  <div class="welcome-splash-inner">
+    <img id="welcome-splash-logo" class="welcome-splash-logo" src="/static/logo-large.png" alt="">
+    <div class="welcome-splash-spinner"></div>
+    <div class="welcome-splash-greeting" id="welcome-splash-greeting">Welcome</div>
+    <div class="welcome-splash-sub">Loading your dashboard…</div>
+  </div>
+</div>
+<script>setTimeout(function(){var e=document.getElementById('welcome-splash');if(e)e.classList.add('hide');},4500);</script>
 
 <!-- ════════════════════════ TOP BAR ════════════════════════ -->
 <div class="topbar">
@@ -1350,10 +1348,8 @@ function renderKPIs(){
   const wrap=document.getElementById('kpis');
   cards.forEach((c,i)=>{
     const available=c.data?.available!==false && hasValue(c.num);
-    const deltaValue=hasValue(c.data?.delta)?Number(c.data.delta):null;
-    const delta=deltaValue===null?'No prior period':`${deltaValue>=0?'▲':'▼'} ${c.money?(deltaValue>=0?'+R':'-R')+Math.abs(deltaValue).toLocaleString('en-ZA'):((deltaValue>=0?'+':'')+deltaValue+(c.suffix==='% '||c.suffix==='%'?' pts':''))} vs. last period`;
-    const deltaClass=deltaValue===null?'':deltaValue>0?' up':deltaValue<0?' down':' flat';
-    const card=el(`<div class="card kpi reveal" style="animation-delay:${i*.06}s"><div class="kpi-label"><span class="kpi-ico" style="background:${c.ico.bg}"><svg width="18" height="18" viewBox="0 0 24 24">${c.ico.path}</svg></span>${c.label}${employerInfoButton(c.infoKey)}</div><div class="kpi-value">${available&&c.prefix?'<span class="cur">'+c.prefix+'</span>':''}<span class="kpi-num">${available?'0':'—'}</span>${available&&c.suffix?'<span style="font-size:18px">'+c.suffix+'</span>':''}</div><div class="kpi-sub">${available?`<span class="delta${deltaClass}">${delta}</span>`:'<span style="color:#8497a7">Data not loaded</span>'}</div>${available?c.spark:''}</div>`);
+    const delta=hasValue(c.data?.delta)?`${Number(c.data.delta)>=0?'▲':'▼'} ${c.data.delta} vs. last period`:'No prior period';
+    const card=el(`<div class="card kpi reveal" style="animation-delay:${i*.06}s"><div class="kpi-label"><span class="kpi-ico" style="background:${c.ico.bg}"><svg width="18" height="18" viewBox="0 0 24 24">${c.ico.path}</svg></span>${c.label}${employerInfoButton(c.infoKey)}</div><div class="kpi-value">${available&&c.prefix?'<span class="cur">'+c.prefix+'</span>':''}<span class="kpi-num">${available?'0':'—'}</span>${available&&c.suffix?'<span style="font-size:18px">'+c.suffix+'</span>':''}</div><div class="kpi-sub">${available?`<span class="delta">${delta}</span>`:'<span style="color:#8497a7">Data not loaded</span>'}</div>${available?c.spark:''}</div>`);
     wrap.appendChild(card); if(available) countUp(card.querySelector('.kpi-num'),Number(c.num),{money:c.money,decimals:c.decimals||0,delay:120+i*60});
   });
 }
@@ -1444,7 +1440,7 @@ function renderEwa(){
   const py=v=>h-pad-(v/max)*(h-pad*1.4);
   const line=pts.map((p,i)=>(i?'L':'M')+px(i).toFixed(1)+' '+py(p).toFixed(1)).join(' ');
   const area=line+` L${px(pts.length-1)} ${h-pad} L${px(0)} ${h-pad} Z`;
-  const dots=pts.map((p,i)=>`<circle cx="${px(i)}" cy="${py(p)}" r="${i===pts.length-1?4.5:2.5}" fill="#b15be8" stroke="#fff" stroke-width="2"><title>${labels[i]||'Period'}: R${p}k</title></circle>`).join('');
+  const dots=pts.map((p,i)=>`<circle cx="${px(i)}" cy="${py(p)}" r="${i===pts.length-1?4.5:2.5}" fill="#b15be8" stroke="#fff" stroke-width="2"/>`).join('');
   const xlabels=labels.map((l,i)=>`<text x="${px(i)}" y="${h-8}" font-size="9.5" fill="#8497a7" text-anchor="middle" font-weight="600">${l}</text>`).join('');
   wrap.appendChild(el(`<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;">
     <defs><linearGradient id="ewag" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b15be8" stop-opacity=".16"/><stop offset="1" stop-color="#b15be8" stop-opacity="0"/></linearGradient></defs>
@@ -1473,7 +1469,7 @@ function renderSavings(){
   const py=v=>h-pad-(v/max)*(h-pad*1.4);
   let line=pts.map((p,i)=>(i?'L':'M')+px(i).toFixed(1)+' '+py(p).toFixed(1)).join(' ');
   let area=line+` L${px(pts.length-1)} ${h-pad} L${px(0)} ${h-pad} Z`;
-  let dots=pts.map((p,i)=>`<circle cx="${px(i)}" cy="${py(p)}" r="${i===pts.length-1?4.5:0}" fill="#b15be8" stroke="#fff" stroke-width="2"><title>${labels[i]||'Period'}: R${p}k/mo</title></circle>`).join('');
+  let dots=pts.map((p,i)=>`<circle cx="${px(i)}" cy="${py(p)}" r="${i===pts.length-1?4.5:0}" fill="#b15be8" stroke="#fff" stroke-width="2"/>`).join('');
   let xlabels=labels.map((l,i)=> i%2===0||i===labels.length-1 ? `<text x="${px(i)}" y="${h-8}" font-size="9.5" fill="#8497a7" text-anchor="middle" font-weight="600">${l}</text>`:'').join('');
   wrap.appendChild(el(`<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;">
     <defs><linearGradient id="savg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1fa463" stop-opacity=".18"/><stop offset="1" stop-color="#1fa463" stop-opacity="0"/></linearGradient></defs>
@@ -1855,7 +1851,6 @@ function applyState(){
     updateContextLine();
     const ep0=document.getElementById('exec-period');
     if(ep0) ep0.textContent=((DATA.filterContext&&DATA.filterContext.label)||'Latest')+' · at a glance';
-    applyThemeToVisuals();
     return;
   }
   const p=PERIOD[STATE.period], f=p.f;
@@ -1939,7 +1934,6 @@ function applyState(){
   wireMetricTips(document.getElementById('employer-view'));
   updateContextLine();
   const ep=document.getElementById('exec-period'); if(ep) ep.textContent=PERIOD[STATE.period].label+' · at a glance';
-  applyThemeToVisuals();
 }
 
 function updateContextLine(){
@@ -2481,6 +2475,7 @@ async function loadLiveData(){
   window.__ME__=me;
   addAuthBar(me);
   applyTheme(me.theme);
+  handleWelcomeSplash(me);
   applySectionVisibility(me);
   populateEmployerSelect(me);
 
@@ -2642,12 +2637,9 @@ function applyTheme(theme){
   const root=document.documentElement.style;
   const hex=c=>c?('#'+String(c).replace(/^#/,'')):null;
   const baseName='empower-fin Dashboard Portal';
-  const primary=hex(theme.primaryColor)||'#32217c', accent=hex(theme.accentColor)||'#b15be8', navy=hex(theme.navyColor)||primary;
-  root.setProperty('--brand-primary',primary); root.setProperty('--brand-accent',accent); root.setProperty('--brand-navy',navy);
-  root.setProperty('--blue',accent); root.setProperty('--blue-d',shade(accent,-18)); root.setProperty('--navy',primary);
-  root.setProperty('--navy-deep',shade(navy,-22)); root.setProperty('--ice',tint(primary,92)); root.setProperty('--ice-2',tint(primary,96));
-  root.setProperty('--line',tint(primary,84)); root.setProperty('--line-soft',tint(primary,94));
-  window.__PORTAL_THEME__={primary,accent,navy};
+  if(theme.accentColor){ root.setProperty('--blue', hex(theme.accentColor)); root.setProperty('--blue-d', shade(theme.accentColor,-18)); }
+  if(theme.navyColor){ root.setProperty('--navy', hex(theme.navyColor)); }
+  if(theme.primaryColor){ root.setProperty('--ice', tint(theme.primaryColor,92)); }
   const brandName=document.getElementById('channel-brand-name');
   if(theme.logoDataUrl){
     document.querySelectorAll('.logo img, .topbar .logo img').forEach(img=>{ img.src=theme.logoDataUrl; });
@@ -2660,20 +2652,6 @@ function applyTheme(theme){
     const sub=document.querySelector('.head-sub');
     if(sub) sub.textContent=theme.tagline;
   }
-  applyThemeToVisuals();
-}
-
-function applyThemeToVisuals(){
-  const theme=window.__PORTAL_THEME__; if(!theme) return;
-  const replacements={'#B15BE8':'var(--brand-accent)','#b15be8':'var(--brand-accent)','#8E42BD':'var(--blue-d)','#8e42bd':'var(--blue-d)','#32217C':'var(--brand-primary)','#32217c':'var(--brand-primary)','#330A36':'var(--brand-navy)','#0D2A47':'var(--navy-deep)','#F3EFFF':'var(--ice)','#f3efff':'var(--ice)','#F4F9FD':'var(--ice-2)','#f4f9fd':'var(--ice-2)','#E8E1F7':'var(--line)','#e8e1f7':'var(--line)','#F7F4FF':'var(--line-soft)','#f7f4ff':'var(--line-soft)'};
-  document.querySelectorAll('[style]').forEach(node=>{
-    let style=node.getAttribute('style')||'';
-    Object.entries(replacements).forEach(([from,to])=>{ style=style.replaceAll(from,to); });
-    node.setAttribute('style',style);
-  });
-  document.querySelectorAll('svg [stroke],svg [fill],svg [stop-color]').forEach(node=>['stroke','fill','stop-color'].forEach(attr=>{
-    const replacement=replacements[node.getAttribute(attr)]; if(replacement) node.setAttribute(attr,replacement);
-  }));
 }
 // darken a hex colour by pct (negative) for the hover/darker accent
 function shade(hex,pct){
@@ -2688,6 +2666,23 @@ function tint(hex,pct){
   let r=(n>>16)&255,g=(n>>8)&255,b=n&255; const f=pct/100;
   r=Math.round(r+(255-r)*f); g=Math.round(g+(255-g)*f); b=Math.round(b+(255-b)*f);
   return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('');
+}
+
+// brief "Hi <name>" splash right after sign-in — shown once per browser tab
+// session so repeat navigation within the dashboard doesn't keep re-showing it
+function handleWelcomeSplash(me){
+  var el=document.getElementById('welcome-splash');
+  if(!el) return;
+  var already=false;
+  try{ already = sessionStorage.getItem('ef_splash_shown')==='1'; }catch(_){}
+  if(already){ el.classList.add('hide'); return; }
+  var greet=document.getElementById('welcome-splash-greeting');
+  var first=(me.name||'').trim().split(/\s+/)[0]||'there';
+  if(greet) greet.textContent='Hi '+first+' \uD83D\uDC4B';
+  var logo=document.getElementById('welcome-splash-logo');
+  if(logo && me.theme && me.theme.logoDataUrl) logo.src=me.theme.logoDataUrl;
+  try{ sessionStorage.setItem('ef_splash_shown','1'); }catch(_){}
+  setTimeout(function(){ el.classList.add('hide'); }, 700);
 }
 
 function addAuthBar(me){
