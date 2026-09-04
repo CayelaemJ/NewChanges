@@ -56,6 +56,20 @@
   .link-box{background:var(--ice-2);border:1px dashed var(--line);border-radius:10px;padding:12px;margin-top:12px;font-size:12.5px;word-break:break-all;display:none;}
   .muted{color:var(--grey);font-size:13px;}
   .hidden{display:none;}
+  .portal-primary-nav{display:flex;align-items:center;gap:4px;margin-left:auto;min-width:0;flex:0 1 auto;}
+  .portal-nav-link{display:inline-flex;align-items:center;justify-content:center;min-height:36px;padding:0 13px;border-radius:10px;color:var(--grey);font-size:12.5px;font-weight:700;text-decoration:none;white-space:nowrap;}
+  .portal-nav-link.is-active{background:#fff;color:var(--navy);border:1px solid var(--line);}
+  .portal-account{position:relative;display:flex;align-items:center;gap:6px;flex:0 0 auto;}
+  .portal-theme-quick{width:34px;height:34px;border:1px solid var(--line);border-radius:10px;background:var(--ice);color:var(--navy);display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .portal-theme-quick svg{width:17px;height:17px;}
+  .portal-account-trigger{border:1px solid transparent;background:transparent;border-radius:12px;padding:3px 5px 3px 3px;display:flex;align-items:center;gap:7px;cursor:pointer;color:var(--navy);}
+  .portal-account-avatar{width:36px;height:36px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;}
+  .portal-account-chevron{width:14px;height:14px;}
+  .portal-account-menu{position:absolute;right:0;top:calc(100% + 10px);width:246px;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 18px 50px rgba(15,36,56,.16);padding:8px;display:none;z-index:120;}
+  .portal-account-menu.is-open{display:block;}
+  .portal-menu-action{width:100%;border:0;background:transparent;border-radius:9px;padding:9px 10px;display:flex;align-items:center;gap:9px;font:700 12.5px 'Manrope',system-ui,sans-serif;color:var(--grey);cursor:pointer;text-align:left;}
+  .portal-menu-action svg{width:16px;height:16px;}
+  @media(max-width:860px){.portal-primary-nav{display:none;}.portal-mobile-links{display:block;}}
 </style>
 </head>
 <body data-portal-build="0.5.4">
