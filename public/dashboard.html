@@ -16,13 +16,13 @@
     --blue-d:#8e42bd;
     --navy:#32217c;
     --navy-deep:#0d2a47;
-    --ice:#f3efff;
-    --ice-2:#f4f9fd;
-    --line:#e8e1f7;
-    --line-soft:#f7f4ff;
+    --ice:#f0ecfb;
+    --ice-2:#eef4f8;
+    --line:#d6dfe8;
+    --line-soft:#e4e9ef;
     --ink:#0f2438;
     --grey:#5b6b7a;
-    --grey-l:#8497a7;
+    --grey-l:#607486;
     --green:#1fa463;
     --green-soft:#e7f7ef;
     --amber:#e8910c;
@@ -406,11 +406,15 @@
   .pf-chip.on .metric-info{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.35);color:#fff;}
   .kpi-label .metric-info{margin-left:auto;}
   .card-title .metric-info{transform:translateY(-1px);}
-  .exec-l .metric-info{width:15px;height:15px;font-size:9px;margin-left:4px;background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.32);color:#fff;}
+  .exec-l .metric-info{width:15px;height:15px;font-size:9px;margin-left:4px;background:#fff;border-color:#b9d4e8;color:#173f5d;}
   .wd-name .metric-info,.funnel-lbl .metric-info,.stat-cell .metric-info,.stress-l .metric-info,.ds-name .metric-info,.risk-sig .metric-info,.opp-name .metric-info,.opp-foot-l .metric-info,.opp-ref-l .metric-info,.rating-share-pill .metric-info{width:15px;height:15px;font-size:9px;margin-left:4px;}
   .stat-cell .l,.stress-l{display:flex;align-items:center;gap:3px;}
   .wd-name small{display:block;}
-  .pf-no-data{background:#f6f5f9!important;color:#98a3ad!important;font-weight:700!important;}
+  .pf-no-data{background:#edf0f3!important;color:#52616d!important;font-weight:700!important;}
+  .muted{color:#425466!important;}
+  [style*="color:#8497a7"]{color:#607486!important;}
+  svg text[fill="#8497a7"]{fill:#607486;}
+  .exec-band svg text{fill:#e3f0fb;}
   @media(max-width:1080px){ .pf-picker{max-width:100%;} .pf-toolbar{align-items:stretch;flex-direction:column;} .pf-filter-block{min-width:0;width:100%;} .pf-toolbar-right{justify-content:flex-start;} }
 
   @media print{
@@ -426,7 +430,9 @@
   @keyframes pulse{0%,100%{box-shadow:0 0 0 4px rgba(61,220,145,.25);}50%{box-shadow:0 0 0 7px rgba(61,220,145,.08);}}
   .exec-title{font-family:'Fraunces',serif;font-weight:600;font-size:18px;letter-spacing:-.3px;color:#fff;}
   .exec-sub{font-size:11.5px;color:#e3f0fb;font-weight:600;margin-top:2px;}
-  .exec-verdict{margin-left:auto;font-size:12.5px;font-weight:800;color:#3ddc91;background:rgba(61,220,145,.12);border:1px solid rgba(61,220,145,.3);padding:7px 13px;border-radius:9px;}
+  .exec-verdict{margin-left:auto;font-size:12.5px;font-weight:800;color:#075c36;background:#d9f7e8;border:1px solid #7bd6a5;padding:7px 13px;border-radius:9px;white-space:nowrap;}
+  .exec-verdict.is-incomplete{color:#704b00;background:#fff2c9;border-color:#e8c96b;}
+  .exec-verdict.is-needs-attention{color:#8f2a17;background:#fde4df;border-color:#eaa092;}
   .exec-verdict span{font-size:10px;}
   .exec-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;}
   .exec-item{display:flex;gap:9px;align-items:flex-start;}
@@ -979,7 +985,7 @@ let DATA = {
     { name:"Standard Bank",   color:"#8e42bd", accounts: 74, balance:"R 1.62m", avg:"R 21,890", status:"elig", statusL:"In journey" },
     { name:"FNB",             color:"#1fa463", accounts: 61, balance:"R 1.39m", avg:"R 22,790", status:"prog", statusL:"Negotiating" },
     { name:"Truworths",       color:"#8a4fc4", accounts: 88, balance:"R 1.04m", avg:"R 11,820", status:"prog", statusL:"Negotiating" },
-    { name:"Other retailers", color:"#8497a7", accounts:142, balance:"R 0.84m", avg:"R 5,915",  status:"prog", statusL:"Negotiating" },
+    { name:"Other retailers", color:"#607486", accounts:142, balance:"R 0.84m", avg:"R 5,915",  status:"prog", statusL:"Negotiating" },
   ],
   creditorsTotal: { accounts:589, balance:"R 9.18m" },
 
@@ -988,7 +994,7 @@ let DATA = {
     { type:"Bank personal loans", balance:"R 5.91m", pct:64, col:"#32217c" },
     { type:"Retail / store credit", balance:"R 1.88m", pct:20, col:"#b15be8" },
     { type:"Microloans",            balance:"R 0.92m", pct:10, col:"#e8910c" },
-    { type:"Other unsecured",       balance:"R 0.47m", pct:6,  col:"#8497a7" },
+    { type:"Other unsecured",       balance:"R 0.47m", pct:6,  col:"#607486" },
   ],
 
   // ── Act 4: stress map (by site) ──
@@ -1012,7 +1018,7 @@ let DATA = {
     { name:"Under R8k/mo",  count:281, color:"#32217c" },
     { name:"R8k–R15k/mo",   count:392, color:"#b15be8" },
     { name:"R15k–R25k/mo",  count:178, color:"#4ea3da" },
-    { name:"Over R25k/mo",  count:87,  color:"#bfe0f5" },
+    { name:"Over R25k/mo",  count:87,  color:"#6b9fc4" },
   ],
 
   // ── Act 4: ratings ──
@@ -1029,7 +1035,7 @@ let DATA = {
     accounts: 274,
     avgPerAccount: "R 10,000",
     statusBars: [
-      { l:"Identified",        n:274, pct:100, c:"#bfe0f5" },
+      { l:"Identified",        n:274, pct:100, c:"#6b9fc4" },
       { l:"Letter dispatched", n:241, pct:88,  c:"#4ea3da" },
       { l:"Creditor conceded", n:163, pct:59,  c:"#b15be8" },
       { l:"Written off",       n:118, pct:43,  c:"#1fa463" },
@@ -1298,11 +1304,14 @@ function renderExec(){
   const wrap=document.getElementById('exec-summary');
   const tick='<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7.5" stroke="#1fa463" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const items=DATA.exec.items.map(it=>{ const mk=employerMetricKey(it.l); return `<div class="exec-item">${tick}<div><div class="exec-v">${it.v}</div><div class="exec-l">${it.l} ${employerInfoButton(mk)}</div></div></div>`; }).join('');
+  const incomplete=window.__LIVE__ && (DATA.wellness?.complete===false || !hasValue(DATA.wellness?.score));
+  const verdict=incomplete?'Data incomplete':(window.__LIVE__ ? (DATA.wellness.score>=75?'Strong':DATA.wellness.score>=60?'On track':'Needs attention') : 'On track');
+  const verdictClass=incomplete?'is-incomplete':verdict==='Needs attention'?'is-needs-attention':'';
   wrap.appendChild(el(`<div class="exec-band reveal">
     <div class="exec-head">
       <div class="exec-pulse"></div>
       <div><div class="exec-title">Financial wellbeing impact summary</div><div class="exec-sub" id="exec-period">Programme to date · at a glance</div></div>
-      <div class="exec-verdict">${window.__LIVE__ ? (DATA.wellness?.complete===false || !hasValue(DATA.wellness?.score) ? 'Data incomplete' : (DATA.wellness.score>=75?'Strong':DATA.wellness.score>=60?'On track':'Needs attention')) : 'On track'}</div>
+      <div class="exec-verdict ${verdictClass}">${verdict}</div>
     </div>
     <div class="exec-grid">${items}</div>
   </div>`));
