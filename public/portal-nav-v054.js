@@ -12,7 +12,11 @@
 
   function isDark(){ return document.body?.classList.contains('portal-dark'); }
   function readTheme(){
-    try{ return localStorage.getItem(THEME_KEY)==='dark'; }catch(_){ return false; }
+    try{
+      const stored=localStorage.getItem(THEME_KEY);
+      if(stored) return stored==='dark';
+    }catch(_){ }
+    try{ return sessionStorage.getItem(THEME_KEY)==='dark'; }catch(_){ return false; }
   }
   function applyTheme(dark=readTheme()){
     document.documentElement.classList.toggle('portal-dark',dark);
@@ -21,7 +25,10 @@
   }
   function toggleTheme(){
     const dark=!isDark();
-    try{ localStorage.setItem(THEME_KEY,dark?'dark':'light'); }catch(_){ /* session-only fallback */ }
+    const value=dark?'dark':'light';
+    try{ localStorage.setItem(THEME_KEY,value); }catch(_){
+      try{ sessionStorage.setItem(THEME_KEY,value); }catch(__){ }
+    }
     applyTheme(dark);
     document.querySelectorAll('[data-portal-theme-toggle]').forEach(button=>{
       button.setAttribute('aria-pressed',String(dark));
@@ -40,14 +47,15 @@
   }
 
   async function deactivateSelf(){
+    const previousFocus=document.activeElement;
     const overlay=document.createElement('div');
     overlay.className='portal-modal-overlay';
     overlay.innerHTML=`
-      <div class="portal-modal" role="dialog" aria-modal="true" aria-label="Deactivate my account">
-        <h3>Deactivate your account?</h3>
+      <div class="portal-modal" role="dialog" aria-modal="true" aria-labelledby="portal-deactivate-title" tabindex="-1">
+        <h3 id="portal-deactivate-title">Deactivate your account?</h3>
         <p>You'll be signed out immediately and won't be able to sign back in. An administrator can see this in Past users and reactivate it for you.</p>
-        <label class="portal-modal-label">Reason (optional)</label>
-        <textarea class="portal-modal-textarea" rows="3" placeholder="e.g. leaving the company, no longer need access…"></textarea>
+        <label class="portal-modal-label" for="portal-deactivate-reason">Reason (optional)</label>
+        <textarea id="portal-deactivate-reason" class="portal-modal-textarea" rows="3" placeholder="e.g. leaving the company, no longer need access…"></textarea>
         <div class="portal-modal-actions">
           <button type="button" class="portal-modal-cancel">Cancel</button>
           <button type="button" class="portal-modal-confirm">Deactivate my account</button>
@@ -55,7 +63,17 @@
         <div class="portal-modal-error" hidden></div>
       </div>`;
     document.body.appendChild(overlay);
-    const close=()=>overlay.remove();
+    const dialog=overlay.querySelector('.portal-modal');
+    const close=()=>{ document.removeEventListener('keydown',onKeyDown); overlay.remove(); previousFocus?.focus?.(); };
+    const onKeyDown=event=>{
+      if(event.key==='Escape'){ event.preventDefault(); close(); return; }
+      if(event.key!=='Tab') return;
+      const focusable=[...dialog.querySelectorAll('button,textarea')].filter(el=>!el.disabled);
+      if(!focusable.length) return;
+      const first=focusable[0], last=focusable[focusable.length-1];
+      if(event.shiftKey && document.activeElement===first){ event.preventDefault(); last.focus(); }
+      else if(!event.shiftKey && document.activeElement===last){ event.preventDefault(); first.focus(); }
+    };
     overlay.addEventListener('click',ev=>{ if(ev.target===overlay) close(); });
     overlay.querySelector('.portal-modal-cancel').addEventListener('click',close);
     overlay.querySelector('.portal-modal-confirm').addEventListener('click',async ()=>{
@@ -72,6 +90,8 @@
         btn.disabled=false; btn.textContent='Deactivate my account';
       }
     });
+    document.addEventListener('keydown',onKeyDown);
+    requestAnimationFrame(()=>overlay.querySelector('.portal-modal-textarea')?.focus());
   }
 
   function closeAll(except){
@@ -94,6 +114,7 @@
     if(me.modules?.dashboard) destinations.push({key:'dashboard',href:'/dashboard',label:'Dashboard'});
     if(me.modules?.admin) destinations.push({key:'admin',href:'/admin',label:'Administration'});
     if(me.modules?.users) destinations.push({key:'users',href:'/users',label:'Users'});
+    const mobileDestinations=destinations.filter(item=>item.key!=='dashboard' || options.includeDashboard !== false);
 
     if(nav){
       const links=destinations
@@ -122,7 +143,7 @@
             <div class="portal-account-build">Portal v${PORTAL_BUILD}</div>
           </div>
           <div class="portal-mobile-links">
-            ${destinations.map(item=>`<a class="portal-mobile-link ${active===item.key?'is-active':''}" href="${item.href}">${item.label}</a>`).join('')}
+            ${mobileDestinations.map(item=>`<a class="portal-mobile-link ${active===item.key?'is-active':''}" href="${item.href}">${item.label}</a>`).join('')}
           </div>
           <button class="portal-menu-action portal-theme-toggle" type="button" role="menuitem" data-portal-theme-toggle aria-pressed="${isDark()}">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3v2m0 14v2M3 12h2m14 0h2M5.6 5.6 7 7m10 10 1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.8"/></svg>
