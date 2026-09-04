@@ -39,7 +39,12 @@
       button.setAttribute('aria-label',`Use ${mode} mode`);
     });
   }
+  function removeLegacyThemeControls(){
+    document.querySelectorAll('body > [data-theme-toggle], body > [data-dark-mode-toggle], body > .theme-toggle, body > .dark-mode-toggle, body > #theme-toggle, body > #dark-mode-toggle')
+      .forEach(control=>control.remove());
+  }
   applyTheme();
+  removeLegacyThemeControls();
 
   async function signOut(){
     try{ await fetch('/api/auth/logout',{method:'POST'}); }catch(_){ /* redirect anyway */ }
