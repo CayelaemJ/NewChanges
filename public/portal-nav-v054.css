@@ -82,6 +82,8 @@ html.portal-dark [style*="color:#8497a7"],
 html.portal-dark [style*="color:#8497A7"]{color:#b7c5d3!important;}
 html.portal-dark [style*="background:#f7f4ff"]{background:#202f40!important;}
 html.portal-dark [style*="border:1px solid #e8e1f7"]{border-color:#46596d!important;}
+html.portal-dark .portal-modal{background:#182333;color:#e7edf4;}
+html.portal-dark .portal-modal-cancel{background:#202f40;border-color:#46596d;color:#e7edf4;}
 
 /* self-service "deactivate my account" confirm modal */
 .portal-modal-overlay{position:fixed;inset:0;z-index:9998;background:rgba(15,36,56,.42);display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(2px);}
