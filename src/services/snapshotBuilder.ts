@@ -526,14 +526,14 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
     : (feedCoverage.workforce_snapshots.available && Boolean(headcountSnapshot)) || feedCoverage.employees.available;
 
   const enrolled = platformUsers.length;
-  const activatedUsers = platformUsers.filter((user: any) => atOrBefore(user.activatedAt, filter.asAt));
-  const activated = activatedUsers.length;
   const completedUserIds = new Set(cumulativeCompleted.map((journey: any) => journey.platformUserId));
   const completedFix = completedUserIds.size;
   const completedCounts = new Map<string, number>();
   for (const journey of cumulativeCompleted as any[]) completedCounts.set(journey.platformUserId, (completedCounts.get(journey.platformUserId) ?? 0) + 1);
   const multipleFix = [...completedCounts.values()].filter((count) => count >= 2).length;
   const startedUserIds = new Set(liveJourneys.filter((journey: any) => journey.startedAt <= filter.asAt).map((journey: any) => journey.platformUserId));
+  const activatedUsers = platformUsers.filter((user: any) => startedUserIds.has(user.id));
+  const activated = activatedUsers.length;
 
   const cumulativeMonthlySaving = cumulativeCompleted.reduce((sum: number, journey: any) => sum + (journey.monthlySavingCents ?? 0), 0);
   const flowMonthlySaving = flowCompleted.reduce((sum: number, journey: any) => sum + (journey.monthlySavingCents ?? 0), 0);
@@ -642,6 +642,7 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
   const ratingPct: Record<number, number> = {};
   for (let stars = 1; stars <= 5; stars++) ratingPct[stars] = ratingResponses ? Math.round(ratingDistribution[stars] / ratingResponses * 100) : 0;
   const fiveStarPct = ratingPct[5];
+  const nps = ratingResponses ? Math.round((ratingDistribution[5] / ratingResponses - (ratingDistribution[1] + ratingDistribution[2] + ratingDistribution[3]) / ratingResponses) * 100) : null;
 
   const challengeRows = debts.filter((debt: any) => debt.challengeStatus);
   const challengeOrder = ["IDENTIFIED", "LETTER_SENT", "CREDITOR_CONCEDED", "WRITTEN_OFF"];
@@ -809,7 +810,6 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
   };
 
   let priorScore: number | null = null;
-  let priorPayload: any = null;
   if (!filter.site && !filter.income) {
     const periodKey = filter.period ?? currentPeriod();
     const prior = await prisma.scoreSnapshot.findFirst({
@@ -817,12 +817,7 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
       orderBy: { period: "desc" },
     });
     priorScore = prior?.optimiseScore ?? null;
-    priorPayload = prior?.payload ?? null;
   }
-
-  const priorKpis = priorPayload?.kpis ?? {};
-  const metricDelta = (current: number | null, previous: number | null): number | null =>
-    current != null && previous != null ? Number((current - previous).toFixed(1)) : null;
 
   const sectionAvailability = {
     workforce: headcountDataAvailable,
@@ -971,10 +966,10 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
       guided: { rand: rand(guided.rand), employees: guided.employees, label: "Self-managed via guidance", note: "educated on prescription where no arrangement was affordable" },
     },
     kpis: {
-      takeUp: { pct: kpiAvailability.takeUp ? pct(enrolled) : null, enrolled: kpiAvailability.takeUp ? enrolled : null, delta: metricDelta(kpiAvailability.takeUp ? pct(enrolled) : null, priorKpis.takeUp?.pct), available: kpiAvailability.takeUp },
-      activated: { pct: kpiAvailability.activated ? pct(activated) : null, count: kpiAvailability.activated ? activated : null, delta: metricDelta(kpiAvailability.activated ? pct(activated) : null, priorKpis.activated?.pct), available: kpiAvailability.activated },
-      monthlySaving: { rand: kpiAvailability.monthlySaving ? rand(cumulativeMonthlySaving) : null, perHead: kpiAvailability.monthlySaving ? rand(averagePerActive) : null, delta: metricDelta(kpiAvailability.monthlySaving ? rand(cumulativeMonthlySaving) : null, priorKpis.monthlySaving?.rand), available: kpiAvailability.monthlySaving },
-      avgRating: { val: kpiAvailability.avgRating ? Number(avgRating.toFixed(1)) : null, responses: kpiAvailability.avgRating ? ratingResponses : null, delta: metricDelta(kpiAvailability.avgRating ? Number(avgRating.toFixed(1)) : null, priorKpis.avgRating?.val), available: kpiAvailability.avgRating },
+      takeUp: { pct: kpiAvailability.takeUp ? pct(enrolled) : null, enrolled: kpiAvailability.takeUp ? enrolled : null, available: kpiAvailability.takeUp },
+      activated: { pct: kpiAvailability.activated ? pct(activated) : null, count: kpiAvailability.activated ? activated : null, available: kpiAvailability.activated },
+      monthlySaving: { rand: kpiAvailability.monthlySaving ? rand(cumulativeMonthlySaving) : null, perHead: kpiAvailability.monthlySaving ? rand(averagePerActive) : null, available: kpiAvailability.monthlySaving },
+      avgRating: { val: kpiAvailability.avgRating ? Number(avgRating.toFixed(1)) : null, responses: kpiAvailability.avgRating ? ratingResponses : null, available: kpiAvailability.avgRating },
     },
     funnel: [
       { label: "Eligible workforce", sub: "as at range end", n: headcountDataAvailable ? headcount : null, pct: headcountDataAvailable ? 100 : null, available: headcountDataAvailable },
@@ -1002,7 +997,7 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
     ewa: { ...ewa, available: sectionAvailability.ewa },
     riskSignals,
     opportunities,
-    ratings: { avg: sectionAvailability.ratings ? Number(avgRating.toFixed(1)) : null, dist: ratingPct, fiveStarPct: sectionAvailability.ratings ? fiveStarPct : null, responses: sectionAvailability.ratings ? ratingResponses : null, available: sectionAvailability.ratings },
+    ratings: { avg: sectionAvailability.ratings ? Number(avgRating.toFixed(1)) : null, dist: ratingPct, fiveStarPct: sectionAvailability.ratings ? fiveStarPct : null, nps: sectionAvailability.ratings ? nps : null, responses: sectionAvailability.ratings ? ratingResponses : null, available: sectionAvailability.ratings },
     prescription: {
       available: sectionAvailability.debt,
       total: zarM(challengedBalance),
