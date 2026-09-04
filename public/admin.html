@@ -7,8 +7,6 @@
 <link rel="stylesheet" href="/static/portal-nav-v054.css?v=0.5.4">
 <link rel="stylesheet" href="/static/ui-enhance-v1.css?v=1">
 <link rel="stylesheet" href="/static/responsive-v1.css?v=1">
-<link rel="stylesheet" href="/static/dark-mode-v1.css?v=1">
-<script src="/static/dark-mode-v1.js?v=1"></script>
 <title>empower-fin Dashboard Portal — Administration</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap');
@@ -89,9 +87,27 @@
   .integration-panel-title{font-size:13px;font-weight:800;color:var(--navy);margin:2px 0 2px;grid-column:span 2;}
   @media(max-width:720px){.source-mode-grid{grid-template-columns:1fr}.integration-two-col{grid-template-columns:1fr!important}.integration-two-col label[style*="grid-column:span 2"],.integration-panel-title{grid-column:span 1!important}}
 
+  /* ── welcome splash (shown briefly right after sign-in) ── */
+  #welcome-splash{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:radial-gradient(1200px 700px at 50% -10%, rgba(177,91,232,.18), transparent 60%), linear-gradient(160deg,#f3f7fb 0%,#eef2ff 100%);transition:opacity .45s ease, visibility .45s ease;}
+  #welcome-splash.hide{opacity:0;visibility:hidden;pointer-events:none;}
+  .welcome-splash-inner{text-align:center;}
+  .welcome-splash-logo{height:40px;width:auto;margin-bottom:22px;opacity:.94;}
+  .welcome-splash-spinner{width:32px;height:32px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--blue);margin:0 auto 20px;animation:welcome-spin .8s linear infinite;}
+  @keyframes welcome-spin{to{transform:rotate(360deg);}}
+  .welcome-splash-greeting{font-family:'Fraunces',serif;font-weight:600;font-size:26px;color:var(--navy);}
+  .welcome-splash-sub{margin-top:6px;font-size:13.5px;color:var(--grey);font-weight:600;}
 </style>
 </head>
-<body data-portal-build="0.5.3">
+<body data-portal-build="0.5.4">
+<div id="welcome-splash">
+  <div class="welcome-splash-inner">
+    <img id="welcome-splash-logo" class="welcome-splash-logo" src="/static/logo-large.png" alt="">
+    <div class="welcome-splash-spinner"></div>
+    <div class="welcome-splash-greeting" id="welcome-splash-greeting">Welcome</div>
+    <div class="welcome-splash-sub">Loading Administration…</div>
+  </div>
+</div>
+<script>setTimeout(function(){var e=document.getElementById('welcome-splash');if(e)e.classList.add('hide');},4500);</script>
 <div class="topbar"><div class="topbar-inner">
   <img src="/static/logo.png" alt="empower-fin Dashboard Portal" style="height:30px;width:auto;">
   <span class="pill">Administration</span>
@@ -228,20 +244,10 @@
 
       <!-- system email and scheduled reporting -->
       <div class="card section-gap" id="email-settings-card">
-        <div class="card-hd"><h2>System Email &amp; Scheduled Reports</h2><div class="note">Resend or SMTP delivery used by scheduled employer reports</div></div>
+        <div class="card-hd"><h2>System Email &amp; Scheduled Reports</h2><div class="note">SMTP or Resend delivery used by scheduled employer reports</div></div>
         <div class="card-bd">
           <div id="mail-status" class="banner ok" style="display:none;margin-bottom:14px;"></div>
-          <div style="margin-bottom:16px;display:flex;gap:8px;">
-            <button type="button" id="mail-provider-smtp" class="btn btn-ghost" onclick="setEmailProvider('smtp')">SMTP</button>
-            <button type="button" id="mail-provider-resend" class="btn btn-ghost" onclick="setEmailProvider('resend')">Resend (API key)</button>
-          </div>
-          <div id="mail-resend-fields" style="display:none;max-width:420px;margin-bottom:14px;">
-            <label style="font-size:12.5px;font-weight:700;color:#5b6b7a;">Resend API key
-              <input id="mail-resend-key" type="password" autocomplete="new-password" placeholder="re_xxxxxxxx — leave blank to keep existing" style="display:block;width:100%;margin-top:5px;font:inherit;font-weight:500;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">
-            </label>
-            <div class="muted" style="font-size:12px;margin-top:6px;">From email below still needs to be a domain you've verified in Resend. SMTP fields aren't used while Resend is selected.</div>
-          </div>
-          <div class="integration-two-col" id="mail-smtp-fields" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:820px;">
+          <div class="integration-two-col" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:820px;">
             <div class="integration-panel-title">SMTP connection</div>
             <label style="font-size:12.5px;font-weight:700;color:#5b6b7a;">SMTP host
               <input id="mail-host" placeholder="smtp.office365.com" style="display:block;width:100%;margin-top:5px;font:inherit;font-weight:500;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">
@@ -255,8 +261,6 @@
             <label style="font-size:12.5px;font-weight:700;color:#5b6b7a;">SMTP password
               <input id="mail-password" type="password" autocomplete="new-password" placeholder="leave blank to keep existing" style="display:block;width:100%;margin-top:5px;font:inherit;font-weight:500;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">
             </label>
-          </div>
-          <div class="integration-two-col" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:820px;margin-top:14px;">
             <label style="font-size:12.5px;font-weight:700;color:#5b6b7a;">From name
               <input id="mail-from-name" value="empower-fin Dashboard Portal" style="display:block;width:100%;margin-top:5px;font:inherit;font-weight:500;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">
             </label>
@@ -294,33 +298,15 @@
 
       <!-- admin audit log -->
       <div class="card section-gap">
-        <div class="card-hd"><h2>Admin Audit Log</h2><div class="note">Every admin change — who, what, when. Showing the most recent 20.</div></div>
+        <div class="card-hd"><h2>Admin Audit Log</h2><div class="note">Every admin change — who, what, when</div></div>
         <div class="card-bd">
-          <div style="margin-bottom:10px;"><a class="btn btn-ghost" href="/api/admin/export/audit-log" download>Download full audit log (CSV)</a></div>
           <div style="overflow:auto;"><table class="hist"><thead><tr><th>When</th><th>Admin</th><th>Action</th><th>Details</th></tr></thead><tbody id="audit-rows"><tr><td colspan="4" class="muted" style="padding:10px;">Loading…</td></tr></tbody></table></div>
-        </div>
-      </div>
-
-      <!-- data export -->
-      <div class="card section-gap">
-        <div class="card-hd"><h2>Export Data</h2><div class="note">Download the current underlying data as CSV — leave employer blank for everything</div></div>
-        <div class="card-bd">
-          <label style="font-size:12.5px;font-weight:700;color:#5b6b7a;display:block;max-width:340px;margin-bottom:14px;">Scope to one employer (optional)
-            <select id="export-employer" style="display:block;width:100%;margin-top:5px;font:inherit;font-weight:500;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;"><option value="">All employers</option></select>
-          </label>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <a class="btn btn-ghost" id="export-employees" href="#" download>Employees (CSV)</a>
-            <a class="btn btn-ghost" id="export-debt" href="#" download>Debt accounts (CSV)</a>
-            <a class="btn btn-ghost" id="export-insurance" href="#" download>Insurance policies (CSV)</a>
-            <a class="btn btn-ghost" id="export-scores" href="#" download>Score snapshots (CSV)</a>
-            <a class="btn btn-ghost" href="/api/admin/export/users" download>Users (CSV)</a>
-          </div>
         </div>
       </div>
 
       <!-- automations -->
       <div class="card section-gap">
-          <div class="card-hd"><h2>Automations</h2><div class="note">Alerts, auto-cleanup and digests use the email settings above</div></div>
+        <div class="card-hd"><h2>Automations</h2><div class="note">Alerts, auto-cleanup and digests — uses the SMTP settings above</div></div>
         <div class="card-bd">
           <div id="auto-status" class="banner ok" style="display:none;margin-bottom:14px;"></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:820px;" class="integration-two-col">
@@ -430,6 +416,22 @@ let MANIFEST = null, CURRENT = null, LAST_BATCH = null;
 
 const $ = s => document.querySelector(s);
 const fmtDate = d => d ? new Date(d).toLocaleString('en-ZA',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '—';
+
+// brief "Hi <name>" splash right after sign-in — once per browser tab session
+function handleWelcomeSplash(me){
+  const el=document.getElementById('welcome-splash');
+  if(!el) return;
+  let already=false;
+  try{ already = sessionStorage.getItem('ef_splash_shown')==='1'; }catch(_){}
+  if(already){ el.classList.add('hide'); return; }
+  const greet=document.getElementById('welcome-splash-greeting');
+  const first=(me.name||'').trim().split(/\s+/)[0]||'there';
+  if(greet) greet.textContent='Hi '+first+' \uD83D\uDC4B';
+  const logo=document.getElementById('welcome-splash-logo');
+  if(logo && me.theme && me.theme.logoDataUrl) logo.src=me.theme.logoDataUrl;
+  try{ sessionStorage.setItem('ef_splash_shown','1'); }catch(_){}
+  setTimeout(()=>el.classList.add('hide'), 700);
+}
 
 function addNav(me){
   if(window.EmpowerPortalNav){
@@ -568,17 +570,8 @@ async function loadIntegLogs(){
 
 
 // ── system email / SMTP and scheduled reports ──
-let CURRENT_EMAIL_PROVIDER='smtp';
-function setEmailProvider(p){
-  CURRENT_EMAIL_PROVIDER=p;
-  $('#mail-provider-smtp').classList.toggle('btn-primary', p==='smtp');
-  $('#mail-provider-resend').classList.toggle('btn-primary', p==='resend');
-  $('#mail-smtp-fields').style.display = p==='smtp' ? 'grid' : 'none';
-  $('#mail-resend-fields').style.display = p==='resend' ? 'block' : 'none';
-}
 function emailDraft(){
   const body={
-    emailProvider: CURRENT_EMAIL_PROVIDER,
     smtpHost: $('#mail-host').value.trim(),
     smtpPort: parseInt($('#mail-port').value)||587,
     smtpSecure: $('#mail-secure').checked,
@@ -592,27 +585,25 @@ function emailDraft(){
     portalBaseUrl: $('#mail-portal-url').value.trim(),
   };
   const password=$('#mail-password').value.trim(); if(password) body.smtpPassword=password;
-  const resendKey=$('#mail-resend-key').value.trim(); if(resendKey) body.resendApiKey=resendKey;
   return body;
 }
 async function loadEmailSettings(){
   try{
     const r=await fetch(`${API}/api/admin/email-settings`); const c=await r.json(); if(!r.ok) throw new Error(c.error||'Could not load email settings');
-    setEmailProvider(c.emailProvider||'smtp');
-    if(c.hasResendApiKey) $('#mail-resend-key').placeholder=c.resendApiKeyFromEnvironment?'•••••• (provided by RESEND_API_KEY)':'•••••• (saved — leave blank to keep)';
     $('#mail-host').value=c.smtpHost||''; $('#mail-port').value=c.smtpPort||587; $('#mail-user').value=c.smtpUsername||'';
     $('#mail-from-name').value=c.fromName||'empower-fin Dashboard Portal'; $('#mail-from-email').value=c.fromEmail||''; $('#mail-reply-to').value=c.replyTo||'';
     $('#mail-timezone').value=c.defaultTimezone||'Africa/Johannesburg'; $('#mail-portal-url').value=c.portalBaseUrl||'';
     $('#mail-secure').checked=!!c.smtpSecure; $('#mail-require-tls').checked=c.smtpRequireTls!==false; $('#mail-reject-unauth').checked=c.smtpRejectUnauthorized!==false;
     if(c.hasPassword) $('#mail-password').placeholder=c.passwordFromEnvironment?'•••••• (provided by SMTP_PASSWORD)':'•••••• (saved — leave blank to keep)';
     const st=$('#mail-status'); st.style.display='block'; st.className='banner '+(c.configured?'ok':'');
-    st.textContent=c.configured?`Email delivery is configured (via ${c.emailProvider==='resend'?'Resend':'SMTP'}).`:'Email setup is incomplete. Scheduled reports and alerts cannot send until the required fields are configured.';
+    const provider=c.emailProvider==='resend'?'Resend API':'SMTP';
+    st.textContent=c.configured?`${provider} is configured for scheduled report delivery.`:`${provider} setup is incomplete. Scheduled reports cannot send until the required fields are configured.`;
     if(c.lastTestAt) st.textContent+=` Last test: ${c.lastTestStatus||'—'} · ${fmtDate(c.lastTestAt)}${c.lastTestNote?' — '+c.lastTestNote:''}`;
     $('#auto-alert-emails').value=c.alertEmails||''; $('#auto-slack-webhook').value=c.alertSlackWebhookUrl||'';
     $('#auto-stale-days').value=c.staleDeactivateDays||''; $('#auto-digest-enabled').checked=!!c.digestEnabled;
     $('#auto-score-enabled').checked=c.scoreChangeAlertsEnabled!==false;
     const as=$('#auto-status'); as.style.display='block'; as.className='banner ok';
-    let asText='Automations use the email settings above to send.';
+    let asText=`Automations use the ${provider} settings above to send.`;
     if(c.lastStaleCheckAt) asText+=` Last stale-account check: ${fmtDate(c.lastStaleCheckAt)}.`;
     if(c.lastDigestSentAt) asText+=` Last digest sent: ${fmtDate(c.lastDigestSentAt)}.`;
     as.textContent=asText;
@@ -624,12 +615,12 @@ async function saveEmailSettings(){
   try{
     const r=await fetch(`${API}/api/admin/email-settings`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(emailDraft())});
     const d=await r.json(); if(!r.ok) throw new Error(d.error||'Save failed');
-    $('#mail-password').value=''; $('#mail-resend-key').value=''; $('#mail-result').innerHTML='<div class="banner ok">✓ Email settings saved.</div>'; loadEmailSettings();
+    $('#mail-password').value=''; $('#mail-result').innerHTML='<div class="banner ok">✓ Email settings saved.</div>'; loadEmailSettings();
   }catch(e){ $('#mail-result').innerHTML=`<div class="banner err">✕ ${e.message}</div>`; }
 }
 async function testEmailSettings(){
   const recipient=$('#mail-test-recipient').value.trim();
-  $('#mail-result').innerHTML='<div class="banner ok">Testing and sending a test email…</div>';
+  $('#mail-result').innerHTML='<div class="banner ok">Testing email delivery and sending a test email…</div>';
   try{
     const body={...emailDraft(),recipient};
     const r=await fetch(`${API}/api/admin/email-settings/test`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); const d=await r.json();
@@ -686,27 +677,11 @@ async function loadEmailDeliveries(){
   }catch(e){ tb.innerHTML=`<tr><td colspan="4" class="muted" style="padding:10px;color:#b5391f;">${e.message}</td></tr>`; }
 }
 
-// ── data export ──
-function populateExportEmployers(me){
-  const sel=$('#export-employer'); if(!sel) return;
-  const employers=Array.isArray(me.employers)?me.employers:[];
-  sel.innerHTML='<option value="">All employers</option>'+employers.map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
-  sel.addEventListener('change', updateExportLinks);
-  updateExportLinks();
-}
-function updateExportLinks(){
-  const id=$('#export-employer')?.value||'';
-  const q=id?`?employer=${encodeURIComponent(id)}`:'';
-  [['export-employees','employees'],['export-debt','debt-accounts'],['export-insurance','insurance-policies'],['export-scores','score-snapshots']].forEach(([elId,type])=>{
-    const el=$('#'+elId); if(el) el.href=`/api/admin/export/${type}${q}`;
-  });
-}
-
 // ── admin audit log ──
 async function loadAuditLog(){
   const rows=$('#audit-rows'); if(!rows) return;
   try{
-    const log=await fetch(`${API}/api/admin/audit-log?limit=20`).then(r=>r.json());
+    const log=await fetch(`${API}/api/admin/audit-log?limit=150`).then(r=>r.json());
     if(!Array.isArray(log) || !log.length){ rows.innerHTML='<tr><td colspan="4" class="muted" style="padding:10px;">No admin changes recorded yet.</td></tr>'; return; }
     rows.innerHTML=log.map(l=>`<tr>
       <td class="muted" style="white-space:nowrap;">${fmtDate(l.createdAt)}</td>
@@ -807,14 +782,11 @@ function renderPartners(){
         <div style="font-weight:800;font-size:15px;color:#32217c;flex:1;">${p.name}</div>
         <span class="muted" style="font-size:12px;">${p._count.users} users · ${p._count.employers} employers · /p/${p.slug}</span>
       </div>
-      <div id="pt-preview-${p.id}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:12px;border:1px solid ${ac};border-radius:9px;background:${pc};color:#fff;">
-        <strong style="font-size:12px;">${p.displayName||p.name}</strong><span style="opacity:.82;font-size:11px;">Dashboard preview</span><span style="margin-left:auto;padding:5px 9px;border-radius:6px;background:${ac};font-size:10px;font-weight:800;">Employer view</span>
-      </div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr) 2fr;gap:10px;align-items:end;">
-        <label style="font-size:11.5px;font-weight:700;color:#5b6b7a;">Primary<input type="color" value="${pc}" oninput="previewPartner('${p.id}')" onchange="editPartner('${p.id}','primaryColor',this.value)" style="display:block;width:100%;height:34px;border:1px solid #e8e1f7;border-radius:7px;margin-top:4px;"></label>
-        <label style="font-size:11.5px;font-weight:700;color:#5b6b7a;">Accent<input type="color" value="${ac}" oninput="previewPartner('${p.id}')" onchange="editPartner('${p.id}','accentColor',this.value)" style="display:block;width:100%;height:34px;border:1px solid #e8e1f7;border-radius:7px;margin-top:4px;"></label>
-        <label style="font-size:11.5px;font-weight:700;color:#5b6b7a;">Navy<input type="color" value="${nv}" oninput="previewPartner('${p.id}')" onchange="editPartner('${p.id}','navyColor',this.value)" style="display:block;width:100%;height:34px;border:1px solid #e8e1f7;border-radius:7px;margin-top:4px;"></label>
-        <label style="font-size:11.5px;font-weight:700;color:#5b6b7a;">Display name<input value="${p.displayName||''}" oninput="previewPartner('${p.id}')" onchange="editPartner('${p.id}','displayName',this.value)" style="display:block;width:100%;padding:7px 10px;border:1px solid #e8e1f7;border-radius:7px;margin-top:4px;font:inherit;"></label>
+        <label style="font-size:11.5px;font-weight:700;color:#5b6b7a;">Primary<input type="color" value="${pc}" onchange="editPartner('${p.id}','primaryColor',this.value)" style="display:block;width:100%;height:34px;border:1px solid #e8e1f7;border-radius:7px;margin-top:4px;"></label>
+        <label style="font-size:11.5px;font-weight:700;color:#5b6b7a;">Accent<input type="color" value="${ac}" onchange="editPartner('${p.id}','accentColor',this.value)" style="display:block;width:100%;height:34px;border:1px solid #e8e1f7;border-radius:7px;margin-top:4px;"></label>
+        <label style="font-size:11.5px;font-weight:700;color:#5b6b7a;">Navy<input type="color" value="${nv}" onchange="editPartner('${p.id}','navyColor',this.value)" style="display:block;width:100%;height:34px;border:1px solid #e8e1f7;border-radius:7px;margin-top:4px;"></label>
+        <label style="font-size:11.5px;font-weight:700;color:#5b6b7a;">Display name<input value="${p.displayName||''}" onchange="editPartner('${p.id}','displayName',this.value)" style="display:block;width:100%;padding:7px 10px;border:1px solid #e8e1f7;border-radius:7px;margin-top:4px;font:inherit;"></label>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;align-items:end;">
         <label style="font-size:11.5px;font-weight:700;color:#5b6b7a;">Tagline (optional)<input value="${p.tagline||''}" onchange="editPartner('${p.id}','tagline',this.value)" style="display:block;width:100%;padding:7px 10px;border:1px solid #e8e1f7;border-radius:7px;margin-top:4px;font:inherit;"></label>
@@ -828,16 +800,6 @@ function renderPartners(){
       <div style="margin-top:10px;text-align:right;"><button class="btn btn-ghost" style="color:#b5391f;font-size:12px;" onclick="deletePartner('${p.id}','${p.name.replace(/'/g,"")}')">Delete partner</button></div>
     </div>`;
   }).join('');
-}
-function previewPartner(id){
-  const card=document.getElementById('pt-preview-'+id); if(!card) return;
-  const inputs=card.parentElement.querySelectorAll('input');
-  const colors=[...inputs].filter(input=>input.type==='color').map(input=>input.value);
-  const name=[...inputs].find(input=>input.type!=='color')?.value.trim()||'Partner dashboard';
-  card.style.background=colors[0]||'#32217c';
-  card.style.borderColor=colors[1]||'#b15be8';
-  const label=card.querySelector('strong'); if(label) label.textContent=name;
-  const button=card.querySelector('span:last-child'); if(button) button.style.background=colors[1]||'#b15be8';
 }
 async function editPartner(id,field,value){
   if(field.endsWith('Color')) value=value.replace(/^#/,'');
@@ -979,8 +941,8 @@ async function boot(){
   try{ const r=await fetch('/api/auth/me'); if(!r.ok){ location.href='/login'; return; } me=await r.json(); }
   catch(e){ location.href='/login'; return; }
   if(!me.modules.admin){ location.href='/dashboard'; return; }
+  handleWelcomeSplash(me);
   addNav(me);
-  populateExportEmployers(me);
   try{
     const r = await fetch(`${API}/api/admin/reports`);
     MANIFEST = await r.json();
