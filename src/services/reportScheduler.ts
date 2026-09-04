@@ -11,8 +11,9 @@ export type ReportFilters = {
 };
 
 type EmailDraft = {
-  emailProvider?: "smtp" | "resend" | null;
+  emailProvider?: "smtp" | "resend";
   resendApiKey?: string | null;
+  resendFromEmail?: string | null;
   smtpHost?: string | null;
   smtpPort?: number | null;
   smtpSecure?: boolean;
@@ -66,6 +67,9 @@ function withEnv(cfg: any, draft: EmailDraft = {}) {
   const envString = (name: string) => process.env[name] === undefined ? undefined : clean(process.env[name]);
   const envPort = process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : undefined;
   return {
+    emailProvider: pick(draft.emailProvider, (envString("EMAIL_PROVIDER") || "smtp") as "smtp" | "resend", cfg.emailProvider || "smtp"),
+    resendApiKey: pick(draftString("resendApiKey") as any, envString("RESEND_API_KEY") as any, undefined),
+    resendFromEmail: pick(draftString("resendFromEmail") as any, envString("RESEND_FROM_EMAIL") as any, undefined),
     smtpHost: pick(draftString("smtpHost") as any, envString("SMTP_HOST") as any, cfg.smtpHost),
     smtpPort: pick(draft.smtpPort ?? undefined, Number.isFinite(envPort) ? envPort : undefined, cfg.smtpPort),
     smtpSecure: pick(draft.smtpSecure, boolEnv("SMTP_SECURE"), cfg.smtpSecure),
@@ -79,9 +83,6 @@ function withEnv(cfg: any, draft: EmailDraft = {}) {
     defaultTimezone: pick(draftString("defaultTimezone") as any, envString("REPORT_TIMEZONE") as any, cfg.defaultTimezone),
     portalBaseUrl: pick(draftString("portalBaseUrl") as any, envString("PORTAL_BASE_URL") as any, cfg.portalBaseUrl),
     passwordFromEnvironment: Boolean(envString("SMTP_PASSWORD")),
-    emailProvider: pick(draftString("emailProvider") as any, envString("EMAIL_PROVIDER") as any, cfg.emailProvider) || "smtp",
-    resendApiKey: pick(draftString("resendApiKey") as any, envString("RESEND_API_KEY") as any, cfg.resendApiKey),
-    resendApiKeyFromEnvironment: Boolean(envString("RESEND_API_KEY")),
   };
 }
 
@@ -90,8 +91,7 @@ export async function publicEmailConfig() {
   const resolved = withEnv(cfg);
   return {
     emailProvider: resolved.emailProvider,
-    hasResendApiKey: Boolean(resolved.resendApiKey),
-    resendApiKeyFromEnvironment: resolved.resendApiKeyFromEnvironment,
+    resendConfigured: Boolean(resolved.emailProvider === "resend" && resolved.resendApiKey),
     smtpHost: resolved.smtpHost,
     smtpPort: resolved.smtpPort,
     smtpSecure: resolved.smtpSecure,
@@ -106,7 +106,7 @@ export async function publicEmailConfig() {
     defaultTimezone: resolved.defaultTimezone,
     portalBaseUrl: resolved.portalBaseUrl,
     configured: resolved.emailProvider === "resend"
-      ? Boolean(resolved.resendApiKey && resolved.fromEmail)
+      ? Boolean(resolved.resendApiKey && (resolved.resendFromEmail || resolved.fromEmail))
       : Boolean(resolved.smtpHost && resolved.smtpPort && resolved.fromEmail && (!resolved.smtpUsername || resolved.smtpPassword)),
     lastTestAt: cfg.lastTestAt,
     lastTestStatus: cfg.lastTestStatus,
@@ -126,12 +126,6 @@ export async function publicEmailConfig() {
 export async function saveEmailConfig(input: EmailDraft) {
   const current = await getEmailConfig();
   const data: any = {};
-  if ("emailProvider" in input) {
-    const p = clean(input.emailProvider);
-    if (p && p !== "smtp" && p !== "resend") throw new Error('email provider must be "smtp" or "resend"');
-    data.emailProvider = p || "smtp";
-  }
-  if (clean(input.resendApiKey)) data.resendApiKey = clean(input.resendApiKey);
   if ("smtpHost" in input) data.smtpHost = clean(input.smtpHost);
   if ("smtpPort" in input && input.smtpPort != null) data.smtpPort = Math.max(1, Math.min(65535, Number(input.smtpPort)));
   if ("smtpSecure" in input) data.smtpSecure = Boolean(input.smtpSecure);
@@ -183,48 +177,46 @@ async function smtpTransport(draft: EmailDraft = {}) {
   return { transporter, cfg };
 }
 
-// Resend (https://resend.com) — a plain HTTPS API call, no SMTP needed.
-// Simpler and more reliable than SMTP from most PaaS hosts (including
-// Railway), which is why it's offered as an alternative provider.
-async function sendViaResend(cfg: any, opts: { to: string; subject: string; html: string; replyTo?: string }) {
-  if (!cfg.resendApiKey) throw new Error("Resend API key is required");
-  if (!cfg.fromEmail || !emailOk(cfg.fromEmail)) throw new Error("A valid From email is required");
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { "Authorization": `Bearer ${cfg.resendApiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      from: cfg.fromName ? `${cfg.fromName} <${cfg.fromEmail}>` : cfg.fromEmail,
-      to: [opts.to],
-      reply_to: opts.replyTo || cfg.replyTo || undefined,
-      subject: opts.subject,
-      html: opts.html,
-    }),
-  });
-  if (!res.ok) {
-    let detail = "";
-    try { detail = (await res.json())?.message || ""; } catch { /* ignore parse failure */ }
-    throw new Error(`Resend API error (${res.status})${detail ? `: ${detail}` : ""}`);
+async function sendEmail(opts: { to: string | string[]; subject: string; html: string; replyTo?: string }, draft: EmailDraft = {}) {
+  const saved = await getEmailConfig();
+  const cfg = withEnv(saved, draft);
+  const fromEmail = cfg.resendFromEmail || cfg.fromEmail;
+  if (cfg.emailProvider === "resend") {
+    if (!cfg.resendApiKey) throw new Error("RESEND_API_KEY is required when EMAIL_PROVIDER=resend");
+    if (!fromEmail || !emailOk(fromEmail)) throw new Error("A valid Resend From email is required");
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${cfg.resendApiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from: `${cfg.fromName || "empower-fin Dashboard Portal"} <${fromEmail}>`,
+        to: Array.isArray(opts.to) ? opts.to : [opts.to],
+        reply_to: opts.replyTo || cfg.replyTo || undefined,
+        subject: opts.subject,
+        html: opts.html,
+      }),
+    });
+    if (!response.ok) {
+      const detail = await response.text();
+      throw new Error(`Resend request failed (${response.status}): ${detail.slice(0, 500)}`);
+    }
+    return cfg;
   }
+  const { transporter } = await smtpTransport(draft);
+  await transporter.sendMail({
+    from: { name: cfg.fromName || "empower-fin Dashboard Portal", address: cfg.fromEmail! },
+    to: opts.to,
+    replyTo: opts.replyTo || cfg.replyTo || undefined,
+    subject: opts.subject,
+    html: opts.html,
+  });
+  return cfg;
 }
 
 // reusable low-level sender — used for scheduled reports AND for one-off
 // transactional emails like "set your password" links (see userService.ts).
-// Uses the same admin-configured provider (SMTP or Resend) as everything else.
+// Uses the same admin-configured SMTP settings as everything else.
 export async function sendMail(opts: { to: string; subject: string; html: string; replyTo?: string }) {
-  const saved = await getEmailConfig();
-  const cfg = withEnv(saved);
-  if (cfg.emailProvider === "resend") {
-    await sendViaResend(cfg, opts);
-    return;
-  }
-  const { transporter, cfg: smtpCfg } = await smtpTransport();
-  await transporter.sendMail({
-    from: { name: smtpCfg.fromName || "empower-fin Dashboard Portal", address: smtpCfg.fromEmail! },
-    to: opts.to,
-    replyTo: opts.replyTo || smtpCfg.replyTo || undefined,
-    subject: opts.subject,
-    html: opts.html,
-  });
+  await sendEmail(opts);
 }
 
 export async function portalBaseUrl(): Promise<string | null> {
@@ -236,28 +228,16 @@ export async function testEmailConnection(draft: EmailDraft & { recipient?: stri
   const recipient = clean(draft.recipient);
   if (!recipient || !emailOk(recipient)) throw new Error("Enter a valid test recipient email");
   const now = new Date();
-  const provider = clean(draft.emailProvider) || (await getEmailConfig()).emailProvider || "smtp";
   try {
-    if (provider === "resend") {
-      const saved = await getEmailConfig();
-      const cfg = withEnv(saved, draft);
-      await sendViaResend(cfg, {
-        to: recipient,
-        subject: "empower-fin Dashboard Portal — email test",
-        html: `<div style="font-family:Arial,sans-serif;color:#241536;max-width:620px"><h2 style="color:#32217c">Email delivery is working (via Resend)</h2><p>This test was sent successfully by the <strong>empower-fin Dashboard Portal</strong>.</p><p style="color:#6b7280;font-size:13px">${escapeHtml(now.toISOString())}</p></div>`,
-      });
-    } else {
-      const { transporter, cfg } = await smtpTransport(draft);
-      await transporter.verify();
-      await transporter.sendMail({
-        from: { name: cfg.fromName || "empower-fin Dashboard Portal", address: cfg.fromEmail! },
-        to: recipient,
-        replyTo: cfg.replyTo || undefined,
-        subject: "empower-fin Dashboard Portal — email test",
-        html: `<div style="font-family:Arial,sans-serif;color:#241536;max-width:620px"><h2 style="color:#32217c">Email delivery is working</h2><p>This test was sent successfully by the <strong>empower-fin Dashboard Portal</strong>.</p><p style="color:#6b7280;font-size:13px">${escapeHtml(now.toISOString())}</p></div>`,
-      });
-    }
-    await prisma.systemEmailConfig.update({ where: { id: "default" }, data: { lastTestAt: now, lastTestStatus: "SUCCESS", lastTestNote: `Test email sent to ${recipient} via ${provider}` } });
+    const saved = await getEmailConfig();
+    const cfg = withEnv(saved, draft);
+    if (cfg.emailProvider === "smtp") await (await smtpTransport(draft)).transporter.verify();
+    await sendEmail({
+      to: recipient,
+      subject: "empower-fin Dashboard Portal — email test",
+      html: `<div style="font-family:Arial,sans-serif;color:#241536;max-width:620px"><h2 style="color:#32217c">Email delivery is working</h2><p>This test was sent successfully by the <strong>empower-fin Dashboard Portal</strong>.</p><p style="color:#6b7280;font-size:13px">${escapeHtml(now.toISOString())}</p></div>`,
+    }, draft);
+    await prisma.systemEmailConfig.update({ where: { id: "default" }, data: { lastTestAt: now, lastTestStatus: "SUCCESS", lastTestNote: `Test email sent to ${recipient}` } });
     return { ok: true, recipient };
   } catch (error: any) {
     await prisma.systemEmailConfig.update({ where: { id: "default" }, data: { lastTestAt: now, lastTestStatus: "FAILED", lastTestNote: String(error?.message || error).slice(0, 500) } });
@@ -441,18 +421,13 @@ async function sendSchedule(scheduleId: string, triggeredBy: "scheduled" | "manu
   const filters = (schedule.filters || {}) as ReportFilters;
   const payload = await getDashboardPayload(schedule.employerId, filters as any);
   const theme = await themeForEmployer(schedule.employerId);
-  const { transporter, cfg } = await smtpTransport();
+  const saved = await getEmailConfig();
+  const cfg = withEnv(saved);
   const recipients = (Array.isArray(schedule.recipients) ? schedule.recipients : [schedule.user.email]).map(String);
   const subject = `${schedule.employer.name} — ${payload.filterContext?.label || "Financial Wellbeing Report"}`;
   const html = reportHtml(payload, { ...schedule, portalBaseUrl: cfg.portalBaseUrl }, theme);
   try {
-    await transporter.sendMail({
-      from: { name: cfg.fromName || "empower-fin Dashboard Portal", address: cfg.fromEmail! },
-      to: recipients,
-      replyTo: cfg.replyTo || undefined,
-      subject,
-      html,
-    });
+    await sendEmail({ to: recipients, subject, html });
     await prisma.reportDeliveryLog.create({ data: { scheduleId: schedule.id, triggeredBy, status: "SENT", recipients: recipients as any, subject, filters: filters as any } });
     await prisma.reportSchedule.update({ where: { id: schedule.id }, data: { lastSentAt: new Date(), lastStatus: "SENT", lastError: null, consecutiveFailures: 0 } });
     return { ok: true, subject, recipients };
