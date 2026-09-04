@@ -42,9 +42,18 @@
   function removeLegacyThemeControls(){
     document.querySelectorAll('body > [data-theme-toggle], body > [data-dark-mode-toggle], body > .theme-toggle, body > .dark-mode-toggle, body > #theme-toggle, body > #dark-mode-toggle')
       .forEach(control=>control.remove());
+    document.querySelectorAll('body > *').forEach(control=>{
+      if(control.id==='welcome-splash' || control.classList.contains('portal-modal-overlay')) return;
+      const style=getComputedStyle(control);
+      const bottom=parseFloat(style.bottom), right=parseFloat(style.right);
+      if(style.position==='fixed' && Number.isFinite(bottom) && Number.isFinite(right) && bottom<=40 && right<=40){
+        control.remove();
+      }
+    });
   }
   applyTheme();
   removeLegacyThemeControls();
+  new MutationObserver(removeLegacyThemeControls).observe(document.documentElement,{childList:true,subtree:true});
 
   async function signOut(){
     try{ await fetch('/api/auth/logout',{method:'POST'}); }catch(_){ /* redirect anyway */ }
