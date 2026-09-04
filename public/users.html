@@ -7,12 +7,10 @@
 <link rel="stylesheet" href="/static/portal-nav-v054.css?v=0.5.4">
 <link rel="stylesheet" href="/static/ui-enhance-v1.css?v=1">
 <link rel="stylesheet" href="/static/responsive-v1.css?v=1">
-<link rel="stylesheet" href="/static/dark-mode-v1.css?v=1">
-<script src="/static/dark-mode-v1.js?v=1"></script>
 <title>empower-fin Dashboard Portal — Users</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap');
-  :root{--blue:#b15be8;--blue-d:#8e42bd;--navy:#32217c;--ice:#f3efff;--ice-2:#f4f9fd;--line:#e8e1f7;--line-soft:#f7f4ff;--ink:#0f2438;--grey:#5b6b7a;--grey-l:#8497a7;--green:#1fa463;--green-soft:#e7f7ef;--amber:#e8910c;--amber-soft:#fdf3e2;--red:#e0492f;--red-soft:#fdecea;--shadow:0 1px 2px rgba(13,42,71,.04),0 8px 24px rgba(13,42,71,.06);}
+  :root{--blue:#7d2fa3;--blue-d:#682487;--navy:#2b1b68;--ice:#eee8fb;--ice-2:#edf4fa;--line:#d7cde9;--line-soft:#e8e3f1;--ink:#0f2438;--grey:#425466;--grey-l:#617486;--green:#187a4d;--green-soft:#dff3e8;--amber:#9a5b00;--amber-soft:#fcedd4;--red:#b5391f;--red-soft:#fbe4df;--shadow:0 1px 2px rgba(13,42,71,.06),0 8px 24px rgba(13,42,71,.08);}
   *{box-sizing:border-box;margin:0;padding:0;}
   body{font-family:'Manrope',system-ui,sans-serif;color:var(--ink);background:radial-gradient(1100px 560px at 88% -10%,rgba(0,120,199,.07),transparent 60%),#f3f7fb;min-height:100vh;}
   .topbar{position:sticky;top:0;z-index:40;background:rgba(243,247,251,.86);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);}
@@ -35,14 +33,14 @@
   .btn-sm{padding:5px 11px;font-size:12px;}
   table{width:100%;border-collapse:collapse;font-size:13px;}
   th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line-soft);vertical-align:middle;}
-  th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--grey-l);font-weight:800;}
+  th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--grey);font-weight:800;}
   .role{font-size:11px;font-weight:800;padding:3px 9px;border-radius:6px;}
   .role.ADMIN{background:var(--amber-soft);color:var(--amber);}
   .role.EMPLOYER_VIEW{background:var(--ice);color:var(--blue-d);}
   .role.PORTFOLIO_VIEW{background:var(--green-soft);color:#137a47;}
   .chip{display:inline-block;font-size:11px;font-weight:700;background:var(--ice);color:var(--grey);padding:2px 8px;border-radius:6px;margin:2px 3px 2px 0;}
   .tag{font-size:11px;font-weight:800;padding:2px 8px;border-radius:6px;}
-  .tag.live{background:var(--green-soft);color:#137a47;}.tag.pend{background:var(--amber-soft);color:var(--amber);}.tag.off{background:#f1f1f4;color:#777;}
+  .tag.live{background:var(--green-soft);color:#137a47;}.tag.pend{background:var(--amber-soft);color:var(--amber);}.tag.off{background:#e2e4e8;color:#46515b;}
   label{display:block;font-size:12px;font-weight:700;color:var(--navy);margin:12px 0 5px;}
   input,select{width:100%;font-family:inherit;font-size:13.5px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fafcfe;}
   input:focus,select:focus{outline:none;border-color:var(--blue);background:#fff;}
@@ -287,7 +285,7 @@ function editUser(id){
   const roleOpts = ['EMPLOYER_VIEW','PORTFOLIO_VIEW','ADMIN'].map(r=>`<option value="${r}" ${u.role===r?'selected':''}>${r.replace('_',' ')}</option>`).join('');
   const tr=document.createElement('tr');
   tr.id='editor-'+id;
-  tr.innerHTML=`<td colspan="7" style="background:#f7fafd;padding:16px 14px;">
+  tr.innerHTML=`<td colspan="7" style="background:#eef3f8;padding:16px 14px;">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:760px;">
       <label style="font-size:12px;font-weight:700;color:#5b6b7a;">Full name
         <input id="e-name-${id}" value="${u.name.replace(/"/g,'&quot;')}" style="display:block;width:100%;margin-top:4px;padding:8px 11px;border:1px solid #e8e1f7;border-radius:8px;font:inherit;">
