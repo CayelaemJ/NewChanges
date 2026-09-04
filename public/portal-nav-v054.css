@@ -54,6 +54,18 @@ html.portal-dark select,
 html.portal-dark textarea,
 html.portal-dark .pf-filter-btn,
 html.portal-dark .schedule-mini{background:#202f40!important;color:#e7edf4!important;border-color:#46596d!important;}
+html.portal-dark .btn-primary,
+html.portal-dark .filter-emp,
+html.portal-dark .seg button.on,
+html.portal-dark .pf-chip.on,
+html.portal-dark table.pf-heat th.pf-mh.sort{background:#7d2fa3!important;color:#fff!important;border-color:#7d2fa3!important;}
+html.portal-dark .btn-primary:hover,
+html.portal-dark .filter-emp:hover{background:#9a55c2!important;border-color:#9a55c2!important;}
+html.portal-dark .source-mode-card{background:#182333!important;border-color:#344456!important;}
+html.portal-dark .source-mode-card:hover{background:#202f40!important;border-color:#8c6aaa!important;}
+html.portal-dark .source-mode-card.on{background:#263548!important;border-color:#c58af0!important;}
+html.portal-dark .source-mode-icon{background:#263548!important;color:#d5a9f5!important;}
+html.portal-dark .portal-account-avatar{background:linear-gradient(135deg,#7d2fa3,#39204f);}
 html.portal-dark .portal-nav-link.is-active{background:#202f40;color:#fff;border-color:#46596d;}
 html.portal-dark .metric-info{background:#263548;color:#f0dfff;border-color:#8c6aaa;}
 html.portal-dark .funnel-bar-bg,
@@ -110,5 +122,10 @@ html.portal-dark .portal-modal-cancel{background:#202f40;border-color:#46596d;co
   .portal-primary-nav{display:none;}
   .portal-mobile-links{display:block;}
   .portal-account-menu{width:min(270px,calc(100vw - 28px));}
+}
+@media(max-width:640px){
+  .topbar-meta .data-fresh-label{display:none;}
+  .audience-switch button{padding:6px 8px;font-size:11px;}
+  .portal-theme-quick{width:32px;height:32px;}
 }
 .portal-account-build{margin-top:7px;font-size:10px;font-weight:700;color:var(--grey-l,#8497a7);letter-spacing:.03em;}
