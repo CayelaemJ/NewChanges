@@ -679,6 +679,10 @@ enum AnalyticsEventType {
   PAGEVIEW
   SCROLL_DEPTH
   SESSION_END
+  CTA_CLICK
+  FORM_SUBMIT
+  OUTBOUND_CLICK
+  CLIENT_ERROR
 }
 
 model AnalyticsEvent {
