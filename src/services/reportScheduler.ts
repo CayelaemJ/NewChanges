@@ -92,6 +92,7 @@ export async function publicEmailConfig() {
   return {
     emailProvider: resolved.emailProvider,
     resendConfigured: Boolean(resolved.emailProvider === "resend" && resolved.resendApiKey),
+    resendFromEmail: resolved.resendFromEmail,
     smtpHost: resolved.smtpHost,
     smtpPort: resolved.smtpPort,
     smtpSecure: resolved.smtpSecure,
@@ -126,6 +127,12 @@ export async function publicEmailConfig() {
 export async function saveEmailConfig(input: EmailDraft) {
   const current = await getEmailConfig();
   const data: any = {};
+  if ("emailProvider" in input) {
+    if (input.emailProvider !== "smtp" && input.emailProvider !== "resend") throw new Error("email provider must be SMTP or Resend");
+    data.emailProvider = input.emailProvider;
+  }
+  if ("resendApiKey" in input && clean(input.resendApiKey)) data.resendApiKey = clean(input.resendApiKey);
+  if ("resendFromEmail" in input) data.resendFromEmail = clean(input.resendFromEmail);
   if ("smtpHost" in input) data.smtpHost = clean(input.smtpHost);
   if ("smtpPort" in input && input.smtpPort != null) data.smtpPort = Math.max(1, Math.min(65535, Number(input.smtpPort)));
   if ("smtpSecure" in input) data.smtpSecure = Boolean(input.smtpSecure);
@@ -152,6 +159,7 @@ export async function saveEmailConfig(input: EmailDraft) {
   if ("scoreChangeAlertsEnabled" in input) data.scoreChangeAlertsEnabled = Boolean(input.scoreChangeAlertsEnabled);
   if (data.fromEmail && !emailOk(data.fromEmail)) throw new Error("from email is not valid");
   if (data.replyTo && !emailOk(data.replyTo)) throw new Error("reply-to email is not valid");
+  if (data.resendFromEmail && !emailOk(data.resendFromEmail)) throw new Error("Resend From email is not valid");
   await prisma.systemEmailConfig.update({ where: { id: current.id }, data });
   return publicEmailConfig();
 }
