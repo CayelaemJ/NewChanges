@@ -24,6 +24,21 @@
     } catch (_) {}
   }
 
+  function labelFor(el) {
+    if (!el) return '';
+    return (el.getAttribute('aria-label') || el.getAttribute('name') || el.textContent || el.href || '')
+      .replace(/\s+/g, ' ').trim().slice(0, 180);
+  }
+
+  document.addEventListener('click', function (event) {
+    var target = event.target && event.target.closest ? event.target.closest('button, [role="button"], a') : null;
+    if (!target) return;
+    if (target.tagName === 'A' && target.hostname && target.hostname !== location.hostname) send('OUTBOUND_CLICK', null);
+    else if (target.tagName === 'BUTTON' || target.getAttribute('role') === 'button') send('CTA_CLICK', null);
+  }, true);
+  document.addEventListener('submit', function () { send('FORM_SUBMIT', null); }, true);
+  window.addEventListener('error', function () { send('CLIENT_ERROR', null); });
+
   function scrollDepthPct() {
     var doc = document.documentElement;
     var scrollable = Math.max(1, (doc.scrollHeight || 0) - (window.innerHeight || 0));
