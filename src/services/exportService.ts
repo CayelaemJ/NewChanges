@@ -7,7 +7,7 @@ import { prisma } from "./authService.js";
 
 function csvEscape(value: unknown): string {
   if (value == null) return "";
-  const s = value instanceof Date ? value.toISOString() : String(value);
+  const s = value instanceof Date ? value.toISOString() : typeof value === "object" ? JSON.stringify(value) : String(value);
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
@@ -18,8 +18,8 @@ export function toCsv(rows: Record<string, unknown>[], columns: string[]): strin
 }
 
 export async function exportAuditLogCsv() {
-  const rows = await prisma.adminAuditLog.findMany({ orderBy: { createdAt: "desc" }, take: 10000 });
-  return toCsv(rows as any, ["createdAt", "actorName", "actorEmail", "action", "targetType", "targetId", "summary"]);
+  const rows = await prisma.adminAuditLog.findMany({ orderBy: { createdAt: "desc" } });
+  return toCsv(rows as any, ["createdAt", "actorName", "actorEmail", "action", "targetType", "targetId", "summary", "detail"]);
 }
 
 export async function exportEmployeesCsv(employerId?: string) {
