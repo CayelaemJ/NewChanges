@@ -8,7 +8,7 @@
 
 import { prisma } from "./authService.js";
 
-type EventType = "PAGEVIEW" | "SCROLL_DEPTH" | "SESSION_END";
+type EventType = "PAGEVIEW" | "SCROLL_DEPTH" | "SESSION_END" | "CTA_CLICK" | "FORM_SUBMIT" | "OUTBOUND_CLICK" | "CLIENT_ERROR";
 
 export async function recordEvent(opts: {
   userId: string | null;
@@ -34,11 +34,12 @@ export async function recordEvent(opts: {
 export async function engagementSummary(days: number = 30) {
   const since = new Date(Date.now() - days * 864e5);
 
-  const [sessions, pageviews, scrollEvents, sessionEnds, totalUsers, activeUsers] = await Promise.all([
+  const [sessions, pageviews, scrollEvents, sessionEnds, interactionEvents, totalUsers, activeUsers] = await Promise.all([
     prisma.session.findMany({ where: { createdAt: { gte: since } }, select: { userId: true, createdAt: true } }),
     prisma.analyticsEvent.findMany({ where: { type: "PAGEVIEW", createdAt: { gte: since } }, select: { userId: true, path: true, createdAt: true } }),
     prisma.analyticsEvent.findMany({ where: { type: "SCROLL_DEPTH", createdAt: { gte: since } }, select: { userId: true, value: true } }),
     prisma.analyticsEvent.findMany({ where: { type: "SESSION_END", createdAt: { gte: since } }, select: { userId: true, value: true } }),
+    prisma.analyticsEvent.findMany({ where: { type: { in: ["CTA_CLICK", "FORM_SUBMIT", "OUTBOUND_CLICK", "CLIENT_ERROR"] }, createdAt: { gte: since } }, select: { type: true } }),
     prisma.user.count({ where: { active: true } }),
     prisma.user.findMany({ where: { active: true }, select: { id: true, name: true, email: true } }),
   ]);
@@ -97,6 +98,7 @@ export async function engagementSummary(days: number = 30) {
     uniqueSignedInUsers: uniqueLoggedInUserIds.size,
     totalLogins: sessions.length,
     totalPageviews: pageviews.length,
+    totalInteractions: interactionEvents.length,
     avgScrollDepth: avgScroll,
     avgSessionSeconds,
     trend,
