@@ -691,8 +691,10 @@ export async function resetAllData() {
     counts.sites = (await tx.site.deleteMany({})).count;
     counts.headcountSnapshots = (await tx.employerHeadcountSnapshot.deleteMany({})).count;
     counts.scoreSnapshots = (await tx.scoreSnapshot.deleteMany({})).count;
-    await tx.userEmployer.deleteMany({});
-    counts.employers = (await tx.employer.deleteMany({})).count;
+    // Partner-owned employers are configuration anchors for white-label UI,
+    // access, and scheduled reports. Clear their imported facts, but keep the
+    // employer shell and its partner/user relationships intact.
+    counts.employers = (await tx.employer.deleteMany({ where: { partnerId: null } })).count;
     counts.batches = (await tx.importBatch.deleteMany({})).count;
     counts.cursors = (await tx.integrationCursor.deleteMany({})).count;
   }, { timeout: 120000 });
