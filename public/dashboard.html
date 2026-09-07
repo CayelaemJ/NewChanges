@@ -1863,6 +1863,10 @@ function applyState(){
     updateContextLine();
     const ep0=document.getElementById('exec-period');
     if(ep0) ep0.textContent=((DATA.filterContext&&DATA.filterContext.label)||'Latest')+' · at a glance';
+    const siteLabel=document.querySelector('#region-filter .tag-label');
+    const incomeLabel=document.querySelector('#income-filter .tag-label');
+    if(siteLabel) siteLabel.textContent=DATA.filterContext?.site || (STATE.region==='all'?'All regions':STATE.region);
+    if(incomeLabel) incomeLabel.textContent=DATA.filterContext?.incomeLabel || (STATE.income==='all'?'All income bands':STATE.income);
     return;
   }
   const p=PERIOD[STATE.period], f=p.f;
@@ -2476,24 +2480,31 @@ function switchFilter(name,value,opts={}){
   if(value && value!=='all') params.set(name,value); else if(name==='range') params.set(name,'all'); else params.delete(name);
   if(opts.clearPeriod) params.delete('period');
   if(name==='period') params.delete('range');
-  location.search='?'+params.toString();
+  history.replaceState(null,'','?'+params.toString());
+  if(window.__LIVE__) loadLiveData({refreshOnly:true});
 }
 
-async function loadLiveData(){
+async function loadLiveData({refreshOnly=false}={}){
   // require sign-in
-  let me=null;
-  try{ const r=await fetch('/api/auth/me'); if(!r.ok){ location.href='/login'; return; } me=await r.json(); }
-  catch(e){ location.href='/login'; return; }
-  window.__ME__=me;
-  addAuthBar(me);
-  applyTheme(me.theme);
-  handleWelcomeSplash(me);
-  applySectionVisibility(me);
-  populateEmployerSelect(me);
+  let me=window.__ME__||null;
+  const view=document.getElementById('employer-view');
+  if(refreshOnly && view){ view.setAttribute('aria-busy','true'); view.classList.add('is-refreshing'); }
+  if(!refreshOnly){
+    try{ const r=await fetch('/api/auth/me'); if(!r.ok){ location.href='/login'; return; } me=await r.json(); }
+    catch(e){ location.href='/login'; return; }
+    window.__ME__=me;
+    addAuthBar(me);
+    applyTheme(me.theme);
+    handleWelcomeSplash(me);
+    applySectionVisibility(me);
+    populateEmployerSelect(me);
+  }
 
   try{
     let id = employerIdFromUrl();
     if(!id && me.employers && me.employers.length){ id = me.employers[0].id; }
+    const employerSelect=document.getElementById('employer-select');
+    if(employerSelect && id) employerSelect.value=id;
     syncStateFromUrl();
     const period = periodFromUrl();
     if(id) await populateMonthSelect(id, period);
@@ -2555,7 +2566,10 @@ async function loadLiveData(){
     }
   }
   applyState();
-  wirePeriod(); wireFilters(); wireAudience(); wireHeaderBtns();
+  if(!refreshOnly){
+    wirePeriod(); wireFilters(); wireAudience(); wireHeaderBtns();
+  }
+  if(refreshOnly && view){ view.removeAttribute('aria-busy'); view.classList.remove('is-refreshing'); }
 }
 
 // month picker — populated from the snapshots that actually exist
@@ -2584,7 +2598,8 @@ function switchPeriod(period){
     params.delete('period'); params.set('range','latest');
   }
   if(id) params.set('employer',id);
-  location.search='?'+params.toString();
+  history.replaceState(null,'','?'+params.toString());
+  if(window.__LIVE__) loadLiveData({refreshOnly:true});
 }
 
 // activity strip for the selected flow window
@@ -2615,7 +2630,7 @@ function populateEmployerSelect(me){
   // always show the field (even with one employer) so it's clearly filterable
   sel.style.display='inline-block';
 }
-function switchEmployer(id){ const p=new URLSearchParams(location.search); p.set('employer',id); p.delete('period'); p.delete('site'); p.delete('income'); location.search='?'+p.toString(); }
+function switchEmployer(id){ const p=new URLSearchParams(location.search); p.set('employer',id); p.delete('period'); p.delete('site'); p.delete('income'); history.replaceState(null,'','?'+p.toString()); if(window.__LIVE__) loadLiveData({refreshOnly:true}); }
 
 function renderDataQuality(q){
   document.getElementById('data-quality-note')?.remove();
