@@ -522,12 +522,20 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
   const debts = debtState.rows;
   const policies = policyState.rows;
 
+  // Evidence that this employer's workforce_snapshots data came from an actual
+  // import (importBatchId set), not just an old convenience headcount cache row.
+  // We check per-employer directly rather than via ImportBatch.employerRef,
+  // because that column only holds a single employer id: any workforce_snapshots
+  // file touching more than one employer (the normal case) leaves it null/stale,
+  // which made every employer's feed wrongly report as "not loaded".
+  const workforceSnapshotEvidence = await prisma.employerHeadcountSnapshot.findFirst({
+    where: { employerId, importBatchId: { not: null } },
+    select: { id: true },
+  });
+
   const feedCoverage = await feedCoverageForEmployer(employerId, {
     employers: true,
-    // Do not infer that the workforce_snapshots feed has been loaded merely
-    // because an old convenience headcount row exists. Coverage for this feed
-    // comes from an explicit import/successful source sync.
-    workforce_snapshots: false,
+    workforce_snapshots: Boolean(workforceSnapshotEvidence),
     employees: workforceState.rows.length > 0 || workforceState.versionCount > 0,
     platform_users: platformUsers.length > 0,
     journeys: (journeys as any[]).length > 0,
