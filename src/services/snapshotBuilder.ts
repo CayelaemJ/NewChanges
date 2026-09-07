@@ -215,7 +215,28 @@ function employeeEligibleAt(employee: any, asAt: Date): boolean {
 async function workforceAsAt(employerId: string, asAt: Date) {
   const employees: any[] = await prisma.employee.findMany({
     where: { employerId },
-    include: { site: true, platformUser: true },
+    select: {
+      id: true,
+      employerId: true,
+      siteId: true,
+      incomeBand: true,
+      active: true,
+      observedAt: true,
+      eligibleFrom: true,
+      eligibleTo: true,
+      sourceUpdatedAt: true,
+      sourceDeletedAt: true,
+      site: { select: { name: true } },
+      platformUser: {
+        select: {
+          id: true,
+          enrolledAt: true,
+          activatedAt: true,
+          hasCreditProfile: true,
+          sourceDeletedAt: true,
+        },
+      },
+    },
   });
   if (!employees.length) return { rows: [] as any[], usedFallback: false, missingAsAtCount: 0, versionCount: 0 };
 
@@ -298,9 +319,9 @@ async function feedCoverageForEmployer(
       select: { reportKey: true, lastSuccessAt: true },
     }),
     prisma.importBatch.findMany({
-      where: { status: "COMMITTED", reportKey: { in: [...CORE_FEEDS] } },
+      where: { status: "COMMITTED", reportKey: { in: [...CORE_FEEDS] }, employerRef: employerId },
       orderBy: { committedAt: "desc" },
-      select: { reportKey: true, employerRef: true, stagedRows: true, committedAt: true },
+      select: { reportKey: true, committedAt: true },
     }),
   ]);
 
@@ -312,11 +333,7 @@ async function feedCoverageForEmployer(
   const importByFeed = new Map<string, Date>();
   for (const batch of batches as any[]) {
     if (!CORE_FEEDS.includes(batch.reportKey as CoreFeed)) continue;
-    let applies = batch.employerRef === employerId;
-    if (!applies && Array.isArray(batch.stagedRows)) {
-      applies = batch.stagedRows.some((row: any) => String(row?.employer_ref ?? "") === employerId);
-    }
-    if (applies && !importByFeed.has(batch.reportKey)) {
+    if (!importByFeed.has(batch.reportKey)) {
       importByFeed.set(batch.reportKey, batch.committedAt ?? new Date(0));
     }
   }
