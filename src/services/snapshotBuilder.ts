@@ -743,7 +743,7 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
   const ewaTotal = advances.reduce((sum: number, advance: any) => sum + advance.amountCents, 0);
   const ewaByMonth = new Map<string, number>();
   for (const advance of advances as any[]) ewaByMonth.set(monthKey(advance.advancedAt), (ewaByMonth.get(monthKey(advance.advancedAt)) ?? 0) + advance.amountCents);
-  const ewaMonths = [...ewaByMonth.keys()].sort().slice(-10);
+  const ewaMonths = [...ewaByMonth.keys()].sort().slice(-12);
   const ewa = {
     clients: ewaClients,
     advances: advances.length,
@@ -767,7 +767,7 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
   const savingsPairs = [...savingByMonth.keys()].sort().map((key) => {
     cumulative += savingByMonth.get(key) ?? 0;
     return { key, value: Math.round(rand(cumulative) / 1_000) };
-  }).filter((point) => !rangeMonth || point.key >= rangeMonth).slice(-10);
+  }).filter((point) => !rangeMonth || point.key >= rangeMonth).slice(-12);
   const savings = savingsPairs.map((point) => point.value);
   const savingsLabels = savingsPairs.map((point) => monthLabel(point.key));
 
