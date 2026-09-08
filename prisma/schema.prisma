@@ -889,6 +889,13 @@ model ImportBatch {
   updatedCount  Int          @default(0)
   deletedCount  Int          @default(0)
   errors        Json?
+  // Legacy whole-file JSON blob. No longer written by file uploads (see
+  // ImportBatchRow) — a single Json column holding an entire large file's
+  // rows was the main cause of upload-time out-of-memory crashes, since both
+  // the app and Prisma's query engine had to hold/transmit it as one giant
+  // value. Still written by syncService.ts for API/SQL pulls, whose page
+  // sizes are already bounded, and read as a fallback by commitBatch/
+  // revertBatch for any batch that predates this column split.
   stagedRows    Json?
   uploadedBy    String?
   sourceSince   DateTime?
@@ -896,11 +903,27 @@ model ImportBatch {
   uploadedAt    DateTime     @default(now())
   committedAt   DateTime?
   revertedAt    DateTime?
+  rows          ImportBatchRow[]
 
   @@index([reportKey])
   @@index([employerRef, reportKey, status, committedAt])
   @@index([status])
   @@index([uploadedAt])
+}
+
+// One row of a staged import, so a large file's data is written and read in
+// bounded chunks (see importService.ts) instead of as one giant Json blob on
+// ImportBatch. Deleted automatically when its batch is deleted (pre-live
+// reset); explicitly deleted by uploadAndValidate if the file fails
+// validation, since only VALIDATED batches have committable staged data.
+model ImportBatchRow {
+  id       String      @id @default(cuid())
+  batchId  String
+  rowIndex Int
+  data     Json
+  batch    ImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@index([batchId, rowIndex])
 }
 
 // ──────────────────────── 8. Config: actuarial constants ────────────────────────
