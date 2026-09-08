@@ -118,19 +118,17 @@ export async function uploadAndValidate(opts: {
   return { batch: updated, result };
 }
 
-export async function commitBatch(batchId: string, options: CommitOptions = {}) {
-  const batch = await prisma.importBatch.findUniqueOrThrow({ where: { id: batchId } });
-  if (batch.status !== "VALIDATED") throw new Error(`batch not in VALIDATED state (is ${batch.status})`);
-  const format = getFormat(batch.reportKey);
-  if (!format) throw new Error(`unknown report: ${batch.reportKey}`);
-  const stagedRows = await loadStagedRows(batch);
-  const rows = rehydrateStagedRows(format, stagedRows);
-  const touchedEmployers = new Set<string>();
-  const stats: CommitStats = { inserted: 0, updated: 0, deleted: 0, skipped: 0 };
-
-  await prisma.$transaction(async (tx: any) => {
-    for (const row of rows) if (row.employer_ref) touchedEmployers.add(String(row.employer_ref));
-
+// Processes one bounded chunk of staged rows inside its own transaction.
+// Factored out of commitBatch so a large batch can be committed as many
+// short transactions instead of one that grows with the row count and
+// eventually exceeds Prisma's interactive transaction timeout.
+async function commitRowsChunk(
+  tx: any,
+  reportKey: string,
+  rows: Record<string, any>[],
+  stats: CommitStats,
+  batchId: string,
+) {
     async function employeeMap() {
       const employees = await tx.employee.findMany({
         select: { id: true, employerId: true, payrollRef: true, platformUser: { select: { id: true } } },
@@ -145,7 +143,7 @@ export async function commitBatch(batchId: string, options: CommitOptions = {}) 
       return { employeeIds, platformUserIds };
     }
 
-    switch (batch.reportKey) {
+    switch (reportKey) {
       case "employers": {
         for (const row of rows) {
           const existing = await tx.employer.findUnique({ where: { id: row.employer_ref } });
@@ -596,21 +594,56 @@ export async function commitBatch(batchId: string, options: CommitOptions = {}) 
       }
 
       default:
-        throw new Error(`commit handler not implemented for report ${batch.reportKey}`);
+        throw new Error(`commit handler not implemented for report ${reportKey}`);
     }
+}
 
-    await tx.importBatch.update({
-      where: { id: batchId },
-      data: {
-        status: "COMMITTED",
-        committedAt: new Date(),
-        insertedCount: stats.inserted,
-        updatedCount: stats.updated,
-        deletedCount: stats.deleted,
-        employerRef: touchedEmployers.size === 1 ? [...touchedEmployers][0] : batch.employerRef,
-      },
-    });
-  }, { timeout: 180000, maxWait: 30000 });
+export async function commitBatch(batchId: string, options: CommitOptions = {}) {
+  const batch = await prisma.importBatch.findUniqueOrThrow({ where: { id: batchId } });
+  if (batch.status !== "VALIDATED") throw new Error(`batch not in VALIDATED state (is ${batch.status})`);
+  const format = getFormat(batch.reportKey);
+  if (!format) throw new Error(`unknown report: ${batch.reportKey}`);
+  const stagedRows = await loadStagedRows(batch);
+  const rows = rehydrateStagedRows(format, stagedRows);
+  const touchedEmployers = new Set<string>();
+  const stats: CommitStats = { inserted: 0, updated: 0, deleted: 0, skipped: 0 };
+
+  for (const row of rows) if (row.employer_ref) touchedEmployers.add(String(row.employer_ref));
+
+  // Large batches commit in bounded chunks, each in its own short-lived
+  // transaction, instead of one transaction spanning every row — a single
+  // interactive transaction has a fixed timeout ceiling that a big enough
+  // file will always eventually exceed, no matter how high it's set. Every
+  // upsert below is keyed by natural key and already skips anything not
+  // newer than what's stored (isAtLeastAsNew), so commit is safely
+  // re-runnable: if a chunk fails partway, re-running commit on the same
+  // VALIDATED batch reprocesses from the start and just re-skips whatever
+  // already landed.
+  const CHUNK_SIZE = 1000;
+  const chunks: Record<string, any>[][] = [];
+  for (let i = 0; i < rows.length; i += CHUNK_SIZE) chunks.push(rows.slice(i, i + CHUNK_SIZE));
+  // An empty batch (0 valid rows) still needs the report-key handler to run
+  // once — e.g. to reject an unsupported report key the same way it always did.
+  if (!chunks.length) chunks.push([]);
+
+  for (const chunk of chunks) {
+    await prisma.$transaction(
+      (tx: any) => commitRowsChunk(tx, batch.reportKey, chunk, stats, batchId),
+      { timeout: 180000, maxWait: 30000 },
+    );
+  }
+
+  await prisma.importBatch.update({
+    where: { id: batchId },
+    data: {
+      status: "COMMITTED",
+      committedAt: new Date(),
+      insertedCount: stats.inserted,
+      updatedCount: stats.updated,
+      deletedCount: stats.deleted,
+      employerRef: touchedEmployers.size === 1 ? [...touchedEmployers][0] : batch.employerRef,
+    },
+  });
 
   if (options.recompute !== false) {
     const period = currentPeriod();
