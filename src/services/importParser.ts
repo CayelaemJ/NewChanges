@@ -5,6 +5,7 @@
 
 import * as XLSX from "xlsx";
 import { parse as parseCsv } from "csv-parse/sync";
+import { parse as parseCsvStream } from "csv-parse";
 import { ReportFormat, FieldSpec } from "./reportFormats.js";
 
 export interface CellError {
@@ -187,6 +188,44 @@ function serializeNaturalKeyPart(value: unknown): string {
   return value instanceof Date ? value.toISOString() : String(value);
 }
 
+// Validates a single already-parsed record and appends its outcome into the
+// shared accumulators. Factored out so the whole-array path (validate(), used
+// for xlsx/json which the underlying libraries must load fully into memory
+// anyway) and the streaming CSV path below can share one implementation
+// without ever materialising a second full array of raw + validated rows.
+function validateRecord(
+  format: ReportFormat,
+  raw: Record<string, unknown>,
+  rowNo: number,
+  seenKeys: Set<string>,
+  errors: CellError[],
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+
+  for (const spec of format.fields) {
+    const [value, error] = coerce(spec, raw[spec.name]);
+    if (error) errors.push({ row: rowNo, column: spec.name, value: raw[spec.name], reason: error });
+    else out[spec.name] = value;
+  }
+
+  addBusinessRules(format, out, rowNo, errors);
+
+  if (format.naturalKey.every((key) => out[key] != null)) {
+    const keyValue = format.naturalKey.map((key) => serializeNaturalKeyPart(out[key])).join("∣");
+    if (seenKeys.has(keyValue)) {
+      errors.push({
+        row: rowNo,
+        column: format.naturalKey.join("+"),
+        value: keyValue,
+        reason: "duplicate natural key in file",
+      });
+    }
+    seenKeys.add(keyValue);
+  }
+
+  return out;
+}
+
 export function validate(format: ReportFormat, rawRows: Record<string, unknown>[]): ValidationResult {
   const specByName = new Map(format.fields.map((f) => [f.name, f]));
   const fileColumns = [...new Set(rawRows.flatMap((row) => Object.keys(row)))];
@@ -203,37 +242,66 @@ export function validate(format: ReportFormat, rawRows: Record<string, unknown>[
   const seenKeys = new Set<string>();
 
   rawRows.forEach((raw, index) => {
-    const rowNo = index + 1;
-    const out: Record<string, unknown> = {};
-
-    for (const spec of format.fields) {
-      const [value, error] = coerce(spec, raw[spec.name]);
-      if (error) errors.push({ row: rowNo, column: spec.name, value: raw[spec.name], reason: error });
-      else out[spec.name] = value;
-    }
-
-    addBusinessRules(format, out, rowNo, errors);
-
-    if (format.naturalKey.every((key) => out[key] != null)) {
-      const keyValue = format.naturalKey.map((key) => serializeNaturalKeyPart(out[key])).join("∣");
-      if (seenKeys.has(keyValue)) {
-        errors.push({
-          row: rowNo,
-          column: format.naturalKey.join("+"),
-          value: keyValue,
-          reason: "duplicate natural key in file",
-        });
-      }
-      seenKeys.add(keyValue);
-    }
-
-    rows.push(out);
+    rows.push(validateRecord(format, raw, index + 1, seenKeys, errors));
   });
 
   const ok = errors.length === 0 && missingColumns.length === 0;
   return {
     ok,
     rowCount: rawRows.length,
+    errors,
+    rows: ok ? rows : [],
+    unknownColumns,
+    missingColumns,
+  };
+}
+
+// Large CSVs are the common case for "any size" imports, and CSV is the one
+// format that doesn't require an external library to hold the whole file in
+// memory to parse it. This streams the file through csv-parse and validates
+// each record as it arrives, so we never hold a full "raw rows" array
+// alongside the full "validated rows" array at the same time — only one
+// growing array (the validated output) is ever live, roughly halving peak
+// memory versus parseFile()+validate() for CSV imports. xlsx/json still go
+// through the whole-array path because those libraries require the full file
+// in memory regardless of how we consume it.
+export async function parseAndValidateCsvStreaming(
+  buffer: Buffer,
+  format: ReportFormat,
+): Promise<ValidationResult> {
+  const specByName = new Map(format.fields.map((f) => [f.name, f]));
+  const errors: CellError[] = [];
+  const rows: Record<string, unknown>[] = [];
+  const seenKeys = new Set<string>();
+  let fileColumns: string[] | null = null;
+  let rowCount = 0;
+
+  const parser = parseCsvStream(buffer, {
+    columns: true,
+    skip_empty_lines: true,
+    bom: true,
+    ltrim: true,
+    rtrim: true,
+    relax_quotes: true,
+    relax_column_count: true,
+  });
+
+  for await (const raw of parser as AsyncIterable<Record<string, unknown>>) {
+    if (fileColumns === null) fileColumns = Object.keys(raw);
+    rowCount += 1;
+    rows.push(validateRecord(format, raw, rowCount, seenKeys, errors));
+  }
+
+  const columns = fileColumns ?? [];
+  const missingColumns = rowCount
+    ? format.fields.filter((f) => f.required && !columns.includes(f.name)).map((f) => f.name)
+    : [];
+  const unknownColumns = columns.filter((column) => !specByName.has(column));
+
+  const ok = errors.length === 0 && missingColumns.length === 0;
+  return {
+    ok,
+    rowCount,
     errors,
     rows: ok ? rows : [],
     unknownColumns,
