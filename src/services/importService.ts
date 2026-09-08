@@ -38,6 +38,31 @@ function deletionTime(row: Record<string, any>): Date | null {
   return row.is_deleted ? row.source_updated_at : null;
 }
 
+// Writes validated rows into ImportBatchRow in bounded chunks instead of
+// building one giant array/JSON blob for the whole file (see schema.prisma).
+async function chunkedRowWriter(batchId: string) {
+  let offset = 0;
+  return async (rows: Record<string, unknown>[]) => {
+    if (!rows.length) return;
+    await prisma.importBatchRow.createMany({
+      data: rows.map((data, i) => ({ batchId, rowIndex: offset + i, data: data as unknown as Json })),
+    });
+    offset += rows.length;
+  };
+}
+
+async function loadStagedRows(batch: { id: string; stagedRows: unknown }): Promise<Record<string, unknown>[]> {
+  const chunked = await prisma.importBatchRow.findMany({
+    where: { batchId: batch.id },
+    orderBy: { rowIndex: "asc" },
+    select: { data: true },
+  });
+  if (chunked.length) return chunked.map((r: { data: unknown }) => r.data as Record<string, unknown>);
+  // Fallback for batches from before this split (or written by syncService.ts,
+  // whose API/SQL page sizes are already bounded so it still uses the blob).
+  return (batch.stagedRows ?? []) as unknown as Record<string, unknown>[];
+}
+
 export async function uploadAndValidate(opts: {
   reportKey: string;
   filename: string;
@@ -48,31 +73,49 @@ export async function uploadAndValidate(opts: {
   if (!format) throw new Error(`unknown report: ${opts.reportKey}`);
 
   const fileFormat = detectFormat(opts.filename);
-  // CSV streams row-by-row so we never hold a raw-parsed array and a
-  // validated array in memory at the same time (see importParser.ts) — this
-  // matters most here since bulk imports are almost always CSV. xlsx/json
-  // still need the whole file loaded by their parsing library either way.
-  const result = fileFormat === "csv"
-    ? await parseAndValidateCsvStreaming(opts.buffer, format)
-    : validate(format, parseFile(opts.buffer, fileFormat));
 
+  // Reserve the batch row first so chunks can reference its id as they're
+  // validated, rather than accumulating the whole file in memory and writing
+  // it as one value at the end.
   const batch = await prisma.importBatch.create({
+    data: { reportKey: opts.reportKey, filename: opts.filename, fileFormat, status: "UPLOADED", uploadedBy: opts.uploadedBy },
+  });
+  const writeChunk = await chunkedRowWriter(batch.id);
+
+  // CSV streams row-by-row and flushes chunks to ImportBatchRow as it goes —
+  // this matters most here since bulk imports are almost always CSV. xlsx/json
+  // still need the whole file loaded by their parsing library either way, but
+  // their validated rows are still written out in the same bounded chunks
+  // rather than as one Json blob.
+  let result;
+  if (fileFormat === "csv") {
+    result = await parseAndValidateCsvStreaming(opts.buffer, format, writeChunk);
+  } else {
+    const rawRows = parseFile(opts.buffer, fileFormat);
+    result = validate(format, rawRows);
+    if (result.ok) {
+      for (let i = 0; i < result.rows.length; i += 2000) await writeChunk(result.rows.slice(i, i + 2000));
+    }
+  }
+
+  // Staged rows are only meaningful for a batch a user can go on to commit.
+  // A failed validation has nothing to commit, so drop whatever chunks were
+  // already written for it (a run of valid-looking rows before a later error).
+  if (!result.ok) await prisma.importBatchRow.deleteMany({ where: { batchId: batch.id } });
+
+  const updated = await prisma.importBatch.update({
+    where: { id: batch.id },
     data: {
-      reportKey: opts.reportKey,
-      filename: opts.filename,
-      fileFormat,
       status: result.ok ? "VALIDATED" : "FAILED",
       rowCount: result.rowCount,
       errorCount: result.errors.length + result.missingColumns.length,
       errors: result.ok
         ? undefined
         : ({ cellErrors: result.errors, missingColumns: result.missingColumns, unknownColumns: result.unknownColumns } as unknown as Json),
-      stagedRows: result.ok ? (result.rows as unknown as Json) : undefined,
-      uploadedBy: opts.uploadedBy,
     },
   });
 
-  return { batch, result };
+  return { batch: updated, result };
 }
 
 export async function commitBatch(batchId: string, options: CommitOptions = {}) {
@@ -80,7 +123,7 @@ export async function commitBatch(batchId: string, options: CommitOptions = {}) 
   if (batch.status !== "VALIDATED") throw new Error(`batch not in VALIDATED state (is ${batch.status})`);
   const format = getFormat(batch.reportKey);
   if (!format) throw new Error(`unknown report: ${batch.reportKey}`);
-  const stagedRows = (batch.stagedRows ?? []) as unknown as Record<string, unknown>[];
+  const stagedRows = await loadStagedRows(batch);
   const rows = rehydrateStagedRows(format, stagedRows);
   const touchedEmployers = new Set<string>();
   const stats: CommitStats = { inserted: 0, updated: 0, deleted: 0, skipped: 0 };
@@ -589,7 +632,7 @@ export async function revertBatch(batchId: string) {
   const batch = await prisma.importBatch.findUniqueOrThrow({ where: { id: batchId } });
   if (batch.status !== "COMMITTED") throw new Error("only COMMITTED batches can be reverted");
 
-  const stagedRows = (batch.stagedRows ?? []) as unknown as Record<string, any>[];
+  const stagedRows = (await loadStagedRows(batch)) as unknown as Record<string, any>[];
   const touchedEmployers = [...new Set(stagedRows
     .map((row) => row.employer_ref)
     .filter(Boolean)
