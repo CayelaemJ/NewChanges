@@ -7,7 +7,7 @@
 import { PrismaClient } from "@prisma/client";
 import { getFormat } from "./reportFormats.js";
 import { compareDateValues, dateMillis, rehydrateStagedRows } from "./stagedRows.js";
-import { parseFile, validate, detectFormat } from "./importParser.js";
+import { parseFile, validate, detectFormat, parseAndValidateCsvStreaming } from "./importParser.js";
 import { snapshotEmployer } from "./snapshotBuilder.js";
 import { notifyScoreChangeIfCurrentPeriod } from "./automationService.js";
 
@@ -48,8 +48,13 @@ export async function uploadAndValidate(opts: {
   if (!format) throw new Error(`unknown report: ${opts.reportKey}`);
 
   const fileFormat = detectFormat(opts.filename);
-  const rawRows = parseFile(opts.buffer, fileFormat);
-  const result = validate(format, rawRows);
+  // CSV streams row-by-row so we never hold a raw-parsed array and a
+  // validated array in memory at the same time (see importParser.ts) — this
+  // matters most here since bulk imports are almost always CSV. xlsx/json
+  // still need the whole file loaded by their parsing library either way.
+  const result = fileFormat === "csv"
+    ? await parseAndValidateCsvStreaming(opts.buffer, format)
+    : validate(format, parseFile(opts.buffer, fileFormat));
 
   const batch = await prisma.importBatch.create({
     data: {
