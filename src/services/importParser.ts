@@ -259,20 +259,24 @@ export function validate(format: ReportFormat, rawRows: Record<string, unknown>[
 // Large CSVs are the common case for "any size" imports, and CSV is the one
 // format that doesn't require an external library to hold the whole file in
 // memory to parse it. This streams the file through csv-parse and validates
-// each record as it arrives, so we never hold a full "raw rows" array
-// alongside the full "validated rows" array at the same time — only one
-// growing array (the validated output) is ever live, roughly halving peak
-// memory versus parseFile()+validate() for CSV imports. xlsx/json still go
-// through the whole-array path because those libraries require the full file
-// in memory regardless of how we consume it.
+// each record as it arrives. If onRows is given, validated rows are flushed
+// to it in bounded chunks (see importService.ts, which writes each chunk
+// straight to the ImportBatchRow table) instead of being accumulated into
+// one ever-growing array — that's what actually keeps peak memory bounded
+// for a large file, not the streaming parse by itself. xlsx/json still go
+// through the whole-array path because those libraries require the full
+// file in memory regardless of how we consume it.
 export async function parseAndValidateCsvStreaming(
   buffer: Buffer,
   format: ReportFormat,
+  onRows?: (rows: Record<string, unknown>[]) => Promise<void> | void,
+  chunkSize = 2000,
 ): Promise<ValidationResult> {
   const specByName = new Map(format.fields.map((f) => [f.name, f]));
   const errors: CellError[] = [];
-  const rows: Record<string, unknown>[] = [];
+  const preview: Record<string, unknown>[] = [];
   const seenKeys = new Set<string>();
+  let chunk: Record<string, unknown>[] = [];
   let fileColumns: string[] | null = null;
   let rowCount = 0;
 
@@ -289,8 +293,17 @@ export async function parseAndValidateCsvStreaming(
   for await (const raw of parser as AsyncIterable<Record<string, unknown>>) {
     if (fileColumns === null) fileColumns = Object.keys(raw);
     rowCount += 1;
-    rows.push(validateRecord(format, raw, rowCount, seenKeys, errors));
+    const out = validateRecord(format, raw, rowCount, seenKeys, errors);
+    if (preview.length < 10) preview.push(out);
+    if (onRows) {
+      chunk.push(out);
+      if (chunk.length >= chunkSize) {
+        await onRows(chunk);
+        chunk = [];
+      }
+    }
   }
+  if (onRows && chunk.length) await onRows(chunk);
 
   const columns = fileColumns ?? [];
   const missingColumns = rowCount
@@ -303,7 +316,7 @@ export async function parseAndValidateCsvStreaming(
     ok,
     rowCount,
     errors,
-    rows: ok ? rows : [],
+    rows: ok ? preview : [],
     unknownColumns,
     missingColumns,
   };
