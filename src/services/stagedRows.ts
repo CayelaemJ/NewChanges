@@ -28,14 +28,20 @@ export function rehydrateStagedRows(
 ): Record<string, any>[] {
   const temporalFields = format.fields.filter((field) => field.type === "date" || field.type === "datetime");
 
-  return stagedRows.map((stagedRow, index) => {
-    const row: Record<string, any> = { ...stagedRow };
+  // Mutate each row in place rather than spreading into a new object per row.
+  // `stagedRows` here is always a fresh object graph deserialised by Prisma
+  // for this call (never shared with a caller who'd be surprised by the
+  // mutation), so cloning it just to convert a few date strings back to Date
+  // objects doubles the memory footprint of the whole batch for no benefit —
+  // significant when a batch can be hundreds of thousands of rows.
+  for (const [index, row] of stagedRows.entries()) {
     for (const field of temporalFields) {
-      if (row[field.name] == null || row[field.name] === "") continue;
-      row[field.name] = restoreDate(row[field.name], field.name, index + 1);
+      const value = (row as Record<string, any>)[field.name];
+      if (value == null || value === "") continue;
+      (row as Record<string, any>)[field.name] = restoreDate(value, field.name, index + 1);
     }
-    return row;
-  });
+  }
+  return stagedRows as Record<string, any>[];
 }
 
 export function dateMillis(value: unknown, fieldName = "date"): number {
