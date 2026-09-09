@@ -1,7 +1,7 @@
 /* ════════════════════════════════════════════════════════════════════
    UI ENHANCEMENTS — contrast, depth & motion polish.
    Additive only: layers on top of each page's own styles via CSS variables
-   that already exist on every page (--navy, --blue, --line, --shadow, …).
+   that already exist on every page (--brand-primary, --blue, --line, --shadow, …).
    Loaded last on purpose so it wins on equal-specificity rules.
    ════════════════════════════════════════════════════════════════════ */
 
@@ -12,7 +12,7 @@
 .topbar { position: sticky; top: 0; z-index: 40; }
 .topbar::after {
   content: ""; display: block; height: 2px;
-  background: linear-gradient(90deg, var(--blue, #b15be8) 0%, var(--navy, #32217c) 55%, transparent 100%);
+  background: linear-gradient(90deg, var(--blue, #b15be8) 0%, var(--brand-primary, #32217c) 55%, transparent 100%);
   opacity: .55;
 }
 
@@ -79,7 +79,7 @@ table tbody tr:hover { background: var(--ice-2, #f4f9fd); }
 .nav a { position: relative; }
 .nav a.on::after {
   content: ""; position: absolute; left: 13px; right: 13px; bottom: 2px; height: 2px;
-  background: linear-gradient(90deg, var(--blue, #b15be8), var(--navy, #32217c)); border-radius: 2px;
+  background: linear-gradient(90deg, var(--blue, #b15be8), var(--brand-primary, #32217c)); border-radius: 2px;
 }
 
 /* primary CTA buttons get a subtle sheen sweep on hover */
