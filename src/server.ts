@@ -17,6 +17,7 @@ import { prisma, snapshotEmployer, getDashboardPayload } from "./services/snapsh
 import { REPORT_FORMATS, LOAD_ORDER, getFormat } from "./services/reportFormats.js";
 import { csvTemplate, xlsxTemplate, formatManifest } from "./services/templateGenerator.js";
 import { uploadAndValidate, commitBatch, revertBatch, resetAllData } from "./services/importService.js";
+import { startUploadJob, getUploadJob, startCommitJob, getCommitJob } from "./services/asyncJobs.js";
 import { getConfig as getSyncConfig, saveConfig as saveSyncConfig, publicConfig as publicSyncConfig, testConnection as testSyncConnection, runSync, recentSyncLogs } from "./services/syncService.js";
 import { listPartners, createPartner, updatePartner, deletePartner, assignUserToPartner, assignEmployerToPartner, themeForUser, themeForSlug } from "./services/partnerService.js";
 import { login, resolveSession, destroySession, canViewEmployer, canAccessModule, allowedEmployerIds, AuthUser } from "./services/authService.js";
@@ -33,9 +34,24 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = [join(__dirname, "public"), join(__dirname, "..", "public")]
   .find((p) => existsSync(join(p, "dashboard.html"))) ?? join(__dirname, "..", "public");
 
-const app = Fastify({ logger: true });
+const MAX_UPLOAD_BYTES = Number(process.env.UPLOAD_MAX_BYTES ?? 50 * 1024 * 1024);
+
+const app = Fastify({
+  logger: true,
+  bodyLimit: 64 * 1024 * 1024,
+  connectionTimeout: 0,
+  keepAliveTimeout: 75_000,
+});
+
+// Node 20 defaults are too aggressive for slow uploads behind proxies.
+app.server.headersTimeout = 180_000;
+app.server.requestTimeout = 600_000;
+
 app.register(cookie);
-app.register(multipart, { limits: { fileSize: 50 * 1024 * 1024 } });
+app.register(multipart, {
+  limits: { fileSize: MAX_UPLOAD_BYTES, files: 1, fields: 10 },
+});
+
 app.register(fastifyStatic, {
   root: PUBLIC_DIR,
   prefix: "/static/",
@@ -405,18 +421,25 @@ app.post<{ Params: { key: string } }>(
 );
 
 // commit a validated batch -> writes live + recomputes affected snapshots
+// Returns 202 immediately; the browser polls /api/admin/commit-jobs/:jobId.
 app.post<{ Params: { batchId: string } }>(
   "/api/admin/batches/:batchId/commit",
   async (req, reply) => {
     if (!(await requireAdmin(req, reply))) return;
-    try {
-      return await commitBatch(req.params.batchId);
-    } catch (e: any) {
-      req.log.error({ err: e, batchId: req.params.batchId }, "import batch commit failed");
-      const raw = String(e?.message || "Import commit failed.").replace(/\s+/g, " ").trim();
-      const safe = raw.length > 400 ? `${raw.slice(0, 397)}...` : raw;
-      return reply.code(500).send({ error: safe || "Import commit failed. Check the deployment logs for details." });
-    }
+    const jobId = startCommitJob(req.params.batchId);
+    return reply.code(202).send({ status: "ACCEPTED", jobId, batchId: req.params.batchId });
+  },
+);
+
+app.get<{ Params: { jobId: string } }>(
+  "/api/admin/commit-jobs/:jobId",
+  async (req, reply) => {
+    if (!(await requireAdmin(req, reply))) return;
+    const job = getCommitJob(req.params.jobId);
+    if (!job) return reply.code(404).send({ error: "unknown commit job" });
+    if (job.status === "PENDING") return { status: "PROCESSING" };
+    if (job.status === "FAILED") return { status: "FAILED", error: job.error };
+    return { status: "DONE", ...job.result };
   },
 );
 
