@@ -829,7 +829,7 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
       { name: "Prescription review", eligible: prescribable.length, saving: "—", extra: `${zarM(prescribableBalance)} challengeable`, icon: "scroll" },
     ].filter((card) => card.eligible > 0),
     estMonthly: zar(estimatedMonthlyOpportunity),
-    estAnnual: zarM(estimatedMonthlyOpportunity * 12),
+    estAnnual: zar(estimatedMonthlyOpportunity * 12),
     valueLabel: "Unresolved premium under review",
     valueNote: "Observed premium only; no assumed savings percentage is applied.",
   };
@@ -966,7 +966,7 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
     exec: { items: [
       { v: sectionAvailability.enrolment ? enrolled.toLocaleString("en-ZA") : "—", l: "employees enrolled", available: sectionAvailability.enrolment },
       { v: sectionAvailability.journeys ? zar(cumulativeMonthlySaving) : "—", l: "monthly cashflow restored", available: sectionAvailability.journeys },
-      { v: sectionAvailability.debt ? zarM(active.rand) : "—", l: "debt under active intervention", available: sectionAvailability.debt },
+      { v: sectionAvailability.debt ? zar(active.rand) : "—", l: "debt under active intervention", available: sectionAvailability.debt },
       { v: sectionAvailability.debt ? String(challengeRows.length) : "—", l: "prescribed debts challenged", available: sectionAvailability.debt },
       { v: sectionAvailability.journeys ? completedFix.toLocaleString("en-ZA") : "—", l: "employees better off", available: sectionAvailability.journeys },
       { v: sectionAvailability.ratings ? `${avgRating.toFixed(1)}/5` : "—", l: "employee satisfaction", available: sectionAvailability.ratings },
@@ -1005,10 +1005,10 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
     ],
     outcomes,
     valueStrip: [
-      { l: "Monthly cash freed up", v: sectionAvailability.journeys ? zar(cumulativeMonthlySaving) : "—", d: sectionAvailability.journeys ? `${zarM(cumulativeMonthlySaving * 12)} annualised` : "Journey data not loaded", available: sectionAvailability.journeys },
+      { l: "Monthly cash freed up", v: sectionAvailability.journeys ? zar(cumulativeMonthlySaving) : "—", d: sectionAvailability.journeys ? `${zar(cumulativeMonthlySaving * 12)} annualised` : "Journey data not loaded", available: sectionAvailability.journeys },
       { l: "New monthly savings in range", v: sectionAvailability.journeys ? zar(flowMonthlySaving) : "—", d: sectionAvailability.journeys ? filter.label : "Journey data not loaded", available: sectionAvailability.journeys },
       { l: "Prescribed debt challenged", v: sectionAvailability.debt ? zarM(challengedBalance) : "—", d: sectionAvailability.debt ? `${challengeRows.length} accounts as at end` : "Debt data not loaded", available: sectionAvailability.debt },
-      { l: "Arrears under active intervention", v: sectionAvailability.debt ? zarM(active.rand) : "—", d: sectionAvailability.debt ? `${active.employees} employees as at end` : "Debt data not loaded", available: sectionAvailability.debt },
+      { l: "Arrears under active intervention", v: sectionAvailability.debt ? zar(active.rand) : "—", d: sectionAvailability.debt ? `${active.employees} employees as at end` : "Debt data not loaded", available: sectionAvailability.debt },
     ],
     debtProfile,
     creditors,
