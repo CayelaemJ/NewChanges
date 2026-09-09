@@ -1134,16 +1134,42 @@ function wireDrop(){
   d.addEventListener('drop',e=>{ if(e.dataTransfer.files[0]) upload(e.dataTransfer.files[0]); });
 }
 
+async function pollJob(url, label){
+  const started = Date.now();
+  let dots = 0;
+
+  while(Date.now() - started < 30 * 60 * 1000){
+    dots = (dots + 1) % 4;
+    $('#result').innerHTML = `<div class="banner ok">${label}${'.'.repeat(dots)} large files can take several minutes. Keep this tab open.</div>`;
+
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    const r = await fetch(url);
+    const d = await r.json().catch(() => null);
+
+    if(!r.ok || !d) throw new Error(d?.error || `${label} status check failed: HTTP ${r.status}`);
+    if(d.status === 'DONE') return d;
+    if(d.status === 'FAILED') throw new Error(d.error || `${label} failed`);
+  }
+
+  throw new Error(`${label} is still running after 30 minutes. Check Import history before retrying.`);
+}
+
+
 async function upload(file){
   if(!file) return;
-  $('#result').innerHTML = `<div class="banner ok">Uploading & validating <strong>${file.name}</strong>…</div>`;
+  $('#result').innerHTML = `<div class="banner ok">Uploading <strong>${file.name}</strong>…</div>`;
   const fd = new FormData(); fd.append('file', file);
   try{
     const r = await fetch(`${API}/api/admin/reports/${CURRENT.key}/upload`, {method:'POST', body:fd});
-    let res;
-    try{ res = await r.json(); }
-    catch(_){ $('#result').innerHTML = `<div class="banner err">✕ The server returned an unexpected response (status ${r.status}). The file may be too large or the server errored while reading it. Try again, or tell support the report was "${CURRENT.key}".</div>`; return; }
-    if(!r.ok){ $('#result').innerHTML = `<div class="banner err">✕ Upload failed: ${res.error||('server error '+r.status)}</div>`; return; }
+    let res = await r.json().catch(() => null);
+    if(!r.ok || !res) throw new Error(res?.error || `server error ${r.status}`);
+
+    // Server now returns 202 and validates in the background.
+    if(r.status === 202 && res.jobId){
+      res = await pollJob(`${API}/api/admin/upload-jobs/${res.jobId}`, 'Validating');
+    }
+
     LAST_BATCH = res.batchId;
     renderResult(res);
     loadHistory();
@@ -1151,6 +1177,7 @@ async function upload(file){
     $('#result').innerHTML = `<div class="banner err">✕ Upload could not complete: ${e.message}. Check your connection and try again.</div>`;
   }
 }
+
 
 function renderResult(res){
   if(res.status === 'VALIDATED'){
@@ -1179,21 +1206,24 @@ function previewTable(rows){
 }
 
 async function commit(batchId){
-  $('#result').innerHTML = `<div class="banner ok">Committing & recomputing scores… (large files can take up to a minute — please wait)</div>`;
+  $('#result').innerHTML = `<div class="banner ok">Committing & recomputing scores…</div>`;
   try{
     const r = await fetch(`${API}/api/admin/batches/${batchId}/commit`, {method:'POST'});
-    let res={};
-    try{ res = await r.json(); }catch(_){}
-    if(!r.ok){
-      $('#result').innerHTML = `<div class="banner err">✕ Commit failed: ${res.error||('server error '+r.status)}. Nothing was saved. ${res.error?'':'If this was a large file, try again — the first attempt may have timed out.'}</div>`;
-      return;
+    let res = await r.json().catch(() => ({}));
+    if(!r.ok) throw new Error(res.error || `server error ${r.status}`);
+
+    // Server now returns 202 and commits in the background.
+    if(r.status === 202 && res.jobId){
+      res = await pollJob(`${API}/api/admin/commit-jobs/${res.jobId}`, 'Committing');
     }
+
     $('#result').innerHTML = `<div class="banner ok">✓ Committed. Recomputed ${res.touchedEmployers?.length||0} employer dashboard(s) for period <strong>${res.period||''}</strong>.</div>`;
     loadHistory();
   }catch(e){
-    $('#result').innerHTML = `<div class="banner err">✕ Commit could not complete: ${e.message}. The file may be large — wait a moment and check Import history; if it shows COMMITTED it actually succeeded.</div>`;
+    $('#result').innerHTML = `<div class="banner err">✕ Commit failed: ${e.message}. Check Import history before retrying so you do not duplicate the import.</div>`;
   }
 }
+
 
 async function revert(batchId){
   if(!confirm('Revert this import? Only rows that can be safely rolled back will be removed.')) return;
