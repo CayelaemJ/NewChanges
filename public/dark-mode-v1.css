@@ -26,7 +26,7 @@ html[data-theme="dark"] [data-no-invert] {
 #theme-toggle-btn {
   position: fixed; right: 18px; bottom: 18px; z-index: 500;
   width: 44px; height: 44px; border-radius: 50%;
-  background: var(--navy, #32217c); color: #fff; border: none;
+  background: var(--brand-primary, #32217c); color: #fff; border: none;
   display: flex; align-items: center; justify-content: center;
   box-shadow: 0 8px 24px rgba(13,42,71,.28);
   cursor: pointer; font-size: 19px; line-height: 1;
