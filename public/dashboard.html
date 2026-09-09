@@ -1357,13 +1357,12 @@ function renderWellness(){
 
 function renderKPIs(){
   const k=DATA.kpis||{};
-  const live=!!window.__LIVE__;
   const safeSpark=(pts,col)=>Array.isArray(pts)&&pts.length>=2?sparkline(pts,col):'';
   const cards=[
-    {label:'Programme take-up',infoKey:'takeUp',ico:KPI_ICONS.takeUp,data:k.takeUp,num:k.takeUp?.pct,suffix:'%',sub:k.takeUp?.available===false?'Data not loaded':`${fmtCount(k.takeUp?.enrolled)} of ${fmtCount(DATA.headcount)} enrolled`,spark:live?'':safeSpark([40,46,52,58,63,67,70,72,k.takeUp?.pct],'#b15be8')},
-    {label:'Actively engaged',infoKey:'engaged',ico:KPI_ICONS.activated,data:k.activated,num:k.activated?.pct,suffix:'%',sub:k.activated?.available===false?'Data not loaded':`${fmtCount(k.activated?.count)} started a fix`,spark:live?'':safeSpark([28,33,38,44,49,53,56,58,k.activated?.pct],'#b15be8')},
-    {label:'Cash freed up / month',infoKey:'saving',ico:KPI_ICONS.saving,data:k.monthlySaving,num:k.monthlySaving?.rand,prefix:'R',money:true,sub:k.monthlySaving?.available===false?'Data not loaded':`R ${fmtCount(k.monthlySaving?.perHead)} avg per active employee`,spark:safeSpark(DATA.savings,'#1fa463')},
-    {label:'Avg experience rating',infoKey:'rating',ico:KPI_ICONS.rating,data:k.avgRating,num:k.avgRating?.val,suffix:'/5',decimals:1,sub:k.avgRating?.available===false?'Data not loaded':`${fmtCount(DATA.ratings?.responses)} ratings collected`,spark:live?'':safeSpark([4.3,4.4,4.4,4.5,4.5,4.6,4.6,4.6,4.6],'#e8910c')},
+    {label:'Programme take-up',infoKey:'takeUp',ico:KPI_ICONS.takeUp,data:k.takeUp,num:k.takeUp?.pct,suffix:'%',sub:k.takeUp?.available===false?'Data not loaded':`${fmtCount(k.takeUp?.enrolled)} of ${fmtCount(DATA.headcount)} enrolled`,spark:safeSpark(k.takeUp?.trend,'#b15be8')},
+    {label:'Actively engaged',infoKey:'engaged',ico:KPI_ICONS.activated,data:k.activated,num:k.activated?.pct,suffix:'%',sub:k.activated?.available===false?'Data not loaded':`${fmtCount(k.activated?.count)} started a fix`,spark:safeSpark(k.activated?.trend,'#b15be8')},
+    {label:'Cash freed up / month',infoKey:'saving',ico:KPI_ICONS.saving,data:k.monthlySaving,num:k.monthlySaving?.rand,prefix:'R',money:true,sub:k.monthlySaving?.available===false?'Data not loaded':`R ${fmtCount(k.monthlySaving?.perHead)} avg per active employee`,spark:safeSpark(k.monthlySaving?.trend,'#1fa463')},
+    {label:'Avg experience rating',infoKey:'rating',ico:KPI_ICONS.rating,data:k.avgRating,num:k.avgRating?.val,suffix:'/5',decimals:1,sub:k.avgRating?.available===false?'Data not loaded':`${fmtCount(DATA.ratings?.responses)} ratings collected`,spark:safeSpark(k.avgRating?.trend,'#e8910c')},
   ];
   const wrap=document.getElementById('kpis');
   cards.forEach((c,i)=>{
