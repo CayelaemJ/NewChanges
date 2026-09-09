@@ -14,6 +14,9 @@ import { notifyScoreChangeIfCurrentPeriod } from "./automationService.js";
 const prisma = new PrismaClient();
 type Json = any;
 
+const IMPORT_CHUNK_SIZE=Number(process.env.IMPORT_CHUNK_SIZE ?? 1000);
+const IMPORT_TX_TIMEOUT_MS=Number(process.env.IMPORT_TX_TIMEOUT_MS ?? 120_000);
+
 interface CommitOptions {
   recompute?: boolean;
 }
@@ -628,8 +631,8 @@ export async function commitBatch(batchId: string, options: CommitOptions = {}) 
 
   for (const chunk of chunks) {
     await prisma.$transaction(
-      (tx: any) => commitRowsChunk(tx, batch.reportKey, chunk, stats, batchId),
-      { timeout: 180000, maxWait: 30000 },
+      (tx: any) => commitRowsChunk(tx, reportKey, chunk, stats, batchId),
+      { timeout: 120_000, maxWait: 30000 },
     );
   }
 
