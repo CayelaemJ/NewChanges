@@ -7,7 +7,7 @@
 import { PrismaClient } from "@prisma/client";
 import { getFormat } from "./reportFormats.js";
 import { compareDateValues, dateMillis, rehydrateStagedRows } from "./stagedRows.js";
-import { parseFile, validate, detectFormat, parseAndValidateCsvStreaming } from "./importParser.js";
+import { parseFile, validate, detectFormat, parseAndValidateCsvStreaming, parseAndValidateXlsxJsonStreaming } from "./importParser.js";
 import { snapshotEmployer } from "./snapshotBuilder.js";
 import { notifyScoreChangeIfCurrentPeriod } from "./automationService.js";
 
@@ -87,18 +87,13 @@ export async function uploadAndValidate(opts: {
 
   // CSV streams row-by-row and flushes chunks to ImportBatchRow as it goes —
   // this matters most here since bulk imports are almost always CSV. xlsx/json
-  // still need the whole file loaded by their parsing library either way, but
-  // their validated rows are still written out in the same bounded chunks
-  // rather than as one Json blob.
+  // also now stream validated rows in bounded chunks rather than accumulating
+  // into one giant array, keeping peak memory bounded for any file size.
   let result;
   if (fileFormat === "csv") {
     result = await parseAndValidateCsvStreaming(opts.buffer, format, writeChunk);
   } else {
-    const rawRows = parseFile(opts.buffer, fileFormat);
-    result = validate(format, rawRows);
-    if (result.ok) {
-      for (let i = 0; i < result.rows.length; i += 2000) await writeChunk(result.rows.slice(i, i + 2000));
-    }
+    result = await parseAndValidateXlsxJsonStreaming(opts.buffer, fileFormat, format, writeChunk);
   }
 
   // Staged rows are only meaningful for a batch a user can go on to commit.
