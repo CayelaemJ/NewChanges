@@ -80,7 +80,7 @@ export async function uploadAndValidate(opts: {
   // Reserve the batch row first so chunks can reference its id as they're
   // validated, rather than accumulating the whole file in memory and writing
   // it as one value at the end.
-  const batch = await prisma.importBatch.create({
+  const batch = .importBatch.create({
     data: { reportKey: opts.reportKey, filename: opts.filename, fileFormat, status: "UPLOADED", uploadedBy: opts.uploadedBy },
   });
   const writeChunk = await chunkedRowWriter(batch.id);
@@ -104,7 +104,7 @@ export async function uploadAndValidate(opts: {
   // Staged rows are only meaningful for a batch a user can go on to commit.
   // A failed validation has nothing to commit, so drop whatever chunks were
   // already written for it (a run of valid-looking rows before a later error).
-  if (!result.ok) await prisma.importBatchRow.deleteMany({ where: { batchId: batch.id } });
+  if (!result.ok) .importBatchRow.deleteMany({ where: { batchId: batch.id } });
 
   const updated = await prisma.importBatch.update({
     where: { id: batch.id },
@@ -631,7 +631,7 @@ export async function commitBatch(batchId: string, options: CommitOptions = {}) 
 
   for (const chunk of chunks) {
     await prisma.$transaction(
-      (tx: any) => commitRowsChunk(tx, reportKey, chunk, stats, batchId),
+      (tx: any) => commitRowsChunk(tx, batch.reportKey, chunk, stats, batchId),
       { timeout: 120_000, maxWait: 30000 },
     );
   }
