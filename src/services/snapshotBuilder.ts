@@ -771,6 +771,44 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
   const savings = savingsPairs.map((point) => point.value);
   const savingsLabels = savingsPairs.map((point) => monthLabel(point.key));
 
+  // Last-12-months trend + period-over-period delta for the four headline KPI
+  // cards. Computed directly from the underlying records (as-of each month's
+  // end) rather than depending on a persisted ScoreSnapshot existing for
+  // every past month, the same way the savings/EWA trends above work — so the
+  // most recent trend point always agrees with the headline number.
+  const currentMonthKey = monthKey(filter.asAt);
+  const trendMonths: string[] = [];
+  {
+    const [ty, tm] = currentMonthKey.split("-").map(Number);
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(Date.UTC(ty, tm - 1 - i, 1));
+      trendMonths.push(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`);
+    }
+  }
+  const firstActivatedAt = new Map<string, Date>();
+  for (const journey of liveJourneys as any[]) {
+    const existing = firstActivatedAt.get(journey.platformUserId);
+    if (!existing || journey.startedAt < existing) firstActivatedAt.set(journey.platformUserId, journey.startedAt);
+  }
+  let monthlySavingCum = 0;
+  for (const [key, value] of savingByMonth.entries()) if (key < trendMonths[0]) monthlySavingCum += value;
+  const takeUpTrend: number[] = [];
+  const activatedTrend: number[] = [];
+  const avgRatingTrend: number[] = [];
+  const monthlySavingTrend: number[] = [];
+  for (const month of trendMonths) {
+    const cutoff = month === currentMonthKey ? filter.asAt : endOfMonth(month);
+    takeUpTrend.push(pct(platformUsers.filter((u: any) => u.enrolledAt <= cutoff).length));
+    activatedTrend.push(pct([...firstActivatedAt.values()].filter((d) => d <= cutoff).length));
+    const ratingsToDate = (ratingsAll as any[]).filter((r: any) => r.createdAt <= cutoff);
+    avgRatingTrend.push(ratingsToDate.length ? Number((ratingsToDate.reduce((sum: number, r: any) => sum + r.stars, 0) / ratingsToDate.length).toFixed(1)) : 0);
+    monthlySavingCum += savingByMonth.get(month) ?? 0;
+    monthlySavingTrend.push(rand(monthlySavingCum));
+  }
+  // "vs last period" delta — the difference between the last two trend
+  // points, so it's always consistent with the trend line drawn next to it.
+  const trendDelta = (trend: number[]) => (trend.length >= 2 ? Number((trend[trend.length - 1] - trend[trend.length - 2]).toFixed(1)) : null);
+
   const regions: any[] = [];
   const stressMap: any[] = [];
   const siteStats: any[] = [];
@@ -991,10 +1029,10 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
       guided: { rand: rand(guided.rand), employees: guided.employees, label: "Self-managed via guidance", note: "educated on prescription where no arrangement was affordable" },
     },
     kpis: {
-      takeUp: { pct: kpiAvailability.takeUp ? pct(enrolled) : null, enrolled: kpiAvailability.takeUp ? enrolled : null, available: kpiAvailability.takeUp },
-      activated: { pct: kpiAvailability.activated ? pct(activated) : null, count: kpiAvailability.activated ? activated : null, available: kpiAvailability.activated },
-      monthlySaving: { rand: kpiAvailability.monthlySaving ? rand(cumulativeMonthlySaving) : null, perHead: kpiAvailability.monthlySaving ? rand(averagePerActive) : null, available: kpiAvailability.monthlySaving },
-      avgRating: { val: kpiAvailability.avgRating ? Number(avgRating.toFixed(1)) : null, responses: kpiAvailability.avgRating ? ratingResponses : null, available: kpiAvailability.avgRating },
+      takeUp: { pct: kpiAvailability.takeUp ? pct(enrolled) : null, enrolled: kpiAvailability.takeUp ? enrolled : null, available: kpiAvailability.takeUp, trend: kpiAvailability.takeUp ? takeUpTrend : [], delta: kpiAvailability.takeUp ? trendDelta(takeUpTrend) : null },
+      activated: { pct: kpiAvailability.activated ? pct(activated) : null, count: kpiAvailability.activated ? activated : null, available: kpiAvailability.activated, trend: kpiAvailability.activated ? activatedTrend : [], delta: kpiAvailability.activated ? trendDelta(activatedTrend) : null },
+      monthlySaving: { rand: kpiAvailability.monthlySaving ? rand(cumulativeMonthlySaving) : null, perHead: kpiAvailability.monthlySaving ? rand(averagePerActive) : null, available: kpiAvailability.monthlySaving, trend: kpiAvailability.monthlySaving ? monthlySavingTrend : [], delta: kpiAvailability.monthlySaving ? trendDelta(monthlySavingTrend) : null },
+      avgRating: { val: kpiAvailability.avgRating ? Number(avgRating.toFixed(1)) : null, responses: kpiAvailability.avgRating ? ratingResponses : null, available: kpiAvailability.avgRating, trend: kpiAvailability.avgRating ? avgRatingTrend : [], delta: kpiAvailability.avgRating ? trendDelta(avgRatingTrend) : null },
     },
     funnel: [
       { label: "Eligible workforce", sub: "as at range end", n: headcountDataAvailable ? headcount : null, pct: headcountDataAvailable ? 100 : null, available: headcountDataAvailable },
