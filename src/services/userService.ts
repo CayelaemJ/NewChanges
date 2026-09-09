@@ -124,7 +124,14 @@ export async function listUsers() {
   return users.map((u: any) => ({
     id: u.id, email: u.email, name: u.name, role: u.role, active: u.active,
     hasPassword: !!u.passwordHash,
-    pendingSetup: !!u.setupToken,
+    // A user is "pending setup" only if they've never actually set a
+    // password — not just because a setupToken row exists. The same token
+    // field is reused for self-service "forgot password" requests (see
+    // requestPasswordReset above); if someone with a working password
+    // requests a reset link but then just logs in with their existing
+    // password instead of using it, the leftover unused token was
+    // incorrectly making a fully active account show "pending setup" forever.
+    pendingSetup: !u.passwordHash,
     employers: u.links.map((l: any) => ({ id: l.employer.id, name: l.employer.name })),
     partner: u.partner ? { id: u.partner.id, name: u.partner.displayName || u.partner.name } : null,
     createdAt: u.createdAt,
