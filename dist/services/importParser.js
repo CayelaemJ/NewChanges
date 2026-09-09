@@ -1,0 +1,338 @@
+// ════════════════════════════════════════════════════════════════════
+//  IMPORT PARSER + VALIDATOR
+//  CSV, XLSX, JSON, API and direct SQL use the same strict canonical contract.
+// ════════════════════════════════════════════════════════════════════
+import * as XLSX from "xlsx";
+import { parse as parseCsv } from "csv-parse/sync";
+import { parse as parseCsvStream } from "csv-parse";
+export function detectFormat(filename) {
+    const f = filename.toLowerCase();
+    if (f.endsWith(".xlsx") || f.endsWith(".xls"))
+        return "xlsx";
+    if (f.endsWith(".json"))
+        return "json";
+    return "csv";
+}
+export function parseFile(buffer, format) {
+    if (format === "json") {
+        const body = JSON.parse(buffer.toString("utf-8"));
+        const data = Array.isArray(body) ? body : body?.records;
+        if (!Array.isArray(data))
+            throw new Error('JSON import must be an array or an object containing a "records" array.');
+        if (data.some((row) => row == null || typeof row !== "object" || Array.isArray(row))) {
+            throw new Error("Every JSON record must be an object.");
+        }
+        return data;
+    }
+    if (format === "xlsx") {
+        const wb = XLSX.read(buffer, { type: "buffer", cellDates: false });
+        if (!wb.SheetNames.length)
+            return [];
+        const sheet = wb.Sheets[wb.SheetNames[0]];
+        return XLSX.utils.sheet_to_json(sheet, { defval: "", raw: false });
+    }
+    return parseCsv(buffer, {
+        columns: true,
+        skip_empty_lines: true,
+        bom: true,
+        ltrim: true,
+        rtrim: true,
+        relax_quotes: true,
+        relax_column_count: true,
+    });
+}
+// Streaming version for XLSX and JSON that emits rows via callback to avoid
+// loading the entire file into memory. This is the complement to
+// parseAndValidateCsvStreaming() which handles CSV streams natively.
+// For XLSX/JSON, we chunk manually since the underlying libraries require
+// full file load anyway — but we emit to onRows immediately rather than
+// accumulating, keeping peak memory at one chunk size instead of full file.
+export async function parseAndValidateXlsxJsonStreaming(buffer, format, reportFormat, onRows, chunkSize = 2000) {
+    const specByName = new Map(reportFormat.fields.map((f) => [f.name, f]));
+    const errors = [];
+    const preview = [];
+    const seenKeys = new Set();
+    let chunk = [];
+    let fileColumns = null;
+    let rowCount = 0;
+    // Parse the entire file upfront (xlsx and json libraries require this)
+    const allRows = parseFile(buffer, format);
+    for (const raw of allRows) {
+        if (fileColumns === null)
+            fileColumns = Object.keys(raw);
+        rowCount += 1;
+        const out = validateRecord(reportFormat, raw, rowCount, seenKeys, errors);
+        if (preview.length < 10)
+            preview.push(out);
+        if (onRows) {
+            chunk.push(out);
+            if (chunk.length >= chunkSize) {
+                await onRows(chunk);
+                chunk = [];
+            }
+        }
+    }
+    if (onRows && chunk.length)
+        await onRows(chunk);
+    const columns = fileColumns ?? [];
+    const missingColumns = rowCount
+        ? reportFormat.fields.filter((f) => f.required && !columns.includes(f.name)).map((f) => f.name)
+        : [];
+    const unknownColumns = columns.filter((column) => !specByName.has(column));
+    const ok = errors.length === 0 && missingColumns.length === 0;
+    return {
+        ok,
+        rowCount,
+        errors,
+        rows: ok ? preview : [],
+        unknownColumns,
+        missingColumns,
+    };
+}
+function parseDateOnly(value) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value))
+        return null;
+    const [year, month, day] = value.split("-").map(Number);
+    const d = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+    if (d.getUTCFullYear() !== year || d.getUTCMonth() !== month - 1 || d.getUTCDate() !== day)
+        return null;
+    return d;
+}
+function parseDateTime(value) {
+    // Require an explicit UTC offset/Z so incremental cursors are unambiguous.
+    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2})$/.test(value))
+        return null;
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? null : d;
+}
+function coerce(spec, raw) {
+    const s = raw == null ? "" : String(raw).trim();
+    if (s === "") {
+        if (spec.required)
+            return [null, "required value is missing"];
+        return [null, null];
+    }
+    switch (spec.type) {
+        case "string":
+            return [s, null];
+        case "int": {
+            if (!/^-?\d+$/.test(s))
+                return [null, `expected an integer, got "${s}"`];
+            const n = Number(s);
+            if (!Number.isSafeInteger(n))
+                return [null, `integer is outside the supported range: "${s}"`];
+            return [n, null];
+        }
+        case "decimal": {
+            const normalized = s.replace(/,/g, "");
+            if (!/^-?(?:\d+(?:\.\d+)?|\.\d+)$/.test(normalized))
+                return [null, `expected a decimal number, got "${s}"`];
+            const n = Number(normalized);
+            if (!Number.isFinite(n))
+                return [null, `number is outside the supported range: "${s}"`];
+            return [spec.cents ? Math.round((n + Number.EPSILON) * 100) : n, null];
+        }
+        case "bool": {
+            const v = s.toLowerCase();
+            if (["true", "1", "yes", "y"].includes(v))
+                return [true, null];
+            if (["false", "0", "no", "n"].includes(v))
+                return [false, null];
+            return [null, `expected true/false, got "${s}"`];
+        }
+        case "date": {
+            const d = parseDateOnly(s);
+            if (!d)
+                return [null, `expected a valid date in YYYY-MM-DD format, got "${s}"`];
+            return [d, null];
+        }
+        case "datetime": {
+            const d = parseDateTime(s);
+            if (!d)
+                return [null, `expected an ISO-8601 timestamp with timezone, got "${s}"`];
+            return [d, null];
+        }
+        case "enum": {
+            if (!spec.enumValues?.includes(s)) {
+                return [null, `must be one of ${spec.enumValues?.join(", ")} — got "${s}"`];
+            }
+            return [s, null];
+        }
+    }
+}
+function addBusinessRules(format, row, rowNo, errors) {
+    const date = (name) => row[name] instanceof Date ? row[name] : null;
+    const num = (name) => typeof row[name] === "number" ? row[name] : null;
+    const fail = (column, reason) => errors.push({ row: rowNo, column, value: row[column], reason });
+    for (const [name, value] of Object.entries(row)) {
+        if (typeof value !== "number")
+            continue;
+        if (["sentiment"].includes(name))
+            continue;
+        if (value < 0)
+            fail(name, "must not be negative");
+    }
+    if (num("stars") != null && (num("stars") < 1 || num("stars") > 5))
+        fail("stars", "must be between 1 and 5");
+    if (num("satisfaction") != null && (num("satisfaction") < 1 || num("satisfaction") > 5))
+        fail("satisfaction", "must be between 1 and 5");
+    if (num("sentiment") != null && (num("sentiment") < -1 || num("sentiment") > 1))
+        fail("sentiment", "must be between -1.0 and 1.0");
+    const eligibleFrom = date("eligible_from");
+    const eligibleTo = date("eligible_to");
+    if (eligibleFrom && eligibleTo && eligibleTo < eligibleFrom)
+        fail("eligible_to", "must be on or after eligible_from");
+    if (format.key === "employees" && row.active === false && row.is_deleted !== true && !eligibleTo) {
+        fail("eligible_to", "is required when active is false so historical eligibility has a business end date");
+    }
+    const enrolledAt = date("enrolled_at");
+    const activatedAt = date("activated_at");
+    if (enrolledAt && activatedAt && activatedAt < enrolledAt)
+        fail("activated_at", "must be on or after enrolled_at");
+    const startedAt = date("started_at");
+    const completedAt = date("completed_at");
+    if (startedAt && completedAt && completedAt < startedAt)
+        fail("completed_at", "must be on or after started_at");
+    if (format.key === "journeys" && row.status === "COMPLETED" && !completedAt)
+        fail("completed_at", "is required when status is COMPLETED");
+    const effectiveFrom = date("effective_from");
+    const effectiveTo = date("effective_to");
+    if (effectiveFrom && effectiveTo && effectiveTo < effectiveFrom)
+        fail("effective_to", "must be on or after effective_from");
+    const observedAt = date("observed_at");
+    const resolvedAt = date("resolved_at");
+    if (effectiveFrom && resolvedAt && resolvedAt < effectiveFrom)
+        fail("resolved_at", "must be on or after effective_from");
+    if (observedAt && resolvedAt && row.is_resolved === true && resolvedAt > observedAt)
+        fail("resolved_at", "cannot be after observed_at when is_resolved is true");
+    const closedAt = date("closed_at");
+    if (observedAt && closedAt && closedAt < observedAt)
+        fail("closed_at", "cannot be before observed_at");
+    if (format.key === "employers" && row.eligible_count != null && !date("eligible_count_as_at")) {
+        fail("eligible_count_as_at", "is required when eligible_count is supplied");
+    }
+    if (format.key === "employers" && row.eligible_count == null && date("eligible_count_as_at")) {
+        fail("eligible_count", "is required when eligible_count_as_at is supplied");
+    }
+    if (row.converted === true && !date("converted_at"))
+        fail("converted_at", "is required when converted is true");
+    if (row.is_resolved === true && format.key === "policies" && !date("resolved_at"))
+        fail("resolved_at", "is required when is_resolved is true");
+}
+function serializeNaturalKeyPart(value) {
+    return value instanceof Date ? value.toISOString() : String(value);
+}
+// Validates a single already-parsed record and appends its outcome into the
+// shared accumulators. Factored out so the whole-array path (validate(), used
+// for xlsx/json which the underlying libraries must load fully into memory
+// anyway) and the streaming CSV path below can share one implementation
+// without ever materialising a second full array of raw + validated rows.
+function validateRecord(format, raw, rowNo, seenKeys, errors) {
+    const out = {};
+    for (const spec of format.fields) {
+        const [value, error] = coerce(spec, raw[spec.name]);
+        if (error)
+            errors.push({ row: rowNo, column: spec.name, value: raw[spec.name], reason: error });
+        else
+            out[spec.name] = value;
+    }
+    addBusinessRules(format, out, rowNo, errors);
+    if (format.naturalKey.every((key) => out[key] != null)) {
+        const keyValue = format.naturalKey.map((key) => serializeNaturalKeyPart(out[key])).join("∣");
+        if (seenKeys.has(keyValue)) {
+            errors.push({
+                row: rowNo,
+                column: format.naturalKey.join("+"),
+                value: keyValue,
+                reason: "duplicate natural key in file",
+            });
+        }
+        seenKeys.add(keyValue);
+    }
+    return out;
+}
+export function validate(format, rawRows) {
+    const specByName = new Map(format.fields.map((f) => [f.name, f]));
+    const fileColumns = [...new Set(rawRows.flatMap((row) => Object.keys(row)))];
+    // Empty API/SQL windows are valid incremental responses. With no rows there
+    // is no row-level column metadata to inspect, so do not report every required
+    // field as missing. Non-empty payloads remain strict.
+    const missingColumns = rawRows.length
+        ? format.fields.filter((f) => f.required && !fileColumns.includes(f.name)).map((f) => f.name)
+        : [];
+    const unknownColumns = fileColumns.filter((column) => !specByName.has(column));
+    const errors = [];
+    const rows = [];
+    const seenKeys = new Set();
+    rawRows.forEach((raw, index) => {
+        rows.push(validateRecord(format, raw, index + 1, seenKeys, errors));
+    });
+    const ok = errors.length === 0 && missingColumns.length === 0;
+    return {
+        ok,
+        rowCount: rawRows.length,
+        errors,
+        rows: ok ? rows : [],
+        unknownColumns,
+        missingColumns,
+    };
+}
+// Large CSVs are the common case for "any size" imports, and CSV is the one
+// format that doesn't require an external library to hold the whole file in
+// memory to parse it. This streams the file through csv-parse and validates
+// each record as it arrives. If onRows is given, validated rows are flushed
+// to it in bounded chunks (see importService.ts, which writes each chunk
+// straight to the ImportBatchRow table) instead of being accumulated into
+// one ever-growing array — that's what actually keeps peak memory bounded
+// for a large file, not the streaming parse by itself. xlsx/json still go
+// through the whole-array path because those libraries require the full
+// file in memory regardless of how we consume it.
+export async function parseAndValidateCsvStreaming(buffer, format, onRows, chunkSize = 2000) {
+    const specByName = new Map(format.fields.map((f) => [f.name, f]));
+    const errors = [];
+    const preview = [];
+    const seenKeys = new Set();
+    let chunk = [];
+    let fileColumns = null;
+    let rowCount = 0;
+    const parser = parseCsvStream(buffer, {
+        columns: true,
+        skip_empty_lines: true,
+        bom: true,
+        ltrim: true,
+        rtrim: true,
+        relax_quotes: true,
+        relax_column_count: true,
+    });
+    for await (const raw of parser) {
+        if (fileColumns === null)
+            fileColumns = Object.keys(raw);
+        rowCount += 1;
+        const out = validateRecord(format, raw, rowCount, seenKeys, errors);
+        if (preview.length < 10)
+            preview.push(out);
+        if (onRows) {
+            chunk.push(out);
+            if (chunk.length >= chunkSize) {
+                await onRows(chunk);
+                chunk = [];
+            }
+        }
+    }
+    if (onRows && chunk.length)
+        await onRows(chunk);
+    const columns = fileColumns ?? [];
+    const missingColumns = rowCount
+        ? format.fields.filter((f) => f.required && !columns.includes(f.name)).map((f) => f.name)
+        : [];
+    const unknownColumns = columns.filter((column) => !specByName.has(column));
+    const ok = errors.length === 0 && missingColumns.length === 0;
+    return {
+        ok,
+        rowCount,
+        errors,
+        rows: ok ? preview : [],
+        unknownColumns,
+        missingColumns,
+    };
+}

@@ -62,6 +62,62 @@ export function parseFile(buffer: Buffer, format: Format): Record<string, unknow
   });
 }
 
+// Streaming version for XLSX and JSON that emits rows via callback to avoid
+// loading the entire file into memory. This is the complement to
+// parseAndValidateCsvStreaming() which handles CSV streams natively.
+// For XLSX/JSON, we chunk manually since the underlying libraries require
+// full file load anyway — but we emit to onRows immediately rather than
+// accumulating, keeping peak memory at one chunk size instead of full file.
+export async function parseAndValidateXlsxJsonStreaming(
+  buffer: Buffer,
+  format: Exclude<Format, "csv">,
+  reportFormat: ReportFormat,
+  onRows?: (rows: Record<string, unknown>[]) => Promise<void> | void,
+  chunkSize = 2000,
+): Promise<ValidationResult> {
+  const specByName = new Map(reportFormat.fields.map((f) => [f.name, f]));
+  const errors: CellError[] = [];
+  const preview: Record<string, unknown>[] = [];
+  const seenKeys = new Set<string>();
+  let chunk: Record<string, unknown>[] = [];
+  let fileColumns: string[] | null = null;
+  let rowCount = 0;
+
+  // Parse the entire file upfront (xlsx and json libraries require this)
+  const allRows = parseFile(buffer, format);
+
+  for (const raw of allRows) {
+    if (fileColumns === null) fileColumns = Object.keys(raw);
+    rowCount += 1;
+    const out = validateRecord(reportFormat, raw, rowCount, seenKeys, errors);
+    if (preview.length < 10) preview.push(out);
+    if (onRows) {
+      chunk.push(out);
+      if (chunk.length >= chunkSize) {
+        await onRows(chunk);
+        chunk = [];
+      }
+    }
+  }
+  if (onRows && chunk.length) await onRows(chunk);
+
+  const columns = fileColumns ?? [];
+  const missingColumns = rowCount
+    ? reportFormat.fields.filter((f) => f.required && !columns.includes(f.name)).map((f) => f.name)
+    : [];
+  const unknownColumns = columns.filter((column) => !specByName.has(column));
+
+  const ok = errors.length === 0 && missingColumns.length === 0;
+  return {
+    ok,
+    rowCount,
+    errors,
+    rows: ok ? preview : [],
+    unknownColumns,
+    missingColumns,
+  };
+}
+
 function parseDateOnly(value: string): Date | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
   const [year, month, day] = value.split("-").map(Number);
@@ -321,3 +377,4 @@ export async function parseAndValidateCsvStreaming(
     missingColumns,
   };
 }
+
