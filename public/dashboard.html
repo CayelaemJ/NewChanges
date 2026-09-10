@@ -554,12 +554,12 @@
   <!-- ════════════════════════ FILTERS ════════════════════════ -->
   <div class="filters">
     <select class="filter-emp" id="employer-select" style="display:none;" onchange="switchEmployer(this.value)"></select>
-    <select class="filter-month" id="month-select" style="display:none;" onchange="switchPeriod(this.value)"></select>
-    <div class="seg" id="period-seg">
-      <button data-p="30">Last 30 days</button>
-      <button data-p="q">Quarter</button>
-      <button class="on" data-p="all">Programme to date</button>
-    </div>
+    <select class="filter-month" id="month-select" onchange="switchPeriod(this.value)">
+      <option value="">Latest period</option>
+      <option value="30d">Last 30 days</option>
+      <option value="qtd">Quarter to date</option>
+      <option value="all">Programme to date</option>
+    </select>
     <span class="filter-tag interactive" id="region-filter">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M6 12h12M10 18h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       <span class="tag-label">All regions</span>
@@ -1454,7 +1454,7 @@ function renderEwa(){
       <div style="font-size:12.5px;color:#8497a7;margin-top:6px;">${pts.length?'Total advanced so far.':'No advances yet.'}<br>The monthly trend appears with two or more months of data.</div></div>`));
     return;
   }
-  const w=860,h=210,pad=30,max=Math.max(...pts)*1.12;
+  const w=860,h=210,pad=44,max=Math.max(...pts)*1.12;
   const px=i=>pad+(i*(w-pad*2)/(pts.length-1));
   const py=v=>h-pad-(v/max)*(h-pad*1.4);
   const line=pts.map((p,i)=>(i?'L':'M')+px(i).toFixed(1)+' '+py(p).toFixed(1)).join(' ');
@@ -1463,7 +1463,7 @@ function renderEwa(){
   const xlabels=labels.map((l,i)=>`<text x="${px(i)}" y="${h-8}" font-size="9.5" fill="#8497a7" text-anchor="middle" font-weight="600">${l}</text>`).join('');
   wrap.appendChild(el(`<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;">
     <defs><linearGradient id="ewag" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b15be8" stop-opacity=".16"/><stop offset="1" stop-color="#b15be8" stop-opacity="0"/></linearGradient></defs>
-    ${[0,.5,1].map(f=>`<line x1="${pad}" x2="${w-pad}" y1="${h-pad-f*(h-pad*1.4)}" y2="${h-pad-f*(h-pad*1.4)}" stroke="#f7f4ff" stroke-width="1"/>`).join('')}
+    ${[0,.5,1].map(f=>`<line x1="${pad}" x2="${w-pad}" y1="${h-pad-f*(h-pad*1.4)}" y2="${h-pad-f*(h-pad*1.4)}" stroke="#f7f4ff" stroke-width="1"/><text x="${pad-6}" y="${(h-pad-f*(h-pad*1.4)+3).toFixed(1)}" text-anchor="end" font-size="9.5" font-weight="700" fill="#8497a7">R${Math.round(max*f)}k</text>`).join('')}
     <path d="${area}" fill="url(#ewag)"/>
     <path d="${line}" fill="none" stroke="#b15be8" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
     ${dots}${xlabels}
@@ -1483,7 +1483,7 @@ function renderSavings(){
     </div>`));
     return;
   }
-  const w=420,h=200,pad=28,max=Math.max(...pts)*1.12;
+  const w=420,h=200,pad=40,max=Math.max(...pts)*1.12;
   const px=i=>pad+(i*(w-pad*2)/(pts.length-1));
   const py=v=>h-pad-(v/max)*(h-pad*1.4);
   let line=pts.map((p,i)=>(i?'L':'M')+px(i).toFixed(1)+' '+py(p).toFixed(1)).join(' ');
@@ -1492,7 +1492,7 @@ function renderSavings(){
   let xlabels=labels.map((l,i)=> i%2===0||i===labels.length-1 ? `<text x="${px(i)}" y="${h-8}" font-size="9.5" fill="#8497a7" text-anchor="middle" font-weight="600">${l}</text>`:'').join('');
   wrap.appendChild(el(`<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;">
     <defs><linearGradient id="savg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1fa463" stop-opacity=".18"/><stop offset="1" stop-color="#1fa463" stop-opacity="0"/></linearGradient></defs>
-    ${[0,.5,1].map(f=>`<line x1="${pad}" x2="${w-pad}" y1="${h-pad-f*(h-pad*1.4)}" y2="${h-pad-f*(h-pad*1.4)}" stroke="#f7f4ff" stroke-width="1"/>`).join('')}
+    ${[0,.5,1].map(f=>`<line x1="${pad}" x2="${w-pad}" y1="${h-pad-f*(h-pad*1.4)}" y2="${h-pad-f*(h-pad*1.4)}" stroke="#f7f4ff" stroke-width="1"/><text x="${pad-6}" y="${(h-pad-f*(h-pad*1.4)+3).toFixed(1)}" text-anchor="end" font-size="9.5" font-weight="700" fill="#8497a7">R${Math.round(max*f)}k</text>`).join('')}
     <path d="${area}" fill="url(#savg)"/>
     <path d="${line}" fill="none" stroke="#1fa463" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
     ${dots}${xlabels}
@@ -1981,21 +1981,21 @@ function updateContextLine(){
 }
 
 /* ─────── wire: period segmented control ─────── */
-function wirePeriod(){
-  document.querySelectorAll('#period-seg button').forEach(b=>{
-    b.classList.toggle('on', b.dataset.p===STATE.period);
-    b.addEventListener('click',()=>{
-      if(window.__LIVE__){
-        const map={ '30':'30d', 'q':'quarter', 'all':'all' };
-        switchFilter('range',map[b.dataset.p]||'all',{clearPeriod:true});
-        return;
-      }
-      document.querySelectorAll('#period-seg button').forEach(x=>x.classList.remove('on'));
-      b.classList.add('on');
-      STATE.period=b.dataset.p;
-      applyState();
-    });
-  });
+/* ─────── sync: period selector reflects current state ─────── */
+function syncPeriodControl(){
+  const sel=document.getElementById('month-select'); if(!sel) return;
+  if(window.__LIVE__){
+    const quarter=quarterFromUrl(), period=periodFromUrl();
+    const rangeParam=new URLSearchParams(location.search).get('range');
+    if(quarter && sel.querySelector(`option[value="q:${quarter}"]`)) sel.value='q:'+quarter;
+    else if(period && sel.querySelector(`option[value="${period}"]`)) sel.value=period;
+    else if(rangeParam==='30d') sel.value='30d';
+    else if(rangeParam==='quarter') sel.value='qtd';
+    else if(rangeParam==='all') sel.value='all';
+    else sel.value=''; // no params, or range=latest — both mean "Latest period"
+  } else {
+    sel.value = STATE.period==='30'?'30d' : STATE.period==='q'?'qtd' : 'all';
+  }
 }
 
 /* ─────── wire: filter dropdowns ─────── */
@@ -2413,24 +2413,31 @@ function closeDrawer(){
 document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeDrawer(); });
 
 function outcomeDrill(o){
+  const delta=hasValue(o.delta)?`${o.delta>=0?'▲ +'+o.delta:'▼ '+o.delta} vs. last month`:'No prior period';
   const body=`
     <div class="drawer-stats">
       <div class="ds"><div class="dsl">Fixes completed</div><div class="dsv">${o.count.toLocaleString()}</div></div>
       <div class="ds"><div class="dsl">${o.statL}</div><div class="dsv">${o.stat}</div></div>
-      <div class="ds"><div class="dsl">Avg per employee</div><div class="dsv">${o.key==='credit'?'R 298/mo':o.key==='funeral'?'R 147/mo':o.key==='arrears'?'R 28,900':o.key==='prescribed'?'R 10,000':o.key==='emergency'?'1-mo advance':'—'}</div></div>
+      <div class="ds"><div class="dsl">Avg per employee</div><div class="dsv">${o.avgPerEmployee||'—'}</div></div>
     </div>
-    <div class="drawer-section-title">Completion trend</div>
-    ${miniTrend(o.key)}
+    <div class="drawer-section-title">Completion trend <span style="font-weight:700;color:${hasValue(o.delta)&&o.delta<0?'#a3271c':'#137a47'}">${delta}</span></div>
+    ${miniTrend(o.trend, o.name)}
     <div class="drawer-note">Employee-level detail is de-identified. The employer sees aggregated outcomes only — never an individual's financial information. ${o.key==='credit'?'Credit life replacement leverages NCA s106(4)(a) substitution rights.':''}</div>`;
   openDrawer(o.name, o.meta, body);
 }
-function miniTrend(key){
-  const seed={credit:[28,41,58,72,90,112],funeral:[12,22,34,46,60,72],arrears:[6,11,18,24,28,33],prescribed:[9,17,24,28,30,33],emergency:[4,9,14,19,22,26],sti:[2,3,5,6,7,8]}[key]||[1,2,3,4,5,6];
-  const w=440,h=120,max=Math.max(...seed)*1.2,pad=10;
-  const px=i=>pad+i*(w-pad*2)/(seed.length-1), py=v=>h-pad-(v/max)*(h-pad*2);
-  let line=seed.map((v,i)=>(i?'L':'M')+px(i)+' '+py(v)).join(' ');
-  let dots=seed.map((v,i)=>`<circle cx="${px(i)}" cy="${py(v)}" r="3" fill="#b15be8"/>`).join('');
-  return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:120px;margin:8px 0 4px">
+function miniTrend(points, label){
+  const seed=(Array.isArray(points)&&points.length)?points:[0,0,0,0,0,0,0,0,0,0,0,0];
+  const w=440,h=140,padL=34,padR=10,padT=10,padB=22;
+  const max=Math.max(1,...seed);
+  const px=i=>padL+i*(w-padL-padR)/(seed.length-1), py=v=>h-padB-(v/max)*(h-padT-padB);
+  let line=seed.map((v,i)=>(i?'L':'M')+px(i).toFixed(1)+' '+py(v).toFixed(1)).join(' ');
+  let dots=seed.map((v,i)=>`<circle cx="${px(i).toFixed(1)}" cy="${py(v).toFixed(1)}" r="3" fill="#b15be8"/>`).join('');
+  // A simple 3-tick y-axis (0 / half / max) — without it a line that ends
+  // higher than it started reads as "improved" even when the underlying
+  // difference is tiny; the axis is what makes the scale honest.
+  const ticks=[0,0.5,1].map(f=>{ const v=Math.round(max*f); const y=py(v); return `<line x1="${padL}" x2="${w-padR}" y1="${y.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#eef1f4" stroke-width="1"/><text x="${padL-6}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="9.5" fill="#8497a7">${v}</text>`; }).join('');
+  return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:${h}px;margin:8px 0 4px" aria-label="${label||''} completion trend, last 12 months">
+    ${ticks}
     <path d="${line}" fill="none" stroke="#b15be8" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>${dots}</svg>`;
 }
 function creditorDrill(c){
@@ -2469,6 +2476,9 @@ function employerIdFromUrl(){
 function periodFromUrl(){
   return new URLSearchParams(location.search).get('period');
 }
+function quarterFromUrl(){
+  return new URLSearchParams(location.search).get('quarter');
+}
 function rangeFromUrl(){
   return new URLSearchParams(location.search).get('range')||'all';
 }
@@ -2481,16 +2491,16 @@ function syncStateFromUrl(){
 function apiFilterQuery(){
   const page=new URLSearchParams(location.search);
   const api=new URLSearchParams();
-  ['period','range','site','income'].forEach(k=>{ const v=page.get(k); if(v) api.set(k,v); });
-  if(!api.has('period') && !api.has('range')) api.set('range','latest');
+  ['period','quarter','range','site','income'].forEach(k=>{ const v=page.get(k); if(v) api.set(k,v); });
+  if(!api.has('period') && !api.has('quarter') && !api.has('range')) api.set('range','latest');
   const q=api.toString();
   return q?'?'+q:'';
 }
 function switchFilter(name,value,opts={}){
   const params=new URLSearchParams(location.search);
   if(value && value!=='all') params.set(name,value); else if(name==='range') params.set(name,'all'); else params.delete(name);
-  if(opts.clearPeriod) params.delete('period');
-  if(name==='period') params.delete('range');
+  if(opts.clearPeriod) { params.delete('period'); params.delete('quarter'); }
+  if(name==='period' || name==='quarter') params.delete('range');
   history.replaceState(null,'','?'+params.toString());
   if(window.__LIVE__) loadLiveData({refreshOnly:true});
 }
@@ -2518,7 +2528,8 @@ async function loadLiveData({refreshOnly=false}={}){
     if(employerSelect && id) employerSelect.value=id;
     syncStateFromUrl();
     const period = periodFromUrl();
-    if(id) await populateMonthSelect(id, period);
+    const quarter = quarterFromUrl();
+    if(id) await populateMonthSelect(id, period, quarter);
     const qs = apiFilterQuery();
     const url = id ? `${API_BASE}/api/employers/${id}/dashboard${qs}` : `${API_BASE}/api/dashboard/first${qs}`;
     const live = await fetch(url).then(async r=>{ if(!r.ok) throw new Error((await r.json().catch(()=>({}))).error||'no data'); return r.json(); });
@@ -2526,8 +2537,8 @@ async function loadLiveData({refreshOnly=false}={}){
       try{
         const pfParams=new URLSearchParams();
         const pageParams=new URLSearchParams(location.search);
-        ['period','range'].forEach(k=>{ const v=pageParams.get(k); if(v) pfParams.set(k,v); });
-        if(!pfParams.has('period') && !pfParams.has('range')) pfParams.set('range','latest');
+        ['period','quarter','range'].forEach(k=>{ const v=pageParams.get(k); if(v) pfParams.set(k,v); });
+        if(!pfParams.has('period') && !pfParams.has('quarter') && !pfParams.has('range')) pfParams.set('range','latest');
         const pf=await fetch(`${API_BASE}/api/portfolio?${pfParams.toString()}`).then(async r=>{ if(!r.ok) throw new Error('portfolio unavailable'); return r.json(); });
         if(Array.isArray(pf.employers)){
           PORTFOLIO.employers=pf.employers;
@@ -2562,8 +2573,6 @@ async function loadLiveData({refreshOnly=false}={}){
     renderMonthActivity(live.monthActivity, live.filterContext);
     renderDataQuality(live.dataQuality);
     setLiveFootnote(live.filterContext);
-    // when a specific month is picked, the relative period segment doesn't apply
-    if(period){ const seg=document.getElementById('period-seg'); if(seg){ seg.style.opacity='.4'; seg.style.pointerEvents='none'; seg.title='Showing a specific month'; } }
     const banner = document.getElementById('demo-banner'); if(banner) banner.remove();
   }catch(e){
     const demoMode=new URLSearchParams(location.search).get('demo')==='1';
@@ -2578,39 +2587,69 @@ async function loadLiveData({refreshOnly=false}={}){
   }
   applyState();
   if(!refreshOnly){
-    wirePeriod(); wireFilters(); wireAudience(); wireHeaderBtns();
+    syncPeriodControl(); wireFilters(); wireAudience(); wireHeaderBtns();
   }
   if(refreshOnly && view){ view.removeAttribute('aria-busy'); view.classList.remove('is-refreshing'); }
 }
 
 // month picker — populated from the snapshots that actually exist
-async function populateMonthSelect(employerId, selected){
+async function populateMonthSelect(employerId, selected, selectedQuarter){
   const sel=document.getElementById('month-select'); if(!sel) return;
+  // The 4 static options (Latest period / Last 30 days / Quarter to date /
+  // Programme to date) are always present in the markup — this only adds
+  // the Quarters and Months groups on top, once real period data exists,
+  // rather than replacing the control entirely.
+  sel.querySelectorAll('optgroup').forEach(g=>g.remove());
   try{
     const periods=await fetch(`${API_BASE}/api/employers/${employerId}/periods`).then(r=>r.json());
-    if(!Array.isArray(periods) || periods.length<1){ sel.style.display='none'; return; }
+    if(!Array.isArray(periods) || periods.length<1) return;
     const fmt=p=>{ const [y,m]=p.split('-'); return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m-1]+' '+y; };
-    // "Latest" option (no period param) + each month
-    let opts=`<option value="">Latest</option>`;
-    opts+=periods.map(p=>`<option value="${p.period}" ${p.period===selected?'selected':''}>${fmt(p.period)} · score ${p.optimiseScore}</option>`).join('');
-    sel.innerHTML=opts;
-    sel.style.display='inline-block';
-  }catch(e){ sel.style.display='none'; }
+    // Group the same months into quarters (Q1..Q4 per year) so a quarter can
+    // be picked as its own aggregate — not just individual months.
+    const quarters=new Map(); // "2026-Q1" -> {label, scores:[]}
+    periods.forEach(p=>{
+      const [y,m]=p.period.split('-').map(Number);
+      const q=Math.floor((m-1)/3)+1, key=`${y}-Q${q}`;
+      const bucket=quarters.get(key)||{label:`Q${q} ${y}`,scores:[]};
+      bucket.scores.push(p.optimiseScore);
+      quarters.set(key,bucket);
+    });
+    const quarterKeys=[...quarters.keys()].sort().reverse();
+    const avg=arr=>Math.round(arr.reduce((s,v)=>s+v,0)/arr.length);
+    let extra='';
+    if(quarterKeys.length){
+      extra+=`<optgroup label="Quarters">`+quarterKeys.map(key=>{
+        const q=quarters.get(key);
+        return `<option value="q:${key}" ${key===selectedQuarter?'selected':''}>${q.label} · avg score ${avg(q.scores)}</option>`;
+      }).join('')+`</optgroup>`;
+    }
+    extra+=`<optgroup label="Specific month">`+periods.map(p=>`<option value="${p.period}" ${p.period===selected?'selected':''}>${fmt(p.period)} · score ${p.optimiseScore}</option>`).join('')+`</optgroup>`;
+    sel.insertAdjacentHTML('beforeend', extra);
+  }catch(e){ /* static options still work fine without a periods list */ }
 }
-function switchPeriod(period){
+function switchPeriod(value){
+  if(!window.__LIVE__){
+    // Demo/pre-load mode: no real quarter/month data yet, only the relative
+    // buckets (which is all the static options offer) apply. "Latest" has no
+    // distinct demo bucket of its own, so it reads as the all-time demo view.
+    STATE.period = value==='30d'?'30' : value==='qtd'?'q' : 'all';
+    applyState();
+    return;
+  }
   const id=employerIdFromUrl();
   const params=new URLSearchParams(location.search);
-  if(period){ params.set('period',period); params.delete('range'); }
-  else {
-    // "Latest" — always the most recent period with data, resolved server-side
-    // and re-checked on every load (was previously falling back to
-    // range=all, an all-time aggregate that barely moves and read as "the
-    // number never updates")
-    params.delete('period'); params.set('range','latest');
-  }
+  params.delete('period'); params.delete('quarter'); params.delete('range');
+  if(value==='30d') params.set('range','30d');
+  else if(value==='qtd') params.set('range','quarter');
+  else if(value==='all') params.set('range','all');
+  else if(value.startsWith('q:')) params.set('quarter',value.slice(2));
+  else if(value) params.set('period',value);
+  // else "" (Latest period): leave every filter param cleared — that's
+  // exactly the state apiFilterQuery() resolves to range=latest itself, so
+  // it always matches whatever the server considers the newest period.
   if(id) params.set('employer',id);
   history.replaceState(null,'','?'+params.toString());
-  if(window.__LIVE__) loadLiveData({refreshOnly:true});
+  loadLiveData({refreshOnly:true});
 }
 
 // activity strip for the selected flow window
