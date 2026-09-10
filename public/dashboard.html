@@ -2413,10 +2413,12 @@ function closeDrawer(){
 document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeDrawer(); });
 
 function outcomeDrill(o){
+  console.log('[outcomeDrill] row clicked:', o && o.name, o);
+  try{
   const delta=hasValue(o.delta)?`${o.delta>=0?'▲ +'+o.delta:'▼ '+o.delta} vs. last month`:'No prior period';
   const body=`
     <div class="drawer-stats">
-      <div class="ds"><div class="dsl">Fixes completed</div><div class="dsv">${o.count.toLocaleString()}</div></div>
+      <div class="ds"><div class="dsl">Fixes completed</div><div class="dsv">${fmtCount(o.count)}</div></div>
       <div class="ds"><div class="dsl">${o.statL}</div><div class="dsv">${o.stat}</div></div>
       <div class="ds"><div class="dsl">Avg per employee</div><div class="dsv">${o.avgPerEmployee||'—'}</div></div>
     </div>
@@ -2424,6 +2426,14 @@ function outcomeDrill(o){
     ${miniTrend(o.trend, o.name)}
     <div class="drawer-note">Employee-level detail is de-identified. The employer sees aggregated outcomes only — never an individual's financial information. ${o.key==='credit'?'Credit life replacement leverages NCA s106(4)(a) substitution rights.':''}</div>`;
   openDrawer(o.name, o.meta, body);
+  }catch(e){
+    // A silent failure here (nothing visibly wrong, nothing in console) is
+    // the worst outcome — it looks like the feature just doesn't exist.
+    // Surface it loudly instead, so a real bug is never mistaken for "this
+    // was never built" again.
+    console.error('outcomeDrill failed:', e, o);
+    alert('Could not open the drill-down for "'+(o&&o.name||'this item')+'" — a technical error occurred. Please screenshot this and the browser console (F12) for support: '+(e&&e.message||e));
+  }
 }
 function miniTrend(points, label){
   const seed=(Array.isArray(points)&&points.length)?points:[0,0,0,0,0,0,0,0,0,0,0,0];
