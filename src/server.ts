@@ -71,12 +71,13 @@ const PORT = Number(process.env.PORT ?? 3000);
 const currentPeriod = () => new Date().toISOString().slice(0, 7);
 const VALID_DASHBOARD_RANGES = new Set(["30d", "quarter", "all", "month", "30", "q", "latest"]);
 const VALID_INCOME_BANDS = new Set(["UNDER_5K", "BAND_5_10K", "BAND_10_20K", "BAND_20_40K", "OVER_40K"]);
-function dashboardQueryError(query: { period?: string; range?: string; income?: string }): string | null {
+function dashboardQueryError(query: { period?: string; quarter?: string; range?: string; income?: string }): string | null {
   const current = currentPeriod();
   if (query.period && !/^\d{4}-(0[1-9]|1[0-2])$/.test(query.period)) return "period must be YYYY-MM";
   if (query.period && query.period > current) return `period cannot be later than ${current}`;
+  if (query.quarter && !/^\d{4}-Q[1-4]$/.test(query.quarter)) return "quarter must be YYYY-Q1..YYYY-Q4";
   if (query.range && !VALID_DASHBOARD_RANGES.has(query.range)) return "range must be 30d, quarter, all or month";
-  if (query.period && query.range) return "use period or range, not both";
+  if ([query.period, query.quarter, query.range].filter((v) => v != null).length > 1) return "use period, quarter, or range — not more than one";
   if (!query.period && query.range === "month") return "range=month requires period=YYYY-MM";
   if (query.income && query.income !== "all" && !VALID_INCOME_BANDS.has(query.income)) return "income is not a supported income-band code";
   return null;
@@ -674,7 +675,7 @@ app.get<{ Params: { slug: string } }>("/api/partner-theme/:slug", async (req) =>
 // ── dashboard: real stock/as-at + flow/in-window filtering ──
 app.get<{
   Params: { employerId: string };
-  Querystring: { period?: string; range?: "30d" | "quarter" | "all" | "month" | "30" | "q" | "latest"; site?: string; income?: string };
+  Querystring: { period?: string; quarter?: string; range?: "30d" | "quarter" | "all" | "month" | "30" | "q" | "latest"; site?: string; income?: string };
 }>(
   "/api/employers/:employerId/dashboard",
   async (req, reply) => {
@@ -686,6 +687,7 @@ app.get<{
     if (queryError) return reply.code(400).send({ error: queryError });
     const payload: any = await getDashboardPayload(employerId, {
       period: req.query.period,
+      quarter: req.query.quarter,
       range: req.query.range,
       site: req.query.site,
       income: req.query.income,
@@ -802,7 +804,7 @@ function startReportScheduler(app: any) {
 }
 
 // ── portfolio view: same dated calculation model as each employer dashboard ──
-app.get<{ Querystring: { period?: string; range?: "30d" | "quarter" | "all" | "month" | "30" | "q" | "latest" } }>(
+app.get<{ Querystring: { period?: string; quarter?: string; range?: "30d" | "quarter" | "all" | "month" | "30" | "q" | "latest" } }>(
   "/api/portfolio",
   async (req, reply) => {
     const user = await requireUser(req, reply); if (!user) return;
@@ -827,7 +829,7 @@ app.get<{ Querystring: { period?: string; range?: "30d" | "quarter" | "all" | "m
 );
 
 // ── convenience: live dashboard of the first employer THIS USER can see ──
-app.get<{ Querystring: { period?: string; range?: "30d" | "quarter" | "all" | "month" | "30" | "q" | "latest"; site?: string; income?: string } }>(
+app.get<{ Querystring: { period?: string; quarter?: string; range?: "30d" | "quarter" | "all" | "month" | "30" | "q" | "latest"; site?: string; income?: string } }>(
   "/api/dashboard/first",
   async (req, reply) => {
     const user = await requireUser(req, reply);
@@ -853,4 +855,3 @@ app.get<{ Querystring: { period?: string; range?: "30d" | "quarter" | "all" | "m
 app.listen({ port: PORT, host: "0.0.0.0" })
   .then(async () => { await bootstrapAdmin(); await ensureSectionDefaults(); startSyncScheduler(app); startReportScheduler(app); startAutomationScheduler(app); app.log.info(`empower-fin Dashboard Portal on :${PORT}`); })
   .catch((err) => { app.log.error(err); process.exit(1); });
-
