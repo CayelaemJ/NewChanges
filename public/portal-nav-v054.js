@@ -46,7 +46,14 @@
       if(control.id==='welcome-splash' || control.classList.contains('portal-modal-overlay')) return;
       const style=getComputedStyle(control);
       const bottom=parseFloat(style.bottom), right=parseFloat(style.right);
-      if(style.position==='fixed' && Number.isFinite(bottom) && Number.isFinite(right) && bottom<=40 && right<=40){
+      // Legacy floating toggles (e.g. the old dark-mode button) are small
+      // corner buttons, not full panels — require a small footprint too,
+      // or this ends up matching (and deleting) app overlays that also
+      // happen to resolve bottom/right near 0, like a full-height drawer
+      // (top:0;right:0) or an inset:0 modal backdrop.
+      const rect=control.getBoundingClientRect();
+      const isSmallCornerControl=rect.width>0 && rect.width<=64 && rect.height>0 && rect.height<=64;
+      if(style.position==='fixed' && Number.isFinite(bottom) && Number.isFinite(right) && bottom<=40 && right<=40 && isSmallCornerControl){
         control.remove();
       }
     });
