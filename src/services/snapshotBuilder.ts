@@ -17,6 +17,7 @@ const rand = (cents: number) => cents / 100;
 export type DashboardRange = "30d" | "quarter" | "all" | "month";
 export interface DashboardQuery {
   period?: string;
+  quarter?: string; // "YYYY-Q1".."YYYY-Q4" — a specific historical quarter, not "quarter to date"
   range?: DashboardRange | "30" | "q" | "latest";
   site?: string;
   income?: string;
@@ -152,16 +153,24 @@ function normalizeRange(value?: string): DashboardRange {
   if (value === "month") return "month";
   return "all";
 }
+function parseQuarter(value: string): { year: number; q: number } | null {
+  const m = /^(\d{4})-Q([1-4])$/.exec(value);
+  if (!m) return null;
+  return { year: Number(m[1]), q: Number(m[2]) };
+}
 function resolveFilter(query: DashboardQuery = {}): ResolvedFilter {
   const now = new Date();
   if (query.period && (!isValidPeriod(query.period) || query.period > currentPeriod())) {
     throw new Error("period must be a valid YYYY-MM not later than the current month");
   }
-  if (query.period && query.range) {
-    throw new Error("use period or range, not both");
+  if ([query.period, query.range, query.quarter].filter((v) => v != null).length > 1) {
+    throw new Error("use period, quarter, or range — not more than one");
   }
+  const quarter = query.quarter ? parseQuarter(query.quarter) : null;
+  if (query.quarter && !quarter) throw new Error("quarter must be YYYY-Q1..YYYY-Q4");
+
   const period = query.period ?? null;
-  const range = period ? "month" : normalizeRange(query.range);
+  const range = period ? "month" : quarter ? "quarter" : normalizeRange(query.range);
   if (!period && range === "month") {
     throw new Error("range=month requires period=YYYY-MM");
   }
@@ -169,6 +178,7 @@ function resolveFilter(query: DashboardQuery = {}): ResolvedFilter {
   // and must never use a future month-end as its as-at boundary.
   const asAt = period ? (period === currentPeriod() ? now : endOfMonth(period)) : now;
   let rangeStart: Date | null = null;
+  let rangeEnd = asAt;
   let label = "Programme to date";
 
   if (range === "month") {
@@ -178,6 +188,17 @@ function resolveFilter(query: DashboardQuery = {}): ResolvedFilter {
   } else if (range === "30d") {
     rangeStart = new Date(startOfUtcDay(asAt).getTime() - 29 * DAY_MS);
     label = "Last 30 days";
+  } else if (quarter) {
+    // A specific historical (or current) quarter, selected by the user — not
+    // "quarter to date" relative to right now. rangeEnd is the quarter's own
+    // last day, capped at now if it's the quarter still in progress, so every
+    // underlying metric aggregates (sums window-filtered counts, or reads
+    // point-in-time values as of quarter-end) over that quarter specifically.
+    const qStartMonth = (quarter.q - 1) * 3;
+    rangeStart = new Date(Date.UTC(quarter.year, qStartMonth, 1));
+    const qEnd = new Date(Date.UTC(quarter.year, qStartMonth + 3, 0, 23, 59, 59, 999));
+    rangeEnd = qEnd < now ? qEnd : now;
+    label = `Q${quarter.q} ${quarter.year}`;
   } else if (range === "quarter") {
     const quarterMonth = Math.floor(asAt.getUTCMonth() / 3) * 3;
     rangeStart = new Date(Date.UTC(asAt.getUTCFullYear(), quarterMonth, 1));
@@ -191,8 +212,8 @@ function resolveFilter(query: DashboardQuery = {}): ResolvedFilter {
     period,
     range,
     rangeStart,
-    rangeEnd: asAt,
-    asAt,
+    rangeEnd,
+    asAt: rangeEnd,
     site: query.site && query.site !== "all" ? query.site : null,
     income,
     label,
@@ -471,6 +492,17 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
   if (query.range === "latest" && !query.period) {
     const latestSnap = await prisma.scoreSnapshot.findFirst({ where: { employerId }, orderBy: { period: "desc" }, select: { period: true } });
     effectiveQuery = { ...query, range: undefined, period: latestSnap?.period ?? currentPeriod() };
+  } else if ((query.range === "quarter" || query.range === "q") && !query.period && !query.quarter) {
+    // Same problem, same fix as "Latest" above: "quarter to date" anchored to
+    // the real wall-clock date reads as broken/empty whenever the most recent
+    // actual data isn't in the real current calendar quarter (routine for
+    // demo/staging data, and even in production once a business is between
+    // imports). Anchor to the quarter containing the latest scored period.
+    const latestSnap = await prisma.scoreSnapshot.findFirst({ where: { employerId }, orderBy: { period: "desc" }, select: { period: true } });
+    const anchorPeriod = latestSnap?.period ?? currentPeriod();
+    const [anchorYear, anchorMonth] = anchorPeriod.split("-").map(Number);
+    const anchorQuarter = Math.floor((anchorMonth - 1) / 3) + 1;
+    effectiveQuery = { ...query, range: undefined, quarter: `${anchorYear}-Q${anchorQuarter}` };
   }
   const filter = resolveFilter(effectiveQuery);
   const employer = await prisma.employer.findFirstOrThrow({ where: { id: employerId, sourceDeletedAt: null } });
@@ -503,11 +535,26 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
     : (headcountSnapshot?.eligibleCount ?? (eligibleEmployees.length || employer.eligibleCount));
 
   const [journeys, ratingsAll, chatsAll, referralsAll, advancesAll, debtState, policyState] = await Promise.all([
-    platformUserIds.length ? prisma.journey.findMany({ where: { platformUserId: { in: platformUserIds }, startedAt: { lte: filter.asAt } } }) : [],
-    platformUserIds.length ? prisma.rating.findMany({ where: { platformUserId: { in: platformUserIds }, createdAt: { lte: filter.asAt } } }) : [],
-    employeeIds.length ? prisma.chatSession.findMany({ where: { employerId, employeeId: { in: employeeIds }, startedAt: { lte: filter.asAt } } }) : [],
-    platformUserIds.length ? prisma.referral.findMany({ where: { platformUserId: { in: platformUserIds }, sharedAt: { lte: filter.asAt } } }) : [],
-    employeeIds.length ? prisma.salaryAdvance.findMany({ where: { employerId, employeeId: { in: employeeIds }, advancedAt: { lte: filter.asAt } } }) : [],
+    platformUserIds.length ? prisma.journey.findMany({
+      where: { platformUserId: { in: platformUserIds }, startedAt: { lte: filter.asAt } },
+      select: { platformUserId: true, type: true, status: true, startedAt: true, completedAt: true, monthlySavingCents: true, balanceImpactCents: true, sourceDeletedAt: true, sourceUpdatedAt: true },
+    }) : [],
+    platformUserIds.length ? prisma.rating.findMany({
+      where: { platformUserId: { in: platformUserIds }, createdAt: { lte: filter.asAt } },
+      select: { stars: true, createdAt: true, sourceDeletedAt: true, sourceUpdatedAt: true },
+    }) : [],
+    employeeIds.length ? prisma.chatSession.findMany({
+      where: { employerId, employeeId: { in: employeeIds }, startedAt: { lte: filter.asAt } },
+      select: { startedAt: true, resolvedInChat: true, satisfaction: true, firstReplySeconds: true, sourceDeletedAt: true, sourceUpdatedAt: true },
+    }) : [],
+    platformUserIds.length ? prisma.referral.findMany({
+      where: { platformUserId: { in: platformUserIds }, sharedAt: { lte: filter.asAt } },
+      select: { platformUserId: true, sharedAt: true, convertedAt: true, sourceDeletedAt: true, sourceUpdatedAt: true },
+    }) : [],
+    employeeIds.length ? prisma.salaryAdvance.findMany({
+      where: { employerId, employeeId: { in: employeeIds }, advancedAt: { lte: filter.asAt } },
+      select: { status: true, advancedAt: true, clientId: true, amountCents: true, sourceDeletedAt: true, sourceUpdatedAt: true },
+    }) : [],
     latestDebtState(platformUserIds, filter.asAt),
     latestPolicyState(platformUserIds, filter.asAt),
   ]);
@@ -614,6 +661,10 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
     ico: JOURNEY_ICON[type] ?? "shield",
     stat: bucket.saving > 0 ? zarM(bucket.saving) : bucket.balance > 0 ? zarM(bucket.balance) : String(bucket.count),
     statL: bucket.saving > 0 ? "saved / mo" : bucket.balance > 0 ? "in resolution" : "completed",
+    // Real avg per employee for this journey type — was previously hardcoded
+    // per-key guess text on the frontend (e.g. always "R 298/mo" for credit
+    // life regardless of what actually happened).
+    avgPerEmployee: bucket.saving > 0 ? `${zar(Math.round(bucket.saving / bucket.count))}/mo` : bucket.balance > 0 ? zar(Math.round(bucket.balance / bucket.count)) : String(bucket.count),
   }));
 
   const arrearsDebts = debts.filter((debt: any) => debt.inArrears);
@@ -808,6 +859,23 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
   // "vs last period" delta — the difference between the last two trend
   // points, so it's always consistent with the trend line drawn next to it.
   const trendDelta = (trend: number[]) => (trend.length >= 2 ? Number((trend[trend.length - 1] - trend[trend.length - 2]).toFixed(1)) : null);
+
+  // Same idea for each "Financial problems resolved" outcome type: a real
+  // last-12-months completion count and period-over-period change, replacing
+  // what used to be entirely made-up numbers in the drill-down dialog.
+  const outcomeMonthly = new Map<string, Map<string, number>>();
+  for (const journey of cumulativeCompleted as any[]) {
+    if (!journey.completedAt) continue;
+    const byMonth = outcomeMonthly.get(journey.type) ?? new Map<string, number>();
+    const mk = monthKey(journey.completedAt);
+    byMonth.set(mk, (byMonth.get(mk) ?? 0) + 1);
+    outcomeMonthly.set(journey.type, byMonth);
+  }
+  for (const [i, type] of [...byType.keys()].entries()) {
+    const byMonth = outcomeMonthly.get(type) ?? new Map<string, number>();
+    (outcomes[i] as any).trend = trendMonths.map((m) => byMonth.get(m) ?? 0);
+    (outcomes[i] as any).delta = trendDelta((outcomes[i] as any).trend);
+  }
 
   const regions: any[] = [];
   const stressMap: any[] = [];
