@@ -222,6 +222,11 @@ model Journey {
   debtAccounts DebtAccount[]
 
   @@index([platformUserId])
+  // Matches the dashboard's hot-path query shape (WHERE platformUserId IN
+  // (...) AND startedAt/completedAt <= asAt) so large employers don't fall
+  // back to a full per-user index scan plus a filter on every dashboard load.
+  @@index([platformUserId, startedAt])
+  @@index([platformUserId, completedAt])
   @@index([type, status])
   @@index([startedAt])
   @@index([completedAt])
@@ -292,6 +297,7 @@ model DebtAccount {
   versions     DebtAccountVersion[]
 
   @@index([platformUserId])
+  @@index([platformUserId, observedAt])
   @@index([creditorName])
   @@index([state])
   @@index([inArrears])
@@ -405,6 +411,7 @@ model Rating {
   platformUser PlatformUser @relation(fields: [platformUserId], references: [id], onDelete: Cascade)
 
   @@index([platformUserId])
+  @@index([platformUserId, createdAt])
   @@index([createdAt])
   @@index([sourceUpdatedAt])
   @@index([sourceDeletedAt])
@@ -432,6 +439,7 @@ model ChatSession {
 
   @@index([employerId])
   @@index([employeeId])
+  @@index([employeeId, startedAt])
   @@index([startedAt])
   @@index([sourceUpdatedAt])
   @@index([sourceDeletedAt])
@@ -456,6 +464,7 @@ model Referral {
   platformUser PlatformUser @relation(fields: [platformUserId], references: [id], onDelete: Cascade)
 
   @@index([platformUserId])
+  @@index([platformUserId, sharedAt])
   @@index([sharedAt])
   @@index([sourceUpdatedAt])
   @@index([sourceDeletedAt])
@@ -533,6 +542,7 @@ model SalaryAdvance {
 
   @@index([employerId])
   @@index([employeeId])
+  @@index([employeeId, advancedAt])
   @@index([clientId])
   @@index([status])
   @@index([advancedAt])
