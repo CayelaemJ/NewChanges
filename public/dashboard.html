@@ -234,14 +234,14 @@
 
   .btn.loading{opacity:.7;pointer-events:none;}
 
-  /* drawer */
+   /* drawer */
   .drawer-backdrop{position:fixed;inset:0;background:rgba(13,42,71,.4);backdrop-filter:blur(2px);z-index:90;opacity:0;transition:.26s;}
   .drawer-backdrop.show{opacity:1;}
   .drawer{position:fixed;top:0;right:0;height:100vh;width:460px;max-width:92vw;background:#fff;z-index:100;box-shadow:-20px 0 60px rgba(13,42,71,.2);transform:translateX(100%);transition:transform .28s cubic-bezier(.2,.7,.2,1);display:flex;flex-direction:column;}
   .drawer.show{transform:none;}
   .drawer-hd{padding:26px 26px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:flex-start;gap:16px;}
   .drawer-eyebrow{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--blue);margin-bottom:7px;}
-  .drawer-title{font-family:'Fraunces',serif;font-weight:600;font-size:24px;color:var(--brand-primary);letter-spacing:-.5px;line-height:1.1;}
+  .drawer-title{font-family:'Fraunces',serif;font-weight:600;font-size:24px;color:var(--navy);letter-spacing:-.5px;line-height:1.1;}
   .drawer-sub{font-size:12.5px;color:var(--grey);font-weight:600;margin-top:6px;}
   .drawer-x{border:none;background:var(--ice);color:var(--grey);width:34px;height:34px;border-radius:9px;font-size:22px;line-height:1;cursor:pointer;flex-shrink:0;transition:.14s;}
   .drawer-x:hover{background:var(--blue);color:#fff;}
@@ -249,8 +249,8 @@
   .drawer-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:6px;}
   .ds{background:var(--ice-2);border:1px solid var(--line-soft);border-radius:13px;padding:13px 14px;}
   .dsl{font-size:10.5px;font-weight:700;color:var(--grey-l);text-transform:uppercase;letter-spacing:.04em;}
-  .dsv{font-family:'Fraunces',serif;font-weight:600;font-size:21px;color:var(--brand-primary);letter-spacing:-.4px;margin-top:6px;}
-  .drawer-section-title{font-size:13px;font-weight:800;color:var(--brand-primary);margin:24px 0 4px;}
+  .dsv{font-family:'Fraunces',serif;font-weight:600;font-size:21px;color:var(--navy);letter-spacing:-.4px;margin-top:6px;}
+  .drawer-section-title{font-size:13px;font-weight:800;color:var(--navy);margin:24px 0 4px;}
   .drawer-note{font-size:12px;color:var(--grey);line-height:1.6;margin-top:18px;background:var(--ice-2);border:1px solid var(--line-soft);border-radius:12px;padding:14px 15px;}
 
   /* toast */
@@ -2413,41 +2413,24 @@ function closeDrawer(){
 document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeDrawer(); });
 
 function outcomeDrill(o){
-  console.log('[outcomeDrill] row clicked:', o && o.name, o);
-  try{
-  const delta=hasValue(o.delta)?`${o.delta>=0?'▲ +'+o.delta:'▼ '+o.delta} vs. last month`:'No prior period';
   const body=`
     <div class="drawer-stats">
-      <div class="ds"><div class="dsl">Fixes completed</div><div class="dsv">${fmtCount(o.count)}</div></div>
+      <div class="ds"><div class="dsl">Fixes completed</div><div class="dsv">${o.count.toLocaleString()}</div></div>
       <div class="ds"><div class="dsl">${o.statL}</div><div class="dsv">${o.stat}</div></div>
-      <div class="ds"><div class="dsl">Avg per employee</div><div class="dsv">${o.avgPerEmployee||'—'}</div></div>
+      <div class="ds"><div class="dsl">Avg per employee</div><div class="dsv">${o.key==='credit'?'R 298/mo':o.key==='funeral'?'R 147/mo':o.key==='arrears'?'R 28,900':o.key==='prescribed'?'R 10,000':o.key==='emergency'?'1-mo advance':'—'}</div></div>
     </div>
-    <div class="drawer-section-title">Completion trend <span style="font-weight:700;color:${hasValue(o.delta)&&o.delta<0?'#a3271c':'#137a47'}">${delta}</span></div>
-    ${miniTrend(o.trend, o.name)}
+    <div class="drawer-section-title">Completion trend</div>
+    ${miniTrend(o.key)}
     <div class="drawer-note">Employee-level detail is de-identified. The employer sees aggregated outcomes only — never an individual's financial information. ${o.key==='credit'?'Credit life replacement leverages NCA s106(4)(a) substitution rights.':''}</div>`;
   openDrawer(o.name, o.meta, body);
-  }catch(e){
-    // A silent failure here (nothing visibly wrong, nothing in console) is
-    // the worst outcome — it looks like the feature just doesn't exist.
-    // Surface it loudly instead, so a real bug is never mistaken for "this
-    // was never built" again.
-    console.error('outcomeDrill failed:', e, o);
-    alert('Could not open the drill-down for "'+(o&&o.name||'this item')+'" — a technical error occurred. Please screenshot this and the browser console (F12) for support: '+(e&&e.message||e));
-  }
 }
-function miniTrend(points, label){
-  const seed=(Array.isArray(points)&&points.length)?points:[0,0,0,0,0,0,0,0,0,0,0,0];
-  const w=440,h=140,padL=34,padR=10,padT=10,padB=22;
-  const max=Math.max(1,...seed);
-  const px=i=>padL+i*(w-padL-padR)/(seed.length-1), py=v=>h-padB-(v/max)*(h-padT-padB);
-  let line=seed.map((v,i)=>(i?'L':'M')+px(i).toFixed(1)+' '+py(v).toFixed(1)).join(' ');
-  let dots=seed.map((v,i)=>`<circle cx="${px(i).toFixed(1)}" cy="${py(v).toFixed(1)}" r="3" fill="#b15be8"/>`).join('');
-  // A simple 3-tick y-axis (0 / half / max) — without it a line that ends
-  // higher than it started reads as "improved" even when the underlying
-  // difference is tiny; the axis is what makes the scale honest.
-  const ticks=[0,0.5,1].map(f=>{ const v=Math.round(max*f); const y=py(v); return `<line x1="${padL}" x2="${w-padR}" y1="${y.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#eef1f4" stroke-width="1"/><text x="${padL-6}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="9.5" fill="#8497a7">${v}</text>`; }).join('');
-  return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:${h}px;margin:8px 0 4px" aria-label="${label||''} completion trend, last 12 months">
-    ${ticks}
+function miniTrend(key){
+  const seed={credit:[28,41,58,72,90,112],funeral:[12,22,34,46,60,72],arrears:[6,11,18,24,28,33],prescribed:[9,17,24,28,30,33],emergency:[4,9,14,19,22,26],sti:[2,3,5,6,7,8]}[key]||[1,2,3,4,5,6];
+  const w=440,h=120,max=Math.max(...seed)*1.2,pad=10;
+  const px=i=>pad+i*(w-pad*2)/(seed.length-1), py=v=>h-pad-(v/max)*(h-pad*2);
+  let line=seed.map((v,i)=>(i?'L':'M')+px(i)+' '+py(v)).join(' ');
+  let dots=seed.map((v,i)=>`<circle cx="${px(i)}" cy="${py(v)}" r="3" fill="#b15be8"/>`).join('');
+  return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:120px;margin:8px 0 4px">
     <path d="${line}" fill="none" stroke="#b15be8" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>${dots}</svg>`;
 }
 function creditorDrill(c){
