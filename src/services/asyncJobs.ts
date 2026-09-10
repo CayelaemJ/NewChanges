@@ -87,10 +87,14 @@ export function startCommitJob(batchId: string): string {
       job.error = String(e?.message || "Import commit failed.").replace(/\s+/g, " ").trim();
       console.error("[commit-job] commit failed:", e);
 
-      await prisma.importBatch.update({
-        where: { id: batchId },
-        data: { status: "FAILED", errors: { commitError: job.error } as any },
-      }).catch(() => {});
+      // Deliberately NOT setting the batch's own status to FAILED here.
+      // commitBatch commits in bounded chunks (see importService.ts) and each
+      // row upsert is already idempotent/re-runnable — if a chunk fails
+      // partway through a large file, the batch is left in VALIDATED with
+      // whatever landed so far, specifically so the user can just hit
+      // Commit again and it resumes cleanly. Forcing FAILED here would
+      // silently strip that recovery path and make them re-upload the whole
+      // file from scratch after a transient failure (e.g. a DB hiccup).
     }
   })();
 
