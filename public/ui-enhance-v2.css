@@ -18,12 +18,16 @@
 
   /* ── cards: soft physical tilt toward the cursor + a light that tracks it ──
      Driven by --mx/--my/--rx/--ry, set by ui-enhance-v2.js on pointer move.
-     Falls back to flat if the vars are unset (JS not loaded / touch). */
-  body { perspective: 1600px; }
+     Falls back to flat if the vars are unset (JS not loaded / touch).
+     perspective() is applied per-card inside `transform`, NOT on a shared
+     ancestor like <body> — putting `perspective` on an ancestor makes that
+     ancestor the containing block for every position:fixed descendant
+     (drawers, modals, backdrops), which pins them to the document instead
+     of the viewport. Keeping it scoped to each card avoids that entirely. */
   .card {
     --rx: 0deg; --ry: 0deg; --mx: 50%; --my: 50%;
     transform-style: preserve-3d;
-    transform: rotateX(var(--rx)) rotateY(var(--ry)) translateZ(0);
+    transform: perspective(1000px) rotateX(var(--rx)) rotateY(var(--ry)) translateZ(0);
     transition: transform .35s cubic-bezier(.2,.7,.2,1), box-shadow .35s ease, border-color .22s ease;
     isolation: isolate;
   }
