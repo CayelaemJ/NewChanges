@@ -68,10 +68,12 @@ function dashboardQueryError(query) {
         return "period must be YYYY-MM";
     if (query.period && query.period > current)
         return `period cannot be later than ${current}`;
+    if (query.quarter && !/^\d{4}-Q[1-4]$/.test(query.quarter))
+        return "quarter must be YYYY-Q1..YYYY-Q4";
     if (query.range && !VALID_DASHBOARD_RANGES.has(query.range))
         return "range must be 30d, quarter, all or month";
-    if (query.period && query.range)
-        return "use period or range, not both";
+    if ([query.period, query.quarter, query.range].filter((v) => v != null).length > 1)
+        return "use period, quarter, or range — not more than one";
     if (!query.period && query.range === "month")
         return "range=month requires period=YYYY-MM";
     if (query.income && query.income !== "all" && !VALID_INCOME_BANDS.has(query.income))
@@ -731,6 +733,7 @@ app.get("/api/employers/:employerId/dashboard", async (req, reply) => {
         return reply.code(400).send({ error: queryError });
     const payload = await getDashboardPayload(employerId, {
         period: req.query.period,
+        quarter: req.query.quarter,
         range: req.query.range,
         site: req.query.site,
         income: req.query.income,
@@ -747,8 +750,12 @@ app.get("/api/employers/:employerId/periods", async (req, reply) => {
         return;
     if (!canViewEmployer(user, req.params.employerId))
         return reply.code(403).send({ error: "no access" });
+    // payloadVersion >= 4: excludes scores computed before the cashflow-
+    // driver fix (see snapshotBuilder.ts) so the month picker never shows a
+    // pre-fix score next to a post-fix one. Run
+    // scripts/rebuild-score-snapshots.ts to backfill historical months.
     const snaps = await prisma.scoreSnapshot.findMany({
-        where: { employerId: req.params.employerId, payloadVersion: { gte: 3 } },
+        where: { employerId: req.params.employerId, payloadVersion: { gte: 4 } },
         orderBy: { period: "desc" },
         select: { period: true, optimiseScore: true },
     });
@@ -762,7 +769,7 @@ app.get("/api/employers/:employerId/score-history", async (req, reply) => {
     if (!canViewEmployer(user, req.params.employerId))
         return reply.code(403).send({ error: "no access" });
     return prisma.scoreSnapshot.findMany({
-        where: { employerId: req.params.employerId, payloadVersion: { gte: 3 } },
+        where: { employerId: req.params.employerId, payloadVersion: { gte: 4 } },
         orderBy: { period: "asc" },
         select: { period: true, optimiseScore: true, engagementScore: true, cashflowScore: true, debtRiskScore: true, insuranceScore: true },
     });
