@@ -111,6 +111,24 @@ function monthLabel(key) {
 export function currentPeriod() {
     return monthKey(new Date());
 }
+// One calendar month before `period` (YYYY-MM), for month-over-month and
+// quarter-over-quarter "vs last period" comparisons.
+function previousPeriod(period) {
+    const [year, month] = period.split("-").map(Number);
+    const d = new Date(Date.UTC(year, month - 2, 1)); // month is 1-indexed; -2 = back one month
+    return monthKey(d);
+}
+// The period key (YYYY-MM) of the last month of the quarter immediately
+// before {year, q} — e.g. Q2 2026 -> "2026-03" (Q1 2026's close).
+function previousQuarterClosePeriod({ year, q }) {
+    const prevQ = q === 1 ? 4 : q - 1;
+    const prevYear = q === 1 ? year - 1 : year;
+    const lastMonth = prevQ * 3;
+    return `${prevYear}-${String(lastMonth).padStart(2, "0")}`;
+}
+function quarterOf(date) {
+    return { year: date.getUTCFullYear(), q: Math.floor(date.getUTCMonth() / 3) + 1 };
+}
 function isValidPeriod(value) {
     if (!/^\d{4}-\d{2}$/.test(value))
         return false;
@@ -193,6 +211,7 @@ function resolveFilter(query = {}) {
         site: query.site && query.site !== "all" ? query.site : null,
         income,
         label,
+        quarter,
     };
 }
 function existsAt(sourceDeletedAt, _asAt) {
@@ -974,12 +993,46 @@ async function buildDashboardPayload(employerId, query = {}) {
     };
     let priorScore = null;
     if (!filter.site && !filter.income) {
-        const periodKey = filter.period ?? currentPeriod();
+        // "vs last period" must compare like-for-like granularity: a month
+        // against the calendar month before it, a quarter against the quarter
+        // before it — never a mismatched comparison. Previously this always
+        // compared against "whatever monthly snapshot precedes the current
+        // calendar month", even when viewing a specific past quarter or month,
+        // which could show a delta against a period that had nothing to do
+        // with what was on screen (e.g. a quarter view improving quarter over
+        // quarter, but showing a drop because it was silently diffed against
+        // an unrelated month).
+        let comparisonPeriod;
+        if (filter.period) {
+            // Specific month view (including the current month-to-date): compare
+            // to the calendar month immediately before it.
+            comparisonPeriod = previousPeriod(filter.period);
+        }
+        else if (filter.quarter) {
+            // Specific quarter view: compare to the previous quarter's close.
+            comparisonPeriod = previousQuarterClosePeriod(filter.quarter);
+        }
+        else if (filter.range === "quarter") {
+            // Relative "quarter to date": compare to the previous full quarter's
+            // close, not to whatever month happens to precede today.
+            comparisonPeriod = previousQuarterClosePeriod(quarterOf(filter.asAt));
+        }
+        else {
+            // "Last 30 days" / "Programme to date" / "Latest" all represent "now",
+            // so the natural comparison is the most recently closed month.
+            comparisonPeriod = previousPeriod(currentPeriod());
+        }
         const prior = await prisma.scoreSnapshot.findFirst({
-            where: { employerId, period: { lt: periodKey }, payloadVersion: { gte: 3 } },
+            where: { employerId, period: comparisonPeriod, payloadVersion: { gte: 4 } },
+        });
+        // Fall back to the closest earlier snapshot if the exact adjacent
+        // period was never imported (e.g. a gap in historical data), so the
+        // delta degrades gracefully instead of just disappearing.
+        const fallback = prior ? null : await prisma.scoreSnapshot.findFirst({
+            where: { employerId, period: { lt: comparisonPeriod }, payloadVersion: { gte: 4 } },
             orderBy: { period: "desc" },
         });
-        priorScore = prior?.optimiseScore ?? null;
+        priorScore = (prior ?? fallback)?.optimiseScore ?? null;
     }
     const sectionAvailability = {
         workforce: headcountDataAvailable,
@@ -1229,7 +1282,15 @@ async function persistScoreSnapshot(employerId, period, payload) {
         rangeStart,
         rangeEnd,
         asAt,
-        payloadVersion: 3,
+        // Bumped 3 -> 4: the cashflow driver's "savings achievable" used to
+        // silently fall back to the unlocked amount itself whenever no
+        // AchievableTarget row existed (which was always, since nothing wrote
+        // to that table) — pinning every Cashflow sub-score, and therefore
+        // every Optimise Score, at 100. Snapshots written before this fix are
+        // no longer trustworthy; gating on payloadVersion >= 4 hides them from
+        // the period picker / score history / "vs last period" delta until
+        // they're recomputed (see scripts/rebuild-score-snapshots.ts).
+        payloadVersion: 4,
         optimiseScore: payload.wellness.score,
         rawScore,
         engagementScore: sub.engagement,
