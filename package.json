@@ -16,7 +16,8 @@
     "db:deploy": "node scripts/deploy-db.mjs",
     "db:reset:prelive": "prisma db push --force-reset --skip-generate",
     "check:imports": "node scripts/import-regression-check.mjs",
-    "check:scheduling": "node scripts/scheduling-regression-check.mjs"
+    "check:scheduling": "node scripts/scheduling-regression-check.mjs",
+    "db:rebuild-scores": "tsx scripts/rebuild-score-snapshots.ts"
   },
   "dependencies": {
     "@fastify/cookie": "^9.3.1",
