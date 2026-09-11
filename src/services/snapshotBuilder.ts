@@ -679,14 +679,22 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
     col: CREDIT_TYPE_COLOR[creditType] ?? "#8497a7",
   }));
 
-  const creditorMap = new Map<string, { accounts: number; balance: number }>();
+  const creditorMap = new Map<string, { accounts: number; balance: number; states: Record<string, number> }>();
   for (const debt of arrearsDebts) {
-    const bucket = creditorMap.get(debt.creditorName) ?? { accounts: 0, balance: 0 };
+    const bucket = creditorMap.get(debt.creditorName) ?? { accounts: 0, balance: 0, states: {} };
     bucket.accounts++;
     bucket.balance += debt.balanceCents;
+    const state = debt.state ?? "NONE";
+    bucket.states[state] = (bucket.states[state] ?? 0) + 1;
     creditorMap.set(debt.creditorName, bucket);
   }
   const palette = ["#e0492f", "#0078c7", "#005e9e", "#1fa463", "#8a4fc4", "#8497a7"];
+  const STATE_LABEL: Record<string, string> = {
+    NONE: "Not yet actioned",
+    GUIDED: "Self-guided (prescription education)",
+    CHALLENGED: "Prescription challenge lodged",
+    ACTIVE_INTERVENTION: "Active arrangement in place",
+  };
   const creditors = [...creditorMap.entries()]
     .sort((a, b) => b[1].balance - a[1].balance)
     .map(([name, bucket], index) => ({
@@ -697,6 +705,14 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
       avg: zar(Math.round(bucket.balance / Math.max(1, bucket.accounts))),
       status: "elig",
       statusL: "In journey",
+      // Real per-account state distribution for this creditor — replaces a
+      // previously hardcoded "offers prepared/sent/responded" funnel on the
+      // frontend that had no backing data model at all.
+      stateBreakdown: Object.entries(bucket.states).map(([state, count]) => ({
+        label: STATE_LABEL[state] ?? state,
+        count,
+        pct: Math.round((count / bucket.accounts) * 100),
+      })),
     }));
   const creditorsTotal = { accounts: arrearsDebts.length, balance: zarM(arrearsTotal) };
 
