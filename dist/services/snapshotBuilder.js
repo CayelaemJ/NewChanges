@@ -126,16 +126,25 @@ function normalizeRange(value) {
         return "month";
     return "all";
 }
+function parseQuarter(value) {
+    const m = /^(\d{4})-Q([1-4])$/.exec(value);
+    if (!m)
+        return null;
+    return { year: Number(m[1]), q: Number(m[2]) };
+}
 function resolveFilter(query = {}) {
     const now = new Date();
     if (query.period && (!isValidPeriod(query.period) || query.period > currentPeriod())) {
         throw new Error("period must be a valid YYYY-MM not later than the current month");
     }
-    if (query.period && query.range) {
-        throw new Error("use period or range, not both");
+    if ([query.period, query.range, query.quarter].filter((v) => v != null).length > 1) {
+        throw new Error("use period, quarter, or range — not more than one");
     }
+    const quarter = query.quarter ? parseQuarter(query.quarter) : null;
+    if (query.quarter && !quarter)
+        throw new Error("quarter must be YYYY-Q1..YYYY-Q4");
     const period = query.period ?? null;
-    const range = period ? "month" : normalizeRange(query.range);
+    const range = period ? "month" : quarter ? "quarter" : normalizeRange(query.range);
     if (!period && range === "month") {
         throw new Error("range=month requires period=YYYY-MM");
     }
@@ -143,6 +152,7 @@ function resolveFilter(query = {}) {
     // and must never use a future month-end as its as-at boundary.
     const asAt = period ? (period === currentPeriod() ? now : endOfMonth(period)) : now;
     let rangeStart = null;
+    let rangeEnd = asAt;
     let label = "Programme to date";
     if (range === "month") {
         rangeStart = startOfMonth(period);
@@ -153,6 +163,18 @@ function resolveFilter(query = {}) {
     else if (range === "30d") {
         rangeStart = new Date(startOfUtcDay(asAt).getTime() - 29 * DAY_MS);
         label = "Last 30 days";
+    }
+    else if (quarter) {
+        // A specific historical (or current) quarter, selected by the user — not
+        // "quarter to date" relative to right now. rangeEnd is the quarter's own
+        // last day, capped at now if it's the quarter still in progress, so every
+        // underlying metric aggregates (sums window-filtered counts, or reads
+        // point-in-time values as of quarter-end) over that quarter specifically.
+        const qStartMonth = (quarter.q - 1) * 3;
+        rangeStart = new Date(Date.UTC(quarter.year, qStartMonth, 1));
+        const qEnd = new Date(Date.UTC(quarter.year, qStartMonth + 3, 0, 23, 59, 59, 999));
+        rangeEnd = qEnd < now ? qEnd : now;
+        label = `Q${quarter.q} ${quarter.year}`;
     }
     else if (range === "quarter") {
         const quarterMonth = Math.floor(asAt.getUTCMonth() / 3) * 3;
@@ -166,8 +188,8 @@ function resolveFilter(query = {}) {
         period,
         range,
         rangeStart,
-        rangeEnd: asAt,
-        asAt,
+        rangeEnd,
+        asAt: rangeEnd,
         site: query.site && query.site !== "all" ? query.site : null,
         income,
         label,
@@ -456,6 +478,18 @@ async function buildDashboardPayload(employerId, query = {}) {
         const latestSnap = await prisma.scoreSnapshot.findFirst({ where: { employerId }, orderBy: { period: "desc" }, select: { period: true } });
         effectiveQuery = { ...query, range: undefined, period: latestSnap?.period ?? currentPeriod() };
     }
+    else if ((query.range === "quarter" || query.range === "q") && !query.period && !query.quarter) {
+        // Same problem, same fix as "Latest" above: "quarter to date" anchored to
+        // the real wall-clock date reads as broken/empty whenever the most recent
+        // actual data isn't in the real current calendar quarter (routine for
+        // demo/staging data, and even in production once a business is between
+        // imports). Anchor to the quarter containing the latest scored period.
+        const latestSnap = await prisma.scoreSnapshot.findFirst({ where: { employerId }, orderBy: { period: "desc" }, select: { period: true } });
+        const anchorPeriod = latestSnap?.period ?? currentPeriod();
+        const [anchorYear, anchorMonth] = anchorPeriod.split("-").map(Number);
+        const anchorQuarter = Math.floor((anchorMonth - 1) / 3) + 1;
+        effectiveQuery = { ...query, range: undefined, quarter: `${anchorYear}-Q${anchorQuarter}` };
+    }
     const filter = resolveFilter(effectiveQuery);
     const employer = await prisma.employer.findFirstOrThrow({ where: { id: employerId, sourceDeletedAt: null } });
     const workforceState = await workforceAsAt(employerId, filter.asAt);
@@ -485,11 +519,26 @@ async function buildDashboardPayload(employerId, query = {}) {
         ? cohortEmployees.length
         : (headcountSnapshot?.eligibleCount ?? (eligibleEmployees.length || employer.eligibleCount));
     const [journeys, ratingsAll, chatsAll, referralsAll, advancesAll, debtState, policyState] = await Promise.all([
-        platformUserIds.length ? prisma.journey.findMany({ where: { platformUserId: { in: platformUserIds }, startedAt: { lte: filter.asAt } } }) : [],
-        platformUserIds.length ? prisma.rating.findMany({ where: { platformUserId: { in: platformUserIds }, createdAt: { lte: filter.asAt } } }) : [],
-        employeeIds.length ? prisma.chatSession.findMany({ where: { employerId, employeeId: { in: employeeIds }, startedAt: { lte: filter.asAt } } }) : [],
-        platformUserIds.length ? prisma.referral.findMany({ where: { platformUserId: { in: platformUserIds }, sharedAt: { lte: filter.asAt } } }) : [],
-        employeeIds.length ? prisma.salaryAdvance.findMany({ where: { employerId, employeeId: { in: employeeIds }, advancedAt: { lte: filter.asAt } } }) : [],
+        platformUserIds.length ? prisma.journey.findMany({
+            where: { platformUserId: { in: platformUserIds }, startedAt: { lte: filter.asAt } },
+            select: { platformUserId: true, type: true, status: true, startedAt: true, completedAt: true, monthlySavingCents: true, balanceImpactCents: true, sourceDeletedAt: true, sourceUpdatedAt: true },
+        }) : [],
+        platformUserIds.length ? prisma.rating.findMany({
+            where: { platformUserId: { in: platformUserIds }, createdAt: { lte: filter.asAt } },
+            select: { stars: true, createdAt: true, sourceDeletedAt: true, sourceUpdatedAt: true },
+        }) : [],
+        employeeIds.length ? prisma.chatSession.findMany({
+            where: { employerId, employeeId: { in: employeeIds }, startedAt: { lte: filter.asAt } },
+            select: { startedAt: true, resolvedInChat: true, satisfaction: true, firstReplySeconds: true, sourceDeletedAt: true, sourceUpdatedAt: true },
+        }) : [],
+        platformUserIds.length ? prisma.referral.findMany({
+            where: { platformUserId: { in: platformUserIds }, sharedAt: { lte: filter.asAt } },
+            select: { platformUserId: true, sharedAt: true, convertedAt: true, sourceDeletedAt: true, sourceUpdatedAt: true },
+        }) : [],
+        employeeIds.length ? prisma.salaryAdvance.findMany({
+            where: { employerId, employeeId: { in: employeeIds }, advancedAt: { lte: filter.asAt } },
+            select: { status: true, advancedAt: true, clientId: true, amountCents: true, sourceDeletedAt: true, sourceUpdatedAt: true },
+        }) : [],
         latestDebtState(platformUserIds, filter.asAt),
         latestPolicyState(platformUserIds, filter.asAt),
     ]);
@@ -539,13 +588,6 @@ async function buildDashboardPayload(employerId, query = {}) {
     const activated = activatedUsers.length;
     const cumulativeMonthlySaving = cumulativeCompleted.reduce((sum, journey) => sum + (journey.monthlySavingCents ?? 0), 0);
     const flowMonthlySaving = flowCompleted.reduce((sum, journey) => sum + (journey.monthlySavingCents ?? 0), 0);
-    const targetRows = await prisma.achievableTarget.findMany({
-        where: { OR: [{ employerId }, { employerId: null }], driver: "CASHFLOW", effectiveFrom: { lte: filter.asAt } },
-        orderBy: { effectiveFrom: "desc" },
-    });
-    const target = targetRows.find((row) => row.employerId === employerId)
-        ?? targetRows.find((row) => row.employerId == null);
-    const savingsAchievable = Number(target?.config?.monthlyAchievableRand ?? rand(cumulativeMonthlySaving));
     const arrearsUserIds = new Set(debts.filter((debt) => debt.inArrears).map((debt) => debt.platformUserId));
     const debtVisibleUserIds = new Set();
     for (const user of platformUsers)
@@ -556,12 +598,55 @@ async function buildDashboardPayload(employerId, query = {}) {
             debtVisibleUserIds.add(debt.platformUserId);
     const wastefulPolicies = policies.filter((policy) => policy.isWasteful);
     const fixedPolicies = wastefulPolicies.filter((policy) => policy.isResolved);
+    // Hoisted from further down (still used there): needed now to size the
+    // cashflow "still achievable" denominator below.
+    const countPolicy = (type, unresolvedOnly = false) => policies.filter((policy) => policy.type === type && policy.isWasteful && (!unresolvedOnly || !policy.isResolved)).length;
+    const prescribable = debts.filter((debt) => ["IDENTIFIED", "LETTER_SENT"].includes(debt.challengeStatus));
     const driverAvailability = {
         engagement: headcountDataAvailable && headcount > 0 && feedCoverage.platform_users.available && feedCoverage.journeys.available,
         cashflow: feedCoverage.platform_users.available && feedCoverage.journeys.available,
         debtRisk: feedCoverage.platform_users.available && feedCoverage.debt_accounts.available && debtVisibleUserIds.size > 0,
         insurance: feedCoverage.platform_users.available && feedCoverage.policies.available && policies.length > 0,
     };
+    // "Savings still achievable" (Optimise Score spec, driver 2 / appendix
+    // section 12): eligible-but-not-yet-fixed users, per journey type, times
+    // the average realised saving per completed fix of that type — the same
+    // "no assumed percentage" diagnostic the Opportunities panel uses below.
+    // An admin-configured AchievableTarget (actuarially reviewed) overrides
+    // this when present; it must NEVER silently fall back to the unlocked
+    // amount itself, since that makes the ratio trivially 100 every time no
+    // target row exists (which was previously always, because nothing ever
+    // writes to that table).
+    const cumulativeByType = new Map();
+    for (const journey of cumulativeCompleted) {
+        const bucket = cumulativeByType.get(journey.type) ?? { count: 0, saving: 0 };
+        bucket.count += 1;
+        bucket.saving += journey.monthlySavingCents ?? 0;
+        cumulativeByType.set(journey.type, bucket);
+    }
+    const overallAvgSavingCents = cumulativeCompleted.length
+        ? cumulativeMonthlySaving / cumulativeCompleted.length
+        : 0;
+    const avgSavingForType = (type) => {
+        const bucket = cumulativeByType.get(type);
+        return bucket && bucket.count > 0 ? bucket.saving / bucket.count : overallAvgSavingCents;
+    };
+    const eligibleNotYetFixed = [
+        ["ARREARS", debts.filter((debt) => debt.inArrears && (debt.state ?? "NONE") === "NONE").length],
+        ["CREDIT_LIFE", countPolicy("CREDIT_LIFE", true)],
+        ["FUNERAL", countPolicy("FUNERAL", true)],
+        ["SHORT_TERM", countPolicy("SHORT_TERM", true)],
+        ["PRESCRIBED", prescribable.length],
+    ];
+    const additionalOpportunityCents = eligibleNotYetFixed.reduce((sum, [type, eligible]) => sum + eligible * avgSavingForType(type), 0);
+    const targetRows = await prisma.achievableTarget.findMany({
+        where: { OR: [{ employerId }, { employerId: null }], driver: "CASHFLOW", effectiveFrom: { lte: filter.asAt } },
+        orderBy: { effectiveFrom: "desc" },
+    });
+    const target = targetRows.find((row) => row.employerId === employerId)
+        ?? targetRows.find((row) => row.employerId == null);
+    const computedAchievable = rand(cumulativeMonthlySaving) + rand(additionalOpportunityCents);
+    const savingsAchievable = Number(target?.config?.monthlyAchievableRand ?? computedAchievable);
     const inputs = {
         usersStartedJourney: startedUserIds.size,
         eligibleEmployees: headcount,
@@ -592,6 +677,10 @@ async function buildDashboardPayload(employerId, query = {}) {
         ico: JOURNEY_ICON[type] ?? "shield",
         stat: bucket.saving > 0 ? zarM(bucket.saving) : bucket.balance > 0 ? zarM(bucket.balance) : String(bucket.count),
         statL: bucket.saving > 0 ? "saved / mo" : bucket.balance > 0 ? "in resolution" : "completed",
+        // Real avg per employee for this journey type — was previously hardcoded
+        // per-key guess text on the frontend (e.g. always "R 298/mo" for credit
+        // life regardless of what actually happened).
+        avgPerEmployee: bucket.saving > 0 ? `${zar(Math.round(bucket.saving / bucket.count))}/mo` : bucket.balance > 0 ? zar(Math.round(bucket.balance / bucket.count)) : String(bucket.count),
     }));
     const arrearsDebts = debts.filter((debt) => debt.inArrears);
     const arrearsTotal = arrearsDebts.reduce((sum, debt) => sum + debt.balanceCents, 0);
@@ -607,12 +696,20 @@ async function buildDashboardPayload(employerId, query = {}) {
     }));
     const creditorMap = new Map();
     for (const debt of arrearsDebts) {
-        const bucket = creditorMap.get(debt.creditorName) ?? { accounts: 0, balance: 0 };
+        const bucket = creditorMap.get(debt.creditorName) ?? { accounts: 0, balance: 0, states: {} };
         bucket.accounts++;
         bucket.balance += debt.balanceCents;
+        const state = debt.state ?? "NONE";
+        bucket.states[state] = (bucket.states[state] ?? 0) + 1;
         creditorMap.set(debt.creditorName, bucket);
     }
     const palette = ["#e0492f", "#0078c7", "#005e9e", "#1fa463", "#8a4fc4", "#8497a7"];
+    const STATE_LABEL = {
+        NONE: "Not yet actioned",
+        GUIDED: "Self-guided (prescription education)",
+        CHALLENGED: "Prescription challenge lodged",
+        ACTIVE_INTERVENTION: "Active arrangement in place",
+    };
     const creditors = [...creditorMap.entries()]
         .sort((a, b) => b[1].balance - a[1].balance)
         .map(([name, bucket], index) => ({
@@ -623,6 +720,14 @@ async function buildDashboardPayload(employerId, query = {}) {
         avg: zar(Math.round(bucket.balance / Math.max(1, bucket.accounts))),
         status: "elig",
         statusL: "In journey",
+        // Real per-account state distribution for this creditor — replaces a
+        // previously hardcoded "offers prepared/sent/responded" funnel on the
+        // frontend that had no backing data model at all.
+        stateBreakdown: Object.entries(bucket.states).map(([state, count]) => ({
+            label: STATE_LABEL[state] ?? state,
+            count,
+            pct: Math.round((count / bucket.accounts) * 100),
+        })),
     }));
     const creditorsTotal = { accounts: arrearsDebts.length, balance: zarM(arrearsTotal) };
     const stateAggregate = (state) => {
@@ -790,6 +895,23 @@ async function buildDashboardPayload(employerId, query = {}) {
     // "vs last period" delta — the difference between the last two trend
     // points, so it's always consistent with the trend line drawn next to it.
     const trendDelta = (trend) => (trend.length >= 2 ? Number((trend[trend.length - 1] - trend[trend.length - 2]).toFixed(1)) : null);
+    // Same idea for each "Financial problems resolved" outcome type: a real
+    // last-12-months completion count and period-over-period change, replacing
+    // what used to be entirely made-up numbers in the drill-down dialog.
+    const outcomeMonthly = new Map();
+    for (const journey of cumulativeCompleted) {
+        if (!journey.completedAt)
+            continue;
+        const byMonth = outcomeMonthly.get(journey.type) ?? new Map();
+        const mk = monthKey(journey.completedAt);
+        byMonth.set(mk, (byMonth.get(mk) ?? 0) + 1);
+        outcomeMonthly.set(journey.type, byMonth);
+    }
+    for (const [i, type] of [...byType.keys()].entries()) {
+        const byMonth = outcomeMonthly.get(type) ?? new Map();
+        outcomes[i].trend = trendMonths.map((m) => byMonth.get(m) ?? 0);
+        outcomes[i].delta = trendDelta(outcomes[i].trend);
+    }
     const regions = [];
     const stressMap = [];
     const siteStats = [];
@@ -822,7 +944,6 @@ async function buildDashboardPayload(employerId, query = {}) {
         stressMap.push({ l: "Most engaged site", v: byEngagement[0].name, d: `${byEngagement[0].engagement}% enrolled`, tone: "blue" });
         stressMap.push({ l: "Most indebted site", v: byDebt[0].name, d: `${zar(Math.round(byDebt[0].averageDebt))} avg unsecured debt`, tone: "amber" });
     }
-    const countPolicy = (type, unresolvedOnly = false) => policies.filter((policy) => policy.type === type && policy.isWasteful && (!unresolvedOnly || !policy.isResolved)).length;
     const duplicateCreditLife = countPolicy("CREDIT_LIFE");
     const duplicateFuneral = countPolicy("FUNERAL");
     const overShortTerm = countPolicy("SHORT_TERM");
@@ -838,7 +959,6 @@ async function buildDashboardPayload(employerId, query = {}) {
     // Do not apply an assumed savings percentage. This is the directly observed
     // unresolved premium under review; any realised saving comes from journey outcomes.
     const estimatedMonthlyOpportunity = unresolvedPremium;
-    const prescribable = debts.filter((debt) => ["IDENTIFIED", "LETTER_SENT"].includes(debt.challengeStatus));
     const prescribableBalance = prescribable.reduce((sum, debt) => sum + debt.balanceCents, 0);
     const opportunities = {
         cards: [
