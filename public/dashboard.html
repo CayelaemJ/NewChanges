@@ -6,6 +6,7 @@
 <link rel="icon" type="image/png" href="/static/favicon.png">
 <link rel="stylesheet" href="/static/portal-nav-v054.css?v=0.5.4">
 <link rel="stylesheet" href="/static/ui-enhance-v1.css?v=1">
+<link rel="stylesheet" href="/static/ui-enhance-v2.css?v=1">
 <link rel="stylesheet" href="/static/responsive-v1.css?v=1">
 <title>empower-fin Dashboard Portal — Employer Insights</title>
 <style>
@@ -893,6 +894,7 @@
 </div>
 
 <script src="/static/engagement-v1.js?v=1" defer></script>
+<script src="/static/ui-enhance-v2.js?v=1" defer></script>
 <script src="/static/portal-nav-v054.js?v=0.5.4"></script>
 <script>
 /* ════════════════════════════════════════════════════════════════════
@@ -2051,8 +2053,14 @@ function wireAudience(){
       document.querySelectorAll('#audience-switch button').forEach(x=>x.classList.remove('on'));
       b.classList.add('on');
       const portfolio = b.dataset.a==='portfolio';
-      document.getElementById('employer-view').style.display = portfolio ? 'none' : '';
-      document.getElementById('portfolio-view').style.display = portfolio ? '' : 'none';
+      const showEl = document.getElementById(portfolio ? 'portfolio-view' : 'employer-view');
+      const hideEl = document.getElementById(portfolio ? 'employer-view' : 'portfolio-view');
+      if(typeof window.__uiViewTransition==='function'){
+        window.__uiViewTransition(hideEl, showEl);
+      } else {
+        hideEl.style.display = 'none';
+        showEl.style.display = '';
+      }
       // hide employer-only filters in portfolio mode
       document.querySelector('.filters').style.display = portfolio ? 'none' : '';
       if(portfolio && !PF_RENDERED){ renderPortfolio(); PF_RENDERED = true; }
