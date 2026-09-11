@@ -704,8 +704,12 @@ app.get<{ Params: { employerId: string } }>(
   async (req, reply) => {
     const user = await requireUser(req, reply); if (!user) return;
     if (!canViewEmployer(user, req.params.employerId)) return reply.code(403).send({ error: "no access" });
+    // payloadVersion >= 4: excludes scores computed before the cashflow-
+    // driver fix (see snapshotBuilder.ts) so the month picker never shows a
+    // pre-fix score next to a post-fix one. Run
+    // scripts/rebuild-score-snapshots.ts to backfill historical months.
     const snaps = await prisma.scoreSnapshot.findMany({
-      where: { employerId: req.params.employerId, payloadVersion: { gte: 3 } },
+      where: { employerId: req.params.employerId, payloadVersion: { gte: 4 } },
       orderBy: { period: "desc" },
       select: { period: true, optimiseScore: true },
     });
@@ -720,7 +724,7 @@ app.get<{ Params: { employerId: string } }>(
     const user = await requireUser(req, reply); if (!user) return;
     if (!canViewEmployer(user, req.params.employerId)) return reply.code(403).send({ error: "no access" });
     return prisma.scoreSnapshot.findMany({
-      where: { employerId: req.params.employerId, payloadVersion: { gte: 3 } },
+      where: { employerId: req.params.employerId, payloadVersion: { gte: 4 } },
       orderBy: { period: "asc" },
       select: { period: true, optimiseScore: true, engagementScore: true, cashflowScore: true, debtRiskScore: true, insuranceScore: true },
     });
