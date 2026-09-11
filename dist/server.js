@@ -750,29 +750,100 @@ app.get("/api/employers/:employerId/periods", async (req, reply) => {
         return;
     if (!canViewEmployer(user, req.params.employerId))
         return reply.code(403).send({ error: "no access" });
-    // payloadVersion >= 4: excludes scores computed before the cashflow-
-    // driver fix (see snapshotBuilder.ts) so the month picker never shows a
-    // pre-fix score next to a post-fix one. Run
-    // scripts/rebuild-score-snapshots.ts to backfill historical months.
-    const snaps = await prisma.scoreSnapshot.findMany({
-        where: { employerId: req.params.employerId, payloadVersion: { gte: 4 } },
-        orderBy: { period: "desc" },
-        select: { period: true, optimiseScore: true },
-    });
-    return snaps;
+    // Build the picker from every historical month represented by the source
+    // data, not just scoreSnapshot rows. Then calculate the displayed score
+    // from the live score engine so "Aug 2026 · Score 53" is genuinely the
+    // score for August rather than a stale/static snapshot value.
+    const employerId = req.params.employerId;
+    const [snaps, employees, employeeVersions, journeys, debts, policies] = await Promise.all([
+        prisma.scoreSnapshot.findMany({ where: { employerId }, select: { period: true }, orderBy: { period: "desc" } }),
+        prisma.employee.findMany({ where: { employerId }, select: { observedAt: true, sourceUpdatedAt: true } }),
+        prisma.employeeVersion.findMany({ where: { employee: { employerId } }, select: { observedAt: true } }),
+        prisma.journey.findMany({ where: { platformUser: { employee: { employerId } } }, select: { completedAt: true, startedAt: true } }),
+        prisma.debtAccount.findMany({ where: { platformUser: { employee: { employerId } } }, select: { observedAt: true } }),
+        prisma.insurancePolicy.findMany({ where: { platformUser: { employee: { employerId } } }, select: { observedAt: true } }),
+    ]);
+    const keys = new Set();
+    const add = (value) => {
+        if (!value)
+            return;
+        const d = new Date(value);
+        if (!Number.isNaN(d.getTime()))
+            keys.add(d.toISOString().slice(0, 7));
+    };
+    for (const row of snaps)
+        keys.add(row.period);
+    for (const row of employees) {
+        add(row.observedAt);
+        add(row.sourceUpdatedAt);
+    }
+    for (const row of employeeVersions)
+        add(row.observedAt);
+    for (const row of journeys) {
+        add(row.completedAt);
+        add(row.startedAt);
+    }
+    for (const row of debts)
+        add(row.observedAt);
+    for (const row of policies)
+        add(row.observedAt);
+    const periods = [];
+    for (const period of [...keys].sort().reverse()) {
+        try {
+            const live = await getDashboardPayload(employerId, { period, site: req.query.site, income: req.query.income });
+            periods.push({
+                period,
+                optimiseScore: live?.wellness?.complete && live?.wellness?.score != null ? Number(live.wellness.score) : null,
+            });
+        }
+        catch {
+            periods.push({ period, optimiseScore: null });
+        }
+    }
+    return periods;
 });
 // ── score history (movement chart) — scoped ──
 app.get("/api/employers/:employerId/score-history", async (req, reply) => {
     const user = await requireUser(req, reply);
     if (!user)
-        return;
-    if (!canViewEmployer(user, req.params.employerId))
         return reply.code(403).send({ error: "no access" });
-    return prisma.scoreSnapshot.findMany({
-        where: { employerId: req.params.employerId, payloadVersion: { gte: 4 } },
+    const snaps = await prisma.scoreSnapshot.findMany({
+        where: { employerId: req.params.employerId },
         orderBy: { period: "asc" },
-        select: { period: true, optimiseScore: true, engagementScore: true, cashflowScore: true, debtRiskScore: true, insuranceScore: true },
+        select: {
+            period: true,
+            optimiseScore: true,
+            engagementScore: true,
+            cashflowScore: true,
+            debtRiskScore: true,
+            insuranceScore: true,
+            payloadVersion: true,
+        },
     });
+    const history = [];
+    for (const snap of snaps) {
+        if (snap.payloadVersion >= 4 && snap.optimiseScore != null) {
+            history.push({
+                period: snap.period,
+                optimiseScore: snap.optimiseScore,
+                engagementScore: snap.engagementScore,
+                cashflowScore: snap.cashflowScore,
+                debtRiskScore: snap.debtRiskScore,
+                insuranceScore: snap.insuranceScore,
+            });
+            continue;
+        }
+        const live = await getDashboardPayload(req.params.employerId, { period: snap.period });
+        history.push({
+            period: snap.period,
+            optimiseScore: live?.wellness?.complete && live?.wellness?.score != null ? Number(live.wellness.score) : null,
+            engagementScore: live?.wellness?.drivers?.[0]?.score ?? null,
+            cashflowScore: live?.wellness?.drivers?.[1]?.score ?? null,
+            debtRiskScore: live?.wellness?.drivers?.[2]?.score ?? null,
+            insuranceScore: live?.wellness?.drivers?.[3]?.score ?? null,
+        });
+    }
+    return history;
 });
 // ── trigger a (re)snapshot — admin only ──
 app.post("/api/employers/:employerId/snapshot", async (req, reply) => {

@@ -166,9 +166,15 @@ function resolveFilter(query = {}) {
     if (!period && range === "month") {
         throw new Error("range=month requires period=YYYY-MM");
     }
-    // A closed month is measured at month-end. The current month is month-to-date
-    // and must never use a future month-end as its as-at boundary.
-    const asAt = period ? (period === currentPeriod() ? now : endOfMonth(period)) : now;
+    // A closed month is measured at month-end. Relative windows can be anchored
+    // to an internal historical as-at date when calculating a prior comparable
+    // window (e.g. prior 30 days). Public dashboard callers never need to set it.
+    const requestedAsAt = query.asAt ? new Date(query.asAt) : null;
+    if (requestedAsAt && Number.isNaN(requestedAsAt.getTime()))
+        throw new Error("asAt must be a valid ISO date");
+    const asAt = period
+        ? (period === currentPeriod() ? now : endOfMonth(period))
+        : (requestedAsAt && requestedAsAt <= now ? requestedAsAt : now);
     let rangeStart = null;
     let rangeEnd = asAt;
     let label = "Programme to date";
@@ -487,7 +493,7 @@ async function latestPolicyState(platformUserIds, asAt) {
     }
     return { rows: result, usedFallback, versionCount: versions.length };
 }
-async function buildDashboardPayload(employerId, query = {}) {
+async function buildDashboardPayload(employerId, query = {}, skipPrior = false) {
     // "Latest" must mean "the most recent single period with data" — it was
     // previously falling through to range=all (a programme-to-date aggregate),
     // which barely moves as new data lands and reads as "the number doesn't
@@ -621,11 +627,17 @@ async function buildDashboardPayload(employerId, query = {}) {
     // cashflow "still achievable" denominator below.
     const countPolicy = (type, unresolvedOnly = false) => policies.filter((policy) => policy.type === type && policy.isWasteful && (!unresolvedOnly || !policy.isResolved)).length;
     const prescribable = debts.filter((debt) => ["IDENTIFIED", "LETTER_SENT"].includes(debt.challengeStatus));
+    // Score availability is based on the records that actually exist for the
+    // selected employer/cohort/as-at period. Global integration-cursor status is
+    // not a valid reason to blank a historical score: an admin can be viewing a
+    // fully populated August cohort even when the latest sync cursor is stale.
+    // This also makes the Region + Income slicers affect the score instead of
+    // turning the entire score to null because an unrelated feed is missing.
     const driverAvailability = {
-        engagement: headcountDataAvailable && headcount > 0 && feedCoverage.platform_users.available && feedCoverage.journeys.available,
-        cashflow: feedCoverage.platform_users.available && feedCoverage.journeys.available,
-        debtRisk: feedCoverage.platform_users.available && feedCoverage.debt_accounts.available && debtVisibleUserIds.size > 0,
-        insurance: feedCoverage.platform_users.available && feedCoverage.policies.available && policies.length > 0,
+        engagement: headcountDataAvailable && headcount > 0 && platformUsers.length > 0 && liveJourneys.length > 0,
+        cashflow: liveJourneys.length > 0,
+        debtRisk: (debtVisibleUserIds.size > 0 || debts.length > 0) && platformUsers.length > 0,
+        insurance: policies.length > 0 && platformUsers.length > 0,
     };
     // "Savings still achievable" (Optimise Score spec, driver 2 / appendix
     // section 12): eligible-but-not-yet-fixed users, per journey type, times
@@ -934,7 +946,27 @@ async function buildDashboardPayload(employerId, query = {}) {
     const regions = [];
     const stressMap = [];
     const siteStats = [];
-    const sites = [...new Set(eligibleEmployees.map((employee) => employee.site?.name).filter(Boolean))].sort();
+    // Dimension members are independent of the selected cohort. This prevents
+    // the region slicer from becoming a one-option control (e.g. "Absa") simply
+    // because the current as-at period has no eligible rows for other sites.
+    const [allSiteRows, historicalSiteRows] = await Promise.all([
+        prisma.site.findMany({
+            where: { employerId },
+            select: { name: true },
+            orderBy: { name: "asc" },
+        }),
+        prisma.employeeVersion.findMany({
+            where: { employee: { employerId }, siteName: { not: null } },
+            select: { siteName: true },
+            distinct: ["siteName"],
+            orderBy: { siteName: "asc" },
+        }),
+    ]);
+    const sites = [...new Set([
+            ...allSiteRows.map((row) => row.name),
+            ...historicalSiteRows.map((row) => row.siteName),
+            ...eligibleEmployees.map((employee) => employee.site?.name),
+        ].filter(Boolean))].sort();
     for (const siteName of sites) {
         if (filter.site && filter.site !== siteName)
             continue;
@@ -992,47 +1024,61 @@ async function buildDashboardPayload(employerId, query = {}) {
         valueNote: "Observed premium only; no assumed savings percentage is applied.",
     };
     let priorScore = null;
-    if (!filter.site && !filter.income) {
-        // "vs last period" must compare like-for-like granularity: a month
-        // against the calendar month before it, a quarter against the quarter
-        // before it — never a mismatched comparison. Previously this always
-        // compared against "whatever monthly snapshot precedes the current
-        // calendar month", even when viewing a specific past quarter or month,
-        // which could show a delta against a period that had nothing to do
-        // with what was on screen (e.g. a quarter view improving quarter over
-        // quarter, but showing a drop because it was silently diffed against
-        // an unrelated month).
-        let comparisonPeriod;
+    if (!skipPrior && score.complete) {
+        // Always compare against the most recent *real, comparable* scored period.
+        // This is deliberately calculated from source data rather than relying on
+        // a snapshot row existing, because historical snapshots can be missing or
+        // pre-date the corrected score engine. Site/income slicers are carried into
+        // the comparison so the two scores represent the same cohort.
+        const cohort = { site: filter.site ?? undefined, income: filter.income ?? undefined };
+        let seed;
         if (filter.period) {
-            // Specific month view (including the current month-to-date): compare
-            // to the calendar month immediately before it.
-            comparisonPeriod = previousPeriod(filter.period);
+            seed = previousPeriod(filter.period);
         }
         else if (filter.quarter) {
-            // Specific quarter view: compare to the previous quarter's close.
-            comparisonPeriod = previousQuarterClosePeriod(filter.quarter);
+            seed = previousQuarterClosePeriod(filter.quarter);
         }
         else if (filter.range === "quarter") {
-            // Relative "quarter to date": compare to the previous full quarter's
-            // close, not to whatever month happens to precede today.
-            comparisonPeriod = previousQuarterClosePeriod(quarterOf(filter.asAt));
+            seed = previousQuarterClosePeriod(quarterOf(filter.asAt));
+        }
+        else if (filter.range === "30d" && filter.rangeStart) {
+            // A 30-day selection must compare against the immediately preceding
+            // 30-day window, not against an arbitrary calendar month. Anchor the
+            // score engine at the day before the selected window begins.
+            const priorEnd = new Date(filter.rangeStart.getTime() - DAY_MS);
+            const priorPayload = await buildDashboardPayload(employerId, { range: "30d", asAt: priorEnd.toISOString(), ...cohort }, true);
+            if (priorPayload?.wellness?.complete && priorPayload?.wellness?.score != null) {
+                priorScore = Number(priorPayload.wellness.score);
+            }
+            seed = monthKey(priorEnd);
         }
         else {
-            // "Last 30 days" / "Programme to date" / "Latest" all represent "now",
-            // so the natural comparison is the most recently closed month.
-            comparisonPeriod = previousPeriod(currentPeriod());
+            seed = previousPeriod(monthKey(filter.asAt));
         }
-        const prior = await prisma.scoreSnapshot.findFirst({
-            where: { employerId, period: comparisonPeriod, payloadVersion: { gte: 4 } },
-        });
-        // Fall back to the closest earlier snapshot if the exact adjacent
-        // period was never imported (e.g. a gap in historical data), so the
-        // delta degrades gracefully instead of just disappearing.
-        const fallback = prior ? null : await prisma.scoreSnapshot.findFirst({
-            where: { employerId, period: { lt: comparisonPeriod }, payloadVersion: { gte: 4 } },
-            orderBy: { period: "desc" },
-        });
-        priorScore = (prior ?? fallback)?.optimiseScore ?? null;
+        // Walk backwards until we find a complete score. This prevents a false
+        // "No prior period" when the immediately preceding month/quarter has a
+        // gap in one source feed but an earlier valid period is available.
+        const [sy, sm] = seed.split("-").map(Number);
+        for (let offset = 0; offset < 25 && priorScore == null; offset++) {
+            const d = new Date(Date.UTC(sy, sm - 1 - offset, 1));
+            const candidate = monthKey(d);
+            // Prefer a corrected snapshot when one exists, but never require a
+            // snapshot row. A missing snapshot is not evidence that the prior
+            // period did not exist. If no usable snapshot exists, calculate the
+            // score from the dated source records using the same slicers.
+            const priorSnap = await prisma.scoreSnapshot.findFirst({
+                where: { employerId, period: candidate, payloadVersion: { gte: 4 } },
+                select: { optimiseScore: true },
+            });
+            if (priorSnap?.optimiseScore != null && !filter.site && !filter.income) {
+                priorScore = Number(priorSnap.optimiseScore);
+                break;
+            }
+            const priorPayload = await buildDashboardPayload(employerId, { period: candidate, ...cohort }, true);
+            if (priorPayload?.wellness?.complete && priorPayload?.wellness?.score != null) {
+                priorScore = Number(priorPayload.wellness.score);
+            }
+        }
     }
     const sectionAvailability = {
         workforce: headcountDataAvailable,
@@ -1125,7 +1171,11 @@ async function buildDashboardPayload(employerId, query = {}) {
             },
         },
         filterOptions: {
+            // Filter choices must describe the employer's full available dimension,
+            // not only the currently eligible/as-at cohort. Otherwise a historical
+            // period or an admin employer switch can make a valid region disappear.
             sites: sites.map((site) => ({ value: site, label: site })),
+            regions: sites.map((site) => ({ value: site, label: site })),
             incomes: INCOME_VALUES.map((value) => ({ value, label: INCOME_LABEL[value] })),
         },
         dataQuality: {
