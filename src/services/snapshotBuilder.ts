@@ -609,19 +609,16 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
 
   const cumulativeMonthlySaving = cumulativeCompleted.reduce((sum: number, journey: any) => sum + (journey.monthlySavingCents ?? 0), 0);
   const flowMonthlySaving = flowCompleted.reduce((sum: number, journey: any) => sum + (journey.monthlySavingCents ?? 0), 0);
-  const targetRows = await prisma.achievableTarget.findMany({
-    where: { OR: [{ employerId }, { employerId: null }], driver: "CASHFLOW", effectiveFrom: { lte: filter.asAt } },
-    orderBy: { effectiveFrom: "desc" },
-  });
-  const target = (targetRows as any[]).find((row: any) => row.employerId === employerId)
-    ?? (targetRows as any[]).find((row: any) => row.employerId == null);
-  const savingsAchievable = Number((target?.config as any)?.monthlyAchievableRand ?? rand(cumulativeMonthlySaving));
   const arrearsUserIds = new Set(debts.filter((debt: any) => debt.inArrears).map((debt: any) => debt.platformUserId));
   const debtVisibleUserIds = new Set<string>();
   for (const user of platformUsers as any[]) if (user.hasCreditProfile) debtVisibleUserIds.add(user.id);
   for (const debt of debts as any[]) if (debt.platformUserId) debtVisibleUserIds.add(debt.platformUserId);
   const wastefulPolicies = policies.filter((policy: any) => policy.isWasteful);
   const fixedPolicies = wastefulPolicies.filter((policy: any) => policy.isResolved);
+  // Hoisted from further down (still used there): needed now to size the
+  // cashflow "still achievable" denominator below.
+  const countPolicy = (type: string, unresolvedOnly = false) => policies.filter((policy: any) => policy.type === type && policy.isWasteful && (!unresolvedOnly || !policy.isResolved)).length;
+  const prescribable = debts.filter((debt: any) => ["IDENTIFIED", "LETTER_SENT"].includes(debt.challengeStatus));
 
   const driverAvailability: DriverAvailability = {
     engagement: headcountDataAvailable && headcount > 0 && feedCoverage.platform_users.available && feedCoverage.journeys.available,
@@ -629,6 +626,50 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
     debtRisk: feedCoverage.platform_users.available && feedCoverage.debt_accounts.available && debtVisibleUserIds.size > 0,
     insurance: feedCoverage.platform_users.available && feedCoverage.policies.available && policies.length > 0,
   };
+
+  // "Savings still achievable" (Optimise Score spec, driver 2 / appendix
+  // section 12): eligible-but-not-yet-fixed users, per journey type, times
+  // the average realised saving per completed fix of that type — the same
+  // "no assumed percentage" diagnostic the Opportunities panel uses below.
+  // An admin-configured AchievableTarget (actuarially reviewed) overrides
+  // this when present; it must NEVER silently fall back to the unlocked
+  // amount itself, since that makes the ratio trivially 100 every time no
+  // target row exists (which was previously always, because nothing ever
+  // writes to that table).
+  const cumulativeByType = new Map<string, { count: number; saving: number }>();
+  for (const journey of cumulativeCompleted as any[]) {
+    const bucket = cumulativeByType.get(journey.type) ?? { count: 0, saving: 0 };
+    bucket.count += 1;
+    bucket.saving += journey.monthlySavingCents ?? 0;
+    cumulativeByType.set(journey.type, bucket);
+  }
+  const overallAvgSavingCents = cumulativeCompleted.length
+    ? cumulativeMonthlySaving / cumulativeCompleted.length
+    : 0;
+  const avgSavingForType = (type: string) => {
+    const bucket = cumulativeByType.get(type);
+    return bucket && bucket.count > 0 ? bucket.saving / bucket.count : overallAvgSavingCents;
+  };
+  const eligibleNotYetFixed: Array<[string, number]> = [
+    ["ARREARS", debts.filter((debt: any) => debt.inArrears && (debt.state ?? "NONE") === "NONE").length],
+    ["CREDIT_LIFE", countPolicy("CREDIT_LIFE", true)],
+    ["FUNERAL", countPolicy("FUNERAL", true)],
+    ["SHORT_TERM", countPolicy("SHORT_TERM", true)],
+    ["PRESCRIBED", prescribable.length],
+  ];
+  const additionalOpportunityCents = eligibleNotYetFixed.reduce(
+    (sum, [type, eligible]) => sum + eligible * avgSavingForType(type),
+    0,
+  );
+
+  const targetRows = await prisma.achievableTarget.findMany({
+    where: { OR: [{ employerId }, { employerId: null }], driver: "CASHFLOW", effectiveFrom: { lte: filter.asAt } },
+    orderBy: { effectiveFrom: "desc" },
+  });
+  const target = (targetRows as any[]).find((row: any) => row.employerId === employerId)
+    ?? (targetRows as any[]).find((row: any) => row.employerId == null);
+  const computedAchievable = rand(cumulativeMonthlySaving) + rand(additionalOpportunityCents);
+  const savingsAchievable = Number((target?.config as any)?.monthlyAchievableRand ?? computedAchievable);
 
   const inputs: ScoreInputs = {
     usersStartedJourney: startedUserIds.size,
@@ -924,7 +965,6 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
     stressMap.push({ l: "Most indebted site", v: byDebt[0].name, d: `${zar(Math.round(byDebt[0].averageDebt))} avg unsecured debt`, tone: "amber" });
   }
 
-  const countPolicy = (type: string, unresolvedOnly = false) => policies.filter((policy: any) => policy.type === type && policy.isWasteful && (!unresolvedOnly || !policy.isResolved)).length;
   const duplicateCreditLife = countPolicy("CREDIT_LIFE");
   const duplicateFuneral = countPolicy("FUNERAL");
   const overShortTerm = countPolicy("SHORT_TERM");
@@ -941,7 +981,6 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
   // Do not apply an assumed savings percentage. This is the directly observed
   // unresolved premium under review; any realised saving comes from journey outcomes.
   const estimatedMonthlyOpportunity = unresolvedPremium;
-  const prescribable = debts.filter((debt: any) => ["IDENTIFIED", "LETTER_SENT"].includes(debt.challengeStatus));
   const prescribableBalance = prescribable.reduce((sum: number, debt: any) => sum + debt.balanceCents, 0);
   const opportunities = {
     cards: [
