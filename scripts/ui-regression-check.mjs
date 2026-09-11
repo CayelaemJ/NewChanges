@@ -1,6 +1,7 @@
 import { readFileSync, existsSync } from "node:fs";
-import { join } from "node:path";
-const root = process.cwd();
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const read = (p) => readFileSync(join(root,p),"utf8");
 const pages = {
   dashboard: read("public/dashboard.html"),
@@ -57,6 +58,16 @@ must(pages.dashboard.includes('const EMPLOYER_METRIC_INFO = {'), 'Employer metri
 must(pages.dashboard.includes('data-metric=\"wellness\"') && pages.dashboard.includes("wireMetricTips(document.getElementById('employer-view'))"), 'Employer view must expose and wire metric information icons');
 must(pages.dashboard.includes("infoKey:'takeUp'") && pages.dashboard.includes("infoKey:'engaged'") && pages.dashboard.includes("infoKey:'saving'") && pages.dashboard.includes("infoKey:'rating'"), 'Employer KPI cards must expose metric help');
 must(pages.dashboard.includes('funnelEligible') && pages.dashboard.includes('valueMonthly') && pages.dashboard.includes('debtProfile') && pages.dashboard.includes('prescription') && pages.dashboard.includes('riskSignals') && pages.dashboard.includes('opportunities'), 'Employer metric glossary must cover the major dashboard sections');
+
+
+must(pages.dashboard.includes('id="employer-select"') && pages.dashboard.includes('id="month-select"') && pages.dashboard.includes('id="region-filter"') && pages.dashboard.includes('id="income-filter"'), 'filter order must expose Company, Period/Month, Region and Income Band controls');
+must(pages.dashboard.indexOf('id="employer-select"') < pages.dashboard.indexOf('id="month-select"') && pages.dashboard.indexOf('id="month-select"') < pages.dashboard.indexOf('id="region-filter"') && pages.dashboard.indexOf('id="region-filter"') < pages.dashboard.indexOf('id="income-filter"'), 'filter DOM order must be Company -> Period/Month -> Region -> Income Band');
+must(pages.dashboard.includes("switchFilter('site',v)") && pages.dashboard.includes("switchFilter('income',v)"), 'Region and Income selections must update the live URL/API filters');
+must(snap.includes('historicalSiteRows') && snap.includes('employeeVersion.findMany'), 'Region choices must include historical site dimension members');
+must(snap.includes('const cohort = { site: filter.site ?? undefined, income: filter.income ?? undefined }') && snap.includes('previousPeriod(filter.period)'), 'Prior-period score must use the same Region/Income cohort and previous month for monthly selections');
+must(snap.includes('{ range: "30d", asAt: priorEnd.toISOString(), ...cohort }'), 'Last 30 days must compare against the preceding 30-day window');
+must(snap.includes('platformUsers.length > 0 && liveJourneys.length > 0') && snap.includes('policies.length > 0 && platformUsers.length > 0'), 'Historical score availability must be based on selected-period records, not only global sync cursors');
+must(pages.dashboard.includes('Score ${Math.round(Number(score))}') && pages.dashboard.includes('replace(" · Score ", ": Score ")'), 'Month selector labels must show the actual score for each month');
 
 if(failures.length){ console.error('UI regression check failed:\n- '+failures.join('\n- ')); process.exit(1); }
 console.log('UI regression check passed: v0.5.4 navigation, SQL integration, users/import controls, live-data availability and demo-leak safeguards are present.');

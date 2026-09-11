@@ -6,7 +6,7 @@
 import { PrismaClient } from "@prisma/client";
 import { getFormat } from "./reportFormats.js";
 import { compareDateValues, dateMillis, rehydrateStagedRows } from "./stagedRows.js";
-import { detectFormat, parseAndValidateCsvStreaming, parseAndValidateXlsxJsonStreaming } from "./importParser.js";
+import { detectFormat, parseAndValidateCsvStreaming, parseAndValidateXlsxJsonStreaming, validateBatchDeferred } from "./importParser.js";
 import { snapshotEmployer } from "./snapshotBuilder.js";
 import { notifyScoreChangeIfCurrentPeriod } from "./automationService.js";
 const prisma = new PrismaClient();
@@ -75,6 +75,25 @@ export async function uploadAndValidate(opts) {
     // already written for it (a run of valid-looking rows before a later error).
     if (!result.ok)
         await prisma.importBatchRow.deleteMany({ where: { batchId: batch.id } });
+    // Deferred validation (see validationStrategies.ts): the streaming parse
+    // above intentionally skips the duplicate-natural-key scan — it wants that
+    // O(n) Set-lookup off the hot per-row path while the file is still
+    // streaming in. It still has to run somewhere before the batch is offered
+    // up as "ready to commit", though: this was previously wired up nowhere at
+    // all, so a file with duplicate rows would validate clean, commit clean,
+    // and silently upsert (last row wins) with no warning ever surfacing.
+    // Running it here — once, after streaming, on the rows we just staged —
+    // means a duplicate-key problem still shows up at upload time rather than
+    // after a long chunked commit has already started.
+    let deferredErrors = [];
+    if (result.ok) {
+        const staged = await loadStagedRows(batch);
+        deferredErrors = await validateBatchDeferred(format, staged);
+        if (deferredErrors.length) {
+            result = { ...result, ok: false, errors: [...result.errors, ...deferredErrors] };
+            await prisma.importBatchRow.deleteMany({ where: { batchId: batch.id } });
+        }
+    }
     const updated = await prisma.importBatch.update({
         where: { id: batch.id },
         data: {
@@ -587,16 +606,15 @@ export async function commitBatch(batchId, options = {}) {
     // re-runnable: if a chunk fails partway, re-running commit on the same
     // VALIDATED batch reprocesses from the start and just re-skips whatever
     // already landed.
-    const CHUNK_SIZE = 1000;
     const chunks = [];
-    for (let i = 0; i < rows.length; i += CHUNK_SIZE)
-        chunks.push(rows.slice(i, i + CHUNK_SIZE));
+    for (let i = 0; i < rows.length; i += IMPORT_CHUNK_SIZE)
+        chunks.push(rows.slice(i, i + IMPORT_CHUNK_SIZE));
     // An empty batch (0 valid rows) still needs the report-key handler to run
     // once — e.g. to reject an unsupported report key the same way it always did.
     if (!chunks.length)
         chunks.push([]);
     for (const chunk of chunks) {
-        await prisma.$transaction((tx) => commitRowsChunk(tx, batch.reportKey, chunk, stats, batchId), { timeout: 120_000, maxWait: 30000 });
+        await prisma.$transaction((tx) => commitRowsChunk(tx, batch.reportKey, chunk, stats, batchId), { timeout: IMPORT_TX_TIMEOUT_MS, maxWait: 30000 });
     }
     await prisma.importBatch.update({
         where: { id: batchId },
