@@ -4,7 +4,7 @@
 //  The model separates three time concepts used by the dashboard:
 //    • business events inside a selected window (journeys, ratings, referrals, EWA, etc.)
 //    • effective/observed state as at the window end (workforce, debt, cover)
-//    • source_updated_at for incremental transport and last-write ordering
+//    • source_updated_at for incremental transport and last-write orderin
 //
 //  Current projection tables keep the application fast; immutable observation
 //  tables retain history so past periods are never rebuilt from today's state.
