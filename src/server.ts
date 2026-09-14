@@ -6,6 +6,7 @@
 // ════════════════════════════════════════════════════════════════════
 
 import Fastify, { FastifyRequest, FastifyReply } from "fastify";
+import { Prisma } from "@prisma/client";
 import multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
 import cookie from "@fastify/cookie";
@@ -846,6 +847,26 @@ app.get<{ Params: { employerId: string }; Querystring: { site?: string; income?:
     });
 
     const periodSet = new Set(snapshots.map((s: any) => s.period));
+
+    // ScoreSnapshot is the preferred source for labelled scores, but it is not
+    // guaranteed to exist for every month covered by imported workforce data.
+    // Build the period dimension from the immutable EmployeeVersion observation
+    // table as well. PostgreSQL does the DISTINCT/month extraction; never pull
+    // 100k employee rows into Node just to populate a selector.
+    const observedPeriods = await prisma.$queryRaw<Array<{ period: string }>>(Prisma.sql`
+      SELECT DISTINCT to_char(date_trunc('month', ev."observedAt"), 'YYYY-MM') AS period
+      FROM "EmployeeVersion" ev
+      INNER JOIN "Employee" e ON e.id = ev."employeeId"
+      WHERE e."employerId" = ${employerId}
+        AND e."sourceDeletedAt" IS NULL
+        AND ev."isDeleted" = false
+      ORDER BY period DESC
+      LIMIT 24
+    `);
+    for (const row of observedPeriods) {
+      if (row?.period) periodSet.add(row.period);
+    }
+
     const latestEmployee = await prisma.employee.findFirst({
       where: { employerId, sourceDeletedAt: null },
       select: { observedAt: true },
@@ -853,9 +874,9 @@ app.get<{ Params: { employerId: string }; Querystring: { site?: string; income?:
     });
     if (latestEmployee?.observedAt) periodSet.add(monthKey(latestEmployee.observedAt));
 
-    // Return at most the latest 12 real reporting months. Keep this query O(12)
-    // and never invoke getDashboardPayload from inside the period-list endpoint.
-    // This is critical on mobile and when Region/Income is already selected.
+    // Return at most the latest 12 real reporting months. Keep the selector
+    // cheap: only the indexed observation dimension and persisted snapshots are
+    // touched; never invoke getDashboardPayload from this endpoint.
     const latestPeriods = [...periodSet].sort().reverse().slice(0, 12);
     const snapshotByPeriod = new Map(snapshots.map((row: any) => [row.period, row]));
     const snapshotScore = (snap: any): number | null => {
