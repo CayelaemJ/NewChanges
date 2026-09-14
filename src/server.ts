@@ -820,15 +820,28 @@ app.get<{ Params: { employerId: string }; Querystring: { site?: string; income?:
     // month. With 100k employees that creates a huge N+1 workload before the
     // user has even opened the month selector.
     //
-    // Persisted monthly scores are the fast path. Cohort-specific scores are
-    // calculated only when Region/Income is actually selected, and those calls
-    // are protected by the dashboard cache.
+    // Persisted monthly scores are the fast path. Region/Income is applied by
+    // the dashboard request after a period is selected; the period picker must
+    // never calculate twelve full cohort dashboards.
     const employerId = req.params.employerId;
-    const hasCohortFilter = Boolean(req.query.site && req.query.site !== "all") || Boolean(req.query.income && req.query.income !== "all");
+    // The period picker is a dimension selector, not a dashboard calculator.
+    // Never rebuild the full dashboard once per month just to populate it.
 
     const snapshots = await prisma.scoreSnapshot.findMany({
       where: { employerId, payloadVersion: { gte: 4 } },
-      select: { period: true, optimiseScore: true },
+      select: {
+        period: true,
+        optimiseScore: true,
+        rawScore: true,
+        engagementScore: true,
+        cashflowScore: true,
+        debtRiskScore: true,
+        insuranceScore: true,
+        engagementWeight: true,
+        cashflowWeight: true,
+        debtRiskWeight: true,
+        insuranceWeight: true,
+      },
       orderBy: { period: "desc" },
     });
 
@@ -840,28 +853,35 @@ app.get<{ Params: { employerId: string }; Querystring: { site?: string; income?:
     });
     if (latestEmployee?.observedAt) periodSet.add(monthKey(latestEmployee.observedAt));
 
-    const periods: Array<{ period: string; optimiseScore: number | null }> = [];
-    for (const period of [...periodSet].sort().reverse()) {
-      const snap = snapshots.find((row: any) => row.period === period);
-      if (!hasCohortFilter && snap) {
-        periods.push({ period, optimiseScore: snap.optimiseScore == null ? null : Number(snap.optimiseScore) });
-        continue;
-      }
-      try {
-        const live = await getDashboardPayload(employerId, {
-          period,
-          site: req.query.site,
-          income: req.query.income,
-        });
-        periods.push({
-          period,
-          optimiseScore: live?.wellness?.complete && live?.wellness?.score != null ? Number(live.wellness.score) : null,
-        });
-      } catch {
-        periods.push({ period, optimiseScore: null });
-      }
-    }
-    return periods;
+    // Return at most the latest 12 real reporting months. Keep this query O(12)
+    // and never invoke getDashboardPayload from inside the period-list endpoint.
+    // This is critical on mobile and when Region/Income is already selected.
+    const latestPeriods = [...periodSet].sort().reverse().slice(0, 12);
+    const snapshotByPeriod = new Map(snapshots.map((row: any) => [row.period, row]));
+    const snapshotScore = (snap: any): number | null => {
+      if (!snap) return null;
+      const stored = Number(snap.optimiseScore);
+      // Older/broken snapshots have occasionally contained a zero headline
+      // while the four driver scores were populated. Rebuild the headline
+      // from the persisted driver scores instead of exposing a false 0.
+      const drivers = [
+        [Number(snap.engagementScore), Number(snap.engagementWeight)],
+        [Number(snap.cashflowScore), Number(snap.cashflowWeight)],
+        [Number(snap.debtRiskScore), Number(snap.debtRiskWeight)],
+        [Number(snap.insuranceScore), Number(snap.insuranceWeight)],
+      ];
+      const weighted = drivers.every(([score, weight]) => Number.isFinite(score) && Number.isFinite(weight) && weight > 0)
+        ? Math.round(drivers.reduce((sum, [score, weight]) => sum + score * weight, 0))
+        : null;
+      if (stored > 0 && stored <= 100) return Math.round(stored);
+      if (weighted != null && weighted >= 0 && weighted <= 100) return weighted;
+      const raw = Number(snap.rawScore);
+      return Number.isFinite(raw) ? Math.max(0, Math.min(100, Math.round(raw))) : null;
+    };
+    return latestPeriods.map(period => {
+      const snap: any = snapshotByPeriod.get(period);
+      return { period, optimiseScore: snapshotScore(snap) };
+    });
   },
 );
 
