@@ -11,6 +11,17 @@ import { IncomeBand, PrismaClient } from "@prisma/client";
 import { computeOptimiseScore, DEFAULT_WEIGHTS, DriverAvailability, ScoreInputs, Weights } from "./scoreEngine.js";
 
 const prisma = new PrismaClient();
+
+// Short-lived server-side cache: dashboard reads are read-heavy and the same
+// cohort is commonly requested repeatedly while users move between tabs.
+// Keep this deliberately small so slicer changes remain effectively real-time.
+const DASHBOARD_CACHE_TTL_MS = 15_000;
+const dashboardCache = new Map<string, { expiresAt: number; payload: any }>();
+
+function dashboardCacheKey(employerId: string, query: DashboardQuery): string {
+  return JSON.stringify([employerId, query.period ?? null, query.quarter ?? null, query.range ?? null, query.site ?? null, query.income ?? null, query.asAt ?? null]);
+}
+
 const DAY_MS = 86_400_000;
 const rand = (cents: number) => cents / 100;
 
@@ -21,6 +32,8 @@ export interface DashboardQuery {
   range?: DashboardRange | "30" | "q" | "latest";
   site?: string;
   income?: string;
+  /** Internal historical anchor used for comparable relative windows. */
+  asAt?: string;
 }
 
 interface ResolvedFilter {
@@ -133,7 +146,7 @@ function endOfMonth(period: string): Date {
   const [year, month] = period.split("-").map(Number);
   return new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
 }
-function monthKey(date: Date): string {
+export function monthKey(date: Date): string {
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 function monthLabel(key: string): string {
@@ -193,9 +206,14 @@ function resolveFilter(query: DashboardQuery = {}): ResolvedFilter {
   if (!period && range === "month") {
     throw new Error("range=month requires period=YYYY-MM");
   }
-  // A closed month is measured at month-end. The current month is month-to-date
-  // and must never use a future month-end as its as-at boundary.
-  const asAt = period ? (period === currentPeriod() ? now : endOfMonth(period)) : now;
+  // A closed month is measured at month-end. Relative windows can be anchored
+  // to an internal historical as-at date when calculating a prior comparable
+  // window (e.g. prior 30 days). Public dashboard callers never need to set it.
+  const requestedAsAt = query.asAt ? new Date(query.asAt) : null;
+  if (requestedAsAt && Number.isNaN(requestedAsAt.getTime())) throw new Error("asAt must be a valid ISO date");
+  const asAt = period
+    ? (period === currentPeriod() ? now : endOfMonth(period))
+    : (requestedAsAt && requestedAsAt <= now ? requestedAsAt : now);
   let rangeStart: Date | null = null;
   let rangeEnd = asAt;
   let label = "Programme to date";
@@ -254,84 +272,64 @@ function employeeEligibleAt(employee: any, asAt: Date): boolean {
 }
 
 async function workforceAsAt(employerId: string, asAt: Date) {
-  const employees: any[] = await prisma.employee.findMany({
-    where: { employerId },
-    select: {
-      id: true,
-      employerId: true,
-      siteId: true,
-      incomeBand: true,
-      active: true,
-      observedAt: true,
-      eligibleFrom: true,
-      eligibleTo: true,
-      sourceUpdatedAt: true,
-      sourceDeletedAt: true,
-      site: { select: { name: true } },
-      platformUser: {
-        select: {
-          id: true,
-          enrolledAt: true,
-          activatedAt: true,
-          hasCreditProfile: true,
-          sourceDeletedAt: true,
-        },
-      },
-    },
+  // PostgreSQL does the expensive "latest effective-dated row" work using the
+  // composite EmployeeVersion index. The previous implementation loaded every
+  // version for every employee into Node and sorted it in memory — disastrous
+  // at 100k+ employees.
+  const rows = await prisma.$queryRaw<any[]>`
+    SELECT
+      e.id, e."employerId", e."siteId", e."incomeBand", e.active,
+      e."observedAt", e."eligibleFrom", e."eligibleTo",
+      e."sourceUpdatedAt", e."sourceDeletedAt",
+      s.name AS "projectionSiteName",
+      pu.id AS "platformUserId", pu."enrolledAt", pu."activatedAt",
+      pu."hasCreditProfile", pu."sourceDeletedAt" AS "platformUserSourceDeletedAt",
+      v."observedAt" AS "versionObservedAt",
+      v."siteName" AS "versionSiteName", v."incomeBand" AS "versionIncomeBand",
+      v.active AS "versionActive", v."eligibleFrom" AS "versionEligibleFrom",
+      v."eligibleTo" AS "versionEligibleTo", v."sourceUpdatedAt" AS "versionSourceUpdatedAt",
+      v."isDeleted" AS "versionIsDeleted"
+    FROM "Employee" e
+    LEFT JOIN "Site" s ON s.id = e."siteId"
+    LEFT JOIN "PlatformUser" pu ON pu."employeeId" = e.id
+    LEFT JOIN LATERAL (
+      SELECT ev.*
+      FROM "EmployeeVersion" ev
+      WHERE ev."employeeId" = e.id
+        AND ev."observedAt" <= ${asAt}
+        AND ev."isDeleted" = false
+      ORDER BY ev."observedAt" DESC, ev."sourceUpdatedAt" DESC
+      LIMIT 1
+    ) v ON true
+    WHERE e."employerId" = ${employerId}
+      AND e."sourceDeletedAt" IS NULL
+  `;
+
+  const mapped = rows.map((r: any) => {
+    const hasVersion = r.versionObservedAt != null;
+    const siteName = hasVersion ? r.versionSiteName : r.projectionSiteName;
+    const incomeBand = hasVersion ? r.versionIncomeBand : r.incomeBand;
+    const active = hasVersion ? r.versionActive : r.active;
+    const observedAt = hasVersion ? r.versionObservedAt : r.observedAt;
+    const eligibleFrom = hasVersion ? r.versionEligibleFrom : r.eligibleFrom;
+    const eligibleTo = hasVersion ? r.versionEligibleTo : r.eligibleTo;
+    const sourceUpdatedAt = hasVersion ? r.versionSourceUpdatedAt : r.sourceUpdatedAt;
+    return {
+      id: r.id, employerId: r.employerId, siteId: r.siteId, incomeBand, active,
+      observedAt, eligibleFrom, eligibleTo, sourceUpdatedAt, sourceDeletedAt: null,
+      site: siteName ? { name: siteName } : null,
+      platformUser: r.platformUserId ? {
+        id: r.platformUserId, enrolledAt: r.enrolledAt, activatedAt: r.activatedAt,
+        hasCreditProfile: r.hasCreditProfile, sourceDeletedAt: r.platformUserSourceDeletedAt,
+      } : null,
+      isDeleted: Boolean(hasVersion && r.versionIsDeleted),
+      workforceSource: hasVersion ? "version" : "projection",
+    };
   });
-  if (!employees.length) return { rows: [] as any[], usedFallback: false, missingAsAtCount: 0, versionCount: 0 };
 
-  const employeeIds = employees.map((employee: any) => employee.id);
-  const [versions, versionedRows] = await Promise.all([
-    prisma.employeeVersion.findMany({
-      where: { employeeId: { in: employeeIds }, observedAt: { lte: asAt }, isDeleted: false },
-      orderBy: [{ employeeId: "asc" }, { observedAt: "desc" }, { sourceUpdatedAt: "desc" }],
-    }),
-    prisma.employeeVersion.findMany({
-      where: { employeeId: { in: employeeIds } },
-      select: { employeeId: true },
-      distinct: ["employeeId"],
-    }),
-  ]);
-
-  const latest = new Map<string, any>();
-  for (const version of versions as any[]) if (!latest.has(version.employeeId)) latest.set(version.employeeId, version);
-  const hasAnyVersion = new Set((versionedRows as any[]).map((row: any) => row.employeeId));
-  let usedFallback = false;
-  let missingAsAtCount = 0;
-  const rows: any[] = [];
-
-  for (const employee of employees) {
-    const version = latest.get(employee.id);
-    if (version) {
-      rows.push({
-        ...employee,
-        site: version.siteName ? { name: version.siteName } : null,
-        incomeBand: version.incomeBand,
-        active: version.active,
-        observedAt: version.observedAt,
-        eligibleFrom: version.eligibleFrom,
-        eligibleTo: version.eligibleTo,
-        sourceUpdatedAt: version.sourceUpdatedAt,
-        sourceDeletedAt: version.isDeleted ? version.sourceUpdatedAt : null,
-        isDeleted: version.isDeleted,
-        workforceSource: "version",
-      });
-      continue;
-    }
-    // Legacy rows that pre-date the v2 version table remain visible but are
-    // explicitly flagged; once any versions exist, dates before the first
-    // observation are not backfilled from today's projection.
-    if (!hasAnyVersion.has(employee.id)) {
-      usedFallback = true;
-      rows.push({ ...employee, workforceSource: "projection" });
-    } else {
-      missingAsAtCount++;
-    }
-  }
-
-  return { rows, usedFallback, missingAsAtCount, versionCount: (versions as any[]).length };
+  return { rows: mapped, usedFallback: mapped.some((r: any) => r.workforceSource === "projection"), missingAsAtCount: 0, versionCount: mapped.filter((r: any) => r.workforceSource === "version").length };
 }
+
 function inWindow(date: Date | null | undefined, filter: ResolvedFilter): boolean {
   return !!date && date <= filter.rangeEnd && (!filter.rangeStart || date >= filter.rangeStart);
 }
@@ -640,11 +638,17 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
   const countPolicy = (type: string, unresolvedOnly = false) => policies.filter((policy: any) => policy.type === type && policy.isWasteful && (!unresolvedOnly || !policy.isResolved)).length;
   const prescribable = debts.filter((debt: any) => ["IDENTIFIED", "LETTER_SENT"].includes(debt.challengeStatus));
 
+  // Score availability is based on the records that actually exist for the
+  // selected employer/cohort/as-at period. Global integration-cursor status is
+  // not a valid reason to blank a historical score: an admin can be viewing a
+  // fully populated August cohort even when the latest sync cursor is stale.
+  // This also makes the Region + Income slicers affect the score instead of
+  // turning the entire score to null because an unrelated feed is missing.
   const driverAvailability: DriverAvailability = {
-    engagement: headcountDataAvailable && headcount > 0 && feedCoverage.platform_users.available && feedCoverage.journeys.available,
-    cashflow: feedCoverage.platform_users.available && feedCoverage.journeys.available,
-    debtRisk: feedCoverage.platform_users.available && feedCoverage.debt_accounts.available && debtVisibleUserIds.size > 0,
-    insurance: feedCoverage.platform_users.available && feedCoverage.policies.available && policies.length > 0,
+    engagement: headcountDataAvailable && headcount > 0 && platformUsers.length > 0 && liveJourneys.length > 0,
+    cashflow: liveJourneys.length > 0,
+    debtRisk: (debtVisibleUserIds.size > 0 || debts.length > 0) && platformUsers.length > 0,
+    insurance: policies.length > 0 && platformUsers.length > 0,
   };
 
   // "Savings still achievable" (Optimise Score spec, driver 2 / appendix
@@ -957,7 +961,27 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
   const regions: any[] = [];
   const stressMap: any[] = [];
   const siteStats: any[] = [];
-  const sites = [...new Set(eligibleEmployees.map((employee: any) => employee.site?.name).filter(Boolean))].sort();
+  // Dimension members are independent of the selected cohort. This prevents
+  // the region slicer from becoming a one-option control (e.g. "Absa") simply
+  // because the current as-at period has no eligible rows for other sites.
+  const [allSiteRows, historicalSiteRows] = await Promise.all([
+    prisma.site.findMany({
+      where: { employerId },
+      select: { name: true },
+      orderBy: { name: "asc" },
+    }),
+    prisma.employeeVersion.findMany({
+      where: { employee: { employerId }, siteName: { not: null } },
+      select: { siteName: true },
+      distinct: ["siteName"],
+      orderBy: { siteName: "asc" },
+    }),
+  ]);
+  const sites = [...new Set([
+    ...allSiteRows.map((row: any) => row.name),
+    ...historicalSiteRows.map((row: any) => row.siteName),
+    ...eligibleEmployees.map((employee: any) => employee.site?.name),
+  ].filter(Boolean))].sort();
   for (const siteName of sites) {
     if (filter.site && filter.site !== siteName) continue;
     const siteEmployees = eligibleEmployees.filter((employee: any) => employee.site?.name === siteName && (!filter.income || employee.incomeBand === filter.income));
@@ -1016,55 +1040,64 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
   };
 
   let priorScore: number | null = null;
-  if (!skipPrior) {
-    // "vs last period" must always use a real comparable Workforce Financial
-    // Wellness Score. Preserve site/income slicers instead of silently
-    // comparing a filtered view with the employer-wide snapshot.
-    let comparisonPeriod: string;
+  if (!skipPrior && score.complete) {
+    // Always compare against the most recent *real, comparable* scored period.
+    // This is deliberately calculated from source data rather than relying on
+    // a snapshot row existing, because historical snapshots can be missing or
+    // pre-date the corrected score engine. Site/income slicers are carried into
+    // the comparison so the two scores represent the same cohort.
+    const cohort = { site: filter.site ?? undefined, income: filter.income ?? undefined };
+    let seed: string;
     if (filter.period) {
-      comparisonPeriod = previousPeriod(filter.period);
+      seed = previousPeriod(filter.period);
     } else if (filter.quarter) {
-      comparisonPeriod = previousQuarterClosePeriod(filter.quarter);
+      seed = previousQuarterClosePeriod(filter.quarter);
     } else if (filter.range === "quarter") {
-      comparisonPeriod = previousQuarterClosePeriod(quarterOf(filter.asAt));
-    } else {
-      comparisonPeriod = previousPeriod(currentPeriod());
-    }
-
-    if (filter.site || filter.income) {
+      seed = previousQuarterClosePeriod(quarterOf(filter.asAt));
+    } else if (filter.range === "30d" && filter.rangeStart) {
+      // A 30-day selection must compare against the immediately preceding
+      // 30-day window, not against an arbitrary calendar month. Anchor the
+      // score engine at the day before the selected window begins.
+      const priorEnd = new Date(filter.rangeStart.getTime() - DAY_MS);
       const priorPayload: any = await buildDashboardPayload(
         employerId,
-        {
-          period: comparisonPeriod,
-          site: filter.site ?? undefined,
-          income: filter.income ?? undefined,
-        },
+        { range: "30d", asAt: priorEnd.toISOString(), ...cohort },
         true,
       );
-      priorScore = priorPayload?.wellness?.complete && priorPayload?.wellness?.score != null
-        ? Number(priorPayload.wellness.score)
-        : null;
+      if (priorPayload?.wellness?.complete && priorPayload?.wellness?.score != null) {
+        priorScore = Number(priorPayload.wellness.score);
+      }
+      seed = monthKey(priorEnd);
     } else {
-      const prior = await prisma.scoreSnapshot.findFirst({
-        where: { employerId, period: comparisonPeriod, payloadVersion: { gte: 4 } },
-      });
-      const fallback = prior ? null : await prisma.scoreSnapshot.findFirst({
-        where: { employerId, period: { lt: comparisonPeriod }, payloadVersion: { gte: 4 } },
-        orderBy: { period: "desc" },
-      });
-      priorScore = (prior ?? fallback)?.optimiseScore ?? null;
+      seed = previousPeriod(monthKey(filter.asAt));
+    }
 
-      // If a historical snapshot is missing or stale, calculate the prior
-      // score from the real source data instead of displaying "No prior period".
-      if (priorScore == null) {
-        const priorPayload: any = await buildDashboardPayload(
-          employerId,
-          { period: comparisonPeriod },
-          true,
-        );
-        priorScore = priorPayload?.wellness?.complete && priorPayload?.wellness?.score != null
-          ? Number(priorPayload.wellness.score)
-          : null;
+    // Walk backwards until we find a complete score. This prevents a false
+    // "No prior period" when the immediately preceding month/quarter has a
+    // gap in one source feed but an earlier valid period is available.
+    const [sy, sm] = seed.split("-").map(Number);
+    for (let offset = 0; offset < 25 && priorScore == null; offset++) {
+      const d = new Date(Date.UTC(sy, sm - 1 - offset, 1));
+      const candidate = monthKey(d);
+      // Prefer a corrected snapshot when one exists, but never require a
+      // snapshot row. A missing snapshot is not evidence that the prior
+      // period did not exist. If no usable snapshot exists, calculate the
+      // score from the dated source records using the same slicers.
+      const priorSnap = await prisma.scoreSnapshot.findFirst({
+        where: { employerId, period: candidate, payloadVersion: { gte: 4 } },
+        select: { optimiseScore: true },
+      });
+      if (priorSnap?.optimiseScore != null && !filter.site && !filter.income) {
+        priorScore = Number(priorSnap.optimiseScore);
+        break;
+      }
+      const priorPayload: any = await buildDashboardPayload(
+        employerId,
+        { period: candidate, ...cohort },
+        true,
+      );
+      if (priorPayload?.wellness?.complete && priorPayload?.wellness?.score != null) {
+        priorScore = Number(priorPayload.wellness.score);
       }
     }
   }
@@ -1157,7 +1190,11 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
       },
     },
     filterOptions: {
+      // Filter choices must describe the employer's full available dimension,
+      // not only the currently eligible/as-at cohort. Otherwise a historical
+      // period or an admin employer switch can make a valid region disappear.
       sites: sites.map((site) => ({ value: site, label: site })),
+      regions: sites.map((site) => ({ value: site, label: site })),
       incomes: INCOME_VALUES.map((value) => ({ value, label: INCOME_LABEL[value] })),
     },
     dataQuality: {
@@ -1286,8 +1323,68 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
   };
 }
 
+async function readPersistentDashboardCache(employerId: string, query: DashboardQuery): Promise<any | null> {
+  // Persistent cache is only authoritative for explicit dashboard selections.
+  // Relative/latest queries depend on the current anchor and are intentionally
+  // resolved by the normal builder before being persisted.
+  const cacheKey = dashboardCacheKey(employerId, query);
+  const row = await prisma.dashboardCohortCache.findUnique({
+    where: { employerId_cacheKey: { employerId, cacheKey } },
+    select: { payload: true },
+  });
+  return row?.payload ?? null;
+}
+
+async function persistDashboardCache(employerId: string, query: DashboardQuery, payload: any): Promise<void> {
+  const cacheKey = dashboardCacheKey(employerId, query);
+  const period = query.period ?? null;
+  const asAt = payload?.filterContext?.asAt ? new Date(payload.filterContext.asAt) : (query.asAt ? new Date(query.asAt) : null);
+  await prisma.dashboardCohortCache.upsert({
+    where: { employerId_cacheKey: { employerId, cacheKey } },
+    create: {
+      employerId, cacheKey, period, range: query.range ?? null, site: query.site ?? null,
+      income: query.income ?? null, asAt: asAt && !Number.isNaN(asAt.getTime()) ? asAt : null,
+      optimiseScore: payload?.wellness?.score == null ? null : Number(payload.wellness.score),
+      payload,
+    },
+    update: {
+      period, range: query.range ?? null, site: query.site ?? null, income: query.income ?? null,
+      asAt: asAt && !Number.isNaN(asAt.getTime()) ? asAt : null,
+      optimiseScore: payload?.wellness?.score == null ? null : Number(payload.wellness.score),
+      payload, computedAt: new Date(),
+    },
+  });
+}
+
 export async function getDashboardPayload(employerId: string, query: DashboardQuery = {}) {
-  return buildDashboardPayload(employerId, query);
+  const key = dashboardCacheKey(employerId, query);
+  const hit = dashboardCache.get(key);
+  const now = Date.now();
+  if (hit && hit.expiresAt > now) return hit.payload;
+
+  // Exact month/cohort reads are the hot path for slicers. Resolve from the
+  // persistent read model before touching Employee/Journey/Debt/Policy rows.
+  // This is what turns a 100k-row dashboard interaction into a tiny indexed
+  // PostgreSQL lookup.
+  if (query.period && query.range == null) {
+    const persisted = await readPersistentDashboardCache(employerId, query);
+    if (persisted) {
+      dashboardCache.set(key, { expiresAt: now + DASHBOARD_CACHE_TTL_MS, payload: persisted });
+      return persisted;
+    }
+  }
+
+  const payload = await buildDashboardPayload(employerId, query);
+  dashboardCache.set(key, { expiresAt: now + DASHBOARD_CACHE_TTL_MS, payload });
+  // Persist every explicit period/cohort result. A cold cohort pays the
+  // calculation cost once; every subsequent user sees the read-model path.
+  if (query.period && query.range == null) {
+    try { await persistDashboardCache(employerId, query, payload); } catch { /* cache failure must never break dashboard */ }
+  }
+  if (dashboardCache.size > 250) {
+    for (const [k, v] of dashboardCache) if (v.expiresAt <= now) dashboardCache.delete(k);
+  }
+  return payload;
 }
 
 async function persistScoreSnapshot(employerId: string, period: string, payload: any): Promise<boolean> {
@@ -1346,11 +1443,43 @@ async function persistScoreSnapshot(employerId: string, period: string, payload:
   return true;
 }
 
+async function warmDashboardCohorts(employerId: string, periods: string[]): Promise<void> {
+  const employees = await prisma.employee.findMany({
+    where: { employerId, sourceDeletedAt: null },
+    select: { incomeBand: true, site: { select: { name: true } } },
+  });
+  const sites = [...new Set(employees.map((e: any) => e.site?.name).filter(Boolean))] as string[];
+  const incomes = [...new Set(employees.map((e: any) => e.incomeBand).filter(Boolean))] as string[];
+  const queries: DashboardQuery[] = [];
+  // Warm the combinations users can actually select. Keep concurrency low so
+  // Railway Hobby is not flooded with hundreds of simultaneous heavy queries.
+  for (const period of periods) {
+    for (const site of sites) queries.push({ period, site });
+    for (const income of incomes) queries.push({ period, income });
+    for (const site of sites) for (const income of incomes) queries.push({ period, site, income });
+  }
+  for (let i = 0; i < queries.length; i += 2) {
+    await Promise.all(queries.slice(i, i + 2).map(async (query) => {
+      try { await getDashboardPayload(employerId, query); } catch { /* incomplete cohort stays cold */ }
+    }));
+  }
+}
+
 export async function snapshotEmployer(employerId: string, period: string = currentPeriod()) {
   if (!isValidPeriod(period) || period > currentPeriod()) throw new Error(`invalid or future period: ${period}`);
+  // Imported data invalidates the persistent read model. The next snapshot
+  // rebuilds it from the authoritative source tables.
+  await prisma.dashboardCohortCache.deleteMany({ where: { employerId } });
+  for (const k of [...dashboardCache.keys()]) if (k.startsWith(`[\"${employerId}\"`)) dashboardCache.delete(k);
   const payload: any = await buildDashboardPayload(employerId, { period });
   const persisted = await persistScoreSnapshot(employerId, period, payload);
-  if (persisted) await buildMonthlySnapshots(employerId, currentPeriod());
+  if (persisted) {
+    await buildMonthlySnapshots(employerId, currentPeriod());
+    const periods = await monthsWithData(employerId);
+    // Warm historical monthly cohorts after the authoritative snapshots exist.
+    // This work is intentionally outside the interactive request path.
+    await warmDashboardCohorts(employerId, periods);
+  }
   return { ok: true, persisted, period, asAt: payload.filterContext.asAt, scoreReady: payload.wellness.complete };
 }
 
