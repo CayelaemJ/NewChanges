@@ -421,10 +421,150 @@
   .exec-band svg text{fill:#e3f0fb;}
   @media(max-width:1080px){ .pf-picker{max-width:100%;} .pf-toolbar{align-items:stretch;flex-direction:column;} .pf-filter-block{min-width:0;width:100%;} .pf-toolbar-right{justify-content:flex-start;} }
 
+  /* ────────────────────────────────
+     PDF / PRINT REPORT
+     Browser print is the PDF renderer for this portal. Keep this deliberately
+     separate from screen/mobile CSS so the exported report is presentation-ready.
+  ───────────────────────────────── */
+  .pdf-print-header,.pdf-print-footer{display:none;}
   @media print{
-    .topbar,.filters,.head-actions,.row-chevron{display:none!important;}
-    body{background:#fff;}
-    .card{box-shadow:none;border-color:#d8e5f0;break-inside:avoid;}
+    @page{size:A4 landscape;margin:12mm 12mm 13mm;}
+
+    html,body{
+      width:auto!important;
+      min-width:0!important;
+      background:#fff!important;
+      color:#102536!important;
+      -webkit-print-color-adjust:exact!important;
+      print-color-adjust:exact!important;
+    }
+    body{font-size:10.5px;line-height:1.4;}
+
+    /* Remove all interactive chrome. */
+    .topbar,.filters,.head-actions,.row-chevron,
+    .audience-switch,.pf-banner,#portfolio-view,.metric-tooltip,
+    .reveal{animation:none!important;}
+    #employer-view{display:block!important;}
+
+    .wrap{
+      width:auto!important;
+      max-width:none!important;
+      margin:0!important;
+      padding:0!important;
+    }
+
+    /* Branded report masthead. */
+    .pdf-print-header{
+      display:flex!important;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:20px;
+      padding:0 0 8mm;
+      margin:0 0 6mm;
+      border-bottom:2px solid #102536;
+    }
+    .pdf-print-header .pdf-brand{
+      display:flex;align-items:center;gap:10px;
+    }
+    .pdf-print-header img{height:27px!important;width:auto!important;}
+    .pdf-print-header .pdf-kicker{
+      font-size:8.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+      color:#607486;margin-bottom:2px;
+    }
+    .pdf-print-header .pdf-title{
+      font-family:'Fraunces',serif;font-size:23px;font-weight:600;
+      color:#102536;line-height:1.05;
+    }
+    .pdf-print-header .pdf-meta{
+      text-align:right;font-size:9px;font-weight:700;color:#607486;line-height:1.55;
+    }
+    .pdf-print-header .pdf-score{
+      display:inline-block;margin-top:4px;padding:4px 8px;border-radius:999px;
+      background:#edf5fb;color:#075c9a;font-weight:900;
+    }
+
+    .head{padding:0 0 5mm!important;margin:0!important;}
+    .head h1{font-size:25px!important;margin-bottom:4px!important;}
+    .head-sub{max-width:850px;font-size:9.5px!important;color:#52616d!important;}
+    .head-eyebrow{font-size:8px!important;letter-spacing:.12em!important;}
+    .dash-section>.head{padding-top:7mm!important;padding-bottom:4mm!important;}
+    .dash-section>.head h1{font-size:20px!important;}
+
+    /* Cards become clean report panels rather than screen UI. */
+    .card{
+      box-shadow:none!important;
+      border:1px solid #d8e5f0!important;
+      border-radius:8px!important;
+      background:#fff!important;
+      break-inside:avoid!important;
+      page-break-inside:avoid!important;
+      overflow:visible!important;
+    }
+    .card-hd{padding:11px 13px 8px!important;}
+    .card-title{font-size:11.5px!important;}
+    .card-note{font-size:8.5px!important;line-height:1.35!important;}
+    .card-tag{font-size:8px!important;padding:4px 7px!important;}
+
+    /* Preserve useful two-column compositions in the report. */
+    .grid.g-12{
+      display:grid!important;
+      grid-template-columns:repeat(12,minmax(0,1fr))!important;
+      gap:10px!important;
+    }
+    .grid.g-4{
+      display:grid!important;
+      grid-template-columns:repeat(4,minmax(0,1fr))!important;
+      gap:10px!important;
+    }
+
+    /* Do not let long tables/charts disappear because of viewport clipping. */
+    svg{max-width:100%!important;}
+    table{width:100%!important;border-collapse:collapse!important;}
+    .pf-heat{font-size:8px!important;}
+    .section-gap{margin-top:10px!important;}
+
+    /* Keep major narrative sections together where practical. */
+    .dash-section{break-before:auto;page-break-before:auto;}
+    .dash-section[data-section="valueDelivered"],
+    .dash-section[data-section="stressMap"],
+    .dash-section[data-section="problemDebt"],
+    .dash-section[data-section="opportunities"],
+    .dash-section[data-section="voiceOfEmployee"]{
+      break-before:page!important;page-break-before:always!important;
+    }
+
+    /* Executive summary gets a restrained print treatment. */
+    .exec-band{
+      box-shadow:none!important;
+      border:1px solid #234b68!important;
+      background:#102f49!important;
+      padding:13px 15px!important;
+      break-inside:avoid!important;page-break-inside:avoid!important;
+    }
+    .exec-grid{gap:10px!important;}
+    .exec-v{font-size:16px!important;}
+    .exec-l,.exec-sub{font-size:8px!important;}
+
+    .wellness-inner{grid-template-columns:175px 1fr!important;gap:18px!important;}
+    .wellness-left{padding-right:16px!important;}
+    .wellness-note{font-size:8px!important;}
+
+    /* Remove screen-only interactive affordances and animation residue. */
+    .clickable{cursor:default!important;}
+    .metric-info{display:none!important;}
+    [style*="animation-delay"]{animation:none!important;}
+
+    .pdf-print-footer{
+      display:block!important;
+      margin-top:7mm;
+      padding-top:3mm;
+      border-top:1px solid #d8e5f0;
+      font-size:7.5px;
+      color:#718391;
+    }
+
+    /* Never print empty/loading placeholders as giant whitespace. */
+    .loading-overlay,.toast,.modal-backdrop{display:none!important;}
   }
 
   /* ── executive summary band ── */
@@ -538,6 +678,21 @@
 </div>
 
 <div class="wrap">
+
+  <div class="pdf-print-header" aria-hidden="true">
+    <div class="pdf-brand">
+      <img src="/static/logo.png" alt="">
+      <div>
+        <div class="pdf-kicker">empower-fin · Workforce Financial Wellbeing</div>
+        <div class="pdf-title" id="pdf-report-title">Employer Insights</div>
+      </div>
+    </div>
+    <div class="pdf-meta">
+      <div id="pdf-report-period">Reporting period</div>
+      <div id="pdf-report-generated"></div>
+      <span class="pdf-score" id="pdf-report-score">Workforce Financial Wellness Score —</span>
+    </div>
+  </div>
 
   <div id="employer-view">
 
@@ -828,6 +983,10 @@
   <div class="footnote" id="footnote"></div>
 
   </div><!-- /employer-view -->
+
+  <div class="pdf-print-footer" aria-hidden="true">
+    empower-fin · Workforce Financial Wellbeing · Confidential employer report · Generated <span id="pdf-footer-date"></span>
+  </div>
 
   <!-- ════════════════════════ PORTFOLIO VIEW (INTERNAL) ════════════════════════ -->
   <div id="portfolio-view" style="display:none">
@@ -2288,12 +2447,32 @@ function renderPfLeague(E){
   wireMetricTips(document.getElementById('pf-league-note'));
 }
 
+/* ─────── PDF export preparation ─────── */
+function preparePdfPrint(){
+  const title=document.getElementById('pdf-report-title');
+  const period=document.getElementById('pdf-report-period');
+  const generated=document.getElementById('pdf-report-generated');
+  const score=document.getElementById('pdf-report-score');
+  const footer=document.getElementById('pdf-footer-date');
+  const employer=document.querySelector('.emp')?.textContent?.trim() || 'Employer';
+  const periodLabel=document.getElementById('month-select')?.selectedOptions?.[0]?.textContent?.trim() || 'Latest available period';
+  const scoreValue=Number(DATA?.wellness?.score);
+  if(title) title.textContent=employer + ' · Employer Insights';
+  if(period) period.textContent=periodLabel;
+  if(generated) generated.textContent='Generated ' + new Date().toLocaleDateString('en-ZA',{year:'numeric',month:'long',day:'numeric'});
+  if(score) score.textContent='Workforce Financial Wellness Score ' + (Number.isFinite(scoreValue)?scoreValue:'—') + ' / 100';
+  if(footer) footer.textContent=new Date().toLocaleDateString('en-ZA',{year:'numeric',month:'long',day:'numeric'});
+}
+
+window.addEventListener('beforeprint',preparePdfPrint);
+
 /* ─────── wire: header buttons ─────── */
 function wireHeaderBtns(){
   const exp=document.getElementById('btn-export');
   if(exp) exp.addEventListener('click',()=>{
     exp.classList.add('loading'); exp.textContent='Preparing…';
-    setTimeout(()=>{ exp.textContent='Export PDF'; exp.classList.remove('loading'); window.print(); },700);
+    preparePdfPrint();
+    requestAnimationFrame(()=>setTimeout(()=>{ exp.textContent='Export PDF'; exp.classList.remove('loading'); window.print(); },180));
   });
   const pfExp=document.getElementById('btn-pf-export');
   if(pfExp) pfExp.addEventListener('click',()=>{
