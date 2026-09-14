@@ -15,7 +15,7 @@ const prisma = new PrismaClient();
 // Short-lived server-side cache: dashboard reads are read-heavy and the same
 // cohort is commonly requested repeatedly while users move between tabs.
 // Keep this deliberately small so slicer changes remain effectively real-time.
-const DASHBOARD_CACHE_TTL_MS = 15_000;
+const DASHBOARD_CACHE_TTL_MS = 60_000;
 const dashboardCache = new Map<string, { expiresAt: number; payload: any }>();
 
 function dashboardCacheKey(employerId: string, query: DashboardQuery): string {
@@ -1357,6 +1357,17 @@ async function persistDashboardCache(employerId: string, query: DashboardQuery, 
 }
 
 export async function getDashboardPayload(employerId: string, query: DashboardQuery = {}) {
+  // Resolve "latest" to the newest persisted monthly snapshot before cache
+  // lookup. This makes the default landing page use the same fast read-model
+  // path as an explicit month instead of rebuilding 100k-row source data.
+  if (!query.period && !query.quarter && query.range === "latest") {
+    const latest = await prisma.scoreSnapshot.findFirst({
+      where: { employerId, payloadVersion: { gte: 4 } },
+      orderBy: { period: "desc" },
+      select: { period: true },
+    });
+    if (latest?.period) query = { ...query, period: latest.period, range: undefined };
+  }
   const key = dashboardCacheKey(employerId, query);
   const hit = dashboardCache.get(key);
   const now = Date.now();
