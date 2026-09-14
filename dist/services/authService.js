@@ -10,23 +10,36 @@
 //  This same link table will power the future broker view with no rework.
 // ════════════════════════════════════════════════════════════════════
 import { PrismaClient } from "@prisma/client";
-import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
+import { createHash, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 const prisma = new PrismaClient();
 const SESSION_DAYS = 7; // default session length
 const SESSION_DAYS_REMEMBER = 30; // "remember me" session length
 // ── password hashing (scrypt) ──
+const SCRYPT_N = 32768;
+const SCRYPT_R = 8;
+const SCRYPT_P = 1;
+const SCRYPT_MAXMEM = 64 * 1024 * 1024;
 export function hashPassword(plain) {
     const salt = randomBytes(16).toString("hex");
-    const hash = scryptSync(plain, salt, 64).toString("hex");
-    return `${salt}:${hash}`;
+    const hash = scryptSync(plain, salt, 64, { N: SCRYPT_N, r: SCRYPT_R, p: SCRYPT_P, maxmem: SCRYPT_MAXMEM }).toString("hex");
+    return `v2$${salt}:${hash}`;
 }
 export function verifyPassword(plain, stored) {
-    const [salt, hash] = stored.split(":");
+    const v2 = stored.startsWith("v2$");
+    const encoded = v2 ? stored.slice(3) : stored;
+    const [salt, hash] = encoded.split(":");
     if (!salt || !hash)
         return false;
-    const candidate = scryptSync(plain, salt, 64);
+    const candidate = v2
+        ? scryptSync(plain, salt, 64, { N: SCRYPT_N, r: SCRYPT_R, p: SCRYPT_P, maxmem: SCRYPT_MAXMEM })
+        : scryptSync(plain, salt, 64);
     const original = Buffer.from(hash, "hex");
     return candidate.length === original.length && timingSafeEqual(candidate, original);
+}
+// Setup/reset tokens are high-entropy secrets. Store only a SHA-256 digest so
+// a database read does not immediately expose a live password-reset link.
+export function digestSetupToken(token) {
+    return createHash("sha256").update(token, "utf8").digest("hex");
 }
 // ── sessions ──
 export async function createSession(userId, days = SESSION_DAYS) {
@@ -42,7 +55,13 @@ export async function resolveSession(token) {
         where: { token },
         include: { user: { include: { links: true } } },
     });
-    if (!session || session.expiresAt < new Date() || !session.user.active)
+    if (!session)
+        return null;
+    if (session.expiresAt < new Date()) {
+        await prisma.session.deleteMany({ where: { token } });
+        return null;
+    }
+    if (!session.user.active)
         return null;
     return session.user;
 }
@@ -66,6 +85,11 @@ export async function login(email, password, remember = false) {
         return null;
     if (!verifyPassword(password, user.passwordHash))
         return null;
+    // Successful login upgrades legacy password hashes to the stronger v2 scrypt
+    // parameters without forcing a password reset for existing users.
+    if (!user.passwordHash.startsWith("v2$")) {
+        await prisma.user.update({ where: { id: user.id }, data: { passwordHash: hashPassword(password) } });
+    }
     const { token, expiresAt } = await createSession(user.id, remember ? SESSION_DAYS_REMEMBER : SESSION_DAYS);
     return { user, token, expiresAt };
 }

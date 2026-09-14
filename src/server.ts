@@ -41,11 +41,110 @@ const app = Fastify({
   bodyLimit: 64 * 1024 * 1024,
   connectionTimeout: 0,
   keepAliveTimeout: 75_000,
+  maxRequestsPerSocket: 1000,
 });
 
 // Node 20 defaults are too aggressive for slow uploads behind proxies.
 app.server.headersTimeout = 180_000;
 app.server.requestTimeout = 600_000;
+
+// ── security hardening ──────────────────────────────────────────────────────
+// The portal uses cookie-backed browser sessions. Keep browser-originated state
+// changes same-origin, add defensive security headers, and apply lightweight
+// in-process throttling to slow credential stuffing / abuse. Railway can sit
+// behind a proxy, so this intentionally uses Fastify's resolved request IP and
+// does not trust arbitrary application-provided identity headers.
+const SECURITY_HEADERS: Record<string, string> = {
+  "X-Content-Type-Options": "nosniff",
+  "X-Frame-Options": "DENY",
+  "Referrer-Policy": "strict-origin-when-cross-origin",
+  "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
+  "Cross-Origin-Opener-Policy": "same-origin",
+  "Cross-Origin-Resource-Policy": "same-origin",
+  "Content-Security-Policy": [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com data:",
+    "img-src 'self' data: blob:",
+    "connect-src 'self'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "frame-ancestors 'none'",
+    "form-action 'self'",
+  ].join("; "),
+};
+
+function applySecurityHeaders(reply: FastifyReply) {
+  for (const [key, value] of Object.entries(SECURITY_HEADERS)) reply.header(key, value);
+  if (COOKIE_SECURE) reply.header("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+}
+
+const rateBuckets = new Map<string, { count: number; resetAt: number }>();
+const RATE_WINDOW_MS = 60_000;
+const RATE_LIMIT = 240;
+const AUTH_RATE_LIMIT = 12;
+const AUTH_WINDOW_MS = 10 * 60_000;
+function rateLimit(reply: FastifyReply, key: string, limit: number, windowMs: number): boolean {
+  const now = Date.now();
+  const current = rateBuckets.get(key);
+  if (!current || current.resetAt <= now) {
+    rateBuckets.set(key, { count: 1, resetAt: now + windowMs });
+    return true;
+  }
+  current.count += 1;
+  if (current.count > limit) {
+    reply.header("Retry-After", Math.ceil((current.resetAt - now) / 1000));
+    reply.code(429).send({ error: "too many requests; try again later" });
+    return false;
+  }
+  return true;
+}
+
+app.addHook("onRequest", async (req, reply) => {
+  applySecurityHeaders(reply);
+  const path = req.url.split("?", 1)[0];
+  if (path.startsWith("/api/")) {
+    reply.header("Cache-Control", "no-store");
+    reply.header("Pragma", "no-cache");
+  }
+  const ip = req.ip || "unknown";
+  const authPath = path === "/api/auth/login" || path === "/api/auth/forgot-password" || path === "/api/auth/set-password";
+  if (!rateLimit(reply, `${authPath ? "auth" : "api"}:${ip}`, authPath ? AUTH_RATE_LIMIT : RATE_LIMIT, authPath ? AUTH_WINDOW_MS : RATE_WINDOW_MS)) return;
+
+  // Cookie-authenticated state-changing API calls must originate from this
+  // application. Bearer-token API clients are exempt because they don't carry
+  // the browser session cookie and can legitimately omit Origin/Referer.
+  if (req.method !== "GET" && req.method !== "HEAD" && path.startsWith("/api/")) {
+    const authHeader = req.headers.authorization;
+    const origin = req.headers.origin;
+    const referer = req.headers.referer;
+    if (!authHeader && (origin || referer)) {
+      const forwardedProto = String(req.headers["x-forwarded-proto"] || req.protocol).split(",")[0].trim();
+      const configuredOrigin = String(process.env.PUBLIC_BASE_URL || "").replace(/\/$/, "");
+      const expectedOrigin = configuredOrigin || `${forwardedProto}://${req.headers.host}`;
+      const suppliedOrigin = origin || (() => { try { return new URL(referer as string).origin; } catch { return ""; } })();
+      if (suppliedOrigin && suppliedOrigin !== expectedOrigin) {
+        return reply.code(403).send({ error: "cross-origin request rejected" });
+      }
+    }
+  }
+});
+
+// Periodically discard old rate-limit buckets so a long-lived process does not
+// retain one entry forever for every IP that ever touched it.
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, bucket] of rateBuckets) if (bucket.resetAt <= now) rateBuckets.delete(key);
+}, 5 * 60_000).unref();
+
+app.setErrorHandler((error, req, reply) => {
+  req.log.error({ err: error, method: req.method, url: req.url }, "unhandled request error");
+  if (reply.sent) return;
+  const status = Number((error as any)?.statusCode);
+  if (status >= 400 && status < 500) return reply.code(status).send({ error: error.message || "request rejected" });
+  return reply.code(500).send({ error: "internal server error" });
+});
 
 app.register(cookie);
 app.register(multipart, {
@@ -87,7 +186,7 @@ const serveHtml = async (reply: FastifyReply, file: string) =>
     .header("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate")
     .header("Pragma", "no-cache")
     .header("Expires", "0")
-    .header("X-Empower-Portal-Build", "0.5.4")
+    .header("X-Empower-Portal-Build", "0.6.0")
     .type("text/html")
     .send(await readFile(join(PUBLIC_DIR, file), "utf-8"));
 
@@ -108,6 +207,17 @@ async function requireAdmin(req: FastifyRequest, reply: FastifyReply): Promise<A
   if (user.role !== "ADMIN") { reply.code(403).send({ error: "admin only" }); return null; }
   return user;
 }
+function redactAuditDetail(value: unknown): unknown {
+  if (!value || typeof value !== "object") return value;
+  if (Array.isArray(value)) return value.map(redactAuditDetail);
+  const out: Record<string, unknown> = {};
+  for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
+    if (/password|token|secret|authorization|smtp/i.test(key)) out[key] = "[REDACTED]";
+    else out[key] = redactAuditDetail(val);
+  }
+  return out;
+}
+
 
 // ── public pages ──
 app.get("/favicon.ico", async (_req, reply) => reply.redirect("/static/favicon.png"));
@@ -139,11 +249,11 @@ app.get("/users", async (req, reply) => {
 
 app.get("/health", async () => ({ ok: true }));
 // lets you confirm the NEW build is live: should report the live-dashboard version
-app.get("/version", async () => ({ product: "empower-fin Dashboard Portal", version: "0.5.4", contractVersion: "2.6", coreSourceFeeds: 10, sourceModes: ["API", "SQL"], sqlDialects: ["POSTGRESQL", "MSSQL", "MYSQL"], channelPartners: true, scheduledReports: true, emailDelivery: "SMTP", portfolioEmployerFilter: true, portfolioMetricHelp: true, employerMetricHelp: true, uiNavigation: "account-dropdown-v2", routes: ["/login", "/dashboard", "/admin", "/users"] }));
+app.get("/version", async () => ({ product: "empower-fin Dashboard Portal", version: "0.6.0", contractVersion: "2.6", coreSourceFeeds: 10, sourceModes: ["API", "SQL"], sqlDialects: ["POSTGRESQL", "MSSQL", "MYSQL"], channelPartners: true, scheduledReports: true, emailDelivery: "SMTP", portfolioEmployerFilter: true, portfolioMetricHelp: true, employerMetricHelp: true, uiNavigation: "account-dropdown-v2", routes: ["/login", "/dashboard", "/admin", "/users"] }));
 
 // ════════════════════ AUTH ════════════════════
 const COOKIE_SECURE = !["0", "false", "no"].includes(String(process.env.COOKIE_SECURE ?? "true").toLowerCase());
-const COOKIE = { httpOnly: true, sameSite: "lax" as const, secure: COOKIE_SECURE, path: "/" };
+const COOKIE = { httpOnly: true, sameSite: "lax" as const, secure: COOKIE_SECURE, path: "/", maxAge: 30 * 86400 };
 
 app.post<{ Body: { email: string; password: string; remember?: boolean } }>("/api/auth/login", async (req, reply) => {
   const { email, password, remember } = req.body ?? ({} as any);
@@ -159,7 +269,7 @@ app.post<{ Body: { email: string; password: string; remember?: boolean } }>("/ap
 
 app.post("/api/auth/logout", async (req, reply) => {
   await destroySession(req.cookies?.session);
-  reply.clearCookie("session", { path: "/" });
+  reply.clearCookie("session", { path: "/", httpOnly: true, sameSite: "lax", secure: COOKIE_SECURE });
   return { ok: true };
 });
 
@@ -192,7 +302,7 @@ app.get("/api/auth/me", async (req, reply) => {
 app.post<{ Body: { token: string; password: string } }>("/api/auth/set-password", async (req, reply) => {
   try {
     const { token, password } = req.body ?? ({} as any);
-    if (!password || password.length < 8) return reply.code(400).send({ error: "password must be at least 8 characters" });
+    if (!password || password.length < 12) return reply.code(400).send({ error: "password must be at least 12 characters and include upper-case, lower-case, and numeric characters" });
     await completeSetup(token, password);
     return { ok: true };
   } catch (e: any) { return reply.code(400).send({ error: e.message }); }
@@ -243,7 +353,7 @@ app.patch<{ Params: { id: string }; Body: any }>("/api/users/:id", async (req, r
   }
   const updated = await updateUser(req.params.id, body);
   const changedKeys = Object.keys(body).join(", ") || "no fields";
-  logAdminAction(admin, "user.update", `Updated user ${req.params.id} (${changedKeys})`, { targetType: "User", targetId: req.params.id, detail: body });
+  logAdminAction(admin, "user.update", `Updated user ${req.params.id} (${changedKeys})`, { targetType: "User", targetId: req.params.id, detail: redactAuditDetail(body) });
   return updated;
 });
 app.post<{ Params: { id: string }; Body: { password: string } }>("/api/users/:id/reset-password", async (req, reply) => {
@@ -259,7 +369,7 @@ app.post<{ Params: { id: string }; Body: { password: string } }>("/api/users/:id
 app.post<{ Body: { reason?: string } }>("/api/users/me/deactivate", async (req, reply) => {
   const user = await requireUser(req, reply); if (!user) return;
   await deactivateSelf(user.id, req.body?.reason);
-  reply.clearCookie("session", { path: "/" });
+  reply.clearCookie("session", { path: "/", httpOnly: true, sameSite: "lax", secure: COOKIE_SECURE });
   return { ok: true };
 });
 
@@ -324,7 +434,7 @@ app.patch<{ Params: { key: string }; Body: { enabled?: boolean; allowedRoles?: s
     const admin = await requireAdmin(req, reply); if (!admin) return;
     try {
       const result = await updateSection(req.params.key, req.body || {});
-      logAdminAction(admin, "section.update", `Updated section "${req.params.key}" (${Object.keys(req.body || {}).join(", ") || "no fields"})`, { targetType: "DashboardSection", targetId: req.params.key, detail: req.body });
+      logAdminAction(admin, "section.update", `Updated section "${req.params.key}" (${Object.keys(req.body || {}).join(", ") || "no fields"})`, { targetType: "DashboardSection", targetId: req.params.key, detail: redactAuditDetail(req.body) });
       return result;
     }
     catch (e: any) { return reply.code(400).send({ error: e?.message || "could not update section" }); }
@@ -705,37 +815,44 @@ app.get<{ Params: { employerId: string }; Querystring: { site?: string; income?:
     const user = await requireUser(req, reply); if (!user) return;
     if (!canViewEmployer(user, req.params.employerId)) return reply.code(403).send({ error: "no access" });
 
-    // Build the picker from every historical month represented by the source
-    // data, not just scoreSnapshot rows. Then calculate the displayed score
-    // from the live score engine so "Aug 2026 · Score 53" is genuinely the
-    // score for August rather than a stale/static snapshot value.
+    // Keep this endpoint cheap. The previous implementation read date columns
+    // from six large tables and then ran the full dashboard builder once per
+    // month. With 100k employees that creates a huge N+1 workload before the
+    // user has even opened the month selector.
+    //
+    // Persisted monthly scores are the fast path. Cohort-specific scores are
+    // calculated only when Region/Income is actually selected, and those calls
+    // are protected by the dashboard cache.
     const employerId = req.params.employerId;
-    const [snaps, employees, employeeVersions, journeys, debts, policies] = await Promise.all([
-      prisma.scoreSnapshot.findMany({ where: { employerId }, select: { period: true }, orderBy: { period: "desc" } }),
-      prisma.employee.findMany({ where: { employerId }, select: { observedAt: true, sourceUpdatedAt: true } }),
-      prisma.employeeVersion.findMany({ where: { employee: { employerId } }, select: { observedAt: true } }),
-      prisma.journey.findMany({ where: { platformUser: { employee: { employerId } } }, select: { completedAt: true, startedAt: true } }),
-      prisma.debtAccount.findMany({ where: { platformUser: { employee: { employerId } } }, select: { observedAt: true } }),
-      prisma.insurancePolicy.findMany({ where: { platformUser: { employee: { employerId } } }, select: { observedAt: true } }),
-    ]);
+    const hasCohortFilter = Boolean(req.query.site && req.query.site !== "all") || Boolean(req.query.income && req.query.income !== "all");
 
-    const keys = new Set<string>();
-    const add = (value: Date | null | undefined) => {
-      if (!value) return;
-      const d = new Date(value);
-      if (!Number.isNaN(d.getTime())) keys.add(d.toISOString().slice(0, 7));
-    };
-    for (const row of snaps) keys.add(row.period);
-    for (const row of employees) { add(row.observedAt); add(row.sourceUpdatedAt); }
-    for (const row of employeeVersions) add(row.observedAt);
-    for (const row of journeys) { add(row.completedAt); add(row.startedAt); }
-    for (const row of debts) add(row.observedAt);
-    for (const row of policies) add(row.observedAt);
+    const snapshots = await prisma.scoreSnapshot.findMany({
+      where: { employerId, payloadVersion: { gte: 4 } },
+      select: { period: true, optimiseScore: true },
+      orderBy: { period: "desc" },
+    });
+
+    const periodSet = new Set(snapshots.map((s: any) => s.period));
+    const latestEmployee = await prisma.employee.findFirst({
+      where: { employerId, sourceDeletedAt: null },
+      select: { observedAt: true },
+      orderBy: { observedAt: "desc" },
+    });
+    if (latestEmployee?.observedAt) periodSet.add(monthKey(latestEmployee.observedAt));
 
     const periods: Array<{ period: string; optimiseScore: number | null }> = [];
-    for (const period of [...keys].sort().reverse()) {
+    for (const period of [...periodSet].sort().reverse()) {
+      const snap = snapshots.find((row: any) => row.period === period);
+      if (!hasCohortFilter && snap) {
+        periods.push({ period, optimiseScore: snap.optimiseScore == null ? null : Number(snap.optimiseScore) });
+        continue;
+      }
       try {
-        const live = await getDashboardPayload(employerId, { period, site: req.query.site, income: req.query.income });
+        const live = await getDashboardPayload(employerId, {
+          period,
+          site: req.query.site,
+          income: req.query.income,
+        });
         periods.push({
           period,
           optimiseScore: live?.wellness?.complete && live?.wellness?.score != null ? Number(live.wellness.score) : null,
@@ -752,7 +869,8 @@ app.get<{ Params: { employerId: string }; Querystring: { site?: string; income?:
 app.get<{ Params: { employerId: string } }>(
   "/api/employers/:employerId/score-history",
   async (req, reply) => {
-    const user = await requireUser(req, reply); if (!user) return reply.code(403).send({ error: "no access" });
+    const user = await requireUser(req, reply); if (!user) return;
+    if (!canViewEmployer(user, req.params.employerId)) return reply.code(403).send({ error: "no access to this employer" });
     const snaps = await prisma.scoreSnapshot.findMany({
       where: { employerId: req.params.employerId },
       orderBy: { period: "asc" },
@@ -919,7 +1037,7 @@ app.get<{ Querystring: { period?: string; quarter?: string; range?: "30d" | "qua
 );
 
 // Register all routes before opening the listener.
-  app.log.info({ portalVersion: "0.5.4", publicDir: PUBLIC_DIR }, "starting empower-fin Dashboard Portal");
+  app.log.info({ portalVersion: "0.6.0", publicDir: PUBLIC_DIR }, "starting empower-fin Dashboard Portal");
 app.listen({ port: PORT, host: "0.0.0.0" })
   .then(async () => { await bootstrapAdmin(); await ensureSectionDefaults(); startSyncScheduler(app); startReportScheduler(app); startAutomationScheduler(app); app.log.info(`empower-fin Dashboard Portal on :${PORT}`); })
   .catch((err) => { app.log.error(err); process.exit(1); });

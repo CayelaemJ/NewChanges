@@ -42,6 +42,7 @@ model Employer {
   employees          Employee[]
   headcountSnapshots EmployerHeadcountSnapshot[]
   scoreSnapshots     ScoreSnapshot[]
+  dashboardCaches    DashboardCohortCache[]
   scoreWeights       ScoreWeight[]
   targets            AchievableTarget[]
   chatSessions       ChatSession[]
@@ -121,7 +122,9 @@ model Employee {
   versions       EmployeeVersion[]
 
   @@unique([employerId, payrollRef])
-  @@index([employerId])
+  @@index([employerId, sourceDeletedAt, observedAt])
+  @@index([employerId, observedAt])
+  @@index([employerId, siteId, incomeBand])
   @@index([siteId])
   @@index([eligibleFrom, eligibleTo])
   @@index([observedAt])
@@ -148,7 +151,6 @@ model EmployeeVersion {
   employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@unique([employeeId, observedAt])
-  @@index([employeeId, observedAt])
   @@index([observedAt])
 }
 
@@ -178,6 +180,7 @@ model PlatformUser {
 
   @@index([enrolledAt])
   @@index([activatedAt])
+  @@index([employeeId, enrolledAt])
   @@index([sourceUpdatedAt])
   @@index([sourceDeletedAt])
 }
@@ -225,8 +228,8 @@ model Journey {
   // Matches the dashboard's hot-path query shape (WHERE platformUserId IN
   // (...) AND startedAt/completedAt <= asAt) so large employers don't fall
   // back to a full per-user index scan plus a filter on every dashboard load.
-  @@index([platformUserId, startedAt])
-  @@index([platformUserId, completedAt])
+  @@index([platformUserId, startedAt, status, sourceDeletedAt])
+  @@index([platformUserId, completedAt, status, sourceDeletedAt])
   @@index([type, status])
   @@index([startedAt])
   @@index([completedAt])
@@ -297,7 +300,7 @@ model DebtAccount {
   versions     DebtAccountVersion[]
 
   @@index([platformUserId])
-  @@index([platformUserId, observedAt])
+  @@index([platformUserId, observedAt, sourceDeletedAt])
   @@index([creditorName])
   @@index([state])
   @@index([inArrears])
@@ -328,7 +331,6 @@ model DebtAccountVersion {
   account DebtAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
   @@unique([accountId, observedAt])
-  @@index([accountId, observedAt])
   @@index([observedAt])
 }
 
@@ -361,7 +363,7 @@ model InsurancePolicy {
   platformUser PlatformUser             @relation(fields: [platformUserId], references: [id], onDelete: Cascade)
   versions     InsurancePolicyVersion[]
 
-  @@index([platformUserId])
+  @@index([platformUserId, observedAt, sourceDeletedAt])
   @@index([isWasteful, isResolved])
   @@index([observedAt])
   @@index([effectiveFrom, effectiveTo])
@@ -390,7 +392,6 @@ model InsurancePolicyVersion {
   policy InsurancePolicy @relation(fields: [policyId], references: [id], onDelete: Cascade)
 
   @@unique([policyId, observedAt])
-  @@index([policyId, observedAt])
   @@index([observedAt])
 }
 
@@ -509,6 +510,29 @@ model ScoreSnapshot {
   @@index([asAt])
 }
 
+// Persistent read model for interactive dashboard cohorts.
+// The expensive raw-data calculation is performed during snapshot/import work;
+// interactive slicer requests read this small, indexed row instead.
+model DashboardCohortCache {
+  id          String   @id @default(cuid())
+  employerId  String
+  cacheKey    String
+  period      String?
+  range       String?
+  site        String?
+  income      String?
+  asAt        DateTime?
+  computedAt  DateTime @default(now())
+  optimiseScore Int?
+  payload     Json
+
+  employer Employer @relation(fields: [employerId], references: [id], onDelete: Cascade)
+
+  @@unique([employerId, cacheKey])
+  @@index([employerId, period, site, income])
+  @@index([computedAt])
+}
+
 // ──────────────────────── Early Wage Access ────────────────────────
 // One row per salary advance. Employer-level activity is matched by employer_ref
 // and payroll_ref so site and income cohorts are applied consistently. Counts
@@ -540,6 +564,7 @@ model SalaryAdvance {
   employer Employer @relation(fields: [employerId], references: [id], onDelete: Cascade)
   employee Employee? @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
+  @@index([employerId, employeeId, advancedAt])
   @@index([employerId])
   @@index([employeeId])
   @@index([employeeId, advancedAt])

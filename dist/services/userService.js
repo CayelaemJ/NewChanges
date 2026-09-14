@@ -4,9 +4,18 @@
 //  update role/links/active, and complete the set-password flow.
 // ════════════════════════════════════════════════════════════════════
 import { randomBytes } from "node:crypto";
-import { prisma, hashPassword, destroyAllSessionsForUser } from "./authService.js";
+import { prisma, hashPassword, destroyAllSessionsForUser, digestSetupToken } from "./authService.js";
 import { sendMail, portalBaseUrl } from "./reportScheduler.js";
 import { notifyAdmins } from "./automationService.js";
+function validatePassword(password) {
+    if (typeof password !== "string" || password.length < 12)
+        throw new Error("password must be at least 12 characters");
+    if (password.length > 128)
+        throw new Error("password must be 128 characters or fewer");
+    if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
+        throw new Error("password must contain upper-case, lower-case, and numeric characters");
+    }
+}
 export async function createUser(opts) {
     const email = opts.email.toLowerCase().trim();
     const existing = await prisma.user.findUnique({ where: { email } });
@@ -14,12 +23,16 @@ export async function createUser(opts) {
         throw new Error("a user with that email already exists");
     let passwordHash = null;
     let setupToken = null;
+    let setupTokenForLink = null;
     let setupExpires = null;
     if (opts.sendSetupLink) {
-        setupToken = randomBytes(24).toString("hex");
+        const rawSetupToken = randomBytes(32).toString("hex");
+        setupTokenForLink = rawSetupToken;
+        setupToken = digestSetupToken(rawSetupToken);
         setupExpires = new Date(Date.now() + 3 * 864e5); // 3 days
     }
     else if (opts.tempPassword) {
+        validatePassword(opts.tempPassword);
         passwordHash = hashPassword(opts.tempPassword);
     }
     else {
@@ -35,7 +48,7 @@ export async function createUser(opts) {
         include: { links: true },
     });
     // the setup link the admin can copy/send (relative path; prefix with your domain)
-    const setupPath = setupToken ? `/set-password?token=${setupToken}` : null;
+    const setupPath = setupTokenForLink ? `/set-password?token=${setupTokenForLink}` : null;
     // try to email the setup link automatically; if SMTP isn't configured or
     // sending fails for any reason, we don't fail user creation — the admin
     // still gets setupPath back in the response to copy/send manually as a fallback.
@@ -75,10 +88,11 @@ export async function requestPasswordReset(email) {
     const user = await prisma.user.findUnique({ where: { email: normalised } });
     if (!user || !user.active)
         return { ok: true }; // don't reveal account existence/status
-    const setupToken = randomBytes(24).toString("hex");
+    const rawSetupToken = randomBytes(32).toString("hex");
+    const setupToken = digestSetupToken(rawSetupToken);
     const setupExpires = new Date(Date.now() + 2 * 3600e3); // 2 hours — shorter than the 3-day admin invite link
     await prisma.user.update({ where: { id: user.id }, data: { setupToken, setupExpires } });
-    const setupPath = `/set-password?token=${setupToken}`;
+    const setupPath = `/set-password?token=${rawSetupToken}`;
     try {
         const base = (await portalBaseUrl()) || "";
         const link = base ? `${base.replace(/\/$/, "")}${setupPath}` : setupPath;
@@ -197,12 +211,18 @@ export async function deleteUserPermanently(userId) {
     return { ok: true };
 }
 export async function resetPassword(userId, newPassword) {
+    validatePassword(newPassword);
     await prisma.user.update({ where: { id: userId }, data: { passwordHash: hashPassword(newPassword), setupToken: null, setupExpires: null } });
+    await destroyAllSessionsForUser(userId);
     return { ok: true };
 }
 // set-password flow (user clicks the emailed link)
 export async function completeSetup(token, newPassword) {
-    const user = await prisma.user.findUnique({ where: { setupToken: token } });
+    validatePassword(newPassword);
+    const digest = digestSetupToken(token);
+    const user = await prisma.user.findFirst({
+        where: { OR: [{ setupToken: digest }, { setupToken: token }] },
+    });
     if (!user || !user.setupExpires || user.setupExpires < new Date()) {
         throw new Error("this setup link is invalid or has expired");
     }
@@ -210,6 +230,7 @@ export async function completeSetup(token, newPassword) {
         where: { id: user.id },
         data: { passwordHash: hashPassword(newPassword), setupToken: null, setupExpires: null, active: true },
     });
+    await destroyAllSessionsForUser(user.id);
     return { ok: true };
 }
 function sanitize(u) {

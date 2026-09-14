@@ -115,3 +115,8 @@ GET /users
 ## Optional Docker deployment
 
 A Dockerfile is included at `deploy/Dockerfile`. It is deliberately not at the repository root so Railway uses the Railpack configuration above. For another container platform, build it with `docker build -f deploy/Dockerfile .`. Run `npm run db:deploy` as a release/pre-deploy step before starting the container.
+
+
+### Instant dashboard read model
+
+Version 0.6.0 adds a persistent `DashboardCohortCache` read model. Interactive monthly Company/Region/Income slicer requests read indexed precomputed payloads instead of recalculating the raw workforce, journey, debt and insurance tables. Snapshot/import work invalidates and warms the cohort read model so the expensive work stays outside the user request path.
