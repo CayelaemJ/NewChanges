@@ -5,11 +5,19 @@
 // ════════════════════════════════════════════════════════════════════
 
 import { randomBytes } from "node:crypto";
-import { prisma, hashPassword, destroyAllSessionsForUser } from "./authService.js";
+import { prisma, hashPassword, destroyAllSessionsForUser, digestSetupToken } from "./authService.js";
 import { sendMail, portalBaseUrl } from "./reportScheduler.js";
 import { notifyAdmins } from "./automationService.js";
 
 type Role = "ADMIN" | "EMPLOYER_VIEW" | "PORTFOLIO_VIEW";
+
+function validatePassword(password: string) {
+  if (typeof password !== "string" || password.length < 12) throw new Error("password must be at least 12 characters");
+  if (password.length > 128) throw new Error("password must be 128 characters or fewer");
+  if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
+    throw new Error("password must contain upper-case, lower-case, and numeric characters");
+  }
+}
 
 export async function createUser(opts: {
   email: string;
@@ -27,12 +35,16 @@ export async function createUser(opts: {
 
   let passwordHash: string | null = null;
   let setupToken: string | null = null;
+  let setupTokenForLink: string | null = null;
   let setupExpires: Date | null = null;
 
   if (opts.sendSetupLink) {
-    setupToken = randomBytes(24).toString("hex");
+    const rawSetupToken = randomBytes(32).toString("hex");
+    setupTokenForLink = rawSetupToken;
+    setupToken = digestSetupToken(rawSetupToken);
     setupExpires = new Date(Date.now() + 3 * 864e5); // 3 days
   } else if (opts.tempPassword) {
+    validatePassword(opts.tempPassword);
     passwordHash = hashPassword(opts.tempPassword);
   } else {
     throw new Error("provide either a temporary password or choose to send a setup link");
@@ -49,7 +61,7 @@ export async function createUser(opts: {
   });
 
   // the setup link the admin can copy/send (relative path; prefix with your domain)
-  const setupPath = setupToken ? `/set-password?token=${setupToken}` : null;
+  const setupPath = setupTokenForLink ? `/set-password?token=${setupTokenForLink}` : null;
 
   // try to email the setup link automatically; if SMTP isn't configured or
   // sending fails for any reason, we don't fail user creation — the admin
@@ -91,10 +103,11 @@ export async function requestPasswordReset(email: string) {
   const normalised = email.toLowerCase().trim();
   const user = await prisma.user.findUnique({ where: { email: normalised } });
   if (!user || !user.active) return { ok: true }; // don't reveal account existence/status
-  const setupToken = randomBytes(24).toString("hex");
+  const rawSetupToken = randomBytes(32).toString("hex");
+  const setupToken = digestSetupToken(rawSetupToken);
   const setupExpires = new Date(Date.now() + 2 * 3600e3); // 2 hours — shorter than the 3-day admin invite link
   await prisma.user.update({ where: { id: user.id }, data: { setupToken, setupExpires } });
-  const setupPath = `/set-password?token=${setupToken}`;
+  const setupPath = `/set-password?token=${rawSetupToken}`;
   try {
     const base = (await portalBaseUrl()) || "";
     const link = base ? `${base.replace(/\/$/, "")}${setupPath}` : setupPath;
@@ -217,13 +230,19 @@ export async function deleteUserPermanently(userId: string) {
 }
 
 export async function resetPassword(userId: string, newPassword: string) {
+  validatePassword(newPassword);
   await prisma.user.update({ where: { id: userId }, data: { passwordHash: hashPassword(newPassword), setupToken: null, setupExpires: null } });
+  await destroyAllSessionsForUser(userId);
   return { ok: true };
 }
 
 // set-password flow (user clicks the emailed link)
 export async function completeSetup(token: string, newPassword: string) {
-  const user = await prisma.user.findUnique({ where: { setupToken: token } });
+  validatePassword(newPassword);
+  const digest = digestSetupToken(token);
+  const user = await prisma.user.findFirst({
+    where: { OR: [{ setupToken: digest }, { setupToken: token }] },
+  });
   if (!user || !user.setupExpires || user.setupExpires < new Date()) {
     throw new Error("this setup link is invalid or has expired");
   }
@@ -231,6 +250,7 @@ export async function completeSetup(token: string, newPassword: string) {
     where: { id: user.id },
     data: { passwordHash: hashPassword(newPassword), setupToken: null, setupExpires: null, active: true },
   });
+  await destroyAllSessionsForUser(user.id);
   return { ok: true };
 }
 
