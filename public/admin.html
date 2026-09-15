@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="/static/ui-enhance-v1.css?v=1">
 <link rel="stylesheet" href="/static/ui-enhance-v2.css?v=1">
 <link rel="stylesheet" href="/static/responsive-v1.css?v=1">
+<link rel="stylesheet" href="/static/dark-mode-v1.css?v=1">
 <title>empower-fin Dashboard Portal — Administration</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap');
@@ -25,17 +26,17 @@
   .wrap{max-width:1080px;margin:0 auto;padding:0 28px 72px;}
   .topbar{position:sticky;top:0;z-index:40;background:rgba(243,247,251,.86);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);}
   .topbar-inner{max-width:1080px;margin:0 auto;padding:0 28px;height:64px;display:flex;align-items:center;gap:14px;}
-  .logo-text{font-weight:800;font-size:16px;letter-spacing:-.3px;color:var(--brand-primary);}
-  .logo-text .opt{color:var(--blue);}
-  .pill{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--blue);background:var(--ice);border:1px solid var(--line);padding:5px 11px;border-radius:8px;}
+  .logo-text{font-weight:800;font-size:16px;letter-spacing:-.3px;color:var(--ink);}
+  .logo-text .opt{color:var(--grey);}
+  .pill{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--grey);background:var(--ice);border:1px solid var(--line);padding:5px 11px;border-radius:8px;}
   .head{padding:34px 0 20px;}
-  .head .eyebrow{font-size:12px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--blue);margin-bottom:9px;}
-  .head h1{font-family:'Fraunces',serif;font-weight:600;font-size:34px;letter-spacing:-.6px;color:var(--brand-primary);}
+  .head .eyebrow{font-size:12px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--grey);margin-bottom:9px;}
+  .head h1{font-family:'Fraunces',serif;font-weight:600;font-size:34px;letter-spacing:-.6px;color:var(--ink);}
   .head p{margin-top:10px;font-size:14.5px;color:var(--grey);max-width:64ch;line-height:1.55;}
   .grid{display:grid;grid-template-columns:300px 1fr;gap:22px;align-items:start;}
   .card{background:var(--white);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);}
   .card-hd{padding:18px 20px 12px;border-bottom:1px solid var(--line-soft);}
-  .card-hd h2{font-size:14px;font-weight:800;color:var(--brand-primary);letter-spacing:.01em;}
+  .card-hd h2{font-size:14px;font-weight:800;color:var(--ink);letter-spacing:.01em;}
   .card-hd .note{font-size:12px;color:var(--grey-l);margin-top:4px;}
   .card-bd{padding:16px 20px 20px;}
   /* report list */
@@ -44,8 +45,8 @@
   .rep.on{background:var(--ice);border-color:var(--line);}
   .rep .step{font-size:10.5px;font-weight:800;color:var(--grey-l);letter-spacing:.05em;}
   .rep .t{font-size:13.5px;font-weight:700;color:var(--ink);}
-  .btn{font-family:inherit;font-weight:700;font-size:13px;border-radius:11px;padding:10px 16px;cursor:pointer;border:1px solid var(--line);background:var(--white);color:var(--brand-primary);transition:.14s;display:inline-flex;align-items:center;gap:8px;}
-  .btn:hover{border-color:var(--blue);color:var(--blue);}
+  .btn{font-family:inherit;font-weight:700;font-size:13px;border-radius:11px;padding:10px 16px;cursor:pointer;border:1px solid var(--line);background:var(--white);color:var(--ink);transition:.14s;display:inline-flex;align-items:center;gap:8px;}
+  .btn:hover{border-color:var(--blue);color:var(--grey);}
   .btn-primary{background:var(--brand-primary);color:#fff;border-color:var(--brand-primary);}
   .btn-primary:hover{background:var(--blue-d);color:#fff;}
   .btn-green{background:var(--green);color:#fff;border-color:var(--green);}
@@ -55,7 +56,7 @@
   .muted{color:var(--grey);font-size:13px;line-height:1.55;}
   .drop{margin-top:14px;border:2px dashed var(--line);border-radius:var(--radius);padding:30px;text-align:center;transition:.16s;cursor:pointer;background:var(--ice-2);}
   .drop.over{border-color:var(--blue);background:var(--ice);}
-  .drop .big{font-size:14px;font-weight:700;color:var(--brand-primary);}
+  .drop .big{font-size:14px;font-weight:700;color:var(--ink);}
   .drop .sm{font-size:12.5px;color:var(--grey-l);margin-top:5px;}
   table{width:100%;border-collapse:collapse;font-size:12.5px;}
   th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line-soft);}
@@ -70,7 +71,7 @@
   .err-list td:first-child{font-weight:800;color:var(--red);white-space:nowrap;}
   .hist td .st{font-size:11px;font-weight:800;padding:3px 9px;border-radius:6px;}
   .st.COMMITTED{background:var(--green-soft);color:#137a47;}
-  .st.VALIDATED{background:var(--ice);color:var(--blue-d);}
+  .st.VALIDATED{background:var(--ice);color:var(--grey);}
   .st.FAILED{background:var(--red-soft);color:#b5391f;}
   .st.REVERTED{background:#f1f1f4;color:#777;}
   .section-gap{margin-top:22px;}
@@ -94,36 +95,36 @@
   .client-preview-dialog{width:min(1080px,100%);max-height:min(820px,calc(100vh - 36px));overflow:auto;background:#f4f7fb;border:1px solid rgba(255,255,255,.7);border-radius:22px;box-shadow:0 28px 90px rgba(15,36,56,.3);transform:translateY(14px) scale(.985);transition:transform .3s cubic-bezier(.2,.8,.2,1);}
   .client-preview-overlay.is-open .client-preview-dialog{transform:translateY(0) scale(1);}
   .client-preview-toolbar{display:flex;align-items:center;gap:12px;padding:14px 18px;background:rgba(255,255,255,.88);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:2;backdrop-filter:blur(14px);}
-  .client-preview-toolbar strong{font-size:13px;color:var(--brand-primary);flex:1;}
-  .client-preview-toolbar span{font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--blue-d);background:var(--ice);padding:6px 9px;border-radius:7px;}
+  .client-preview-toolbar strong{font-size:13px;color:var(--ink);flex:1;}
+  .client-preview-toolbar span{font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--grey);background:var(--ice);padding:6px 9px;border-radius:7px;}
   .client-preview-close{width:32px;height:32px;border-radius:9px;border:1px solid var(--line);background:#fff;color:var(--grey);font-size:20px;line-height:1;cursor:pointer;}
   .client-preview-app{--preview-navy:#32217c;--preview-blue:#b15be8;--preview-ice:#f3efff;--preview-line:#e8e1f7;--preview-ink:#0f2438;color:var(--preview-ink);font-family:Manrope,system-ui,sans-serif;}
   .client-preview-app .cp-topbar{display:flex;align-items:center;gap:12px;padding:16px 28px;background:#fff;border-bottom:1px solid var(--preview-line);}
   .client-preview-app .cp-logo{width:34px;height:34px;border-radius:9px;object-fit:contain;background:#fff;border:1px solid var(--preview-line);padding:3px;}
-  .client-preview-app .cp-brand{font-weight:800;color:var(--preview-navy);font-size:14px;}
+  .client-preview-app .cp-brand{font-weight:800;color:var(--ink);font-size:14px;}
   .client-preview-app .cp-user{margin-left:auto;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,var(--preview-blue),var(--preview-navy));color:#fff;font-size:11px;font-weight:800;}
   .client-preview-app .cp-body{padding:30px 28px 38px;}
-  .client-preview-app .cp-eyebrow{font-size:10px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--preview-blue);}
-  .client-preview-app h3{margin-top:7px;font:600 29px Fraunces,serif;color:var(--preview-navy);letter-spacing:-.4px;}
+  .client-preview-app .cp-eyebrow{font-size:10px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--grey);}
+  .client-preview-app h3{margin-top:7px;font:600 29px Fraunces,serif;color:var(--ink);letter-spacing:-.4px;}
   .client-preview-app .cp-sub{margin-top:7px;font-size:12.5px;color:#5b6b7a;max-width:620px;line-height:1.5;}
   .client-preview-app .cp-filters{display:flex;gap:8px;flex-wrap:wrap;margin-top:20px;}
   .client-preview-app .cp-filter{padding:7px 10px;border:1px solid var(--preview-line);border-radius:8px;background:#fff;color:#5b6b7a;font-size:11px;font-weight:700;}
-  .client-preview-app .cp-filter.active{background:var(--preview-ice);color:var(--preview-navy);border-color:var(--preview-blue);}
+  .client-preview-app .cp-filter.active{background:var(--preview-ice);color:var(--ink);border-color:var(--preview-blue);}
   .client-preview-app .cp-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:14px;margin-top:18px;}
   .client-preview-app .cp-card{background:#fff;border:1px solid var(--preview-line);border-radius:14px;padding:17px;box-shadow:0 7px 20px rgba(15,36,56,.05);}
   .client-preview-app .cp-card-wide{grid-column:span 2;}
   .client-preview-app .cp-card-label{font-size:11px;font-weight:800;color:#8497a7;text-transform:uppercase;letter-spacing:.05em;}
   .client-preview-app .cp-score{display:flex;align-items:end;gap:10px;margin-top:13px;}
-  .client-preview-app .cp-score strong{font-size:42px;line-height:1;color:var(--preview-navy);}
+  .client-preview-app .cp-score strong{font-size:42px;line-height:1;color:var(--ink);}
   .client-preview-app .cp-score span{font-size:11px;color:#1fa463;font-weight:800;padding-bottom:5px;}
   .client-preview-app .cp-bars{height:82px;display:flex;align-items:end;gap:7px;margin-top:16px;padding-bottom:3px;border-bottom:1px solid var(--preview-line);}
   .client-preview-app .cp-bars i{display:block;flex:1;border-radius:5px 5px 2px 2px;background:linear-gradient(180deg,var(--preview-blue),var(--preview-navy));animation:cpBarIn .65s cubic-bezier(.2,.8,.2,1) both;transform-origin:bottom;}
   @keyframes cpBarIn{from{transform:scaleY(0);opacity:.2}to{transform:scaleY(1);opacity:1}}
   .client-preview-app .cp-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:15px;}
   .client-preview-app .cp-kpi{padding:11px;border-radius:10px;background:var(--preview-ice);}
-  .client-preview-app .cp-kpi strong{display:block;font-size:20px;color:var(--preview-navy);}
+  .client-preview-app .cp-kpi strong{display:block;font-size:20px;color:var(--ink);}
   .client-preview-app .cp-kpi span{display:block;margin-top:3px;font-size:10px;color:#5b6b7a;font-weight:700;}
-  .client-preview-app .cp-outcome{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f7f4ff;font-size:12px;font-weight:700;color:var(--preview-navy);}
+  .client-preview-app .cp-outcome{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f7f4ff;font-size:12px;font-weight:700;color:var(--ink);}
   .client-preview-app .cp-outcome:last-child{border-bottom:0;}
   .client-preview-app .cp-dot{width:9px;height:9px;border-radius:50%;background:var(--preview-blue);box-shadow:0 0 0 4px var(--preview-ice);}
   @media(max-width:700px){.client-preview-app .cp-grid{grid-template-columns:1fr}.client-preview-app .cp-card-wide{grid-column:span 1}.client-preview-app .cp-body{padding:24px 16px 30px}.client-preview-app .cp-topbar{padding:13px 16px}.client-preview-app h3{font-size:25px}.client-preview-toolbar span{display:none}}
@@ -133,10 +134,10 @@
   .source-mode-card{display:flex;align-items:flex-start;gap:12px;text-align:left;border:1px solid var(--line);background:#fff;border-radius:13px;padding:15px 16px;cursor:pointer;font-family:inherit;color:var(--ink);transition:.16s;}
   .source-mode-card:hover{border-color:#cdb8f3;background:#fcfbff;}
   .source-mode-card.on{border-color:var(--blue);background:var(--ice);box-shadow:0 0 0 2px rgba(177,91,232,.08);}
-  .source-mode-icon{width:34px;height:34px;border-radius:10px;background:#f3efff;color:var(--blue-d);display:flex;align-items:center;justify-content:center;flex:0 0 auto;font-weight:800;}
-  .source-mode-card strong{display:block;font-size:13.5px;color:var(--brand-primary);}
+  .source-mode-icon{width:34px;height:34px;border-radius:10px;background:#f3efff;color:var(--grey);display:flex;align-items:center;justify-content:center;flex:0 0 auto;font-weight:800;}
+  .source-mode-card strong{display:block;font-size:13.5px;color:var(--ink);}
   .source-mode-card small{display:block;margin-top:3px;color:var(--grey-l);font-size:11.5px;line-height:1.4;font-weight:600;}
-  .integration-panel-title{font-size:13px;font-weight:800;color:var(--brand-primary);margin:2px 0 2px;grid-column:span 2;}
+  .integration-panel-title{font-size:13px;font-weight:800;color:var(--ink);margin:2px 0 2px;grid-column:span 2;}
   @media(max-width:720px){.source-mode-grid{grid-template-columns:1fr}.integration-two-col{grid-template-columns:1fr!important}.integration-two-col label[style*="grid-column:span 2"],.integration-panel-title{grid-column:span 1!important}}
 
   /* ── welcome splash (shown briefly right after sign-in) ── */
@@ -146,7 +147,7 @@
   .welcome-splash-logo{height:40px;width:auto;margin-bottom:22px;opacity:.94;}
   .welcome-splash-spinner{width:32px;height:32px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--blue);margin:0 auto 20px;animation:welcome-spin .8s linear infinite;}
   @keyframes welcome-spin{to{transform:rotate(360deg);}}
-  .welcome-splash-greeting{font-family:'Fraunces',serif;font-weight:600;font-size:26px;color:var(--brand-primary);}
+  .welcome-splash-greeting{font-family:'Fraunces',serif;font-weight:600;font-size:26px;color:var(--ink);}
   .welcome-splash-sub{margin-top:6px;font-size:13.5px;color:var(--grey);font-weight:600;}
 </style>
 </head>
@@ -488,6 +489,7 @@
   </div>
 </div>
 
+<script src="/static/dark-mode-v1.js?v=1"></script>
 <script src="/static/engagement-v1.js?v=1" defer></script>
 <script src="/static/ui-enhance-v2.js?v=1" defer></script>
 <script src="/static/portal-nav-v054.js?v=0.5.4"></script>
@@ -885,7 +887,10 @@ function renderPartners(){
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;align-items:end;">
         <label style="font-size:11.5px;font-weight:700;color:#5b6b7a;">Tagline (optional)<input value="${p.tagline||''}" onchange="editPartner('${p.id}','tagline',this.value)" style="display:block;width:100%;padding:7px 10px;border:1px solid #e8e1f7;border-radius:7px;margin-top:4px;font:inherit;"></label>
-        <label style="font-size:11.5px;font-weight:700;color:#5b6b7a;">Logo (PNG)<input type="file" accept="image/png,image/jpeg" onchange="uploadPartnerLogo('${p.id}',this)" style="display:block;margin-top:4px;font-size:12px;"></label>
+        <label style="font-size:11.5px;font-weight:700;color:#5b6b7a;">Logo (PNG)
+          <input type="file" accept="image/png,image/jpeg" onchange="uploadPartnerLogo('${p.id}',this)" style="display:block;margin-top:4px;font-size:12px;">
+          ${p.logoDataUrl ? `<button type="button" class="btn btn-ghost" style="margin-top:6px;font-size:11px;padding:5px 9px;" onclick="redetectPartnerColors('${p.id}')" title="Re-run colour detection on the current logo">🎨 Re-detect colours from logo</button>` : ''}
+        </label>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;margin-top:12px;align-items:center;">
         <select id="pt-u-${p.id}" style="font:inherit;padding:7px 10px;border:1px solid #e8e1f7;border-radius:7px;"><option value="">Assign a user…</option>${ALL_USERS.map(u=>`<option value="${u.id}">${u.name||u.email}</option>`).join('')}</select>
@@ -933,12 +938,134 @@ async function editPartner(id,field,value){
   await fetch(`${API}/api/admin/partners/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({[field]:value})});
   loadPartners();
 }
-function uploadPartnerLogo(id,input){
+// ── auto brand-colour detection from an uploaded logo ──
+// Client-side canvas colour extraction: samples the logo's pixels, buckets
+// them by hue, and scores each bucket by how saturated + how frequent it is,
+// so a logo's real brand colours drive Primary/Accent/Navy instead of the
+// generic purple default. Runs entirely in-browser, no external API needed.
+function rgbToHsl(r,g,b){
+  r/=255; g/=255; b/=255;
+  const max=Math.max(r,g,b), min=Math.min(r,g,b);
+  let h=0; const l=(max+min)/2;
+  let s=0;
+  if(max!==min){
+    const d=max-min;
+    s = l>0.5 ? d/(2-max-min) : d/(max+min);
+    switch(max){
+      case r: h=(g-b)/d+(g<b?6:0); break;
+      case g: h=(b-r)/d+2; break;
+      default: h=(r-g)/d+4; break;
+    }
+    h/=6;
+  }
+  return [h*360,s,l];
+}
+function hslToHex(h,s,l){
+  h=((h%360)+360)%360;
+  const c=(1-Math.abs(2*l-1))*s, x=c*(1-Math.abs((h/60)%2-1)), m=l-c/2;
+  let r=0,g=0,b=0;
+  if(h<60){r=c;g=x;b=0;} else if(h<120){r=x;g=c;b=0;} else if(h<180){r=0;g=c;b=x;}
+  else if(h<240){r=0;g=x;b=c;} else if(h<300){r=x;g=0;b=c;} else {r=c;g=0;b=x;}
+  const to255=v=>Math.round((v+m)*255).toString(16).padStart(2,'0');
+  return (to255(r)+to255(g)+to255(b)).toUpperCase();
+}
+function extractPaletteFromImage(dataUrl){
+  return new Promise((resolve,reject)=>{
+    const img=new Image();
+    img.onload=()=>{
+      try{
+        // Keep the logo's own aspect ratio (capped, not squashed into a fixed
+        // 80x80 box) and turn off smoothing. Squashing/blurring a logo turns
+        // crisp brand-colour pixels into pale, desaturated edge blends, which
+        // is the main reason detection used to miss on real uploaded logos.
+        const maxDim=200;
+        const nw=img.naturalWidth||img.width||1, nh=img.naturalHeight||img.height||1;
+        const scale=Math.min(1, maxDim/Math.max(nw,nh));
+        const w=Math.max(1,Math.round(nw*scale)), h=Math.max(1,Math.round(nh*scale));
+        const canvas=document.createElement('canvas');
+        canvas.width=w; canvas.height=h;
+        const ctx=canvas.getContext('2d');
+        ctx.imageSmoothingEnabled=false;
+        ctx.drawImage(img,0,0,w,h);
+        const {data}=ctx.getImageData(0,0,w,h);
+
+        // Bucket opaque pixels into 15°-wide hue slices. Two passes: normal
+        // thresholds first, then a relaxed pass as a fallback for muted
+        // "corporate navy"-style logos that don't clear the usual bar.
+        const buildBuckets=(sMin,lMin,lMax)=>{
+          const buckets={}; let sampled=0;
+          for(let i=0;i<data.length;i+=4){
+            const r=data[i],g=data[i+1],b=data[i+2],a=data[i+3];
+            if(a<200) continue; // skip transparent
+            sampled++;
+            const [hue,s,l]=rgbToHsl(r,g,b);
+            if(s<sMin||l<lMin||l>lMax) continue; // skip near-grey/black/white pixels
+            const key=Math.round(hue/15)%24;
+            if(!buckets[key]) buckets[key]={count:0,h:0,s:0,l:0};
+            const bkt=buckets[key];
+            bkt.count++; bkt.h+=hue; bkt.s+=s; bkt.l+=l;
+          }
+          return {buckets, sampled};
+        };
+        let {buckets, sampled}=buildBuckets(0.18,0.08,0.92);
+        if(!Object.keys(buckets).length) ({buckets, sampled}=buildBuckets(0.10,0.04,0.96));
+        if(!sampled || !Object.keys(buckets).length){ resolve(null); return; } // logo is monochrome/greyscale
+
+        // Smooth the circular hue histogram (merge each bucket with its
+        // immediate neighbours for ranking) so one brand colour that happens
+        // to straddle two adjacent 15° bins doesn't get under-counted, and
+        // drop buckets that are just stray anti-aliased fringe pixels.
+        const noiseFloor=sampled*0.015;
+        const scored=Object.keys(buckets).map(Number).map(k=>{
+          const self=buckets[k];
+          const neighbours=[(k+23)%24,k,(k+1)%24];
+          let smoothScore=0;
+          neighbours.forEach(n=>{ const b=buckets[n]; if(b) smoothScore+=b.count*b.s; });
+          return { h:self.h/self.count, s:self.s/self.count, l:self.l/self.count, count:self.count, smoothScore };
+        }).filter(c=>c.count>=noiseFloor).sort((a,b)=>b.smoothScore-a.smoothScore);
+        if(!scored.length){ resolve(null); return; }
+
+        const accent=scored[0];
+        // a second, genuinely different hue family (circular distance > 40°),
+        // if the logo has one, becomes the primary colour
+        const primary=scored.find(c=>{ const d=Math.abs(c.h-accent.h); return Math.min(d,360-d)>40; }) || null;
+        resolve({
+          accentColor: hslToHex(accent.h, Math.min(accent.s+0.1,0.9), Math.max(Math.min(accent.l,0.62),0.42)),
+          primaryColor: primary
+            ? hslToHex(primary.h, Math.min(primary.s+0.05,0.85), Math.max(Math.min(primary.l,0.4),0.22))
+            : hslToHex(accent.h, Math.min(accent.s+0.05,0.85), 0.28),
+          navyColor: hslToHex(primary?primary.h:accent.h, Math.min((primary?primary.s:accent.s)+0.05,0.7), 0.15),
+        });
+      }catch(err){ reject(err); }
+    };
+    img.onerror=reject;
+    img.src=dataUrl;
+  });
+}
+async function uploadPartnerLogo(id,input){
   const f=input.files[0]; if(!f) return;
   if(f.size>500000){ alert('Please use a logo under 500KB.'); return; }
   const reader=new FileReader();
-  reader.onload=async()=>{ await fetch(`${API}/api/admin/partners/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({logoDataUrl:reader.result})}); alert('Logo saved.'); loadPartners(); };
+  reader.onload=async()=>{
+    const logoDataUrl=reader.result;
+    const patch={logoDataUrl};
+    let palette=null;
+    try{ palette=await extractPaletteFromImage(logoDataUrl); if(palette) Object.assign(patch,palette); }catch(e){ /* logo still saves even if detection fails */ }
+    await fetch(`${API}/api/admin/partners/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(patch)});
+    alert(palette ? 'Logo saved — Primary/Accent/Navy set from the logo\'s colours. Tweak the swatches below if needed.' : 'Logo saved. Couldn\'t detect distinct brand colours (logo looks mono/greyscale) — set colours manually.');
+    loadPartners();
+  };
   reader.readAsDataURL(f);
+}
+async function redetectPartnerColors(id){
+  const p=PARTNERS.find(x=>x.id===id);
+  if(!p || !p.logoDataUrl){ alert('Upload a logo first.'); return; }
+  try{
+    const palette=await extractPaletteFromImage(p.logoDataUrl);
+    if(!palette){ alert('Couldn\'t detect distinct brand colours from this logo — try a higher-contrast version, or set the swatches manually.'); return; }
+    await fetch(`${API}/api/admin/partners/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(palette)});
+    loadPartners();
+  }catch(e){ alert('Colour detection failed.'); }
 }
 async function assignToPartner(id){
   const uid=$('#pt-u-'+id).value, eid=$('#pt-e-'+id).value;
