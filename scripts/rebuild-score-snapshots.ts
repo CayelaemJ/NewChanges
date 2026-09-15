@@ -15,7 +15,7 @@
 // Usage:  npx tsx scripts/rebuild-score-snapshots.ts
 // (safe to re-run: snapshotEmployer() upserts on the employerId+period key)
 
-import { prisma, snapshotEmployer } from "../src/services/snapshotBuilder.js";
+import { prisma, snapshotEmployer, currentPeriod } from "../src/services/snapshotBuilder.js";
 
 async function main() {
   const rows = await prisma.scoreSnapshot.findMany({
@@ -34,7 +34,20 @@ async function main() {
   let skipped = 0;
   let failed = 0;
 
+  // snapshotEmployer() throws for any period later than "now" (it refuses
+  // to snapshot the future). A row can legitimately be ahead of the
+  // server's wall clock at rebuild time — that used to abort this row as
+  // FAILED and leave it permanently stuck at the old payloadVersion,
+  // hidden from the month picker with no score. Skip those explicitly
+  // instead of treating them as an error.
+  const today = currentPeriod();
+
   for (const row of rows) {
+    if (row.period > today) {
+      skipped++;
+      console.log(`  – ${row.employerId} ${row.period} — skipped (future period as of ${today}; will rebuild once it arrives)`);
+      continue;
+    }
     try {
       const result = await snapshotEmployer(row.employerId, row.period);
       if (result.persisted) {
