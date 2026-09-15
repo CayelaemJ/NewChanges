@@ -501,6 +501,12 @@ app.get<{ Params: { key: string }; Querystring: { fmt?: string } }>(
 );
 
 // upload a report file -> parse + validate -> staged batch (NOT yet live)
+// Returns 202 immediately and validates in the background; the browser
+// polls /api/admin/upload-jobs/:jobId (admin.html already does this — the
+// route just needs to exist). Parsing/validating a large CSV/XLSX is CPU
+// and DB work that can run for a while; doing it inline on the request
+// blocked the whole HTTP connection (and the rest of the server) until it
+// finished, which is what made uploads feel like they were hanging.
 app.post<{ Params: { key: string } }>(
   "/api/admin/reports/:key/upload",
   async (req, reply) => {
@@ -509,26 +515,29 @@ app.post<{ Params: { key: string } }>(
       const file = await req.file();
       if (!file) return reply.code(400).send({ error: "no file uploaded" });
       const buffer = await file.toBuffer();
-      const { batch, result } = await uploadAndValidate({
+      const jobId = startUploadJob({
         reportKey: req.params.key,
         filename: file.filename,
         buffer,
         uploadedBy: (await currentUser(req))?.email ?? undefined,
       });
-      return {
-        batchId: batch.id,
-        status: batch.status,
-        rowCount: result.rowCount,
-        errors: result.errors.slice(0, 200),
-        errorCount: result.errors.length,
-        missingColumns: result.missingColumns,
-        unknownColumns: result.unknownColumns,
-        preview: result.rows.slice(0, 10),
-      };
+      return reply.code(202).send({ status: "ACCEPTED", jobId });
     } catch (e: any) {
       req.log.error(e);
       return reply.code(400).send({ error: `could not read the file: ${e.message}. Check it's a valid CSV/Excel and that text with commas is wrapped in quotes.` });
     }
+  },
+);
+
+app.get<{ Params: { jobId: string } }>(
+  "/api/admin/upload-jobs/:jobId",
+  async (req, reply) => {
+    if (!(await requireAdmin(req, reply))) return;
+    const job = getUploadJob(req.params.jobId);
+    if (!job) return reply.code(404).send({ error: "unknown upload job" });
+    if (job.status === "PENDING") return { status: "PROCESSING" };
+    if (job.status === "FAILED") return { status: "FAILED", error: job.error };
+    return { status: "DONE", ...job.result };
   },
 );
 
