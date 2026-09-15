@@ -899,10 +899,35 @@ app.get<{ Params: { employerId: string }; Querystring: { site?: string; income?:
       const raw = Number(snap.rawScore);
       return Number.isFinite(raw) ? Math.max(0, Math.min(100, Math.round(raw))) : null;
     };
-    return latestPeriods.map(period => {
+
+    const results = latestPeriods.map(period => {
       const snap: any = snapshotByPeriod.get(period);
       return { period, optimiseScore: snapshotScore(snap) };
     });
+
+    // Most months already have a usable persisted snapshot (the fast path
+    // above). But a period can legitimately have none yet — data just
+    // imported for it, the snapshot job hasn't run, or the row is stuck at
+    // an old payloadVersion until scripts/rebuild-score-snapshots.ts is
+    // re-run — and in that case the picker was showing "Score unavailable"
+    // forever instead of a number. Rather than silently leaving those
+    // periods blank, compute the handful that are missing on demand — this
+    // reuses the same cached dashboard-payload path getDashboardPayload
+    // already uses everywhere else, so it's cheap after the first request
+    // and never touches the months that already resolved above.
+    const missing = results.filter(r => r.optimiseScore == null);
+    if (missing.length) {
+      await Promise.all(missing.map(async (r) => {
+        try {
+          const live: any = await getDashboardPayload(employerId, { period: r.period });
+          if (live?.wellness?.complete && live?.wellness?.score != null) {
+            r.optimiseScore = Math.round(Number(live.wellness.score));
+          }
+        } catch { /* leave unavailable — the picker still shows the period itself */ }
+      }));
+    }
+
+    return results;
   },
 );
 
