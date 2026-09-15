@@ -1,39 +1,39 @@
-/* ════════════════════════════════════════════════════════════════════
-   DARK MODE
-   Most of this app's colour is hardcoded inline hex (style="color:#32217c"
-   etc.), not CSS variables, so a per-rule dark palette would miss most of
-   the UI. Inverting + hue-rotating the whole page is the standard fix for
-   retrofitting dark mode onto a light-only app like this — it works
-   uniformly regardless of how a colour was declared. Images/logos are
-   un-inverted so they still look correct.
-   ════════════════════════════════════════════════════════════════════ */
-
-html[data-theme="dark"] {
-  background: #fff; /* covered before inversion so the page doesn't flash black at the edges */
-  filter: invert(1) hue-rotate(180deg);
+/* Proper dark mode: no page inversion. Brand colours remain the partner/logo palette. */
+html[data-theme="dark"], body[data-theme="dark"]{
+  color-scheme:dark;
 }
-
-/* photos, logos, and anything already colour-correct get un-inverted back */
-html[data-theme="dark"] img,
-html[data-theme="dark"] svg image,
-html[data-theme="dark"] video,
-html[data-theme="dark"] .welcome-splash-logo,
-html[data-theme="dark"] [data-no-invert] {
-  filter: invert(1) hue-rotate(180deg);
+@media (prefers-color-scheme: dark){
+  html:not([data-theme="light"]){color-scheme:dark;}
 }
-
-/* the theme toggle itself stays put regardless of scroll/zoom */
-#theme-toggle-btn {
-  position: fixed; right: 18px; bottom: 18px; z-index: 500;
-  width: 44px; height: 44px; border-radius: 50%;
-  background: var(--brand-primary, #32217c); color: #fff; border: none;
-  display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 8px 24px rgba(13,42,71,.28);
-  cursor: pointer; font-size: 19px; line-height: 1;
-  transition: transform .15s ease;
+html[data-theme="dark"]{
+  --white:#111821;
+  --ice:var(--brand-soft,#20202a);
+  --ice-2:#18222c;
+  --line:#30404e;
+  --line-soft:#263541;
+  --ink:#edf4f8;
+  --grey:#b8c6d1;
+  --grey-l:#91a3b2;
+  --brand-soft:#1d2630;
+  --shadow:0 1px 2px rgba(0,0,0,.22),0 10px 28px rgba(0,0,0,.24);
+  --shadow-lg:0 2px 5px rgba(0,0,0,.28),0 20px 48px rgba(0,0,0,.34);
 }
-#theme-toggle-btn:hover { transform: scale(1.06); }
-
-@media (max-width: 640px) {
-  #theme-toggle-btn { right: 14px; bottom: 14px; width: 40px; height: 40px; font-size: 17px; }
+@media (prefers-color-scheme: dark){
+  html:not([data-theme="light"]){
+    --white:#111821;--ice:#1d2630;--ice-2:#18222c;--line:#30404e;--line-soft:#263541;
+    --ink:#edf4f8;--grey:#b8c6d1;--grey-l:#91a3b2;--brand-soft:#1d2630;
+    --shadow:0 1px 2px rgba(0,0,0,.22),0 10px 28px rgba(0,0,0,.24);--shadow-lg:0 2px 5px rgba(0,0,0,.28),0 20px 48px rgba(0,0,0,.34);
+  }
 }
+html[data-theme="dark"] body, body[data-theme="dark"]{background:#0c131a;color:var(--ink);}
+@media (prefers-color-scheme: dark){html:not([data-theme="light"]) body{background:#0c131a;color:var(--ink);}}
+html[data-theme="dark"] .card,html[data-theme="dark"] .drawer,html[data-theme="dark"] .schedule-modal,
+html[data-theme="dark"] .dropdown-menu,html[data-theme="dark"] .pf-filter-menu{background:#111a23;color:var(--ink);border-color:var(--line);}
+html[data-theme="dark"] .topbar{background:rgba(12,19,26,.88);border-color:var(--line);}
+html[data-theme="dark"] input,html[data-theme="dark"] select,html[data-theme="dark"] textarea{background:#0e1720;color:var(--ink);border-color:var(--line);}
+html[data-theme="dark"] .muted{color:var(--grey-l)!important;}
+html[data-theme="dark"] [style*="color:#8497a7"],html[data-theme="dark"] [style*="color:#607486"]{color:var(--grey-l)!important;}
+html[data-theme="dark"] svg text[fill="#8497a7"],html[data-theme="dark"] svg text[fill="#607486"]{fill:var(--grey-l)!important;}
+html[data-theme="dark"] .funnel-bar-bg,html[data-theme="dark"] .wd-track{background:#18222c;border-color:var(--line-soft);}
+html[data-theme="dark"] .drawer-note{background:#17232d;border-color:var(--line);}
+html[data-theme="dark"] .rating-share-pill{background:#14271e;border-color:#24573e;}
