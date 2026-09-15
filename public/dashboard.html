@@ -442,9 +442,16 @@
 
     /* Remove all interactive chrome. */
     .topbar,.filters,.head-actions,.row-chevron,
-    .audience-switch,.pf-banner,#portfolio-view,.metric-tooltip,
-    .reveal{animation:none!important;}
+    .audience-switch,.pf-banner,#portfolio-view,.metric-tooltip{display:none!important;}
     #employer-view{display:block!important;}
+
+    /* The on-load reveal animation only shows its content because
+       "forwards" holds the *end* keyframe (opacity:1). Cancelling the
+       animation for print without also pinning opacity/transform back to
+       that end state drops every card back to its opacity:0 starting
+       point — which is what was making exported/printed reports come out
+       blank. Force the settled, fully-visible state instead. */
+    .reveal{animation:none!important;opacity:1!important;transform:none!important;}
 
     .wrap{
       width:auto!important;
