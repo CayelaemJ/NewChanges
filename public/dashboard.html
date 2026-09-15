@@ -661,6 +661,37 @@
   @keyframes welcome-spin{to{transform:rotate(360deg);}}
   .welcome-splash-greeting{font-family:'Fraunces',serif;font-weight:600;font-size:26px;color:var(--brand-primary);}
   .welcome-splash-sub{margin-top:6px;font-size:13.5px;color:var(--grey);font-weight:600;}
+
+  /* ── White-label semantic status + night mode ───────────────────── */
+  :root{
+    --status-positive:#1fa463; --status-positive-soft:#e7f7ef;
+    --status-warning:#e8910c; --status-warning-soft:#fdf3e2;
+    --status-danger:#e0492f; --status-danger-soft:#fdeceb;
+    --chart-grid:#f0ecf4;
+    --theme-text:#0f2438;
+    --theme-muted:#607486;
+    --theme-card:#ffffff;
+  }
+  .robot-status{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:800;letter-spacing:.01em;padding:5px 10px;border-radius:999px;border:1px solid var(--status-border,#cbd5df);background:var(--status-bg,#f4f7fa);color:var(--status-color,#516273);white-space:nowrap}
+  .robot-status .robot-dot{font-size:13px;line-height:1}
+  .wellness-band .robot-status{vertical-align:middle}
+  .dark-toggle{border:1px solid var(--line);background:var(--white);color:var(--brand-primary);border-radius:10px;padding:8px 10px;cursor:pointer;font:700 12px Manrope,sans-serif}
+  .dark-toggle:hover{border-color:var(--blue);color:var(--blue)}
+  @media (prefers-color-scheme: dark){
+    html:not([data-theme-mode="light"]) { --page-bg:#0b1220; --white:#111a2b; --ice:#172235; --ice-2:#1b293d; --line:#2a3a50; --line-soft:#243348; --ink:#edf3fa; --grey:#b5c2d0; --grey-l:#91a3b7; --green-soft:#123527; --amber-soft:#382b13; --chart-grid:#253247; --theme-text:#edf3fa; --theme-muted:#91a3b7; --theme-card:#111a2b; }
+    html:not([data-theme-mode="light"]) body{background:radial-gradient(1000px 500px at 85% -10%, color-mix(in srgb,var(--chart-1) 18%,transparent),transparent 60%),var(--page-bg)}
+    html:not([data-theme-mode="light"]) .card, html:not([data-theme-mode="light"]) .drawer, html:not([data-theme-mode="light"]) .seg, html:not([data-theme-mode="light"]) .btn, html:not([data-theme-mode="light"]) .topbar{background:var(--theme-card);color:var(--theme-text)}
+    html:not([data-theme-mode="light"]) .exec-band{background:var(--brand-gradient);color:#fff}
+    html:not([data-theme-mode="light"]) .filter-month,html:not([data-theme-mode="light"]) .filter-tag,html:not([data-theme-mode="light"]) .audience-switch{background:var(--ice);color:var(--ink)}
+    html:not([data-theme-mode="light"]) .muted,html:not([data-theme-mode="light"]) .card-note,html:not([data-theme-mode="light"]) .card-sub,html:not([data-theme-mode="light"]) .kpi-sub{color:var(--theme-muted)!important}
+    html:not([data-theme-mode="light"]) svg line{stroke:var(--chart-grid)}
+  }
+  html[data-theme-mode="dark"]{--page-bg:#0b1220;--white:#111a2b;--ice:#172235;--ice-2:#1b293d;--line:#2a3a50;--line-soft:#243348;--ink:#edf3fa;--grey:#b5c2d0;--grey-l:#91a3b7;--green-soft:#123527;--amber-soft:#382b13;--chart-grid:#253247;--theme-text:#edf3fa;--theme-muted:#91a3b7;--theme-card:#111a2b}
+  html[data-theme-mode="dark"] body{background:radial-gradient(1000px 500px at 85% -10%,color-mix(in srgb,var(--chart-1) 18%,transparent),transparent 60%),var(--page-bg)}
+  html[data-theme-mode="dark"] .card,html[data-theme-mode="dark"] .drawer,html[data-theme-mode="dark"] .seg,html[data-theme-mode="dark"] .btn,html[data-theme-mode="dark"] .topbar{background:var(--theme-card);color:var(--theme-text)}
+  html[data-theme-mode="dark"] .exec-band{background:var(--brand-gradient);color:#fff}
+  html[data-theme-mode="dark"] .filter-month,html[data-theme-mode="dark"] .filter-tag,html[data-theme-mode="dark"] .audience-switch{background:var(--ice);color:var(--ink)}
+  html[data-theme-mode="dark"] .muted,html[data-theme-mode="dark"] .card-note,html[data-theme-mode="dark"] .card-sub,html[data-theme-mode="dark"] .kpi-sub{color:var(--theme-muted)!important}
 </style>
 </head>
 <body data-portal-build="0.5.4">
@@ -1093,7 +1124,7 @@ let DATA = {
     items: [
       { v:"1,182",      l:"employees enrolled" },
       { v:"R 384,900",  l:"monthly cashflow restored" },
-      { v:"R 6.4m",     l:"debt under active intervention" },
+      { v:"R 6400000",     l:"debt under active intervention" },
       { v:"274",        l:"prescribed debts challenged" },
       { v:"812",        l:"employees better off" },
       { v:"4.6/5",      l:"employee satisfaction" },
@@ -1141,19 +1172,19 @@ let DATA = {
 
   // ── Act 2: outcomes by fix type ──  (count = fixes completed)
   outcomes: [
-    { key:"credit",    name:"Credit Life Replacement",    meta:"avg R298/mo saved",      count:744, ico:"shield",  stat:"R 222k", statL:"saved / mo" },
-    { key:"funeral",   name:"Funeral Consolidation",      meta:"duplicate cover removed", count:486, ico:"umbrella", stat:"R 71k",  statL:"saved / mo" },
-    { key:"arrears",   name:"Arrears Resolution",         meta:"settlement plans live",  count:318, ico:"scale",   stat:"R 9.2m", statL:"in resolution" },
-    { key:"prescribed",name:"Prescribed Debt Challenge",  meta:"accounts contested",     count:274, ico:"scroll",  stat:"R 2.74m",statL:"challenged" },
+    { key:"credit",    name:"Credit Life Replacement",    meta:"avg R298/mo saved",      count:744, ico:"shield",  stat:"R 222000", statL:"saved / mo" },
+    { key:"funeral",   name:"Funeral Consolidation",      meta:"duplicate cover removed", count:486, ico:"umbrella", stat:"R 71000",  statL:"saved / mo" },
+    { key:"arrears",   name:"Arrears Resolution",         meta:"settlement plans live",  count:318, ico:"scale",   stat:"R 9200000", statL:"in resolution" },
+    { key:"prescribed",name:"Prescribed Debt Challenge",  meta:"accounts contested",     count:274, ico:"scroll",  stat:"R 2740000",statL:"challenged" },
     { key:"emergency", name:"Emergency Cash Assistance",   meta:"interest-free advances drawn", count:206, ico:"wallet",  stat:"206",   statL:"advances set up" },
     { key:"sti",       name:"Short-Term Insurance Audit", meta:"policies reviewed",      count:86,  ico:"car",     statL:"audited", stat:"86" },
   ],
 
   // ── Act 3: value strip ──
   valueStrip: [
-    { l:"Monthly cash freed up",         v:"R 384,900", d:"R 4.62m annualised" },
-    { l:"Prescribed debt challenged",    v:"R 2.74m",   d:"274 accounts" },
-    { l:"Arrears under active intervention", v:"R 6.4m", d:"214 employees" },
+    { l:"Monthly cash freed up",         v:"R 384,900", d:"R 4620000 annualised" },
+    { l:"Prescribed debt challenged",    v:"R 2740000",   d:"274 accounts" },
+    { l:"Arrears under active intervention", v:"R 6400000", d:"214 employees" },
     { l:"Avg saving per active employee",v:"R 326/mo",  d:"R 3,912 / year" },
   ],
 
@@ -1163,21 +1194,21 @@ let DATA = {
 
   // ── Act 3: creditor breakdown (arrears journey) ──
   creditors: [
-    { name:"African Bank",    color:"var(--chart-danger)", accounts:128, balance:"R 2.41m", avg:"R 18,830", status:"elig", statusL:"In journey" },
-    { name:"Capitec",         color:"var(--chart-2)", accounts: 96, balance:"R 1.88m", avg:"R 19,580", status:"elig", statusL:"In journey" },
-    { name:"Standard Bank",   color:"var(--chart-3)", accounts: 74, balance:"R 1.62m", avg:"R 21,890", status:"elig", statusL:"In journey" },
-    { name:"FNB",             color:"var(--chart-positive)", accounts: 61, balance:"R 1.39m", avg:"R 22,790", status:"prog", statusL:"Negotiating" },
-    { name:"Truworths",       color:"var(--chart-4)", accounts: 88, balance:"R 1.04m", avg:"R 11,820", status:"prog", statusL:"Negotiating" },
-    { name:"Other retailers", color:"var(--chart-5)", accounts:142, balance:"R 0.84m", avg:"R 5,915",  status:"prog", statusL:"Negotiating" },
+    { name:"African Bank",    color:"var(--chart-danger)", accounts:128, balance:"R 2410000", avg:"R 18,830", status:"elig", statusL:"In journey" },
+    { name:"Capitec",         color:"var(--chart-2)", accounts: 96, balance:"R 1880000", avg:"R 19,580", status:"elig", statusL:"In journey" },
+    { name:"Standard Bank",   color:"var(--chart-3)", accounts: 74, balance:"R 1620000", avg:"R 21,890", status:"elig", statusL:"In journey" },
+    { name:"FNB",             color:"var(--chart-positive)", accounts: 61, balance:"R 1390000", avg:"R 22,790", status:"prog", statusL:"Negotiating" },
+    { name:"Truworths",       color:"var(--chart-4)", accounts: 88, balance:"R 1040000", avg:"R 11,820", status:"prog", statusL:"Negotiating" },
+    { name:"Other retailers", color:"var(--chart-5)", accounts:142, balance:"R 840000", avg:"R 5,915",  status:"prog", statusL:"Negotiating" },
   ],
   creditorsTotal: { accounts:589, balance:"R 9.18m" },
 
   // debt pressure by credit TYPE (the employer-legible cut; creditors are the drill-down)
   debtProfile: [
-    { type:"Bank personal loans", balance:"R 5.91m", pct:64, col:"var(--chart-1)" },
-    { type:"Retail / store credit", balance:"R 1.88m", pct:20, col:"var(--chart-2)" },
-    { type:"Microloans",            balance:"R 0.92m", pct:10, col:"var(--chart-warning)" },
-    { type:"Other unsecured",       balance:"R 0.47m", pct:6,  col:"var(--chart-5)" },
+    { type:"Bank personal loans", balance:"R 5910000", pct:64, col:"var(--chart-1)" },
+    { type:"Retail / store credit", balance:"R 1880000", pct:20, col:"var(--chart-2)" },
+    { type:"Microloans",            balance:"R 920000", pct:10, col:"var(--chart-warning)" },
+    { type:"Other unsecured",       balance:"R 470000", pct:6,  col:"var(--chart-5)" },
   ],
 
   // ── Act 4: stress map (by site) ──
@@ -1214,7 +1245,7 @@ let DATA = {
 
   // ── Act 5: prescription ──
   prescription: {
-    total: "R 2.74m",
+    total: "R 2740000",
     accounts: 274,
     avgPerAccount: "R 10,000",
     statusBars: [
@@ -1223,7 +1254,7 @@ let DATA = {
       { l:"Creditor conceded", n:163, pct:59,  c:"var(--chart-2)" },
       { l:"Written off",       n:118, pct:43,  c:"var(--chart-positive)" },
     ],
-    writtenOff: "R 1.18m",
+    writtenOff: "R 1180000",
   },
 
   // ── Act 5: referral ──
@@ -1247,14 +1278,14 @@ let DATA = {
   // ── Opportunities Identified (next-wave sales engine) ──
   opportunities: {
     cards: [
-      { name:"Credit life replacement", eligible:412, saving:"R 122,800", icon:"shield" },
-      { name:"Funeral consolidation",   eligible:278, saving:"R 40,900",  icon:"umbrella" },
-      { name:"Short-term insurance audit", eligible:236, saving:"R 31,400", icon:"car" },
-      { name:"Prescription review",     eligible:183, saving:"—", extra:"R 1.6m challengeable", icon:"scroll" },
+      { name:"Credit life replacement", eligible:412, saving:"R 122800", icon:"shield" },
+      { name:"Funeral consolidation",   eligible:278, saving:"R 40900",  icon:"umbrella" },
+      { name:"Short-term insurance audit", eligible:236, saving:"R 31400", icon:"car" },
+      { name:"Prescription review",     eligible:183, saving:"—", extra:"R 1600000 challengeable", icon:"scroll" },
       { name:"Emergency cash access",   eligible:341, saving:"—", extra:"alternative to costly credit", icon:"wallet" },
     ],
     estMonthly: "R 241,000",
-    estAnnual: "R 2.89m",
+    estAnnual: "R 2890000",
   },
 
   // ── Act 6: webchat engagement (categorised) ──
@@ -1487,7 +1518,7 @@ function sparkline(points, color){
 /* ─────────────────── Executive summary band ─────────────────── */
 function renderExec(){
   const wrap=document.getElementById('exec-summary');
-  const tick='<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7.5" stroke="var(--chart-positive)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const tick='<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7.5" stroke="var(--status-positive)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const items=DATA.exec.items.map(it=>{ const mk=employerMetricKey(it.l); return `<div class="exec-item">${tick}<div><div class="exec-v">${it.v}</div><div class="exec-l">${it.l} ${employerInfoButton(mk)}</div></div></div>`; }).join('');
   const incomplete=window.__LIVE__ && (DATA.wellness?.complete===false || !hasValue(DATA.wellness?.score));
   const verdict=incomplete?'Data incomplete':(window.__LIVE__ ? (DATA.wellness.score>=75?'Strong':DATA.wellness.score>=60?'On track':'Needs attention') : 'On track');
@@ -1507,9 +1538,13 @@ function renderExec(){
 // thing as the score band's colour — improving/strong shines dark green, at
 // risk is amber, critical is red. Thresholds match wellnessBand() server-side.
 function bandTone(score){
-  if(score>=60) return {c:'var(--chart-positive)',bg:'color-mix(in srgb, var(--chart-positive) 12%, white)',border:'color-mix(in srgb, var(--chart-positive) 28%, white)'};
-  if(score>=40) return {c:'var(--chart-warning)',bg:'color-mix(in srgb, var(--chart-warning) 12%, white)',border:'color-mix(in srgb, var(--chart-warning) 28%, white)'};
-  return {c:'var(--chart-danger)',bg:'color-mix(in srgb, var(--chart-danger) 12%, white)',border:'color-mix(in srgb, var(--chart-danger) 28%, white)'};
+  if(score>=60) return {c:'var(--status-positive)',bg:'var(--status-positive-soft)',border:'#b8e6cc'};
+  if(score>=40) return {c:'var(--status-warning)',bg:'var(--status-warning-soft)',border:'#f3cf98'};
+  return {c:'var(--status-danger)',bg:'var(--status-danger-soft)',border:'#f3b8b1'};
+}
+function robotStatus(label,score){
+  const t=bandTone(Number(score));
+  return `<span class="robot-status" style="--status-color:${t.c};--status-bg:${t.bg};--status-border:${t.border}"><span class="robot-dot">🤖</span>${label||'Status'}</span>`;
 }
 function renderWellness(){
   const wrap=document.getElementById('wellness');
@@ -1522,7 +1557,7 @@ function renderWellness(){
       const col=available?bandTone(score).c: 'var(--chart-warning)';
       const mk=employerMetricKey(d.name); return `<div class="wd-row"><div class="wd-name">${d.name} ${employerInfoButton(mk)}<small>${d.note||''}</small></div><div class="wd-track"><div class="wd-fill" style="width:${available?score:0}%;background:${available?col:'#e8e1f7'}"></div></div><div class="wd-val">${available?score:'—'}</div></div>`;
     }).join('');
-    wrap.appendChild(el(`<div class="wellness-inner"><div class="wellness-left"><div style="font-family:'Fraunces',serif;font-size:46px;color:var(--chart-1);line-height:1">—</div><div style="font-size:11px;color:#8497a7;font-weight:800;margin-top:4px">/ 100</div><div class="wellness-band" style="color:var(--chart-warning);background:#fff8e8;border-color:#efd49b">Data incomplete</div><div class="wellness-note">The score is calculated only when all required driver feeds are available. Missing data is never treated as zero.</div></div><div class="wellness-right">${drivers||'<div class="muted">Required score drivers have not been loaded.</div>'}</div></div>`));
+    wrap.appendChild(el(`<div class="wellness-inner"><div class="wellness-left"><div style="font-family:'Fraunces',serif;font-size:46px;color:var(--chart-1);line-height:1">—</div><div style="font-size:11px;color:#8497a7;font-weight:800;margin-top:4px">/ 100</div><div class="wellness-band" style="color:var(--status-warning);background:var(--status-warning-soft);border-color:#efd49b">${robotStatus('Data incomplete',50)}</div><div class="wellness-note">The score is calculated only when all required driver feeds are available. Missing data is never treated as zero.</div></div><div class="wellness-right">${drivers||'<div class="muted">Required score drivers have not been loaded.</div>'}</div></div>`));
     return;
   }
   const delta=hasValue(w.prior)?w.score-w.prior:null;
@@ -1534,7 +1569,7 @@ function renderWellness(){
     <text x="80" y="74" text-anchor="middle" font-family="Fraunces,serif" font-size="34" font-weight="600" fill="var(--chart-1)">${w.score}</text><text x="80" y="90" text-anchor="middle" font-size="9.5" font-weight="700" fill="#8497a7">/ 100</text></svg>`;
   const drivers=(w.drivers||[]).map(d=>{ const available=d.available!==false&&hasValue(d.score); const score=available?Number(d.score):0; const col=available?bandTone(score).c: 'var(--chart-warning)'; const mk=employerMetricKey(d.name); return `<div class="wd-row"><div class="wd-name">${d.name} ${employerInfoButton(mk)}<small>${d.note||''}</small></div><div class="wd-track"><div class="wd-fill" style="width:0;background:${available?col:'#e8e1f7'}" data-w="${available?score:0}"></div></div><div class="wd-val">${available?score:'—'}</div></div>`; }).join('');
   const bt=bandTone(Number(w.score)||0);
-  wrap.appendChild(el(`<div class="wellness-inner"><div class="wellness-left">${gauge}<div class="wellness-band" style="color:${bt.c};background:${bt.bg};border-color:${bt.border}">${w.band||'Index'}</div><div class="wellness-delta">${delta===null?'No prior period':(delta>=0?'▲ +'+delta:'▼ '+delta)+' pts vs. last period'}</div><div class="wellness-note">A composite of four weighted drivers. Use it to track workforce financial health over time.</div></div><div class="wellness-right">${drivers}</div></div>`));
+  wrap.appendChild(el(`<div class="wellness-inner"><div class="wellness-left">${gauge}<div class="wellness-band" style="color:${bt.c};background:${bt.bg};border-color:${bt.border}">${robotStatus(w.band||'Index',Number(w.score)||0)}</div><div class="wellness-delta">${delta===null?'No prior period':(delta>=0?'▲ +'+delta:'▼ '+delta)+' pts vs. last period'}</div><div class="wellness-note">A composite of four weighted drivers. Use it to track workforce financial health over time.</div></div><div class="wellness-right">${drivers}</div></div>`));
   setTimeout(()=>wrap.querySelectorAll('.wd-fill').forEach(f=>f.style.width=f.dataset.w+'%'),150);
 }
 
@@ -1677,7 +1712,7 @@ function renderSavings(){
     <defs><linearGradient id="savg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--chart-positive)" stop-opacity=".18"/><stop offset="1" stop-color="var(--chart-positive)" stop-opacity="0"/></linearGradient></defs>
     ${[0,.5,1].map(f=>`<line x1="${pad}" x2="${w-pad}" y1="${h-pad-f*(h-pad*1.4)}" y2="${h-pad-f*(h-pad*1.4)}" stroke="#f7f4ff" stroke-width="1"/><text x="${pad-6}" y="${(h-pad-f*(h-pad*1.4)+3).toFixed(1)}" text-anchor="end" font-size="9.5" font-weight="700" fill="#8497a7">R${Math.round(max*f)}k</text>`).join('')}
     <path d="${area}" fill="url(#savg)"/>
-    <path d="${line}" fill="none" stroke="var(--chart-positive)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="${line}" fill="none" stroke="var(--status-positive)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
     ${dots}${xlabels}
     <text x="${px(pts.length-1)}" y="${py(pts[pts.length-1])-12}" font-size="12" font-weight="800" fill="#137a47" text-anchor="end">R${pts[pts.length-1]}k/mo</text>
   </svg>`));
@@ -1687,8 +1722,9 @@ function renderSavings(){
 function renderDebtProfile(){
   const wrap=document.getElementById('debt-profile'); if(!wrap) return;
   // stacked bar by type
-  let seg=DATA.debtProfile.map(d=>`<div class="dp-seg" style="width:${d.pct}%;background:${d.col}" title="${d.type}"></div>`).join('');
-  let legend=DATA.debtProfile.map(d=>`<div class="dp-leg"><span class="dp-dot" style="background:${d.col}"></span><span class="dp-type">${d.type}</span><span class="dp-bal">${d.balance}</span><span class="dp-pct">${d.pct}%</span></div>`).join('');
+  const palette=['var(--chart-1)','var(--chart-2)','var(--chart-3)','var(--chart-4)','var(--chart-5)'];
+  let seg=DATA.debtProfile.map((d,i)=>`<div class="dp-seg" style="width:${d.pct}%;background:${palette[i%palette.length]}" title="${d.type}"></div>`).join('');
+  let legend=DATA.debtProfile.map((d,i)=>`<div class="dp-leg"><span class="dp-dot" style="background:${palette[i%palette.length]}"></span><span class="dp-type">${d.type}</span><span class="dp-bal">${d.balance}</span><span class="dp-pct">${d.pct}%</span></div>`).join('');
   wrap.appendChild(el(`<div>
     <div class="dp-bar">${seg}</div>
     <div class="dp-legend">${legend}</div>
@@ -2038,7 +2074,7 @@ function safeRender(fn){
 
 /* helpers to scale numbers/strings */
 function scaleNum(n,f){ return Math.round(n*f); }
-function randMoney(v,f){ // scale a "R 2.41m"/"R 222k" style string
+function randMoney(v,f){ // scale a "R 2410000"/"R 222000" style string
   const m=String(v).match(/R?\s*([\d.,]+)\s*([mk]?)/i);
   if(!m) return v;
   let num=parseFloat(m[1].replace(/,/g,'')); let unit=m[2].toLowerCase();
@@ -2093,7 +2129,7 @@ function applyState(){
   // value strip
   DATA.valueStrip = BASE.valueStrip.map((s,i)=>{
     if(i===3) return s; // per-employee avg unchanged by period
-    return { ...s, v: randMoney(s.v,F), d: i===0? randMoney('R 4.62m',F)+' annualised' : s.d };
+    return { ...s, v: randMoney(s.v,F), d: i===0? randMoney('R 4620000',F)+' annualised' : s.d };
   });
 
   // savings series: take a tail proportional to period
@@ -2133,7 +2169,7 @@ function applyState(){
   DATA.exec = { items: [
     { v: DATA.kpis.takeUp.enrolled.toLocaleString(),                 l:"employees enrolled" },
     { v: 'R '+DATA.kpis.monthlySaving.rand.toLocaleString(),         l:"monthly cashflow restored" },
-    { v: randMoney('R 6.4m', F).replace('.00',''),                   l:"debt under active intervention" },
+    { v: randMoney('R 6400000', F).replace('.00',''),                   l:"debt under active intervention" },
     { v: scaleNum(274, F).toLocaleString(),                          l:"prescribed debts challenged" },
     { v: scaleNum(812, F).toLocaleString(),                          l:"employees better off" },
     { v: BASE.kpis.avgRating.val.toFixed(1)+"/5",                    l:"employee satisfaction" },
@@ -2483,6 +2519,7 @@ function preparePdfPrint(){
 }
 
 window.addEventListener('beforeprint',preparePdfPrint);
+document.addEventListener('DOMContentLoaded',()=>{initNightMode();startMoneyObserver();});
 
 /* ─────── wire: header buttons ─────── */
 function wireHeaderBtns(){
@@ -2648,13 +2685,19 @@ function outcomeDrill(o){
 }
 function miniTrend(trend){
   const seed=Array.isArray(trend)&&trend.length?trend:null;
-  if(!seed) return '<div class="muted" style="padding:10px 0;font-size:12.5px;">No monthly trend data for the selected window.</div>';
-  const w=440,h=120,max=Math.max(1,...seed)*1.2,pad=10;
-  const px=i=>pad+i*(w-pad*2)/Math.max(1,seed.length-1), py=v=>h-pad-(v/max)*(h-pad*2);
-  let line=seed.map((v,i)=>(i?'L':'M')+px(i)+' '+py(v)).join(' ');
-  let dots=seed.map((v,i)=>`<circle cx="${px(i)}" cy="${py(v)}" r="3" fill="#b15be8"/>`).join('');
-  return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:120px;margin:8px 0 4px">
-    <path d="${line}" fill="none" stroke="var(--chart-2)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>${dots}</svg>`;
+  if(!seed) return '<div class="muted" style="padding:10px 0;font-size:12.5px;">No monthly trend data for the selected window. The live API can supply the monthly series here.</div>';
+  const vals=seed.map(v=>Number(v)).filter(Number.isFinite);
+  if(vals.length<2) return `<div style="padding:10px 0;font-size:12.5px;color:var(--theme-muted)">Current value: <strong>${vals.length?vals[0].toLocaleString('en-ZA'):'—'}</strong>. A change chart appears once at least two periods are available.</div>`;
+  const w=520,h=190,left=58,right=18,top=18,bottom=34;
+  const min=Math.min(...vals), max=Math.max(...vals), span=Math.max(1,max-min), yMin=Math.max(0,Math.floor(min-span*.12)), yMax=Math.ceil(max+span*.12);
+  const px=i=>left+i*(w-left-right)/Math.max(1,vals.length-1);
+  const py=v=>h-bottom-(v-yMin)/(yMax-yMin)*(h-top-bottom);
+  const line=vals.map((v,i)=>(i?'L':'M')+px(i).toFixed(1)+' '+py(v).toFixed(1)).join(' ');
+  const ticks=4;
+  const grid=Array.from({length:ticks+1},(_,i)=>{const v=yMin+(yMax-yMin)*i/ticks,y=py(v);return `<line x1="${left}" x2="${w-right}" y1="${y}" y2="${y}" stroke="var(--chart-grid)" stroke-width="1"/><text x="${left-8}" y="${y+3}" text-anchor="end" font-size="9.5" font-weight="700" fill="var(--theme-muted)">${Math.round(v).toLocaleString('en-ZA')}</text>`}).join('');
+  const dots=vals.map((v,i)=>`<circle cx="${px(i)}" cy="${py(v)}" r="3.5" fill="var(--chart-2)"/><text x="${px(i)}" y="${py(v)-9}" text-anchor="middle" font-size="9" font-weight="800" fill="var(--chart-1)">${v.toLocaleString('en-ZA')}</text>`).join('');
+  const delta=vals[vals.length-1]-vals[0], deltaPct=vals[0]===0?null:(delta/Math.abs(vals[0]))*100;
+  return `<div class="trend-summary"><div style="font-size:11px;color:var(--theme-muted);font-weight:700;margin-bottom:3px">Actual monthly values · change ${delta>=0?'▲':'▼'} ${Math.abs(delta).toLocaleString('en-ZA')}${deltaPct===null?'':` (${Math.abs(deltaPct).toFixed(1)}%)`}</div><svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;margin:4px 0"><defs><linearGradient id="outTrend" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--chart-2)" stop-opacity=".18"/><stop offset="1" stop-color="var(--chart-2)" stop-opacity="0"/></linearGradient></defs>${grid}<path d="${line} L${px(vals.length-1)} ${h-bottom} L${px(0)} ${h-bottom} Z" fill="url(#outTrend)" opacity=".7"/><path d="${line}" fill="none" stroke="var(--chart-2)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>${dots}</svg></div>`;
 }
 function creditorDrill(c){
   const stages=Array.isArray(c.stateBreakdown)?c.stateBreakdown:[];
@@ -2672,6 +2715,28 @@ function creditorDrill(c){
     </div>
     <div class="drawer-note">Employees deal with ${c.name} directly through a guided, do-it-yourself settlement — no debt-review flag, no third party taking over their money. Figures aggregated across ${c.accounts} employees.</div>`;
   openDrawer(c.name, 'Unsecured arrears · settlement journey', body);
+}
+
+/* ── Never abbreviate rand values in visible UI ───────────────────── */
+function expandRandText(value){
+  return String(value).replace(/R\s*([0-9]+(?:[.,][0-9]+)?)\s*([km])\b/gi,(_,num,unit)=>{
+    const n=parseFloat(num.replace(/,/g,''));
+    const mult=unit.toLowerCase()==='m'?1000000:1000;
+    return 'R '+Math.round(n*mult).toLocaleString('en-ZA');
+  });
+}
+function normalizeMoneyDisplay(root=document.body){
+  const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
+  const nodes=[]; let n; while(n=walker.nextNode()) nodes.push(n);
+  nodes.forEach(t=>{const v=expandRandText(t.nodeValue);if(v!==t.nodeValue)t.nodeValue=v;});
+  root.querySelectorAll('[title]').forEach(e=>{const v=expandRandText(e.getAttribute('title'));if(v!==e.getAttribute('title'))e.setAttribute('title',v);});
+}
+let moneyObserver;
+function startMoneyObserver(){
+  if(moneyObserver||!document.body) return;
+  moneyObserver=new MutationObserver(m=>{ if(m.some(x=>x.addedNodes.length||x.type==='characterData')) requestAnimationFrame(()=>normalizeMoneyDisplay()); });
+  moneyObserver.observe(document.body,{subtree:true,childList:true,characterData:true});
+  normalizeMoneyDisplay();
 }
 
 /* ─────── toast ─────── */
@@ -2734,7 +2799,7 @@ async function loadLiveData({refreshOnly=false}={}){
     try{ const r=await fetch('/api/auth/me'); if(!r.ok){ location.href='/login'; return; } me=await r.json(); }
     catch(e){ location.href='/login'; return; }
     window.__ME__=me;
-    addAuthBar(me); applyTheme(me.theme); handleWelcomeSplash(me); applySectionVisibility(me); populateEmployerSelect(me);
+    addAuthBar(me); applyTheme(me.theme); initNightMode(); startMoneyObserver(); handleWelcomeSplash(me); applySectionVisibility(me); populateEmployerSelect(me);
   }
   try{
     let id=employerIdFromUrl();
@@ -3014,6 +3079,19 @@ function tint(hex,pct){
   let r=(n>>16)&255,g=(n>>8)&255,b=n&255; const f=pct/100;
   r=Math.round(r+(255-r)*f); g=Math.round(g+(255-g)*f); b=Math.round(b+(255-b)*f);
   return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('');
+}
+
+function initNightMode(){
+  const key='ef_dashboard_theme_mode';
+  let mode='system'; try{mode=localStorage.getItem(key)||'system';}catch(_){ }
+  if(mode==='dark'||mode==='light') document.documentElement.setAttribute('data-theme-mode',mode); else document.documentElement.removeAttribute('data-theme-mode');
+  const meta=document.querySelector('.topbar-meta');
+  if(meta && !document.getElementById('dark-toggle')){
+    const b=document.createElement('button'); b.id='dark-toggle'; b.className='dark-toggle'; b.type='button';
+    const refresh=()=>{const m=document.documentElement.getAttribute('data-theme-mode')||'system'; b.textContent=m==='dark'?'☀ Light':m==='light'?'◐ System':'☾ Night'; b.title='Switch dashboard appearance';};
+    b.addEventListener('click',()=>{const m=document.documentElement.getAttribute('data-theme-mode')||'system';const next=m==='system'?'dark':m==='dark'?'light':'system';try{localStorage.setItem(key,next);}catch(_){} if(next==='system')document.documentElement.removeAttribute('data-theme-mode');else document.documentElement.setAttribute('data-theme-mode',next);refresh();});
+    meta.insertBefore(b,meta.firstChild); refresh();
+  }
 }
 
 // brief "Hi <name>" splash right after sign-in — shown once per browser tab
