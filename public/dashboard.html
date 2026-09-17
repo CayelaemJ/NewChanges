@@ -2998,7 +2998,7 @@ function applyTheme(theme){
   root.setProperty('--brand-grad-5', mix(accent,'#ffffff',.55));
   const brandName=document.getElementById('channel-brand-name');
   if(theme.logoDataUrl){
-    document.querySelectorAll('.logo img, .topbar .logo img').forEach(img=>{ img.src=theme.logoDataUrl; });
+    document.querySelectorAll('.logo img, .topbar .logo img, .pdf-brand img').forEach(img=>{ img.src=theme.logoDataUrl; });
     if(brandName) brandName.textContent='';
   }else if(brandName){
     brandName.textContent=theme.name && theme.name!==baseName ? theme.name : '';
