@@ -606,7 +606,7 @@ app.get("/api/admin/batches", async (req, reply) => {
 });
 
 // download the exact source rows uploaded for an import batch as CSV
-app.get("/api/admin/batches/:batchId/csv", async (req, reply) => {
+app.get<{ Params: { batchId: string } }>("/api/admin/batches/:batchId/csv", async (req, reply) => {
     if (!(await requireAdmin(req, reply)))
         return;
     try {
@@ -622,7 +622,7 @@ app.get("/api/admin/batches/:batchId/csv", async (req, reply) => {
         reply.header("Content-Disposition", `attachment; filename="${safeReport}-uploaded-data.csv"`);
         return reply.send(csv);
     }
-    catch (e) {
+    catch (e: any) {
         req.log.error(e);
         return reply.code(400).send({ error: e?.message || "Could not export import data." });
     }
