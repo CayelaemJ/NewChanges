@@ -3,6 +3,7 @@
 //  Simple, dependency-free CSV building (no xlsx tooling needed here).
 // ════════════════════════════════════════════════════════════════════
 import { prisma } from "./authService.js";
+import { getFormat } from "./reportFormats.js";
 function csvEscape(value) {
     if (value == null)
         return "";
@@ -71,4 +72,22 @@ export async function exportUsersCsv() {
         orderBy: { createdAt: "desc" },
     });
     return toCsv(rows, ["id", "email", "name", "role", "active", "partnerId", "createdAt", "revokedAt", "revokedReason", "revokedBy"]);
+}
+
+/** Export the exact source rows uploaded for an import batch as CSV. */
+export async function exportImportBatchCsv(batchId) {
+    const batch = await prisma.importBatch.findUnique({
+        where: { id: batchId },
+        include: { rows: { orderBy: { rowIndex: "asc" }, select: { data: true } } },
+    });
+    if (!batch)
+        throw new Error("Import batch not found");
+    const format = getFormat(batch.reportKey);
+    if (!format)
+        throw new Error(`Unknown report: ${batch.reportKey}`);
+    const columns = format.fields.map((field) => field.name);
+    const rows = batch.rows.length
+        ? batch.rows.map((row) => row.data)
+        : (batch.stagedRows ?? []);
+    return toCsv(rows, columns);
 }

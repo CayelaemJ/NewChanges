@@ -26,7 +26,7 @@ import { createUser, listUsers, updateUser, resetPassword, completeSetup, deacti
 import { recordEvent, engagementSummary } from "./services/analyticsService.js";
 import { notifyAdmins, notifyScoreChangeIfCurrentPeriod, runStaleAccountCheck, runWeeklyDigestIfDue } from "./services/automationService.js";
 import { logAdminAction, listAuditLog } from "./services/auditService.js";
-import { exportAuditLogCsv } from "./services/exportService.js";
+import { exportAuditLogCsv, exportImportBatchCsv } from "./services/exportService.js";
 import { ensureSectionDefaults, listSections, updateSection, grantUserSection, revokeUserSection, sectionsForUser } from "./services/sectionService.js";
 import { publicEmailConfig, saveEmailConfig, testEmailConnection, createReportSchedule, listReportSchedules, updateReportSchedule, deleteReportSchedule, sendReportNow, recentReportDeliveries, runDueReports } from "./services/reportScheduler.js";
 import type { ScheduleInput } from "./services/reportScheduler.js";
@@ -605,6 +605,28 @@ app.get("/api/admin/batches", async (req, reply) => {
   });
 });
 
+// download the exact source rows uploaded for an import batch as CSV
+app.get("/api/admin/batches/:batchId/csv", async (req, reply) => {
+    if (!(await requireAdmin(req, reply)))
+        return;
+    try {
+        const batch = await prisma.importBatch.findUnique({
+            where: { id: req.params.batchId },
+            select: { id: true, reportKey: true },
+        });
+        if (!batch)
+            return reply.code(404).send({ error: "import batch not found" });
+        const csv = await exportImportBatchCsv(batch.id);
+        const safeReport = String(batch.reportKey).replace(/[^a-zA-Z0-9_-]/g, "_");
+        reply.header("Content-Type", "text/csv; charset=utf-8");
+        reply.header("Content-Disposition", `attachment; filename="${safeReport}-uploaded-data.csv"`);
+        return reply.send(csv);
+    }
+    catch (e) {
+        req.log.error(e);
+        return reply.code(400).send({ error: e?.message || "Could not export import data." });
+    }
+});
 // ── DANGER: wipe ALL imported data (clean slate for go-live). Admin only,
 //    and the body must contain confirm: "RESET" so it can't fire by accident. ──
 app.post<{ Body: { confirm?: string } }>("/api/admin/reset-all", async (req, reply) => {
