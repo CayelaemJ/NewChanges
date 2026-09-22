@@ -16,6 +16,13 @@ import { createSourceAdapter, configuredSourceMode, sourceIsConfigured } from ".
 const prisma = new PrismaClient();
 type Json = Prisma.InputJsonValue;
 const CURSOR_OVERLAP_MS = 5 * 60 * 1000;
+// Tolerate small clock drift between the source database and this app
+// server (common across two different hosts/regions — e.g. a Railway DB
+// vs. wherever this service runs). Previously ANY drift, even a few
+// seconds, hard-failed the WHOLE report on every single sync, forever —
+// which looks exactly like "the schema/view is fine, but it never
+// actually syncs or produces visuals".
+const CLOCK_SKEW_TOLERANCE_MS = 5 * 60 * 1000;
 
 function overlapCursor(value?: Date | null): Date | null {
   return value ? new Date(value.getTime() - CURSOR_OVERLAP_MS) : null;
@@ -122,10 +129,18 @@ export async function runSync(trigger: "manual" | "scheduled" = "manual") {
           through: throughAt,
         });
         const result = validate(format, pulled.records);
-        const futureSourceRows = result.rows.filter((row: any) => row.source_updated_at > throughAt);
-        if (futureSourceRows.length) {
-          throw new Error(`${reportKey}: ${futureSourceRows.length} record(s) had source_updated_at later than the requested through timestamp`);
+
+        // Genuinely bad/faked-future data still fails the report, but a
+        // small amount of drift is clamped instead of killing the whole
+        // report on every retry.
+        const skewCeiling = new Date(throughAt.getTime() + CLOCK_SKEW_TOLERANCE_MS);
+        const genuinelyFutureRows = result.rows.filter((row: any) => row.source_updated_at > skewCeiling);
+        if (genuinelyFutureRows.length) {
+          throw new Error(`${reportKey}: ${genuinelyFutureRows.length} record(s) had source_updated_at more than ${CLOCK_SKEW_TOLERANCE_MS / 60000} minute(s) later than the requested through timestamp — check the source database's clock/timezone settings.`);
         }
+        result.rows = result.rows.map((row: any) =>
+          row.source_updated_at > throughAt ? { ...row, source_updated_at: throughAt } : row
+        );
 
         if (!result.ok) {
           const note = `Validation failed: ${result.errors.length} cell error(s), ${result.missingColumns.length} required column(s) missing.`;
