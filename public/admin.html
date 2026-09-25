@@ -813,7 +813,7 @@ let PARTNERS=[], ALL_USERS=[], ALL_EMP=[];
 async function loadPartners(){
   try{
     PARTNERS = await fetch(`${API}/api/admin/partners`).then(r=>r.json());
-    ALL_USERS = await fetch(`${API}/api/users`).then(r=>r.json()).catch(()=>[]);
+    ALL_USERS = await fetch(`${API}/api/users`,{credentials:"include"}).then(r=>r.json()).catch(()=>[]);
     const _me = await fetch(`${API}/api/auth/me`).then(r=>r.json()).catch(()=>({employers:[]}));
     ALL_EMP = _me.employers || [];
     renderPartners();
@@ -1001,7 +1001,7 @@ let SECTIONS=[];
 async function loadSections(){
   try{
     SECTIONS = await fetch(`${API}/api/admin/sections`).then(r=>r.json());
-    if(!ALL_USERS.length) ALL_USERS = await fetch(`${API}/api/users`).then(r=>r.json()).catch(()=>[]);
+    if(!ALL_USERS.length) ALL_USERS = await fetch(`${API}/api/users`,{credentials:"include"}).then(r=>r.json()).catch(()=>[]);
     renderSections();
   }catch(e){}
 }
