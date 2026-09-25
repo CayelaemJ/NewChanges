@@ -25,14 +25,23 @@
     --line-soft:#e4e9ef;
     --ink:#0f2438;
     --grey:#5b6b7a;
-    --grey-l:var(--chart-debt);
-    --green:var(--chart-cashflow);
+    --grey-l:#8497a7;
+    --green:#1fa463;
     --green-soft:#e7f7ef;
-    --amber:var(--chart-mid);
+    --amber:#e8910c;
     --amber-soft:#fdf3e2;
-    --red:var(--chart-high);
+    --red:#e0492f;
     --white:#fff;
     --brand-soft:#f3efff;
+    /* Original portal chart palette: retained for admin and as pre-theme fallback. */
+    --chart-engagement:#3a93d2;
+    --chart-cashflow:#1fa463;
+    --chart-debt:#607486;
+    --chart-insurance:#8a4fc4;
+    --chart-workforce:#4ea3da;
+    --chart-low:#1fa463;
+    --chart-mid:#e8910c;
+    --chart-high:#e0492f;
     --brand-grad-1:#32217c;
     --brand-grad-2:#8e42bd;
     --brand-grad-3:#b15be8;
@@ -3001,12 +3010,23 @@ function applyTheme(theme, user){
   // Admins retain the portal's original dashboard palette. Employer branding is
   // applied only inside an authenticated employer session.
   if(user && String(user.role||'').toUpperCase()==='ADMIN'){
-    ['--blue','--blue-d','--brand-primary','--brand-primary-deep','--ice','--brand-soft',
-     '--brand-grad-1','--brand-grad-2','--brand-grad-3','--brand-grad-4','--brand-grad-5',
-     '--chart-engagement','--chart-cashflow','--chart-debt','--chart-insurance','--chart-workforce',
-     '--chart-low','--chart-mid','--chart-high','--engagement-color','--cashflow-color',
-     '--debt-risk-color','--insurance-color','--eligible-workforce-color',
-     '--stress-low-color','--stress-mid-color','--stress-high-color'].forEach(k=>root.removeProperty(k));
+    // Preserve a vivid, multi-hue original portal palette for admins. Do not
+    // clear these variables: all charts now consume semantic CSS variables.
+    const adminPalette={
+      '--blue':'#2878c7','--blue-d':'#185a9d','--brand-primary':'#32217c',
+      '--brand-primary-deep':'#0d2a47','--ice':'#eaf3fc','--brand-soft':'#f0ecfb',
+      '--brand-grad-1':'#32217c','--brand-grad-2':'#6546b8','--brand-grad-3':'#2878c7',
+      '--brand-grad-4':'#28a6b8','--brand-grad-5':'#68c5d0',
+      '--chart-engagement':'#2878c7','--chart-cashflow':'#159b68',
+      '--chart-debt':'#65758b','--chart-insurance':'#8753c7',
+      '--chart-workforce':'#20a6b2','--chart-low':'#159b68',
+      '--chart-mid':'#e59a18','--chart-high':'#d94b45',
+      '--engagement-color':'#2878c7','--cashflow-color':'#159b68',
+      '--debt-risk-color':'#65758b','--insurance-color':'#8753c7',
+      '--eligible-workforce-color':'#20a6b2','--stress-low-color':'#159b68',
+      '--stress-mid-color':'#e59a18','--stress-high-color':'#d94b45'
+    };
+    Object.entries(adminPalette).forEach(([k,v])=>root.setProperty(k,v));
     return;
   }
   if(!theme) return;
@@ -3164,6 +3184,34 @@ function showDemoBanner(){
 
 loadLiveData();
 
+</script>
+<script>
+/* Employer chart recolouring pass: applies to all present and future chart marks,
+   while deliberately leaving the admin dashboard's original palette untouched. */
+(function(){
+  const isAdmin=()=>{let u=window.currentUser||window.me||window.currentUserData;try{u=u||JSON.parse(sessionStorage.getItem('currentUser')||localStorage.getItem('currentUser')||'null');}catch(e){}return String(u?.role||u?.userRole||document.body?.dataset?.role||'').toUpperCase()==='ADMIN';};
+  const semantic={
+    '#1fa463':'var(--chart-cashflow)','#137a47':'var(--chart-cashflow)','#16a34a':'var(--chart-cashflow)',
+    '#e0492f':'var(--chart-high)','#e74c3c':'var(--chart-high)','#dc2626':'var(--chart-high)',
+    '#e8910c':'var(--chart-mid)','#f59e0b':'var(--chart-mid)','#f0a020':'var(--chart-mid)',
+    '#4ea3da':'var(--chart-engagement)','#3b82f6':'var(--chart-engagement)','#2563eb':'var(--chart-engagement)',
+    '#8a4fc4':'var(--chart-insurance)','#9333ea':'var(--chart-insurance)',
+    '#607486':'var(--chart-debt)','#6b9fc4':'var(--chart-workforce)'
+  };
+  const norm=v=>String(v||'').toLowerCase().replace(/\s+/g,'');
+  function recolor(root){
+    if(isAdmin()||!document.documentElement.style.getPropertyValue('--chart-engagement'))return;
+    const nodes=[]; if(root.nodeType===1)nodes.push(root);
+    if(root.querySelectorAll)nodes.push(...root.querySelectorAll('[style],[fill],[stroke]'));
+    for(const el of nodes){
+      if(!el.closest || !el.closest('.dash-section, .chart, .chart-area, .graph, .heatmap, .funnel, .stress, .risk, .trend, .bar, .donut, .legend, .wellness, .portfolio'))continue;
+      for(const attr of ['fill','stroke']){const v=el.getAttribute?.(attr);const rep=semantic[norm(v)];if(rep)el.setAttribute(attr,rep);}
+      const st=el.getAttribute?.('style'); if(st){let out=st;for(const [hex,varval] of Object.entries(semantic)){const re=new RegExp(hex.replace('#','\\#'),'ig');out=out.replace(re,varval);}if(out!==st){el.setAttribute('style',out);el.dataset.themeRecolored='1';}}
+    }
+  }
+  const start=()=>{recolor(document.body);new MutationObserver(ms=>ms.forEach(m=>{if(m.type==='attributes'){if(m.target.dataset?.themeRecolored){delete m.target.dataset.themeRecolored;return;}recolor(m.target);}else m.addedNodes.forEach(n=>{if(n.nodeType===1)recolor(n);});})).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['style','fill','stroke']});};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
+})();
 </script>
 </body>
 </html>
