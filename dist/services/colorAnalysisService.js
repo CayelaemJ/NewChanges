@@ -1,19 +1,6 @@
-// ─────────────────────────────────────────────────────────────────────────
-// Logo Color Analysis: Extract dominant colors from partner logos
-// Returns the three primary brand colors: primaryBrandColor, secondaryColor,
-// and dominantBackgroundColor, suitable for UI theming.
-// ─────────────────────────────────────────────────────────────────────────
 /**
- * Simple color distance calculation (Euclidean in RGB space)
- */
-function colorDistance(c1, c2) {
-    const dr = c1.r - c2.r;
-    const dg = c1.g - c2.g;
-    const db = c1.b - c2.b;
-    return Math.sqrt(dr * dr + dg * dg + db * db);
-}
-/**
- * Convert RGB to HSL for better color analysis (saturation/lightness matter for brand colors)
+ * Logo Color Analysis: Extract dominant colors from partner logos using k-means clustering.
+ * Returns three brand colors: primaryBrandColor, secondaryColor, dominantBackgroundColor.
  */
 function rgbToHsl(r, g, b) {
     r /= 255;
@@ -40,79 +27,126 @@ function rgbToHsl(r, g, b) {
     }
     return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
 }
+function rgbToHex(r, g, b) {
+    return [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('').toUpperCase();
+}
+function colorDistance(c1, c2) {
+    const dr = c1.r - c2.r;
+    const dg = c1.g - c2.g;
+    const db = c1.b - c2.b;
+    return Math.sqrt(dr * dr + dg * dg + db * db);
+}
 /**
- * Simple color quantization: group pixels into dominant colors
- * Returns top N colors by frequency
+ * K-means clustering to find dominant colors
  */
-function getDominantColors(pixels, count = 5) {
-    const colorMap = new Map();
-    // Quantize to 5-bit color (reduce from 8-bit to ~32k possible colors)
-    for (let i = 0; i < pixels.length; i += 4) {
-        const r = Math.round((pixels[i] / 255) * 31) * 8;
-        const g = Math.round((pixels[i + 1] / 255) * 31) * 8;
-        const b = Math.round((pixels[i + 2] / 255) * 31) * 8;
-        const key = `${r},${g},${b}`;
-        colorMap.set(key, (colorMap.get(key) || 0) + 1);
+function kMeansClustering(pixels, k = 8, iterations = 5) {
+    if (pixels.length <= k)
+        return pixels;
+    // Initialize centroids randomly
+    let centroids = [];
+    for (let i = 0; i < k; i++) {
+        centroids.push(pixels[Math.floor(Math.random() * pixels.length)]);
     }
-    // Sort by frequency and take top N
-    const sorted = Array.from(colorMap.entries())
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, count);
-    return sorted.map(([key]) => {
-        const [r, g, b] = key.split(",").map(Number);
-        return { r, g, b };
-    });
+    // K-means iterations
+    for (let iter = 0; iter < iterations; iter++) {
+        const clusters = Array(k).fill(null).map(() => []);
+        // Assign each pixel to nearest centroid
+        pixels.forEach(pixel => {
+            let minDist = Infinity;
+            let closestIdx = 0;
+            centroids.forEach((centroid, idx) => {
+                const dist = colorDistance(pixel, centroid);
+                if (dist < minDist) {
+                    minDist = dist;
+                    closestIdx = idx;
+                }
+            });
+            clusters[closestIdx].push(pixel);
+        });
+        // Recompute centroids
+        centroids = clusters.map((cluster, idx) => {
+            if (cluster.length === 0)
+                return centroids[idx];
+            const sum = cluster.reduce((acc, c) => ({ r: acc.r + c.r, g: acc.g + c.g, b: acc.b + c.b }), { r: 0, g: 0, b: 0 });
+            return {
+                r: Math.round(sum.r / cluster.length),
+                g: Math.round(sum.g / cluster.length),
+                b: Math.round(sum.b / cluster.length),
+            };
+        });
+    }
+    return centroids;
 }
 /**
- * Score a color for brand potential: vibrant, saturated colors > muted/grayscale
- * Prefer mid-range lightness (not too dark, not too light)
+ * Filter out near-grayscale colors and very dark/light pixels
  */
-function scoreBrandColor(hsl) {
-    const saturationBoost = hsl.s > 40 ? hsl.s : 0; // Only saturated colors
-    const lightnessBoost = hsl.l > 20 && hsl.l < 80 ? 100 - Math.abs(hsl.l - 50) : 0; // Prefer mid-range
-    return saturationBoost * 0.6 + lightnessBoost * 0.4;
+function isValidBrandColor(rgb) {
+    const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+    // Must have some saturation (not grayscale) and be mid-range lightness
+    return hsl.s >= 15 && hsl.l >= 15 && hsl.l <= 85;
 }
 /**
- * Analyze a logo image (from canvas data) and extract three brand colors:
- * - primaryBrandColor: most vibrant, saturated color (signature identity)
- * - secondaryColor: complementary or supporting color
- * - dominantBackgroundColor: darkest common color (canvas/background)
+ * Analyze canvas pixel data and return three dominant brand colors
  */
 export function analyzeLogoColors(imageData) {
-    const colors = getDominantColors(imageData.data, 8);
-    if (colors.length === 0) {
-        // Fallback: return default empower-fin palette
+    const data = imageData.data;
+    const pixels = [];
+    // Sample every pixel, skip transparent
+    for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        const a = data[i + 3];
+        // Skip mostly transparent pixels
+        if (a < 200)
+            continue;
+        pixels.push({ r, g, b });
+    }
+    if (pixels.length < 10) {
         return {
             primaryBrandColor: "32217C",
             secondaryColor: "B15BE8",
             dominantBackgroundColor: "330A36",
         };
     }
-    // Score colors for brand potential
-    const scored = colors
-        .map((rgb) => ({
-        rgb,
-        hsl: rgbToHsl(rgb.r, rgb.g, rgb.b),
-    }))
-        .map((c) => ({
-        ...c,
-        brandScore: scoreBrandColor(c.hsl),
-    }));
-    // Primary brand color: highest brand score (vibrant & saturated)
-    const primaryColor = scored.reduce((best, c) => (c.brandScore > best.brandScore ? c : best));
-    // Secondary: next highest brand score, but different hue from primary
-    const primaryHue = primaryColor.hsl.h;
-    const secondary = scored
-        .filter((c) => Math.abs(c.hsl.h - primaryHue) > 30) // Different hue
-        .sort((a, b) => b.brandScore - a.brandScore)[0] || scored[1] || primaryColor;
-    // Dominant background: darkest color (usually black/dark grays in logos)
-    const dominantBg = scored.reduce((darkest, c) => c.hsl.l < darkest.hsl.l ? c : darkest);
-    const toHex = (rgb) => [rgb.r, rgb.g, rgb.b]
-        .map((x) => x.toString(16).padStart(2, "0").toUpperCase())
-        .join("");
+    // Cluster pixels into 8 dominant colors
+    const centroids = kMeansClustering(pixels, 8, 5);
+    // Separate into categories: vibrant (primary), supporting (secondary), dark (background)
+    const vibrант = [];
+    const dark = [];
+    centroids.forEach(color => {
+        const hsl = rgbToHsl(color.r, color.g, color.b);
+        // Count how many pixels map to this centroid
+        let count = 0;
+        pixels.forEach(p => {
+            if (colorDistance(p, color) < 50)
+                count++;
+        });
+        if (hsl.l < 35) {
+            dark.push({ color, count, hsl });
+        }
+        else if (isValidBrandColor(color)) {
+            vibrант.push({ color, count, hsl });
+        }
+    });
+    // Sort vibrant by saturation (most saturated = most brandable)
+    vibrант.sort((a, b) => b.hsl.s - a.hsl.s);
+    // Sort dark by frequency
+    dark.sort((a, b) => b.count - a.count);
+    const primaryBrandColor = vibrант.length > 0
+        ? rgbToHex(vibrант[0].color.r, vibrант[0].color.g, vibrант[0].color.b)
+        : "32217C";
+    const secondaryColor = vibrант.length > 1
+        ? rgbToHex(vibrант[1].color.r, vibrант[1].color.g, vibrант[1].color.b)
+        : vibrант.length > 0
+            ? rgbToHex(vibrант[0].color.r, vibrант[0].color.g, vibrант[0].color.b)
+            : "B15BE8";
+    const dominantBackgroundColor = dark.length > 0
+        ? rgbToHex(dark[0].color.r, dark[0].color.g, dark[0].color.b)
+        : "330A36";
     return {
-        primaryBrandColor: toHex(primaryColor.rgb),
-        secondaryColor: toHex(secondary.rgb),
-        dominantBackgroundColor: toHex(dominantBg.rgb),
+        primaryBrandColor,
+        secondaryColor,
+        dominantBackgroundColor,
     };
 }
