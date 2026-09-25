@@ -451,6 +451,10 @@
         <div class="card-bd">
           <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
             <input id="pt-new-name" placeholder="New partner name (e.g. Acme Financial)" style="flex:1;min-width:220px;font:inherit;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">
+            <label class="btn btn-ghost" style="font-size:12.5px;padding:9px 14px;cursor:pointer;" title="Optional — colours are auto-detected from it">
+              <span id="pt-new-logo-label">+ Logo (optional)</span>
+              <input id="pt-new-logo" type="file" accept="image/png,image/jpeg" style="display:none;" onchange="onNewPartnerLogoPicked(this)">
+            </label>
             <button class="btn" onclick="createPartner()">Add partner</button>
           </div>
           <div style="margin-bottom:16px;">
@@ -820,10 +824,29 @@ async function loadPartners(){
     renderPartners();
   }catch(e){}
 }
+let PT_NEW_LOGO_DATAURL=null;
+function onNewPartnerLogoPicked(input){
+  const f=input.files[0]; if(!f) return;
+  if(f.size>500000){ showToast('Please use a logo under 500KB.','err'); input.value=''; PT_NEW_LOGO_DATAURL=null; document.getElementById('pt-new-logo-label').textContent='+ Logo (optional)'; return; }
+  const reader=new FileReader();
+  reader.onload=()=>{ PT_NEW_LOGO_DATAURL=reader.result; document.getElementById('pt-new-logo-label').textContent='✓ '+f.name; };
+  reader.readAsDataURL(f);
+}
 async function createPartner(){
   const name=$('#pt-new-name').value.trim(); if(!name) return;
-  await fetch(`${API}/api/admin/partners`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})});
-  $('#pt-new-name').value='';
+  const created=await fetch(`${API}/api/admin/partners`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})}).then(r=>r.json());
+  if(PT_NEW_LOGO_DATAURL && created?.id){
+    const detected=await extractColorsFromImage(PT_NEW_LOGO_DATAURL);
+    const payload=detected
+      ? { logoDataUrl:PT_NEW_LOGO_DATAURL, primaryColor:detected.primaryColor, accentColor:detected.accentColor, navyColor:detected.navyColor }
+      : { logoDataUrl:PT_NEW_LOGO_DATAURL };
+    await fetch(`${API}/api/admin/partners/${created.id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    showToast(detected ? `${name} added — brand colours detected from the logo.` : `${name} added.`,'ok');
+  } else {
+    showToast(`${name} added.`,'ok');
+  }
+  $('#pt-new-name').value=''; $('#pt-new-logo').value=''; PT_NEW_LOGO_DATAURL=null;
+  document.getElementById('pt-new-logo-label').textContent='+ Logo (optional)';
   loadPartners();
 }
 
