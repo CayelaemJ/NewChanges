@@ -447,10 +447,13 @@
     }
     body{font-size:10.5px;line-height:1.4;}
 
-    /* Remove all interactive chrome. */
+    /* Remove all interactive chrome. Whichever of #employer-view /
+       #portfolio-view is currently on screen (per the audience switch)
+       stays as-is here — forcing #employer-view on and #portfolio-view off
+       is what made "Export book" always print the employer dashboard even
+       when the portfolio report was the one open. */
     .topbar,.filters,.head-actions,.row-chevron,
-    .audience-switch,.pf-banner,#portfolio-view,.metric-tooltip{display:none!important;}
-    #employer-view{display:block!important;}
+    .audience-switch,.pf-banner,.metric-tooltip{display:none!important;}
 
     /* The on-load reveal animation only shows its content because
        "forwards" holds the *end* keyframe (opacity:1). Cancelling the
@@ -2501,13 +2504,26 @@ function preparePdfPrint(){
   const generated=document.getElementById('pdf-report-generated');
   const score=document.getElementById('pdf-report-score');
   const footer=document.getElementById('pdf-footer-date');
-  const employer=document.querySelector('.emp')?.textContent?.trim() || 'Employer';
-  const periodLabel=document.getElementById('month-select')?.selectedOptions?.[0]?.textContent?.trim() || 'Latest available period';
-  const scoreValue=Number(DATA?.wellness?.score);
-  if(title) title.textContent=employer + ' · Employer Insights';
-  if(period) period.textContent=periodLabel;
+  // The header markup is shared between employer-view and portfolio-view's
+  // print output, so it has to be filled in differently depending on which
+  // one is actually on screen — otherwise "Export book" prints a portfolio
+  // report headed with a single employer's name and score.
+  const portfolioActive=document.getElementById('portfolio-view')?.style.display!=='none';
+  if(portfolioActive){
+    const employerCount=document.getElementById('pf-employer-count')?.textContent?.trim() || '';
+    const windowLabel=document.getElementById('pf-window-pill')?.textContent?.trim() || 'Reporting window: —';
+    if(title) title.textContent='Portfolio Insights' + (employerCount ? ' · ' + employerCount : '');
+    if(period) period.textContent=windowLabel;
+    if(score) score.textContent='Across your whole book of employers';
+  } else {
+    const employer=document.querySelector('.emp')?.textContent?.trim() || 'Employer';
+    const periodLabel=document.getElementById('month-select')?.selectedOptions?.[0]?.textContent?.trim() || 'Latest available period';
+    const scoreValue=Number(DATA?.wellness?.score);
+    if(title) title.textContent=employer + ' · Employer Insights';
+    if(period) period.textContent=periodLabel;
+    if(score) score.textContent='Workforce Financial Wellness Score ' + (Number.isFinite(scoreValue)?scoreValue:'—') + ' / 100';
+  }
   if(generated) generated.textContent='Generated ' + new Date().toLocaleDateString('en-ZA',{year:'numeric',month:'long',day:'numeric'});
-  if(score) score.textContent='Workforce Financial Wellness Score ' + (Number.isFinite(scoreValue)?scoreValue:'—') + ' / 100';
   if(footer) footer.textContent=new Date().toLocaleDateString('en-ZA',{year:'numeric',month:'long',day:'numeric'});
 }
 
@@ -2524,6 +2540,7 @@ function wireHeaderBtns(){
   const pfExp=document.getElementById('btn-pf-export');
   if(pfExp) pfExp.addEventListener('click',()=>{
     pfExp.classList.add('loading'); pfExp.textContent='Preparing…';
+    preparePdfPrint();
     setTimeout(()=>{ pfExp.textContent='Export book'; pfExp.classList.remove('loading'); window.print(); },500);
   });
   const sch=document.getElementById('btn-schedule');
