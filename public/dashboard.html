@@ -470,7 +470,14 @@
       padding:0!important;
     }
 
-    /* Branded report masthead. */
+    /* Branded report masthead. Uses the live theme variables (set from the
+       signed-in employer/channel partner's branding by applyTheme) rather
+       than fixed colors, so an exported employer report carries that
+       employer's own logo and UI instead of always reverting to the
+       default empower-fin palette. Portfolio exports intentionally keep
+       this same masthead treatment off via body.pf-export-mode below,
+       since the portfolio book is empower-fin/channel-partner internal
+       and isn't the employer's own branded material. */
     .pdf-print-header{
       display:flex!important;
       align-items:flex-end;
@@ -478,8 +485,9 @@
       gap:20px;
       padding:0 0 8mm;
       margin:0 0 6mm;
-      border-bottom:2px solid #102536;
+      border-bottom:2px solid var(--brand-primary);
     }
+    body.pf-export-mode .pdf-print-header{ border-bottom-color:#102536; }
     .pdf-print-header .pdf-brand{
       display:flex;align-items:center;gap:10px;
     }
@@ -490,14 +498,15 @@
     }
     .pdf-print-header .pdf-title{
       font-family:'Fraunces',serif;font-size:23px;font-weight:600;
-      color:#102536;line-height:1.05;
+      color:var(--brand-primary);line-height:1.05;
     }
+    body.pf-export-mode .pdf-print-header .pdf-title{ color:#102536; }
     .pdf-print-header .pdf-meta{
       text-align:right;font-size:9px;font-weight:700;color:#607486;line-height:1.55;
     }
     .pdf-print-header .pdf-score{
       display:inline-block;margin-top:4px;padding:4px 8px;border-radius:999px;
-      background:#edf5fb;color:#075c9a;font-weight:900;
+      background:var(--ice);color:var(--brand-primary);font-weight:900;
     }
 
     .head{padding:0 0 5mm!important;margin:0!important;}
@@ -550,13 +559,19 @@
       break-before:page!important;page-break-before:always!important;
     }
 
-    /* Executive summary gets a restrained print treatment. */
+    /* Executive summary gets a restrained print treatment, keeping the
+       employer's own brand gradient (see the masthead note above) rather
+       than a flat default navy. */
     .exec-band{
       box-shadow:none!important;
-      border:1px solid #234b68!important;
-      background:#102f49!important;
+      border:1px solid var(--brand-primary-deep)!important;
+      background:linear-gradient(135deg,var(--brand-grad-1),var(--brand-grad-2) 55%,var(--brand-grad-3))!important;
       padding:13px 15px!important;
       break-inside:avoid!important;page-break-inside:avoid!important;
+    }
+    body.pf-export-mode .exec-band{
+      border-color:#234b68!important;
+      background:#102f49!important;
     }
     .exec-grid{gap:10px!important;}
     .exec-v{font-size:16px!important;}
@@ -2509,6 +2524,7 @@ function preparePdfPrint(){
   // one is actually on screen — otherwise "Export book" prints a portfolio
   // report headed with a single employer's name and score.
   const portfolioActive=document.getElementById('portfolio-view')?.style.display!=='none';
+  document.body.classList.toggle('pf-export-mode', portfolioActive);
   if(portfolioActive){
     const employerCount=document.getElementById('pf-employer-count')?.textContent?.trim() || '';
     const windowLabel=document.getElementById('pf-window-pill')?.textContent?.trim() || 'Reporting window: —';
