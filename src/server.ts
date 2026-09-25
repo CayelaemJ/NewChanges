@@ -20,7 +20,7 @@ import { csvTemplate, xlsxTemplate, formatManifest } from "./services/templateGe
 import { uploadAndValidate, commitBatch, revertBatch, resetAllData } from "./services/importService.js";
 import { startUploadJob, getUploadJob, startCommitJob, getCommitJob } from "./services/asyncJobs.js";
 import { getConfig as getSyncConfig, saveConfig as saveSyncConfig, publicConfig as publicSyncConfig, testConnection as testSyncConnection, runSync, recentSyncLogs } from "./services/syncService.js";
-import { listPartners, createPartner, updatePartner, deletePartner, assignUserToPartner, assignEmployerToPartner, themeForUser, themeForSlug } from "./services/partnerService.js";
+import { listPartners, createPartner, updatePartner, deletePartner, assignUserToPartner, assignEmployerToPartner, themeForUser, themeForEmployer, themeForSlug } from "./services/partnerService.js";
 import { login, resolveSession, destroySession, canViewEmployer, canAccessModule, allowedEmployerIds, AuthUser } from "./services/authService.js";
 import { createUser, listUsers, updateUser, resetPassword, completeSetup, deactivateSelf, listRevokedUsers, deleteUserPermanently, requestPasswordReset } from "./services/userService.js";
 import { recordEvent, engagementSummary } from "./services/analyticsService.js";
@@ -275,7 +275,7 @@ app.post("/api/auth/logout", async (req, reply) => {
 });
 
 // who am I + what can I see (drives the UI)
-app.get("/api/auth/me", async (req, reply) => {
+app.get<{ Querystring: { employer?: string } }>("/api/auth/me", async (req, reply) => {
   const user = await currentUser(req);
   if (!user) return reply.code(401).send({ error: "not signed in" });
   const ids = allowedEmployerIds(user);
@@ -285,6 +285,18 @@ app.get("/api/auth/me", async (req, reply) => {
   } else {
     employers = await prisma.employer.findMany({ where: { id: { in: ids }, sourceDeletedAt: null }, select: { id: true, name: true }, orderBy: { name: "asc" } });
   }
+  // A user (e.g. an ADMIN, or anyone with access to more than one employer)
+  // can view employers that belong to different channel partners, each with
+  // their own logo/branding. themeForUser only reflects the signed-in user's
+  // own partner assignment, which is wrong the moment they're looking at
+  // someone else's employer — the dashboard (and its "Hi <name>" splash,
+  // topbar and exported PDFs) would show the wrong logo/colors. When a
+  // specific, permitted employer is requested, use that employer's own
+  // partner branding instead.
+  const requestedEmployerId = req.query?.employer;
+  const theme = requestedEmployerId && canViewEmployer(user, requestedEmployerId)
+    ? await themeForEmployer(requestedEmployerId)
+    : await themeForUser(user.id);
   return {
     name: user.name, email: user.email, role: user.role,
     modules: {
@@ -295,7 +307,7 @@ app.get("/api/auth/me", async (req, reply) => {
     },
     sections: await sectionsForUser(user),
     employers,
-    theme: await themeForUser(user.id),
+    theme,
   };
 });
 
