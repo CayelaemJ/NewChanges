@@ -6,7 +6,8 @@
 import { PrismaClient } from "@prisma/client";
 import { getFormat } from "./reportFormats.js";
 import { compareDateValues, dateMillis, rehydrateStagedRows } from "./stagedRows.js";
-import { detectFormat, parseAndValidateCsvStreaming, parseAndValidateXlsxJsonStreaming, validateBatchDeferred } from "./importParser.js";
+import { validateRecordDeferred } from "./validationStrategies.js";
+import { detectFormat, parseAndValidateCsvStreaming, parseAndValidateXlsxJsonStreaming } from "./importParser.js";
 import { snapshotEmployer } from "./snapshotBuilder.js";
 import { notifyScoreChangeIfCurrentPeriod } from "./automationService.js";
 const prisma = new PrismaClient();
@@ -58,10 +59,25 @@ export async function uploadAndValidate(opts) {
     const batch = await prisma.importBatch.create({
         data: { reportKey: opts.reportKey, filename: opts.filename, fileFormat, status: "UPLOADED", uploadedBy: opts.uploadedBy },
     });
-    const writeChunk = await chunkedRowWriter(batch.id);
+    const writeChunkToDb = await chunkedRowWriter(batch.id);
+    const seenNaturalKeys = new Set();
+    const deferredErrors = [];
+    let stagedRowOffset = 0;
+    // Run duplicate-key detection during the existing streaming pass instead of
+    // reading the entire staged batch back from PostgreSQL for a second scan.
+    // The previous implementation did: stream -> write -> SELECT every staged
+    // row -> duplicate scan. For large uploads that extra round-trip and JSON
+    // materialisation was a significant part of upload latency.
+    const writeChunk = async (rows) => {
+        rows.forEach((row, index) => {
+            validateRecordDeferred(format, row, stagedRowOffset + index + 1, seenNaturalKeys, deferredErrors);
+        });
+        stagedRowOffset += rows.length;
+        await writeChunkToDb(rows);
+    };
     // CSV streams row-by-row and flushes chunks to ImportBatchRow as it goes —
     // this matters most here since bulk imports are almost always CSV. xlsx/json
-    // also now stream validated rows in bounded chunks rather than accumulating
+    // also stream validated rows in bounded chunks rather than accumulating
     // into one giant array, keeping peak memory bounded for any file size.
     let result;
     if (fileFormat === "csv") {
@@ -75,24 +91,11 @@ export async function uploadAndValidate(opts) {
     // already written for it (a run of valid-looking rows before a later error).
     if (!result.ok)
         await prisma.importBatchRow.deleteMany({ where: { batchId: batch.id } });
-    // Deferred validation (see validationStrategies.ts): the streaming parse
-    // above intentionally skips the duplicate-natural-key scan — it wants that
-    // O(n) Set-lookup off the hot per-row path while the file is still
-    // streaming in. It still has to run somewhere before the batch is offered
-    // up as "ready to commit", though: this was previously wired up nowhere at
-    // all, so a file with duplicate rows would validate clean, commit clean,
-    // and silently upsert (last row wins) with no warning ever surfacing.
-    // Running it here — once, after streaming, on the rows we just staged —
-    // means a duplicate-key problem still shows up at upload time rather than
-    // after a long chunked commit has already started.
-    let deferredErrors = [];
-    if (result.ok) {
-        const staged = await loadStagedRows(batch);
-        deferredErrors = await validateBatchDeferred(format, staged);
-        if (deferredErrors.length) {
-            result = { ...result, ok: false, errors: [...result.errors, ...deferredErrors] };
-            await prisma.importBatchRow.deleteMany({ where: { batchId: batch.id } });
-        }
+    // Duplicate natural keys were checked while streaming. If any were found,
+    // discard the staged rows so a failed batch can never be committed.
+    if (result.ok && deferredErrors.length) {
+        result = { ...result, ok: false, errors: [...result.errors, ...deferredErrors] };
+        await prisma.importBatchRow.deleteMany({ where: { batchId: batch.id } });
     }
     const updated = await prisma.importBatch.update({
         where: { id: batch.id },
@@ -112,8 +115,27 @@ export async function uploadAndValidate(opts) {
 // short transactions instead of one that grows with the row count and
 // eventually exceeds Prisma's interactive transaction timeout.
 async function commitRowsChunk(tx, reportKey, rows, stats, batchId) {
-    async function employeeMap() {
+    async function employeeMap(rowsForChunk) {
+        // Never scan the employer's entire employee table for every 1k-row
+        // import chunk. Large feeds previously turned each chunk into a full
+        // employee-table read, multiplying the upload/commit time by the number
+        // of chunks. Restrict the lookup to the natural keys in this chunk and
+        // let the composite employee index do the work.
+        const keys = [...new Set(rowsForChunk
+                .filter((row) => row.employer_ref != null && row.payroll_ref != null)
+                .map((row) => `${String(row.employer_ref)}|${String(row.payroll_ref)}`))];
+        if (!keys.length)
+            return { employeeIds: new Map(), platformUserIds: new Map() };
         const employees = await tx.employee.findMany({
+            where: {
+                OR: keys.map((key) => {
+                    const split = key.indexOf("|");
+                    return {
+                        employerId: key.slice(0, split),
+                        payrollRef: key.slice(split + 1),
+                    };
+                }),
+            },
             select: { id: true, employerId: true, payrollRef: true, platformUser: { select: { id: true } } },
         });
         const employeeIds = new Map();
@@ -286,7 +308,7 @@ async function commitRowsChunk(tx, reportKey, rows, stats, batchId) {
             break;
         }
         case "platform_users": {
-            const { employeeIds } = await employeeMap();
+            const { employeeIds } = await employeeMap(rows);
             for (const row of rows) {
                 const employeeId = employeeIds.get(`${row.employer_ref}|${row.payroll_ref}`);
                 if (!employeeId)
@@ -313,7 +335,7 @@ async function commitRowsChunk(tx, reportKey, rows, stats, batchId) {
             break;
         }
         case "journeys": {
-            const { platformUserIds } = await employeeMap();
+            const { platformUserIds } = await employeeMap(rows);
             for (const row of rows) {
                 const platformUserId = platformUserIds.get(`${row.employer_ref}|${row.payroll_ref}`);
                 if (!platformUserId)
@@ -344,7 +366,7 @@ async function commitRowsChunk(tx, reportKey, rows, stats, batchId) {
             break;
         }
         case "debt_accounts": {
-            const { platformUserIds } = await employeeMap();
+            const { platformUserIds } = await employeeMap(rows);
             for (const row of rows) {
                 const platformUserId = platformUserIds.get(`${row.employer_ref}|${row.payroll_ref}`);
                 if (!platformUserId)
@@ -417,7 +439,7 @@ async function commitRowsChunk(tx, reportKey, rows, stats, batchId) {
             break;
         }
         case "policies": {
-            const { platformUserIds } = await employeeMap();
+            const { platformUserIds } = await employeeMap(rows);
             for (const row of rows) {
                 const platformUserId = platformUserIds.get(`${row.employer_ref}|${row.payroll_ref}`);
                 if (!platformUserId)
@@ -487,7 +509,7 @@ async function commitRowsChunk(tx, reportKey, rows, stats, batchId) {
             break;
         }
         case "ratings": {
-            const { platformUserIds } = await employeeMap();
+            const { platformUserIds } = await employeeMap(rows);
             for (const row of rows) {
                 const platformUserId = platformUserIds.get(`${row.employer_ref}|${row.payroll_ref}`);
                 if (!platformUserId)
@@ -515,7 +537,7 @@ async function commitRowsChunk(tx, reportKey, rows, stats, batchId) {
             break;
         }
         case "referrals": {
-            const { platformUserIds } = await employeeMap();
+            const { platformUserIds } = await employeeMap(rows);
             for (const row of rows) {
                 const platformUserId = platformUserIds.get(`${row.employer_ref}|${row.payroll_ref}`);
                 if (!platformUserId)
@@ -544,7 +566,7 @@ async function commitRowsChunk(tx, reportKey, rows, stats, batchId) {
             break;
         }
         case "salary_advances": {
-            const { employeeIds } = await employeeMap();
+            const { employeeIds } = await employeeMap(rows);
             for (const row of rows) {
                 const employeeId = employeeIds.get(`${row.employer_ref}|${row.payroll_ref}`);
                 if (!employeeId)

@@ -20,10 +20,11 @@ import { csvTemplate, xlsxTemplate, formatManifest } from "./services/templateGe
 import { uploadAndValidate, commitBatch, revertBatch, resetAllData } from "./services/importService.js";
 import { startUploadJob, getUploadJob, startCommitJob, getCommitJob } from "./services/asyncJobs.js";
 import { getConfig as getSyncConfig, saveConfig as saveSyncConfig, publicConfig as publicSyncConfig, testConnection as testSyncConnection, runSync, recentSyncLogs } from "./services/syncService.js";
-import { listPartners, createPartner, updatePartner, deletePartner, assignUserToPartner, assignEmployerToPartner, themeForUser, themeForSlug } from "./services/partnerService.js";
+import { listPartners, createPartner, updatePartner, deletePartner, assignUserToPartner, assignEmployerToPartner, themeForUser, themeForEmployer, DEFAULT_THEME, themeForSlug } from "./services/partnerService.js";
 import { login, resolveSession, destroySession, canViewEmployer, canAccessModule, allowedEmployerIds, AuthUser } from "./services/authService.js";
 import { createUser, listUsers, updateUser, resetPassword, completeSetup, deactivateSelf, listRevokedUsers, deleteUserPermanently, requestPasswordReset } from "./services/userService.js";
 import { recordEvent, engagementSummary } from "./services/analyticsService.js";
+import { analyzeLogoColors } from "./services/colorAnalysisService.js";
 import { notifyAdmins, notifyScoreChangeIfCurrentPeriod, runStaleAccountCheck, runWeeklyDigestIfDue } from "./services/automationService.js";
 import { logAdminAction, listAuditLog } from "./services/auditService.js";
 import { exportAuditLogCsv, exportImportBatchCsv } from "./services/exportService.js";
@@ -275,7 +276,7 @@ app.post("/api/auth/logout", async (req, reply) => {
 });
 
 // who am I + what can I see (drives the UI)
-app.get("/api/auth/me", async (req, reply) => {
+app.get<{ Querystring: { employer?: string } }>("/api/auth/me", async (req, reply) => {
   const user = await currentUser(req);
   if (!user) return reply.code(401).send({ error: "not signed in" });
   const ids = allowedEmployerIds(user);
@@ -285,8 +286,31 @@ app.get("/api/auth/me", async (req, reply) => {
   } else {
     employers = await prisma.employer.findMany({ where: { id: { in: ids }, sourceDeletedAt: null }, select: { id: true, name: true }, orderBy: { name: "asc" } });
   }
+  // A user (e.g. an ADMIN, or anyone with access to more than one employer)
+  // can view employers that belong to different channel partners, each with
+  // their own logo/branding.
+  //
+  // ADMINS have no partner assignment and should ALWAYS see the default
+  // empower-fin branding (plain purple), never partner-specific themes.
+  //
+  // Regular users: themeForUser reflects the signed-in user's own partner
+  // assignment. However, when they're looking at someone else's employer,
+  // the dashboard would show the wrong logo/colors. When a specific employer
+  // is requested, use that employer's own partner branding instead.
+  const requestedEmployerId = req.query?.employer;
+  let theme;
+  if (user.role === "ADMIN") {
+    // Admins always see plain empower-fin branding
+    theme = { ...DEFAULT_THEME };
+  } else if (requestedEmployerId && canViewEmployer(user, requestedEmployerId)) {
+    // Regular user viewing a specific employer: use that employer's partner theme
+    theme = await themeForEmployer(requestedEmployerId);
+  } else {
+    // Regular user viewing their own employers: use their assigned partner theme
+    theme = await themeForUser(user.id);
+  }
+
   return {
-    name: user.name, email: user.email, role: user.role,
     modules: {
       admin: canAccessModule(user, "admin"),
       dashboard: canAccessModule(user, "dashboard"),
@@ -295,7 +319,7 @@ app.get("/api/auth/me", async (req, reply) => {
     },
     sections: await sectionsForUser(user),
     employers,
-    theme: await themeForUser(user.id),
+    theme,
   };
 });
 
@@ -809,6 +833,44 @@ app.post<{ Params: { id: string }; Body: { userId?: string; employerId?: string 
     return reply.code(400).send({ error: "userId or employerId required" });
   },
 );
+
+// analyze logo image and extract dominant brand colors
+app.post<{ Params: { id: string }; Body: { imageDataUrl?: string; pixelData?: string } }>(
+  "/api/admin/partners/:id/analyze-logo",
+  async (req, reply) => {
+    const admin = await requireAdmin(req, reply);
+    if (!admin) return;
+    
+    try {
+      const { imageDataUrl, pixelData } = req.body ?? {};
+
+      if (typeof pixelData === "string") {
+        // Client extracted pixel data from canvas and sent it as base64
+        const pixelArray = new Uint8ClampedArray(Buffer.from(pixelData, "base64"));
+        const imageData = { data: pixelArray, width: 0, height: 0 } as any;
+        const colors = analyzeLogoColors(imageData);
+        logAdminAction(admin, "partner.analyze_logo", `Analyzed logo colors for partner ${req.params.id}`, { targetType: "Partner", targetId: req.params.id });
+        return colors;
+      }
+
+      if (typeof imageDataUrl === "string") {
+        // Parse data URL: "data:image/png;base64,..."
+        const matches = imageDataUrl.match(/^data:image\/\w+;base64,(.+)$/);
+        if (!matches) {
+          return reply.code(400).send({ error: "Invalid image data URL format" });
+        }
+        // In production, decode image with 'jimp' or 'sharp' to extract pixel data
+        return reply.code(501).send({ error: "Server-side image decoding not yet implemented. Please use browser canvas to extract pixels." });
+      }
+
+      return reply.code(400).send({ error: "pixelData or imageDataUrl is required" });
+    } catch (e: any) {
+      req.log.error(e);
+      return reply.code(400).send({ error: e.message || "color analysis failed" });
+    }
+  },
+);
+
 // public: theme by slug (for the future branded login page)
 app.get<{ Params: { slug: string } }>("/api/partner-theme/:slug", async (req) => {
   return themeForSlug(req.params.slug);
