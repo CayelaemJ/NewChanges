@@ -22,22 +22,23 @@
   *{box-sizing:border-box;margin:0;padding:0;}
   body{font-family:'Manrope',system-ui,sans-serif;color:var(--ink);
     background:radial-gradient(1100px 560px at 88% -10%,rgba(0,120,199,.07),transparent 60%),#f3f7fb;min-height:100vh;}
-  .wrap{max-width:1080px;margin:0 auto;padding:0 28px 72px;}
+  .wrap{max-width:1100px;margin:0 auto;padding:0 32px 96px;}
   .topbar{position:sticky;top:0;z-index:40;background:rgba(243,247,251,.86);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);}
-  .topbar-inner{max-width:1080px;margin:0 auto;padding:0 28px;height:64px;display:flex;align-items:center;gap:14px;}
+  .topbar-inner{max-width:1100px;margin:0 auto;padding:0 32px;height:68px;display:flex;align-items:center;gap:14px;}
   .logo-text{font-weight:800;font-size:16px;letter-spacing:-.3px;color:var(--brand-primary);}
   .logo-text .opt{color:var(--blue);}
   .pill{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--blue);background:var(--ice);border:1px solid var(--line);padding:5px 11px;border-radius:8px;}
-  .head{padding:34px 0 20px;}
-  .head .eyebrow{font-size:12px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--blue);margin-bottom:9px;}
-  .head h1{font-family:'Fraunces',serif;font-weight:600;font-size:34px;letter-spacing:-.6px;color:var(--brand-primary);}
-  .head p{margin-top:10px;font-size:14.5px;color:var(--grey);max-width:64ch;line-height:1.55;}
-  .grid{display:grid;grid-template-columns:300px 1fr;gap:22px;align-items:start;}
+  .head{padding:44px 0 28px;}
+  .head .eyebrow{font-size:12px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--blue);margin-bottom:11px;}
+  .head h1{font-family:'Fraunces',serif;font-weight:600;font-size:36px;letter-spacing:-.6px;color:var(--brand-primary);}
+  .head p{margin-top:12px;font-size:14.5px;color:var(--grey);max-width:64ch;line-height:1.6;}
+  .grid{display:grid;grid-template-columns:300px 1fr;gap:26px;align-items:start;}
   .card{background:var(--white);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);}
-  .card-hd{padding:18px 20px 12px;border-bottom:1px solid var(--line-soft);}
-  .card-hd h2{font-size:14px;font-weight:800;color:var(--brand-primary);letter-spacing:.01em;}
-  .card-hd .note{font-size:12px;color:var(--grey-l);margin-top:4px;}
-  .card-bd{padding:16px 20px 20px;}
+  .card-hd{padding:22px 24px 14px;border-bottom:1px solid var(--line-soft);}
+  .card-hd h2{font-size:14.5px;font-weight:800;color:var(--brand-primary);letter-spacing:.01em;}
+  .card-hd .note{font-size:12px;color:var(--grey-l);margin-top:5px;line-height:1.5;}
+  .card-bd{padding:22px 24px 26px;}
+  .card-bd>*+*{margin-top:16px;} /* consistent vertical rhythm between fields/sections; .section-gap (below) still wins for explicit section breaks since it's more specific */
   /* report list */
   .rep{display:flex;flex-direction:column;gap:2px;padding:11px 13px;border-radius:var(--radius-sm);cursor:pointer;border:1px solid transparent;transition:.14s;}
   .rep:hover{background:var(--ice-2);}
@@ -865,8 +866,8 @@ function renderPartners(){
     const logo = p.logoDataUrl
       ? `<img class="partner-preview-logo" src="${p.logoDataUrl}" alt="${p.displayName||p.name} logo">`
       : `<div class="partner-preview-logo partner-preview-fallback" style="background:${ac};">${(p.displayName||p.name||'?').slice(0,2).toUpperCase()}</div>`;
-    return `<div class="card partner-card" style="margin-bottom:12px;padding:16px;border:1px solid #e8e1f7;">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+    return `<div class="card partner-card" style="margin-bottom:16px;padding:20px;border:1px solid #e8e1f7;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
         <div style="width:34px;height:34px;border-radius:8px;background:${pc};box-shadow:inset 0 0 0 1px rgba(255,255,255,.35);"></div>
         <div style="font-weight:800;font-size:15px;color:#32217c;flex:1;">${p.name}</div>
         <span class="muted" style="font-size:12px;">${p._count.users} users · ${p._count.employers} employers · /p/${p.slug}</span>
@@ -877,7 +878,7 @@ function renderPartners(){
         <span class="partner-preview-badge" style="color:${ac};">Live preview</span>
       </div>
       <button class="btn partner-preview-open" type="button" onclick="openClientPreview('${p.id}')">View client dashboard</button>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr) 2fr;gap:10px;align-items:end;">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr) 2fr;gap:12px;align-items:end;margin-top:16px;">
         <label style="font-size:11.5px;font-weight:700;color:#5b6b7a;">Primary<input type="color" value="${pc}" onchange="editPartner('${p.id}','primaryColor',this.value)" style="display:block;width:100%;height:34px;border:1px solid #e8e1f7;border-radius:7px;margin-top:4px;"></label>
         <label style="font-size:11.5px;font-weight:700;color:#5b6b7a;">Accent<input type="color" value="${ac}" onchange="editPartner('${p.id}','accentColor',this.value)" style="display:block;width:100%;height:34px;border:1px solid #e8e1f7;border-radius:7px;margin-top:4px;"></label>
         <label style="font-size:11.5px;font-weight:700;color:#5b6b7a;">Navy<input type="color" value="${nv}" onchange="editPartner('${p.id}','navyColor',this.value)" style="display:block;width:100%;height:34px;border:1px solid #e8e1f7;border-radius:7px;margin-top:4px;"></label>
@@ -933,12 +934,112 @@ async function editPartner(id,field,value){
   await fetch(`${API}/api/admin/partners/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({[field]:value})});
   loadPartners();
 }
+// ── colour extraction from an uploaded logo ──
+// Samples the logo's pixels on an offscreen canvas, ignores near-white/near-black/
+// low-saturation background pixels, and picks a brand palette from what's left:
+//   accent  = the most vivid (highest-saturation) colour found
+//   primary = the darkest genuinely-colourful tone (falls back to a darkened accent)
+//   navy    = primary pushed further toward near-black, for the deep/navy slot
+function rgbToHsl(r,g,b){
+  r/=255; g/=255; b/=255;
+  const max=Math.max(r,g,b), min=Math.min(r,g,b);
+  let h=0,s=0; const l=(max+min)/2;
+  const d=max-min;
+  if(d!==0){
+    s=d/(1-Math.abs(2*l-1));
+    switch(max){
+      case r: h=60*(((g-b)/d)%6); break;
+      case g: h=60*((b-r)/d+2); break;
+      default: h=60*((r-g)/d+4);
+    }
+  }
+  if(h<0) h+=360;
+  return [h,s,l];
+}
+function hslToHex(h,s,l){
+  const c=(1-Math.abs(2*l-1))*s, x=c*(1-Math.abs((h/60)%2-1)), m=l-c/2;
+  let r=0,g=0,b=0;
+  if(h<60){r=c;g=x;} else if(h<120){r=x;g=c;} else if(h<180){g=c;b=x;}
+  else if(h<240){g=x;b=c;} else if(h<300){r=x;b=c;} else {r=c;b=x;}
+  const toHex=v=>Math.max(0,Math.min(255,Math.round((v+m)*255)));
+  return [toHex(r),toHex(g),toHex(b)].map(v=>v.toString(16).padStart(2,'0')).join('');
+}
+function extractColorsFromImage(dataUrl){
+  return new Promise((resolve)=>{
+    const img=new Image();
+    img.onload=()=>{
+      try{
+        const size=64; // downsample — plenty for a palette, keeps this fast
+        const canvas=document.createElement('canvas');
+        canvas.width=size; canvas.height=size;
+        const ctx=canvas.getContext('2d',{willReadFrequently:true});
+        ctx.clearRect(0,0,size,size);
+        ctx.drawImage(img,0,0,size,size);
+        const {data}=ctx.getImageData(0,0,size,size);
+        const buckets=new Map(); // quantised colour -> {count,r,g,b}
+        for(let i=0;i<data.length;i+=4){
+          const r=data[i],g=data[i+1],b=data[i+2],a=data[i+3];
+          if(a<128) continue; // transparent
+          const max=Math.max(r,g,b), min=Math.min(r,g,b);
+          if(max>238 && min>210) continue; // near-white background
+          if(max<24) continue; // near-black background/outline noise
+          if(max-min<18) continue; // too grey/neutral to be a brand colour
+          const qr=Math.round(r/16)*16, qg=Math.round(g/16)*16, qb=Math.round(b/16)*16;
+          const key=`${qr},${qg},${qb}`;
+          const entry=buckets.get(key)||{count:0,r:qr,g:qg,b:qb};
+          entry.count++; buckets.set(key,entry);
+        }
+        const palette=[...buckets.values()].sort((a,b)=>b.count-a.count).slice(0,12);
+        if(!palette.length){ resolve(null); return; }
+        const withHsl=palette.map(c=>({...c,hsl:rgbToHsl(c.r,c.g,c.b)}));
+        const accent=withHsl.slice().sort((a,b)=>(b.hsl[1]*Math.min(b.hsl[2],1-b.hsl[2]))-(a.hsl[1]*Math.min(a.hsl[2],1-a.hsl[2])))[0];
+        const darkCandidates=withHsl.filter(c=>c.hsl[2]<0.5 && c.hsl[1]>0.25).sort((a,b)=>a.hsl[2]-b.hsl[2]);
+        const primary=darkCandidates[0]||{hsl:[accent.hsl[0],Math.min(1,accent.hsl[1]),Math.max(0.14,accent.hsl[2]-0.28)]};
+        const navyHsl=[primary.hsl[0],Math.min(1,primary.hsl[1]+0.08),Math.max(0.10,primary.hsl[2]-0.14)];
+        resolve({
+          primaryColor: hslToHex(...primary.hsl),
+          accentColor: hslToHex(...accent.hsl),
+          navyColor: hslToHex(...navyHsl),
+        });
+      }catch(e){ resolve(null); }
+    };
+    img.onerror=()=>resolve(null);
+    img.src=dataUrl;
+  });
+}
 function uploadPartnerLogo(id,input){
   const f=input.files[0]; if(!f) return;
-  if(f.size>500000){ alert('Please use a logo under 500KB.'); return; }
+  if(f.size>500000){ showToast('Please use a logo under 500KB.','err'); input.value=''; return; }
   const reader=new FileReader();
-  reader.onload=async()=>{ await fetch(`${API}/api/admin/partners/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({logoDataUrl:reader.result})}); alert('Logo saved.'); loadPartners(); };
+  reader.onload=async()=>{
+    const logoDataUrl=reader.result;
+    const detected=await extractColorsFromImage(logoDataUrl);
+    const payload=detected
+      ? { logoDataUrl, primaryColor:detected.primaryColor, accentColor:detected.accentColor, navyColor:detected.navyColor }
+      : { logoDataUrl };
+    await fetch(`${API}/api/admin/partners/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    showToast(detected ? 'Logo saved — brand colours detected automatically. Adjust any swatch below if needed.' : 'Logo saved.','ok');
+    loadPartners();
+  };
   reader.readAsDataURL(f);
+}
+// Lightweight, non-blocking replacement for alert() so an automatic colour
+// detection doesn't interrupt the admin with a modal dialog.
+function showToast(message,kind){
+  let el=document.getElementById('admin-toast');
+  if(!el){
+    el=document.createElement('div');
+    el.id='admin-toast';
+    el.style.cssText='position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(12px);z-index:9999;padding:12px 18px;border-radius:11px;font:600 13px/1.4 Manrope,system-ui,sans-serif;box-shadow:0 12px 28px rgba(20,10,50,.18);opacity:0;transition:opacity .18s,transform .18s;max-width:min(86vw,420px);text-align:center;';
+    document.body.appendChild(el);
+  }
+  el.textContent=message;
+  el.style.background = kind==='err' ? '#fdecea' : '#eafaf1';
+  el.style.color = kind==='err' ? '#b5391f' : '#137a47';
+  el.style.border = kind==='err' ? '1px solid #f3c2ba' : '1px solid #b7e8cc';
+  clearTimeout(el._hideTimer);
+  requestAnimationFrame(()=>{ el.style.opacity='1'; el.style.transform='translateX(-50%) translateY(0)'; });
+  el._hideTimer=setTimeout(()=>{ el.style.opacity='0'; el.style.transform='translateX(-50%) translateY(12px)'; },3600);
 }
 async function assignToPartner(id){
   const uid=$('#pt-u-'+id).value, eid=$('#pt-e-'+id).value;
