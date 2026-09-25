@@ -25,12 +25,12 @@
     --line-soft:#e4e9ef;
     --ink:#0f2438;
     --grey:#5b6b7a;
-    --grey-l:#607486;
-    --green:#1fa463;
+    --grey-l:var(--chart-debt);
+    --green:var(--chart-cashflow);
     --green-soft:#e7f7ef;
-    --amber:#e8910c;
+    --amber:var(--chart-mid);
     --amber-soft:#fdf3e2;
-    --red:#e0492f;
+    --red:var(--chart-high);
     --white:#fff;
     --brand-soft:#f3efff;
     --brand-grad-1:#32217c;
@@ -189,7 +189,7 @@
   .rb-val{font-size:11px;font-weight:700;color:var(--grey-l);text-align:right;}
   .rating-share-pill{margin-top:18px;background:var(--green-soft);border:1px solid #c4ecd5;border-radius:13px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;}
   .rating-share-pill .v{font-family:'Fraunces',serif;font-weight:600;font-size:26px;color:var(--green);letter-spacing:-.5px;}
-  .rating-share-pill .l{font-size:12px;font-weight:700;color:#137a47;}
+  .rating-share-pill .l{font-size:12px;font-weight:700;color:var(--chart-cashflow);}
 
   /* ── creditor table ────────────────────────────────── */
   table.ct{width:100%;border-collapse:collapse;}
@@ -202,7 +202,7 @@
   .num{font-weight:800;color:var(--brand-primary);font-variant-numeric:tabular-nums;}
   .muted{color:var(--grey);font-weight:600;}
   .chip-mini{font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:6px;}
-  .chip-elig{background:var(--green-soft);color:#137a47;}
+  .chip-elig{background:var(--green-soft);color:var(--chart-cashflow);}
   .chip-prog{background:var(--ice);color:var(--blue-d);}
 
   /* ── region map / income ───────────────────────────── */
@@ -423,8 +423,8 @@
   .wd-name small{display:block;}
   .pf-no-data{background:#edf0f3!important;color:#52616d!important;font-weight:700!important;}
   .muted{color:#425466!important;}
-  [style*="color:#8497a7"]{color:#607486!important;}
-  svg text[fill="#8497a7"]{fill:#607486;}
+  [style*="color:#8497a7"]{color:var(--chart-debt)!important;}
+  svg text[fill="#8497a7"]{fill:var(--chart-debt);}
   .exec-band svg text{fill:#e3f0fb;}
   @media(max-width:1080px){ .pf-picker{max-width:100%;} .pf-toolbar{align-items:stretch;flex-direction:column;} .pf-filter-block{min-width:0;width:100%;} .pf-toolbar-right{justify-content:flex-start;} }
 
@@ -486,14 +486,14 @@
     .pdf-print-header img{height:27px!important;width:auto!important;}
     .pdf-print-header .pdf-kicker{
       font-size:8.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
-      color:#607486;margin-bottom:2px;
+      color:var(--chart-debt);margin-bottom:2px;
     }
     .pdf-print-header .pdf-title{
       font-family:'Fraunces',serif;font-size:23px;font-weight:600;
       color:#102536;line-height:1.05;
     }
     .pdf-print-header .pdf-meta{
-      text-align:right;font-size:9px;font-weight:700;color:#607486;line-height:1.55;
+      text-align:right;font-size:9px;font-weight:700;color:var(--chart-debt);line-height:1.55;
     }
     .pdf-print-header .pdf-score{
       display:inline-block;margin-top:4px;padding:4px 8px;border-radius:999px;
@@ -606,7 +606,7 @@
   .wellness-card{border-top:3px solid var(--blue);}
   .wellness-inner{display:grid;grid-template-columns:230px 1fr;gap:30px;align-items:center;}
   .wellness-left{text-align:center;border-right:1px solid var(--line-soft);padding-right:26px;}
-  .wellness-band{display:inline-block;font-size:12px;font-weight:800;color:#137a47;background:var(--green-soft);border:1px solid #c4ecd5;padding:5px 13px;border-radius:999px;margin-top:6px;}
+  .wellness-band{display:inline-block;font-size:12px;font-weight:800;color:var(--chart-cashflow);background:var(--green-soft);border:1px solid #c4ecd5;padding:5px 13px;border-radius:999px;margin-top:6px;}
   .wellness-delta{font-size:12px;font-weight:800;color:var(--green);margin-top:10px;}
   .wellness-note{font-size:11px;color:var(--grey-l);line-height:1.55;margin-top:12px;max-width:30ch;margin-left:auto;margin-right:auto;}
   .wellness-right{display:flex;flex-direction:column;gap:13px;}
@@ -619,7 +619,7 @@
 
   .rag-lights{display:inline-flex;align-items:center;gap:3px;margin-right:7px;vertical-align:middle;}
   .rag-dot{width:7px;height:7px;border-radius:50%;display:block;opacity:.25;box-shadow:none;}
-  .rag-dot.red{background:#e0492f}.rag-dot.amber{background:#e8910c}.rag-dot.green{background:#1fa463}
+  .rag-dot.red{background:var(--chart-high)}.rag-dot.amber{background:var(--chart-mid)}.rag-dot.green{background:var(--chart-cashflow)}
   .rag-dot.on{opacity:1;box-shadow:0 0 0 2px rgba(0,0,0,.05)}
 
   @media(max-width:1080px){ .wellness-inner{grid-template-columns:1fr;} .wellness-left{border-right:none;border-bottom:1px solid var(--line-soft);padding-right:0;padding-bottom:18px;} .wd-row{grid-template-columns:140px 1fr 34px;} }
@@ -1168,12 +1168,12 @@ let DATA = {
 
   // ── Act 3: creditor breakdown (arrears journey) ──
   creditors: [
-    { name:"African Bank",    color:"#e0492f", accounts:128, balance:"R 2.41m", avg:"R 18,830", status:"elig", statusL:"In journey" },
+    { name:"African Bank",    color:"var(--chart-high)", accounts:128, balance:"R 2.41m", avg:"R 18,830", status:"elig", statusL:"In journey" },
     { name:"Capitec",         color:"var(--blue)", accounts: 96, balance:"R 1.88m", avg:"R 19,580", status:"elig", statusL:"In journey" },
     { name:"Standard Bank",   color:"var(--blue-d)", accounts: 74, balance:"R 1.62m", avg:"R 21,890", status:"elig", statusL:"In journey" },
-    { name:"FNB",             color:"#1fa463", accounts: 61, balance:"R 1.39m", avg:"R 22,790", status:"prog", statusL:"Negotiating" },
-    { name:"Truworths",       color:"#8a4fc4", accounts: 88, balance:"R 1.04m", avg:"R 11,820", status:"prog", statusL:"Negotiating" },
-    { name:"Other retailers", color:"#607486", accounts:142, balance:"R 0.84m", avg:"R 5,915",  status:"prog", statusL:"Negotiating" },
+    { name:"FNB",             color:"var(--chart-cashflow)", accounts: 61, balance:"R 1.39m", avg:"R 22,790", status:"prog", statusL:"Negotiating" },
+    { name:"Truworths",       color:"var(--chart-insurance)", accounts: 88, balance:"R 1.04m", avg:"R 11,820", status:"prog", statusL:"Negotiating" },
+    { name:"Other retailers", color:"var(--chart-debt)", accounts:142, balance:"R 0.84m", avg:"R 5,915",  status:"prog", statusL:"Negotiating" },
   ],
   creditorsTotal: { accounts:589, balance:"R 9.18m" },
 
@@ -1181,8 +1181,8 @@ let DATA = {
   debtProfile: [
     { type:"Bank personal loans", balance:"R 5.91m", pct:64, col:"var(--brand-primary)" },
     { type:"Retail / store credit", balance:"R 1.88m", pct:20, col:"var(--blue)" },
-    { type:"Microloans",            balance:"R 0.92m", pct:10, col:"#e8910c" },
-    { type:"Other unsecured",       balance:"R 0.47m", pct:6,  col:"#607486" },
+    { type:"Microloans",            balance:"R 0.92m", pct:10, col:"var(--chart-mid)" },
+    { type:"Other unsecured",       balance:"R 0.47m", pct:6,  col:"var(--chart-debt)" },
   ],
 
   // ── Act 4: stress map (by site) ──
@@ -1205,8 +1205,8 @@ let DATA = {
   income: [
     { name:"Under R8k/mo",  count:281, color:"var(--brand-primary)" },
     { name:"R8k–R15k/mo",   count:392, color:"var(--blue)" },
-    { name:"R15k–R25k/mo",  count:178, color:"#4ea3da" },
-    { name:"Over R25k/mo",  count:87,  color:"#6b9fc4" },
+    { name:"R15k–R25k/mo",  count:178, color:"var(--chart-engagement)" },
+    { name:"Over R25k/mo",  count:87,  color:"var(--chart-workforce)" },
   ],
 
   // ── Act 4: ratings ──
@@ -1223,10 +1223,10 @@ let DATA = {
     accounts: 274,
     avgPerAccount: "R 10,000",
     statusBars: [
-      { l:"Identified",        n:274, pct:100, c:"#6b9fc4" },
-      { l:"Letter dispatched", n:241, pct:88,  c:"#4ea3da" },
+      { l:"Identified",        n:274, pct:100, c:"var(--chart-workforce)" },
+      { l:"Letter dispatched", n:241, pct:88,  c:"var(--chart-engagement)" },
       { l:"Creditor conceded", n:163, pct:59,  c:"var(--blue)" },
-      { l:"Written off",       n:118, pct:43,  c:"#1fa463" },
+      { l:"Written off",       n:118, pct:43,  c:"var(--chart-cashflow)" },
     ],
     writtenOff: "R 1.18m",
   },
@@ -1421,20 +1421,20 @@ const PORTFOLIO_KPI_INFO = {
 
 /* ─────────────────── tiny SVG / icon helpers ─────────────────── */
 const ICON = {
-  shield:'<path d="M12 3l7 3v5c0 4.4-3 7.5-7 9-4-1.5-7-4.6-7-9V6l7-3z" stroke="var(--blue)" stroke-width="1.8" fill="none"/>',
-  umbrella:'<path d="M12 3v2M3.5 11a8.5 8.5 0 0117 0H3.5zM12 11v7a2.5 2.5 0 01-5 0" stroke="var(--blue)" stroke-width="1.8" fill="none" stroke-linecap="round"/>',
-  scale:'<path d="M12 4v16M7 20h10M5 8l-2.5 5a2.5 2.5 0 005 0L5 8zm14 0l-2.5 5a2.5 2.5 0 005 0L19 8zM5 8l7-2 7 2" stroke="var(--blue)" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
-  scroll:'<path d="M6 4h10a2 2 0 012 2v11a3 3 0 01-3 3H7a2 2 0 01-2-2V6M9 8h6M9 12h6M9 16h4" stroke="var(--blue)" stroke-width="1.7" fill="none" stroke-linecap="round"/>',
-  wallet:'<path d="M3 8a2 2 0 012-2h12a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8zm14 3h-3a2 2 0 000 4h3" stroke="var(--blue)" stroke-width="1.8" fill="none" stroke-linecap="round"/>',
-  car:'<path d="M5 13l1.5-4.5A2 2 0 018.4 7h7.2a2 2 0 011.9 1.5L19 13m-14 0h14m-14 0v4h2v-2m10 2h2v-4m-12 1h1m9 0h1" stroke="var(--blue)" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
+  shield:'<path d="M12 3l7 3v5c0 4.4-3 7.5-7 9-4-1.5-7-4.6-7-9V6l7-3z" stroke="var(--chart-cashflow)" stroke-width="1.8" fill="none"/>',
+  umbrella:'<path d="M12 3v2M3.5 11a8.5 8.5 0 0117 0H3.5zM12 11v7a2.5 2.5 0 01-5 0" stroke="var(--chart-cashflow)" stroke-width="1.8" fill="none" stroke-linecap="round"/>',
+  scale:'<path d="M12 4v16M7 20h10M5 8l-2.5 5a2.5 2.5 0 005 0L5 8zm14 0l-2.5 5a2.5 2.5 0 005 0L19 8zM5 8l7-2 7 2" stroke="var(--chart-cashflow)" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
+  scroll:'<path d="M6 4h10a2 2 0 012 2v11a3 3 0 01-3 3H7a2 2 0 01-2-2V6M9 8h6M9 12h6M9 16h4" stroke="var(--chart-cashflow)" stroke-width="1.7" fill="none" stroke-linecap="round"/>',
+  wallet:'<path d="M3 8a2 2 0 012-2h12a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8zm14 3h-3a2 2 0 000 4h3" stroke="var(--chart-cashflow)" stroke-width="1.8" fill="none" stroke-linecap="round"/>',
+  car:'<path d="M5 13l1.5-4.5A2 2 0 018.4 7h7.2a2 2 0 011.9 1.5L19 13m-14 0h14m-14 0v4h2v-2m10 2h2v-4m-12 1h1m9 0h1" stroke="var(--chart-cashflow)" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
 };
 function svgIco(name){ return '<svg width="20" height="20" viewBox="0 0 24 24">'+(ICON[name]||'')+'</svg>'; }
 
 const KPI_ICONS = {
-  takeUp:    {bg:'var(--brand-soft)', path:'<circle cx="12" cy="8" r="3.5" stroke="var(--blue)" stroke-width="1.8" fill="none"/><path d="M5 19c0-3 3.1-5 7-5s7 2 7 5" stroke="var(--blue)" stroke-width="1.8" fill="none" stroke-linecap="round"/>'},
-  activated: {bg:'var(--brand-soft)', path:'<path d="M13 3L5 13h6l-1 8 8-10h-6l1-8z" stroke="var(--blue)" stroke-width="1.7" fill="none" stroke-linejoin="round"/>'},
-  saving:    {bg:'#e7f7ef', path:'<path d="M12 4v16m4-13H10a2.5 2.5 0 000 5h4a2.5 2.5 0 010 5H8" stroke="#1fa463" stroke-width="1.8" fill="none" stroke-linecap="round"/>'},
-  rating:    {bg:'#fdf3e2', path:'<path d="M12 3l2.5 5.5L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-.5L12 3z" stroke="#e8910c" stroke-width="1.6" fill="none" stroke-linejoin="round"/>'},
+  takeUp:    {bg:'var(--brand-soft)', path:'<circle cx="12" cy="8" r="3.5" stroke="var(--chart-cashflow)" stroke-width="1.8" fill="none"/><path d="M5 19c0-3 3.1-5 7-5s7 2 7 5" stroke="var(--chart-cashflow)" stroke-width="1.8" fill="none" stroke-linecap="round"/>'},
+  activated: {bg:'var(--brand-soft)', path:'<path d="M13 3L5 13h6l-1 8 8-10h-6l1-8z" stroke="var(--chart-cashflow)" stroke-width="1.7" fill="none" stroke-linejoin="round"/>'},
+  saving:    {bg:'#e7f7ef', path:'<path d="M12 4v16m4-13H10a2.5 2.5 0 000 5h4a2.5 2.5 0 010 5H8" stroke="var(--chart-cashflow)" stroke-width="1.8" fill="none" stroke-linecap="round"/>'},
+  rating:    {bg:'#fdf3e2', path:'<path d="M12 3l2.5 5.5L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-.5L12 3z" stroke="var(--chart-mid)" stroke-width="1.6" fill="none" stroke-linejoin="round"/>'},
 };
 
 function el(html){ const d=document.createElement('div'); d.innerHTML=html.trim(); return d.firstElementChild; }
@@ -1492,7 +1492,7 @@ function sparkline(points, color){
 /* ─────────────────── Executive summary band ─────────────────── */
 function renderExec(){
   const wrap=document.getElementById('exec-summary');
-  const tick='<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7.5" stroke="#1fa463" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const tick='<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7.5" stroke="var(--chart-cashflow)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const items=DATA.exec.items.map(it=>{ const mk=employerMetricKey(it.l); return `<div class="exec-item">${tick}<div><div class="exec-v">${it.v}</div><div class="exec-l">${it.l} ${employerInfoButton(mk)}</div></div></div>`; }).join('');
   const incomplete=window.__LIVE__ && (DATA.wellness?.complete===false || !hasValue(DATA.wellness?.score));
   const verdict=incomplete?'Data incomplete':(window.__LIVE__ ? (DATA.wellness.score>=75?'Strong':DATA.wellness.score>=60?'On track':'Needs attention') : 'On track');
@@ -1512,7 +1512,7 @@ function renderExec(){
 // thing as the score band's colour — improving/strong shines dark green, at
 // risk is amber, critical is red. Thresholds match wellnessBand() server-side.
 function brandSeries(i=0){
-  const vars=['--brand-grad-1','--brand-grad-2','--brand-grad-3','--brand-grad-4','--brand-grad-5'];
+  const vars=['--chart-engagement','--chart-cashflow','--chart-debt','--chart-insurance','--chart-workforce','--chart-low','--chart-mid','--chart-high'];
   return `var(${vars[Math.abs(i)%vars.length]})`;
 }
 function ragLights(rag){
@@ -1521,9 +1521,9 @@ function ragLights(rag){
 }
 
 function bandTone(score){
-  if(score>=60) return {c:'#137a47',bg:'#e3f6ec',border:'#b8e6cc',rag:'green'};   // Strong / Improving
-  if(score>=40) return {c:'#8a5a10',bg:'#fff2df',border:'#f3cf98',rag:'amber'};   // At risk
-  return {c:'#a3271c',bg:'#fdeceb',border:'#f3b8b1',rag:'red'};                  // Critical
+  if(score>=60) return {c:'var(--chart-low)',bg:'color-mix(in srgb, var(--chart-low) 12%, white)',border:'color-mix(in srgb, var(--chart-low) 32%, white)',rag:'green'};   // Strong / Improving
+  if(score>=40) return {c:'var(--chart-mid)',bg:'color-mix(in srgb, var(--chart-mid) 12%, white)',border:'color-mix(in srgb, var(--chart-mid) 32%, white)',rag:'amber'};   // At risk
+  return {c:'var(--chart-high)',bg:'color-mix(in srgb, var(--chart-high) 12%, white)',border:'color-mix(in srgb, var(--chart-high) 32%, white)',rag:'red'};                  // Critical
 }
 function renderWellness(){
   const wrap=document.getElementById('wellness');
@@ -1533,7 +1533,7 @@ function renderWellness(){
     const drivers=(w.drivers||[]).map(d=>{
       const available=d.available!==false && hasValue(d.score);
       const score=available?Number(d.score):null;
-      const col=available?bandTone(score).c:'#e8910c';
+      const col=available?bandTone(score).c:'var(--chart-mid)';
       const mk=employerMetricKey(d.name); return `<div class="wd-row"><div class="wd-name">${d.name} ${employerInfoButton(mk)}<small>${d.note||''}</small></div><div class="wd-track"><div class="wd-fill" style="width:${available?score:0}%;background:${available?col:'var(--brand-soft)'}"></div></div><div class="wd-val">${available?score:'—'}</div></div>`;
     }).join('');
     wrap.appendChild(el(`<div class="wellness-inner"><div class="wellness-left"><div style="font-family:'Fraunces',serif;font-size:46px;color:var(--brand-primary);line-height:1">—</div><div style="font-size:11px;color:#8497a7;font-weight:800;margin-top:4px">/ 100</div><div class="wellness-band" style="color:#8a6610;background:#fff8e8;border-color:#efd49b">${ragLights('amber')}Data incomplete</div><div class="wellness-note">The score is calculated only when all required driver feeds are available. Missing data is never treated as zero.</div></div><div class="wellness-right">${drivers||'<div class="muted">Required score drivers have not been loaded.</div>'}</div></div>`));
@@ -1546,7 +1546,7 @@ function renderWellness(){
     <path d="M16 88 A64 64 0 0 1 144 88" fill="none" stroke="url(#wg)" stroke-width="13" stroke-linecap="round" stroke-dasharray="${(C*frac).toFixed(1)} ${C.toFixed(1)}"/>
     <defs><linearGradient id="wg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="var(--brand-grad-1)"/><stop offset=".5" stop-color="var(--brand-grad-3)"/><stop offset="1" stop-color="var(--brand-grad-5)"/></linearGradient></defs>
     <text x="80" y="74" text-anchor="middle" font-family="Fraunces,serif" font-size="34" font-weight="600" fill="var(--brand-primary)">${w.score}</text><text x="80" y="90" text-anchor="middle" font-size="9.5" font-weight="700" fill="#8497a7">/ 100</text></svg>`;
-  const drivers=(w.drivers||[]).map(d=>{ const available=d.available!==false&&hasValue(d.score); const score=available?Number(d.score):0; const col=available?bandTone(score).c:'#e8910c'; const mk=employerMetricKey(d.name); return `<div class="wd-row"><div class="wd-name">${d.name} ${employerInfoButton(mk)}<small>${d.note||''}</small></div><div class="wd-track"><div class="wd-fill" style="width:0;background:${available?col:'var(--brand-soft)'}" data-w="${available?score:0}"></div></div><div class="wd-val">${available?score:'—'}</div></div>`; }).join('');
+  const drivers=(w.drivers||[]).map(d=>{ const available=d.available!==false&&hasValue(d.score); const score=available?Number(d.score):0; const col=available?bandTone(score).c:'var(--chart-mid)'; const mk=employerMetricKey(d.name); return `<div class="wd-row"><div class="wd-name">${d.name} ${employerInfoButton(mk)}<small>${d.note||''}</small></div><div class="wd-track"><div class="wd-fill" style="width:0;background:${available?col:'var(--brand-soft)'}" data-w="${available?score:0}"></div></div><div class="wd-val">${available?score:'—'}</div></div>`; }).join('');
   const bt=bandTone(Number(w.score)||0);
   wrap.appendChild(el(`<div class="wellness-inner"><div class="wellness-left">${gauge}<div class="wellness-band" style="color:${bt.c};background:${bt.bg};border-color:${bt.border}">${ragLights(bt.rag)}${w.band||'Index'}</div><div class="wellness-delta">${delta===null?'No prior period':(delta>=0?'▲ +'+delta:'▼ '+delta)+' pts vs. last period'}</div><div class="wellness-note">A composite of four weighted drivers. Use it to track workforce financial health over time.</div></div><div class="wellness-right">${drivers}</div></div>`));
   setTimeout(()=>wrap.querySelectorAll('.wd-fill').forEach(f=>f.style.width=f.dataset.w+'%'),150);
@@ -1558,8 +1558,8 @@ function renderKPIs(){
   const cards=[
     {label:'Programme take-up',infoKey:'takeUp',ico:KPI_ICONS.takeUp,data:k.takeUp,num:k.takeUp?.pct,suffix:'%',sub:k.takeUp?.available===false?'Data not loaded':`${fmtCount(k.takeUp?.enrolled)} of ${fmtCount(DATA.headcount)} enrolled`,spark:safeSpark(k.takeUp?.trend,brandSeries(2))},
     {label:'Actively engaged',infoKey:'engaged',ico:KPI_ICONS.activated,data:k.activated,num:k.activated?.pct,suffix:'%',sub:k.activated?.available===false?'Data not loaded':`${fmtCount(k.activated?.count)} started a fix`,spark:safeSpark(k.activated?.trend,brandSeries(1))},
-    {label:'Cash freed up / month',infoKey:'saving',ico:KPI_ICONS.saving,data:k.monthlySaving,num:k.monthlySaving?.rand,prefix:'R',money:true,sub:k.monthlySaving?.available===false?'Data not loaded':`R ${fmtCount(k.monthlySaving?.perHead)} avg per active employee`,spark:safeSpark(k.monthlySaving?.trend,'#1fa463')},
-    {label:'Avg experience rating',infoKey:'rating',ico:KPI_ICONS.rating,data:k.avgRating,num:k.avgRating?.val,suffix:'/5',decimals:1,sub:k.avgRating?.available===false?'Data not loaded':`${fmtCount(DATA.ratings?.responses)} ratings collected`,spark:safeSpark(k.avgRating?.trend,'#e8910c')},
+    {label:'Cash freed up / month',infoKey:'saving',ico:KPI_ICONS.saving,data:k.monthlySaving,num:k.monthlySaving?.rand,prefix:'R',money:true,sub:k.monthlySaving?.available===false?'Data not loaded':`R ${fmtCount(k.monthlySaving?.perHead)} avg per active employee`,spark:safeSpark(k.monthlySaving?.trend,'var(--chart-cashflow)')},
+    {label:'Avg experience rating',infoKey:'rating',ico:KPI_ICONS.rating,data:k.avgRating,num:k.avgRating?.val,suffix:'/5',decimals:1,sub:k.avgRating?.available===false?'Data not loaded':`${fmtCount(DATA.ratings?.responses)} ratings collected`,spark:safeSpark(k.avgRating?.trend,'var(--chart-engagement)')},
   ];
   const wrap=document.getElementById('kpis');
   cards.forEach((c,i)=>{
@@ -1656,15 +1656,15 @@ function renderEwa(){
   const py=v=>h-pad-(v/max)*(h-pad*1.4);
   const line=pts.map((p,i)=>(i?'L':'M')+px(i).toFixed(1)+' '+py(p).toFixed(1)).join(' ');
   const area=line+` L${px(pts.length-1)} ${h-pad} L${px(0)} ${h-pad} Z`;
-  const dots=pts.map((p,i)=>`<circle cx="${px(i)}" cy="${py(p)}" r="${i===pts.length-1?4.5:2.5}" fill="var(--blue)" stroke="#fff" stroke-width="2"/>`).join('');
+  const dots=pts.map((p,i)=>`<circle cx="${px(i)}" cy="${py(p)}" r="${i===pts.length-1?4.5:2.5}" fill="var(--chart-engagement)" stroke="#fff" stroke-width="2"/>`).join('');
   const xlabels=labels.map((l,i)=>`<text x="${px(i)}" y="${h-8}" font-size="9.5" fill="#8497a7" text-anchor="middle" font-weight="600">${l}</text>`).join('');
   wrap.appendChild(el(`<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;">
     <defs><linearGradient id="ewag" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--blue)" stop-opacity=".16"/><stop offset="1" stop-color="var(--blue)" stop-opacity="0"/></linearGradient></defs>
     ${[0,.5,1].map(f=>`<line x1="${pad}" x2="${w-pad}" y1="${h-pad-f*(h-pad*1.4)}" y2="${h-pad-f*(h-pad*1.4)}" stroke="#f7f4ff" stroke-width="1"/><text x="${pad-6}" y="${(h-pad-f*(h-pad*1.4)+3).toFixed(1)}" text-anchor="end" font-size="9.5" font-weight="700" fill="#8497a7">R${Math.round(max*f)}k</text>`).join('')}
     <path d="${area}" fill="url(#ewag)"/>
-    <path d="${line}" fill="none" stroke="var(--blue)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="${line}" fill="none" stroke="var(--chart-cashflow)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
     ${dots}${xlabels}
-    <text x="${px(pts.length-1)}" y="${py(pts[pts.length-1])-12}" font-size="12" font-weight="800" fill="var(--blue-d)" text-anchor="end">R${pts[pts.length-1]}k</text>
+    <text x="${px(pts.length-1)}" y="${py(pts[pts.length-1])-12}" font-size="12" font-weight="800" fill="var(--chart-cashflow)" text-anchor="end">R${pts[pts.length-1]}k</text>
   </svg>`));
 }
 
@@ -1675,7 +1675,7 @@ function renderSavings(){
   if(pts.length<2){
     const val = pts.length ? pts[pts.length-1] : 0;
     wrap.appendChild(el(`<div style="padding:28px 8px;text-align:center;">
-      <div style="font-family:'Fraunces',serif;font-size:30px;font-weight:600;color:#137a47;">R${val}k<span style="font-size:15px;">/mo</span></div>
+      <div style="font-family:'Fraunces',serif;font-size:30px;font-weight:600;color:var(--chart-cashflow);">R${val}k<span style="font-size:15px;">/mo</span></div>
       <div style="font-size:12.5px;color:#8497a7;margin-top:6px;">${pts.length? 'Cumulative savings unlocked so far.' : 'No savings recorded yet.'}<br>The trend line appears once there are two or more months of data.</div>
     </div>`));
     return;
@@ -1685,15 +1685,15 @@ function renderSavings(){
   const py=v=>h-pad-(v/max)*(h-pad*1.4);
   let line=pts.map((p,i)=>(i?'L':'M')+px(i).toFixed(1)+' '+py(p).toFixed(1)).join(' ');
   let area=line+` L${px(pts.length-1)} ${h-pad} L${px(0)} ${h-pad} Z`;
-  let dots=pts.map((p,i)=>`<circle cx="${px(i)}" cy="${py(p)}" r="${i===pts.length-1?4.5:0}" fill="var(--blue)" stroke="#fff" stroke-width="2"/>`).join('');
+  let dots=pts.map((p,i)=>`<circle cx="${px(i)}" cy="${py(p)}" r="${i===pts.length-1?4.5:0}" fill="var(--chart-engagement)" stroke="#fff" stroke-width="2"/>`).join('');
   let xlabels=labels.map((l,i)=> i%2===0||i===labels.length-1 ? `<text x="${px(i)}" y="${h-8}" font-size="9.5" fill="#8497a7" text-anchor="middle" font-weight="600">${l}</text>`:'').join('');
   wrap.appendChild(el(`<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;">
-    <defs><linearGradient id="savg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1fa463" stop-opacity=".18"/><stop offset="1" stop-color="#1fa463" stop-opacity="0"/></linearGradient></defs>
+    <defs><linearGradient id="savg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--chart-cashflow)" stop-opacity=".18"/><stop offset="1" stop-color="var(--chart-cashflow)" stop-opacity="0"/></linearGradient></defs>
     ${[0,.5,1].map(f=>`<line x1="${pad}" x2="${w-pad}" y1="${h-pad-f*(h-pad*1.4)}" y2="${h-pad-f*(h-pad*1.4)}" stroke="#f7f4ff" stroke-width="1"/><text x="${pad-6}" y="${(h-pad-f*(h-pad*1.4)+3).toFixed(1)}" text-anchor="end" font-size="9.5" font-weight="700" fill="#8497a7">R${Math.round(max*f)}k</text>`).join('')}
     <path d="${area}" fill="url(#savg)"/>
-    <path d="${line}" fill="none" stroke="#1fa463" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="${line}" fill="none" stroke="var(--chart-cashflow)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
     ${dots}${xlabels}
-    <text x="${px(pts.length-1)}" y="${py(pts[pts.length-1])-12}" font-size="12" font-weight="800" fill="#137a47" text-anchor="end">R${pts[pts.length-1]}k/mo</text>
+    <text x="${px(pts.length-1)}" y="${py(pts[pts.length-1])-12}" font-size="12" font-weight="800" fill="var(--chart-cashflow)" text-anchor="end">R${pts[pts.length-1]}k/mo</text>
   </svg>`));
 }
 
@@ -1742,7 +1742,7 @@ function renderCreditors(){
 function renderRegions(){
   const wrap=document.getElementById('region-bars');
   DATA.regions.forEach((r,i)=>{
-    const col = r.stress>=70?'#e0492f' : r.stress>=55?'#e8910c' : r.stress>=45?'var(--blue)' : '#1fa463';
+    const col = r.stress>=70?'var(--chart-high)' : r.stress>=55?'var(--chart-mid)' : r.stress>=45?'var(--chart-debt)' : 'var(--chart-low)';
     const row=el(`<div class="hbar-row"><div class="hbar-lbl">${r.name}</div><div class="hbar-track"><div class="hbar-fill" style="width:0;background:${col}"></div></div><div class="hbar-val">${r.stress}</div></div>`);
     wrap.appendChild(row);
     setTimeout(()=>row.querySelector('.hbar-fill').style.width=r.stress+'%', 150+i*80);
@@ -1752,7 +1752,7 @@ function renderRegions(){
 /* ─────────────────── ACT 4: stress map summary strip ─────────────────── */
 function renderStressMap(){
   const wrap=document.getElementById('stress-strip'); if(!wrap) return;
-  const tone={ red:'#e0492f', green:'#1fa463', blue:'var(--blue)', amber:'#e8910c' };
+  const tone={ red:'var(--chart-high)', green:'var(--chart-low)', blue:'var(--chart-debt)', amber:'var(--chart-mid)' };
   const strip=el('<div class="stress-grid reveal"></div>');
   DATA.stressMap.forEach(s=>{
     strip.appendChild(el(`<div class="stress-cell" style="--t:${tone[s.tone]}">
@@ -1769,12 +1769,13 @@ function renderIncome(){
   const wrap=document.getElementById('income-donut');
   const total=DATA.income.reduce((s,x)=>s+x.count,0);
   const r=52,c=2*Math.PI*r; let off=0;
-  let segs=DATA.income.map(b=>{
+  const incomePalette=['var(--chart-engagement)','var(--chart-cashflow)','var(--chart-debt)','var(--chart-insurance)','var(--chart-workforce)','var(--chart-mid)','var(--chart-high)','var(--chart-low)'];
+  let segs=DATA.income.map((b,i)=>{
     const frac=b.count/total, len=frac*c;
-    const s=`<circle cx="70" cy="70" r="${r}" fill="none" stroke="${b.color}" stroke-width="20" stroke-dasharray="${len} ${c-len}" stroke-dashoffset="${-off}" transform="rotate(-90 70 70)" />`;
+    const s=`<circle cx="70" cy="70" r="${r}" fill="none" stroke="${incomePalette[i%incomePalette.length]}" stroke-width="20" stroke-dasharray="${len} ${c-len}" stroke-dashoffset="${-off}" transform="rotate(-90 70 70)" />`;
     off+=len; return s;
   }).join('');
-  let legend=DATA.income.map(b=>`<div class="legend-row"><span class="legend-dot" style="background:${b.color}"></span><span class="legend-name">${b.name}</span><span class="legend-val">${b.count}</span></div>`).join('');
+  let legend=DATA.income.map(b=>`<div class="legend-row"><span class="legend-dot" style="background:${incomePalette[i%incomePalette.length]}"></span><span class="legend-name">${b.name}</span><span class="legend-val">${b.count}</span></div>`).join('');
   wrap.appendChild(el(`<div class="donut-wrap">
     <svg width="140" height="140" viewBox="0 0 140 140">${segs}
       <text x="70" y="65" text-anchor="middle" font-size="22" font-weight="800" fill="var(--brand-primary)" font-family="Fraunces,serif">${total}</text>
@@ -1787,7 +1788,7 @@ function renderIncome(){
 /* ─────────────────── ACT 4: ratings ─────────────────── */
 function renderRatings(){
   const wrap=document.getElementById('ratings'); const rt=DATA.ratings;
-  let bars=[5,4,3,2,1].map(s=>`<div class="rb-row"><div class="rb-lbl">${s} ★</div><div class="rb-track"><div class="rb-fill" style="width:${rt.dist[s]}%;${s<=2?'background:#e0492f':s===3?'background:#e8910c':''}"></div></div><div class="rb-val">${rt.dist[s]}%</div></div>`).join('');
+  let bars=[5,4,3,2,1].map(s=>`<div class="rb-row"><div class="rb-lbl">${s} ★</div><div class="rb-track"><div class="rb-fill" style="width:${rt.dist[s]}%;${s<=2?'background:var(--chart-high)':s===3?'background:var(--chart-mid)':''}"></div></div><div class="rb-val">${rt.dist[s]}%</div></div>`).join('');
   wrap.appendChild(el(`<div>
     <div class="rating-hero"><div class="rating-big">${rt.avg.toFixed(1)}</div><div><div class="rating-stars">★★★★★</div><div style="font-size:11.5px;color:#8497a7;font-weight:700;margin-top:2px">${rt.responses.toLocaleString()} ratings</div></div></div>
     <div class="rating-bars">${bars}</div>
@@ -1807,8 +1808,8 @@ function renderDebtStates(){
   const total=d.active.rand+d.challenged.rand+d.guided.rand;
   const cols=[
     { ...d.active,    c:"var(--blue)", tag:"ACTIVE ARRANGEMENT" },
-    { ...d.challenged,c:"#8a4fc4", tag:"BEING CONTESTED" },
-    { ...d.guided,    c:"#e8910c", tag:"GUIDANCE ONLY" },
+    { ...d.challenged,c:"var(--chart-insurance)", tag:"BEING CONTESTED" },
+    { ...d.guided,    c:"var(--chart-mid)", tag:"GUIDANCE ONLY" },
   ];
   // stacked bar
   let seg=cols.map(x=>`<div style="width:${(x.rand/total*100).toFixed(1)}%;background:${x.c};height:100%"></div>`).join('');
@@ -1837,7 +1838,7 @@ function renderPrescription(){
   });
   const top=el(`<div style="display:flex;gap:26px;margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid #f7f4ff">
     <div><div style="font-size:11px;font-weight:700;color:#8497a7;text-transform:uppercase;letter-spacing:.05em">Value challenged ${employerInfoButton('prescriptionValue')}</div><div style="font-family:Fraunces,serif;font-size:30px;font-weight:600;color:var(--brand-primary);letter-spacing:-1px;margin-top:5px">${displayMoney(p.total)}</div></div>
-    <div><div style="font-size:11px;font-weight:700;color:#8497a7;text-transform:uppercase;letter-spacing:.05em">Already written off ${employerInfoButton('prescriptionWrittenOff')}</div><div style="font-family:Fraunces,serif;font-size:30px;font-weight:600;color:#1fa463;letter-spacing:-1px;margin-top:5px">${displayMoney(p.writtenOff)}</div></div>
+    <div><div style="font-size:11px;font-weight:700;color:#8497a7;text-transform:uppercase;letter-spacing:.05em">Already written off ${employerInfoButton('prescriptionWrittenOff')}</div><div style="font-family:Fraunces,serif;font-size:30px;font-weight:600;color:var(--chart-cashflow);letter-spacing:-1px;margin-top:5px">${displayMoney(p.writtenOff)}</div></div>
     <div><div style="font-size:11px;font-weight:700;color:#8497a7;text-transform:uppercase;letter-spacing:.05em">Accounts ${employerInfoButton('prescriptionAccounts')}</div><div style="font-family:Fraunces,serif;font-size:30px;font-weight:600;color:var(--brand-primary);letter-spacing:-1px;margin-top:5px">${p.accounts}</div></div>
   </div>`);
   wrap.appendChild(top);
@@ -1847,7 +1848,7 @@ function renderPrescription(){
 /* ─────────────────── ACT 5: referral ─────────────────── */
 function renderRiskSignals(){
   const wrap=document.getElementById('risk-signals'); if(!wrap) return;
-  const sev={ high:{c:'#e0492f',l:'High'}, med:{c:'#e8910c',l:'Medium'}, low:{c:'var(--blue)',l:'Low'} };
+  const sev={ high:{c:'var(--chart-high)',l:'High'}, med:{c:'var(--chart-mid)',l:'Medium'}, low:{c:'var(--chart-debt)',l:'Low'} };
   DATA.riskSignals.forEach(s=>{
     const sv=sev[s.sev];
     wrap.appendChild(el(`<div class="risk-row">
@@ -1885,7 +1886,7 @@ function renderOpportunities(){
 }
 
 /* ─────────────────── ACT 6: webchat engagement ─────────────────── */
-const JOURNEY_COLOR = { credit:'var(--brand-primary)', funeral:'var(--blue)', arrears:'#e8910c', prescribed:'#8a4fc4', emergency:'#1fa463', general:'#8497a7' };
+const JOURNEY_COLOR = { credit:'var(--chart-debt)', funeral:'var(--chart-insurance)', arrears:'var(--chart-mid)', prescribed:'var(--chart-workforce)', emergency:'var(--chart-cashflow)', general:'var(--chart-engagement)' };
 let CHAT_SELECTED = 'credit';
 
 function sentBadge(pct){
@@ -1919,7 +1920,7 @@ function renderChatKPIs(){
   const cards=[
     { label:'Total conversations', infoKey:'chatTotal', ico:KPI_ICONS.activated, num:Number(c.conversations||0), sub:'selected period', spark:Array.isArray(c.volume)&&c.volume.length?sparkline(c.volume,'var(--blue)'):'' },
     { label:'Resolved in chat', infoKey:'chatResolved',    ico:KPI_ICONS.takeUp, num:Number(c.resolvedInChat||0), suffix:'%', sub:Number.isFinite(Number(c.escalated))?Number(c.escalated)+'% handed to an agent':'handoff rate unavailable' },
-    { label:'Avg first reply', infoKey:'chatFirstReply',     ico:{bg:'var(--brand-soft)',path:'<circle cx="12" cy="12" r="9" stroke="var(--blue)" stroke-width="1.8" fill="none"/><path d="M12 7v5l3 2" stroke="var(--blue)" stroke-width="1.8" stroke-linecap="round"/>'}, raw:c.avgFirstReply||'—', sub:'median response time' },
+    { label:'Avg first reply', infoKey:'chatFirstReply',     ico:{bg:'var(--brand-soft)',path:'<circle cx="12" cy="12" r="9" stroke="var(--chart-cashflow)" stroke-width="1.8" fill="none"/><path d="M12 7v5l3 2" stroke="var(--chart-cashflow)" stroke-width="1.8" stroke-linecap="round"/>'}, raw:c.avgFirstReply||'—', sub:'median response time' },
     { label:'Chat satisfaction', infoKey:'chatSatisfaction',   ico:KPI_ICONS.rating, num:Number(c.csat||0), suffix:'/5', decimals:1, sub:'rated after chat' },
   ];
   const wrap=document.getElementById('chat-kpis');
@@ -1960,7 +1961,7 @@ function renderChatTrending(){
   const rows=Array.isArray(DATA.chat?.trending)?DATA.chat.trending:[];
   if(!rows.length){ wrap.innerHTML='<div class="muted" style="padding:28px 12px;text-align:center;color:#8497a7;font-size:13px;">No trending questions in the selected period.</div>'; return; }
   rows.forEach((t,i)=>{
-    const tc = t.trend==='flat' ? '#8497a7' : '#1fa463';
+    const tc = t.trend==='flat' ? '#8497a7' : 'var(--chart-engagement)';
     wrap.appendChild(el(`<div class="trend-row">
       <div class="trend-rank">${i+1}</div>
       <div class="trend-body"><div class="trend-q">"${t.q}"</div><div class="trend-meta">${t.journey}</div></div>
@@ -2699,11 +2700,11 @@ function miniTrend(trend){
   const span=Math.max(1,max-min), px=i=>left+i*(w-left-right)/Math.max(1,seed.length-1), py=v=>top+(max-v)/span*(h-top-bottom);
   const ticks=[0,.25,.5,.75,1].map(f=>max-(max-min)*f);
   const line=seed.map((v,i)=>(i?'L':'M')+px(i).toFixed(1)+' '+py(v).toFixed(1)).join(' ');
-  const dots=seed.map((v,i)=>`<circle cx="${px(i)}" cy="${py(v)}" r="3.8" fill="var(--blue)" stroke="var(--white)" stroke-width="2"><title>${v.toLocaleString('en-ZA')}</title></circle>`).join('');
+  const dots=seed.map((v,i)=>`<circle cx="${px(i)}" cy="${py(v)}" r="3.8" fill="var(--chart-engagement)" stroke="var(--white)" stroke-width="2"><title>${v.toLocaleString('en-ZA')}</title></circle>`).join('');
   const yaxis=ticks.map(v=>`<line x1="${left}" x2="${w-right}" y1="${py(v)}" y2="${py(v)}" stroke="var(--line-soft)" stroke-width="1"/><text x="${left-9}" y="${py(v)+3}" text-anchor="end" font-size="10" font-weight="700" fill="var(--grey-l)">${Math.round(v).toLocaleString('en-ZA')}</text>`).join('');
   const labels=seed.map((v,i)=>`<text x="${px(i)}" y="${h-10}" text-anchor="middle" font-size="9.5" font-weight="600" fill="var(--grey-l)">${i+1}</text>`).join('');
-  const values=seed.map((v,i)=>`<text x="${px(i)}" y="${Math.max(top+10,py(v)-9)}" text-anchor="middle" font-size="9.5" font-weight="800" fill="var(--blue-d)">${v.toLocaleString('en-ZA')}</text>`).join('');
-  return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:190px;margin:8px 0 4px" role="img" aria-label="Completion trend with actual values"><line x1="${left}" x2="${left}" y1="${top}" y2="${h-bottom}" stroke="var(--line)"/><path d="${line}" fill="none" stroke="var(--blue)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>${yaxis}${dots}${values}${labels}</svg>`;
+  const values=seed.map((v,i)=>`<text x="${px(i)}" y="${Math.max(top+10,py(v)-9)}" text-anchor="middle" font-size="9.5" font-weight="800" fill="var(--chart-cashflow)">${v.toLocaleString('en-ZA')}</text>`).join('');
+  return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:190px;margin:8px 0 4px" role="img" aria-label="Completion trend with actual values"><line x1="${left}" x2="${left}" y1="${top}" y2="${h-bottom}" stroke="var(--line)"/><path d="${line}" fill="none" stroke="var(--chart-cashflow)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>${yaxis}${dots}${values}${labels}</svg>`;
 }
 function creditorDrill(c){
   const stages=Array.isArray(c.stateBreakdown)?c.stateBreakdown:[];
@@ -2783,7 +2784,7 @@ async function loadLiveData({refreshOnly=false}={}){
     try{ const r=await fetch('/api/auth/me'); if(!r.ok){ location.href='/login'; return; } me=await r.json(); }
     catch(e){ location.href='/login'; return; }
     window.__ME__=me;
-    addAuthBar(me); applyTheme(me.theme); handleWelcomeSplash(me); applySectionVisibility(me); populateEmployerSelect(me);
+    addAuthBar(me); applyTheme(me.theme, me); handleWelcomeSplash(me); applySectionVisibility(me); populateEmployerSelect(me);
   }
   try{
     let id=employerIdFromUrl();
@@ -2995,9 +2996,20 @@ function applySectionVisibility(me){
   });
 }
 
-function applyTheme(theme){
-  if(!theme) return;
+function applyTheme(theme, user){
   const root=document.documentElement.style;
+  // Admins retain the portal's original dashboard palette. Employer branding is
+  // applied only inside an authenticated employer session.
+  if(user && String(user.role||'').toUpperCase()==='ADMIN'){
+    ['--blue','--blue-d','--brand-primary','--brand-primary-deep','--ice','--brand-soft',
+     '--brand-grad-1','--brand-grad-2','--brand-grad-3','--brand-grad-4','--brand-grad-5',
+     '--chart-engagement','--chart-cashflow','--chart-debt','--chart-insurance','--chart-workforce',
+     '--chart-low','--chart-mid','--chart-high','--engagement-color','--cashflow-color',
+     '--debt-risk-color','--insurance-color','--eligible-workforce-color',
+     '--stress-low-color','--stress-mid-color','--stress-high-color'].forEach(k=>root.removeProperty(k));
+    return;
+  }
+  if(!theme) return;
   const hex=c=>c?('#'+String(c).replace(/^#/,'')):null;
   const baseName='empower-fin Dashboard Portal';
   const accent=hex(theme.accentColor||theme.primaryColor||'#b15be8');
@@ -3013,6 +3025,19 @@ function applyTheme(theme){
   root.setProperty('--brand-grad-3', accent);
   root.setProperty('--brand-grad-4', mix(accent,'#ffffff',.28));
   root.setProperty('--brand-grad-5', mix(accent,'#ffffff',.55));
+  // Employer-only chart palette: derive harmonious hues from the uploaded brand
+  // colours rather than reusing the logo colours for every data series. Stable
+  // semantic assignments keep each metric recognisable across all chart types.
+  const chartPalette = complementaryPalette(accent, primary);
+  Object.entries(chartPalette).forEach(([key,value])=>root.setProperty('--chart-'+key,value));
+  root.setProperty('--engagement-color','var(--chart-engagement)');
+  root.setProperty('--cashflow-color','var(--chart-cashflow)');
+  root.setProperty('--debt-risk-color','var(--chart-debt)');
+  root.setProperty('--insurance-color','var(--chart-insurance)');
+  root.setProperty('--eligible-workforce-color','var(--chart-workforce)');
+  root.setProperty('--stress-low-color','var(--chart-low)');
+  root.setProperty('--stress-mid-color','var(--chart-mid)');
+  root.setProperty('--stress-high-color','var(--chart-high)');
   const brandName=document.getElementById('channel-brand-name');
   if(theme.logoDataUrl){
     document.querySelectorAll('.logo img, .topbar .logo img, .pdf-brand img').forEach(img=>{ img.src=theme.logoDataUrl; });
@@ -3025,6 +3050,30 @@ function applyTheme(theme){
     const sub=document.querySelector('.head-sub');
     if(sub) sub.textContent=theme.tagline;
   }
+}
+// Create a full, repeatable chart palette from any valid employer brand hex.
+// Hue rotation makes the charts complementary to (not copies of) the logo hues.
+function complementaryPalette(accent, primary){
+  const toHsl = hex => {
+    const h=String(hex||'#777777').replace('#','');
+    const r=parseInt(h.slice(0,2),16)/255,g=parseInt(h.slice(2,4),16)/255,b=parseInt(h.slice(4,6),16)/255;
+    const max=Math.max(r,g,b),min=Math.min(r,g,b),d=max-min; let hue=0;
+    const l=(max+min)/2; let sat=0;
+    if(d){sat=d/(1-Math.abs(2*l-1)); if(max===r)hue=60*(((g-b)/d)%6);else if(max===g)hue=60*((b-r)/d+2);else hue=60*((r-g)/d+4);}
+    return [(hue+360)%360,sat,l];
+  };
+  const fromHsl=(h,s,l)=>{
+    const c=(1-Math.abs(2*l-1))*s,x=c*(1-Math.abs((h/60)%2-1)),m=l-c/2;
+    let rgb=h<60?[c,x,0]:h<120?[x,c,0]:h<180?[0,c,x]:h<240?[0,x,c]:h<300?[x,0,c]:[c,0,x];
+    return '#'+rgb.map(v=>Math.round((v+m)*255).toString(16).padStart(2,'0')).join('');
+  };
+  const [h,s]=toHsl(accent), [ph]=toHsl(primary);
+  const make=(offset,light=.43,sat=Math.max(.42,s))=>fromHsl((h+offset+360)%360,sat,light);
+  return {
+    engagement:make(145,.43), cashflow:make(205,.43), debt:make(32,.48),
+    insurance:make(265,.48), workforce:fromHsl((ph+180)%360,.42,.39),
+    low:make(165,.43), mid:make(35,.49), high:make(0,.43,.66)
+  };
 }
 // darken a hex colour by pct (negative) for the hover/darker accent
 function shade(hex,pct){
