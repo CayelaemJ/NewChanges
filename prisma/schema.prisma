@@ -648,9 +648,9 @@ model Partner {
   slug        String   @unique // url-safe key for partner-specific entry, e.g. "acme"
   displayName String?  // brand name shown in the header (defaults to name)
   // branding — all optional; sensible empower-fin defaults apply when blank
-  primaryColor   String?  // hex, e.g. "31207C"
-  accentColor    String?  // hex, e.g. "0078C7"
-  navyColor      String?  // hex deep tone
+  primaryBrandColor   String?  // hex, e.g. "31207C"
+  secondaryColor    String?  // hex, e.g. "0078C7"
+  dominantBackgroundColor      String?  // hex deep tone
   logoDataUrl    String?  @db.Text // base64 data URL of the partner logo
   tagline        String?  // optional sub-line under the title
   active         Boolean  @default(true)

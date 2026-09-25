@@ -12,9 +12,9 @@ const slugify = (s: string) =>
 // empower-fin is the default portal brand. Channel partners override these values for their assigned users.
 export const DEFAULT_THEME = {
   name: "empower-fin Dashboard Portal",
-  primaryColor: "32217C",
-  accentColor: "B15BE8",
-  navyColor: "330A36",
+  primaryBrandColor: "32217C",
+  secondaryColor: "B15BE8",
+  dominantBackgroundColor: "330A36",
   logoDataUrl: null as string | null,
   tagline: null as string | null,
 };
@@ -24,7 +24,7 @@ export async function listPartners() {
     orderBy: { name: "asc" },
     select: {
       id: true, name: true, slug: true, displayName: true,
-      primaryColor: true, accentColor: true, navyColor: true,
+      primaryBrandColor: true, secondaryColor: true, dominantBackgroundColor: true,
       tagline: true, active: true, logoDataUrl: true,
       _count: { select: { users: true, employers: true } },
     },
@@ -41,11 +41,11 @@ export async function createPartner(input: { name: string; displayName?: string 
 
 export async function updatePartner(id: string, patch: any) {
   const data: any = {};
-  for (const k of ["name", "displayName", "primaryColor", "accentColor", "navyColor", "logoDataUrl", "tagline", "active"]) {
+  for (const k of ["name", "displayName", "primaryBrandColor", "secondaryColor", "dominantBackgroundColor", "logoDataUrl", "tagline", "active"]) {
     if (k in patch) data[k] = patch[k] === "" ? null : patch[k];
   }
   // normalise hex (strip leading #)
-  for (const c of ["primaryColor", "accentColor", "navyColor"]) {
+  for (const c of ["primaryBrandColor", "secondaryColor", "dominantBackgroundColor"]) {
     if (typeof data[c] === "string") data[c] = data[c].replace(/^#/, "").toUpperCase();
   }
   return prisma.partner.update({ where: { id }, data });
@@ -74,9 +74,9 @@ export async function themeForUser(userId: string) {
   if (!p || !p.active) return { ...DEFAULT_THEME };
   return {
     name: p.displayName || p.name || DEFAULT_THEME.name,
-    primaryColor: p.primaryColor || DEFAULT_THEME.primaryColor,
-    accentColor: p.accentColor || DEFAULT_THEME.accentColor,
-    navyColor: p.navyColor || DEFAULT_THEME.navyColor,
+    primaryBrandColor: p.primaryBrandColor || DEFAULT_THEME.primaryBrandColor,
+    secondaryColor: p.secondaryColor || DEFAULT_THEME.secondaryColor,
+    dominantBackgroundColor: p.dominantBackgroundColor || DEFAULT_THEME.dominantBackgroundColor,
     logoDataUrl: p.logoDataUrl || null,
     tagline: p.tagline || null,
   };
@@ -91,9 +91,9 @@ export async function themeForEmployer(employerId: string) {
   if (!p || !p.active) return { ...DEFAULT_THEME };
   return {
     name: p.displayName || p.name || DEFAULT_THEME.name,
-    primaryColor: p.primaryColor || DEFAULT_THEME.primaryColor,
-    accentColor: p.accentColor || DEFAULT_THEME.accentColor,
-    navyColor: p.navyColor || DEFAULT_THEME.navyColor,
+    primaryBrandColor: p.primaryBrandColor || DEFAULT_THEME.primaryBrandColor,
+    secondaryColor: p.secondaryColor || DEFAULT_THEME.secondaryColor,
+    dominantBackgroundColor: p.dominantBackgroundColor || DEFAULT_THEME.dominantBackgroundColor,
     logoDataUrl: p.logoDataUrl || null,
     tagline: p.tagline || null,
   };
@@ -105,9 +105,9 @@ export async function themeForSlug(slug: string) {
   if (!p || !p.active) return { ...DEFAULT_THEME };
   return {
     name: p.displayName || p.name,
-    primaryColor: p.primaryColor || DEFAULT_THEME.primaryColor,
-    accentColor: p.accentColor || DEFAULT_THEME.accentColor,
-    navyColor: p.navyColor || DEFAULT_THEME.navyColor,
+    primaryBrandColor: p.primaryBrandColor || DEFAULT_THEME.primaryBrandColor,
+    secondaryColor: p.secondaryColor || DEFAULT_THEME.secondaryColor,
+    dominantBackgroundColor: p.dominantBackgroundColor || DEFAULT_THEME.dominantBackgroundColor,
     logoDataUrl: p.logoDataUrl || null,
     tagline: p.tagline || null,
   };
