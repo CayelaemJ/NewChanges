@@ -2796,14 +2796,43 @@ async function loadLiveData({refreshOnly=false}={}){
   const splash=document.getElementById('welcome-splash');
   if(refreshOnly && view){ view.setAttribute('aria-busy','true'); view.classList.add('is-refreshing'); }
   if(!refreshOnly){
-    try{ const r=await fetch('/api/auth/me'); if(!r.ok){ location.href='/login'; return; } me=await r.json(); }
+    const initialEmployerId=employerIdFromUrl();
+    const meUrl=initialEmployerId ? '/api/auth/me?employer='+encodeURIComponent(initialEmployerId) : '/api/auth/me';
+    try{ const r=await fetch(meUrl); if(!r.ok){ location.href='/login'; return; } me=await r.json(); }
     catch(e){ location.href='/login'; return; }
+    me.__themeEmployerId=initialEmployerId||null;
     window.__ME__=me;
     addAuthBar(me); applyTheme(me.theme); handleWelcomeSplash(me); applySectionVisibility(me); populateEmployerSelect(me);
+  } else if(me){
+    // Switching employers (the dropdown) reuses this refreshOnly path and
+    // skips the block above, so without this the topbar/print branding
+    // would keep showing whichever employer's theme happened to load
+    // first instead of following the one now being viewed.
+    const switchedId=employerIdFromUrl();
+    if(switchedId && switchedId!==me.__themeEmployerId){
+      try{
+        const tr=await fetch('/api/auth/me?employer='+encodeURIComponent(switchedId));
+        if(tr.ok){ const tme=await tr.json(); me.theme=tme.theme; me.__themeEmployerId=switchedId; window.__ME__=me; applyTheme(tme.theme); }
+      }catch(e){ /* keep the previous theme rather than blocking the refresh */ }
+    }
   }
   try{
     let id=employerIdFromUrl();
     if(!id && me?.employers?.length) id=me.employers[0].id;
+    // No explicit ?employer= yet (very first load) — we defaulted to the
+    // first employer above, but the /api/auth/me fetch happened before we
+    // knew that id, so its theme came from the viewer's own partner rather
+    // than this employer's. Resolve it now and pin the id into the URL so
+    // a page refresh from here on stays on (and re-themes for) this same
+    // employer instead of silently falling back again.
+    if(id && me && id!==me.__themeEmployerId){
+      const p=new URLSearchParams(location.search);
+      if(!p.get('employer')){ p.set('employer',id); history.replaceState(null,'','?'+p.toString()); }
+      try{
+        const tr=await fetch('/api/auth/me?employer='+encodeURIComponent(id));
+        if(tr.ok){ const tme=await tr.json(); me.theme=tme.theme; me.__themeEmployerId=id; window.__ME__=me; applyTheme(tme.theme); }
+      }catch(e){ /* keep the theme already applied rather than blocking the load */ }
+    }
     const employerSelect=document.getElementById('employer-select');
     if(employerSelect && id) employerSelect.value=id;
     syncStateFromUrl();
