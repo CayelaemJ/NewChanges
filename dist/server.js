@@ -5,6 +5,7 @@
 //  fetch() calls — no re-shaping needed.
 // ════════════════════════════════════════════════════════════════════
 import Fastify from "fastify";
+import { Prisma } from "@prisma/client";
 import multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
 import cookie from "@fastify/cookie";
@@ -12,16 +13,17 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { prisma, snapshotEmployer, getDashboardPayload } from "./services/snapshotBuilder.js";
+import { prisma, snapshotEmployer, getDashboardPayload, monthKey } from "./services/snapshotBuilder.js";
 import { REPORT_FORMATS, LOAD_ORDER, getFormat } from "./services/reportFormats.js";
 import { csvTemplate, xlsxTemplate, formatManifest } from "./services/templateGenerator.js";
-import { uploadAndValidate, revertBatch, resetAllData } from "./services/importService.js";
-import { startCommitJob, getCommitJob } from "./services/asyncJobs.js";
+import { revertBatch, resetAllData } from "./services/importService.js";
+import { startUploadJob, getUploadJob, startCommitJob, getCommitJob } from "./services/asyncJobs.js";
 import { getConfig as getSyncConfig, saveConfig as saveSyncConfig, publicConfig as publicSyncConfig, testConnection as testSyncConnection, runSync, recentSyncLogs } from "./services/syncService.js";
-import { listPartners, createPartner, updatePartner, deletePartner, assignUserToPartner, assignEmployerToPartner, themeForUser, themeForSlug } from "./services/partnerService.js";
+import { listPartners, createPartner, updatePartner, deletePartner, assignUserToPartner, assignEmployerToPartner, themeForUser, themeForEmployer, DEFAULT_THEME, themeForSlug } from "./services/partnerService.js";
 import { login, resolveSession, destroySession, canViewEmployer, canAccessModule, allowedEmployerIds } from "./services/authService.js";
 import { createUser, listUsers, updateUser, resetPassword, completeSetup, deactivateSelf, listRevokedUsers, deleteUserPermanently, requestPasswordReset } from "./services/userService.js";
 import { recordEvent, engagementSummary } from "./services/analyticsService.js";
+import { analyzeLogoColors } from "./services/colorAnalysisService.js";
 import { notifyAdmins, notifyScoreChangeIfCurrentPeriod, runStaleAccountCheck, runWeeklyDigestIfDue } from "./services/automationService.js";
 import { logAdminAction, listAuditLog } from "./services/auditService.js";
 import { exportAuditLogCsv, exportImportBatchCsv } from "./services/exportService.js";
@@ -296,8 +298,32 @@ app.get("/api/auth/me", async (req, reply) => {
     else {
         employers = await prisma.employer.findMany({ where: { id: { in: ids }, sourceDeletedAt: null }, select: { id: true, name: true }, orderBy: { name: "asc" } });
     }
+    // A user (e.g. an ADMIN, or anyone with access to more than one employer)
+    // can view employers that belong to different channel partners, each with
+    // their own logo/branding.
+    //
+    // ADMINS have no partner assignment and should ALWAYS see the default
+    // empower-fin branding (plain purple), never partner-specific themes.
+    //
+    // Regular users: themeForUser reflects the signed-in user's own partner
+    // assignment. However, when they're looking at someone else's employer,
+    // the dashboard would show the wrong logo/colors. When a specific employer
+    // is requested, use that employer's own partner branding instead.
+    const requestedEmployerId = req.query?.employer;
+    let theme;
+    if (user.role === "ADMIN") {
+        // Admins always see plain empower-fin branding
+        theme = { ...DEFAULT_THEME };
+    }
+    else if (requestedEmployerId && canViewEmployer(user, requestedEmployerId)) {
+        // Regular user viewing a specific employer: use that employer's partner theme
+        theme = await themeForEmployer(requestedEmployerId);
+    }
+    else {
+        // Regular user viewing their own employers: use their assigned partner theme
+        theme = await themeForUser(user.id);
+    }
     return {
-        name: user.name, email: user.email, role: user.role,
         modules: {
             admin: canAccessModule(user, "admin"),
             dashboard: canAccessModule(user, "dashboard"),
@@ -306,7 +332,7 @@ app.get("/api/auth/me", async (req, reply) => {
         },
         sections: await sectionsForUser(user),
         employers,
-        theme: await themeForUser(user.id),
+        theme,
     };
 });
 // complete the set-password link
@@ -531,6 +557,12 @@ app.get("/api/admin/reports/:key/template", async (req, reply) => {
     return reply.send(csvTemplate(format));
 });
 // upload a report file -> parse + validate -> staged batch (NOT yet live)
+// Returns 202 immediately and validates in the background; the browser
+// polls /api/admin/upload-jobs/:jobId (admin.html already does this — the
+// route just needs to exist). Parsing/validating a large CSV/XLSX is CPU
+// and DB work that can run for a while; doing it inline on the request
+// blocked the whole HTTP connection (and the rest of the server) until it
+// finished, which is what made uploads feel like they were hanging.
 app.post("/api/admin/reports/:key/upload", async (req, reply) => {
     if (!(await requireAdmin(req, reply)))
         return;
@@ -539,27 +571,30 @@ app.post("/api/admin/reports/:key/upload", async (req, reply) => {
         if (!file)
             return reply.code(400).send({ error: "no file uploaded" });
         const buffer = await file.toBuffer();
-        const { batch, result } = await uploadAndValidate({
+        const jobId = startUploadJob({
             reportKey: req.params.key,
             filename: file.filename,
             buffer,
             uploadedBy: (await currentUser(req))?.email ?? undefined,
         });
-        return {
-            batchId: batch.id,
-            status: batch.status,
-            rowCount: result.rowCount,
-            errors: result.errors.slice(0, 200),
-            errorCount: result.errors.length,
-            missingColumns: result.missingColumns,
-            unknownColumns: result.unknownColumns,
-            preview: result.rows.slice(0, 10),
-        };
+        return reply.code(202).send({ status: "ACCEPTED", jobId });
     }
     catch (e) {
         req.log.error(e);
         return reply.code(400).send({ error: `could not read the file: ${e.message}. Check it's a valid CSV/Excel and that text with commas is wrapped in quotes.` });
     }
+});
+app.get("/api/admin/upload-jobs/:jobId", async (req, reply) => {
+    if (!(await requireAdmin(req, reply)))
+        return;
+    const job = getUploadJob(req.params.jobId);
+    if (!job)
+        return reply.code(404).send({ error: "unknown upload job" });
+    if (job.status === "PENDING")
+        return { status: "PROCESSING" };
+    if (job.status === "FAILED")
+        return { status: "FAILED", error: job.error };
+    return { status: "DONE", ...job.result };
 });
 // commit a validated batch -> writes live + recomputes affected snapshots
 // Returns 202 immediately; the browser polls /api/admin/commit-jobs/:jobId.
@@ -856,6 +891,37 @@ app.post("/api/admin/partners/:id/assign", async (req, reply) => {
         return assignEmployerToPartner(req.body.employerId, req.params.id);
     return reply.code(400).send({ error: "userId or employerId required" });
 });
+// analyze logo image and extract dominant brand colors
+app.post("/api/admin/partners/:id/analyze-logo", async (req, reply) => {
+    const admin = await requireAdmin(req, reply);
+    if (!admin)
+        return;
+    try {
+        const { imageDataUrl, pixelData } = req.body ?? {};
+        if (typeof pixelData === "string") {
+            // Client extracted pixel data from canvas and sent it as base64
+            const pixelArray = new Uint8ClampedArray(Buffer.from(pixelData, "base64"));
+            const imageData = { data: pixelArray, width: 0, height: 0 };
+            const colors = analyzeLogoColors(imageData);
+            logAdminAction(admin, "partner.analyze_logo", `Analyzed logo colors for partner ${req.params.id}`, { targetType: "Partner", targetId: req.params.id });
+            return colors;
+        }
+        if (typeof imageDataUrl === "string") {
+            // Parse data URL: "data:image/png;base64,..."
+            const matches = imageDataUrl.match(/^data:image\/\w+;base64,(.+)$/);
+            if (!matches) {
+                return reply.code(400).send({ error: "Invalid image data URL format" });
+            }
+            // In production, decode image with 'jimp' or 'sharp' to extract pixel data
+            return reply.code(501).send({ error: "Server-side image decoding not yet implemented. Please use browser canvas to extract pixels." });
+        }
+        return reply.code(400).send({ error: "pixelData or imageDataUrl is required" });
+    }
+    catch (e) {
+        req.log.error(e);
+        return reply.code(400).send({ error: e.message || "color analysis failed" });
+    }
+});
 // public: theme by slug (for the future branded login page)
 app.get("/api/partner-theme/:slug", async (req) => {
     return themeForSlug(req.params.slug);
@@ -895,17 +961,49 @@ app.get("/api/employers/:employerId/periods", async (req, reply) => {
     // month. With 100k employees that creates a huge N+1 workload before the
     // user has even opened the month selector.
     //
-    // Persisted monthly scores are the fast path. Cohort-specific scores are
-    // calculated only when Region/Income is actually selected, and those calls
-    // are protected by the dashboard cache.
+    // Persisted monthly scores are the fast path. Region/Income is applied by
+    // the dashboard request after a period is selected; the period picker must
+    // never calculate twelve full cohort dashboards.
     const employerId = req.params.employerId;
-    const hasCohortFilter = Boolean(req.query.site && req.query.site !== "all") || Boolean(req.query.income && req.query.income !== "all");
+    // The period picker is a dimension selector, not a dashboard calculator.
+    // Never rebuild the full dashboard once per month just to populate it.
     const snapshots = await prisma.scoreSnapshot.findMany({
         where: { employerId, payloadVersion: { gte: 4 } },
-        select: { period: true, optimiseScore: true },
+        select: {
+            period: true,
+            optimiseScore: true,
+            rawScore: true,
+            engagementScore: true,
+            cashflowScore: true,
+            debtRiskScore: true,
+            insuranceScore: true,
+            engagementWeight: true,
+            cashflowWeight: true,
+            debtRiskWeight: true,
+            insuranceWeight: true,
+        },
         orderBy: { period: "desc" },
     });
     const periodSet = new Set(snapshots.map((s) => s.period));
+    // ScoreSnapshot is the preferred source for labelled scores, but it is not
+    // guaranteed to exist for every month covered by imported workforce data.
+    // Build the period dimension from the immutable EmployeeVersion observation
+    // table as well. PostgreSQL does the DISTINCT/month extraction; never pull
+    // 100k employee rows into Node just to populate a selector.
+    const observedPeriods = await prisma.$queryRaw(Prisma.sql `
+      SELECT DISTINCT to_char(date_trunc('month', ev."observedAt"), 'YYYY-MM') AS period
+      FROM "EmployeeVersion" ev
+      INNER JOIN "Employee" e ON e.id = ev."employeeId"
+      WHERE e."employerId" = ${employerId}
+        AND e."sourceDeletedAt" IS NULL
+        AND ev."isDeleted" = false
+      ORDER BY period DESC
+      LIMIT 24
+    `);
+    for (const row of observedPeriods) {
+        if (row?.period)
+            periodSet.add(row.period);
+    }
     const latestEmployee = await prisma.employee.findFirst({
         where: { employerId, sourceDeletedAt: null },
         select: { observedAt: true },
@@ -913,29 +1011,61 @@ app.get("/api/employers/:employerId/periods", async (req, reply) => {
     });
     if (latestEmployee?.observedAt)
         periodSet.add(monthKey(latestEmployee.observedAt));
-    const periods = [];
-    for (const period of [...periodSet].sort().reverse()) {
-        const snap = snapshots.find((row) => row.period === period);
-        if (!hasCohortFilter && snap) {
-            periods.push({ period, optimiseScore: snap.optimiseScore == null ? null : Number(snap.optimiseScore) });
-            continue;
-        }
-        try {
-            const live = await getDashboardPayload(employerId, {
-                period,
-                site: req.query.site,
-                income: req.query.income,
-            });
-            periods.push({
-                period,
-                optimiseScore: live?.wellness?.complete && live?.wellness?.score != null ? Number(live.wellness.score) : null,
-            });
-        }
-        catch {
-            periods.push({ period, optimiseScore: null });
-        }
+    // Return at most the latest 12 real reporting months. Keep the selector
+    // cheap: only the indexed observation dimension and persisted snapshots are
+    // touched; never invoke getDashboardPayload from this endpoint.
+    const latestPeriods = [...periodSet].sort().reverse().slice(0, 12);
+    const snapshotByPeriod = new Map(snapshots.map((row) => [row.period, row]));
+    const snapshotScore = (snap) => {
+        if (!snap)
+            return null;
+        const stored = Number(snap.optimiseScore);
+        // Older/broken snapshots have occasionally contained a zero headline
+        // while the four driver scores were populated. Rebuild the headline
+        // from the persisted driver scores instead of exposing a false 0.
+        const drivers = [
+            [Number(snap.engagementScore), Number(snap.engagementWeight)],
+            [Number(snap.cashflowScore), Number(snap.cashflowWeight)],
+            [Number(snap.debtRiskScore), Number(snap.debtRiskWeight)],
+            [Number(snap.insuranceScore), Number(snap.insuranceWeight)],
+        ];
+        const weighted = drivers.every(([score, weight]) => Number.isFinite(score) && Number.isFinite(weight) && weight > 0)
+            ? Math.round(drivers.reduce((sum, [score, weight]) => sum + score * weight, 0))
+            : null;
+        if (stored > 0 && stored <= 100)
+            return Math.round(stored);
+        if (weighted != null && weighted >= 0 && weighted <= 100)
+            return weighted;
+        const raw = Number(snap.rawScore);
+        return Number.isFinite(raw) ? Math.max(0, Math.min(100, Math.round(raw))) : null;
+    };
+    const results = latestPeriods.map(period => {
+        const snap = snapshotByPeriod.get(period);
+        return { period, optimiseScore: snapshotScore(snap) };
+    });
+    // Most months already have a usable persisted snapshot (the fast path
+    // above). But a period can legitimately have none yet — data just
+    // imported for it, the snapshot job hasn't run, or the row is stuck at
+    // an old payloadVersion until scripts/rebuild-score-snapshots.ts is
+    // re-run — and in that case the picker was showing "Score unavailable"
+    // forever instead of a number. Rather than silently leaving those
+    // periods blank, compute the handful that are missing on demand — this
+    // reuses the same cached dashboard-payload path getDashboardPayload
+    // already uses everywhere else, so it's cheap after the first request
+    // and never touches the months that already resolved above.
+    const missing = results.filter(r => r.optimiseScore == null);
+    if (missing.length) {
+        await Promise.all(missing.map(async (r) => {
+            try {
+                const live = await getDashboardPayload(employerId, { period: r.period });
+                if (live?.wellness?.complete && live?.wellness?.score != null) {
+                    r.optimiseScore = Math.round(Number(live.wellness.score));
+                }
+            }
+            catch { /* leave unavailable — the picker still shows the period itself */ }
+        }));
     }
-    return periods;
+    return results;
 });
 // ── score history (movement chart) — scoped ──
 app.get("/api/employers/:employerId/score-history", async (req, reply) => {

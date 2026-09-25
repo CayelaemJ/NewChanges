@@ -73,7 +73,6 @@ export async function exportUsersCsv() {
     });
     return toCsv(rows, ["id", "email", "name", "role", "active", "partnerId", "createdAt", "revokedAt", "revokedReason", "revokedBy"]);
 }
-
 /** Export the exact source rows uploaded for an import batch as CSV. */
 export async function exportImportBatchCsv(batchId) {
     const batch = await prisma.importBatch.findUnique({
