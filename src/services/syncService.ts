@@ -10,6 +10,7 @@ import { LOAD_ORDER, getFormat } from "./reportFormats.js";
 import { validate } from "./importParser.js";
 import { snapshotEmployer } from "./snapshotBuilder.js";
 import { notifyScoreChangeIfCurrentPeriod } from "./automationService.js";
+import { commitBatch } from "./importService.js";
 import { createSourceAdapter, configuredSourceMode, sourceIsConfigured } from "./sourceAdapter.js";
 
 const prisma = new PrismaClient();
@@ -82,39 +83,6 @@ export function publicConfig(config: Awaited<ReturnType<typeof getConfig>>) {
     sqlPasswordFromEnvironment: Boolean(process.env.SOURCE_SQL_PASSWORD),
     apiTokenFromEnvironment: Boolean(process.env.SOURCE_API_TOKEN),
   };
-}
-
-async function directInsertEmployers(rows: Record<string, any>[]) {
-  let inserted = 0, updated = 0;
-  for (const row of rows) {
-    try {
-      const data = {
-        name: row.name,
-        eligibleCount: row.eligible_count ?? 0,
-        eligibleCountAsAt: row.eligible_count_as_at ?? null,
-        sourceUpdatedAt: row.source_updated_at,
-        sourceDeletedAt: row.is_deleted ? row.source_updated_at : null,
-      };
-      const existing = await prisma.employer.findUnique({
-        where: { id: String(row.employer_ref) },
-      });
-      if (existing) {
-        await prisma.employer.update({
-          where: { id: String(row.employer_ref) },
-          data,
-        });
-        updated++;
-      } else {
-        await prisma.employer.create({
-          data: { id: String(row.employer_ref), ...data },
-        });
-        inserted++;
-      }
-    } catch (error) {
-      console.error(`Error inserting employer ${row.employer_ref}:`, error);
-    }
-  }
-  return { inserted, updated };
 }
 
 export async function runSync(trigger: "manual" | "scheduled" = "manual") {
@@ -190,6 +158,21 @@ export async function runSync(trigger: "manual" | "scheduled" = "manual") {
         }
 
         if (result.rowCount === 0) {
+          if (isFirstSync) {
+            // Nothing came back on a first sync: do NOT advance the cursor.
+            // Advancing it to "now" would make every later sync ask only for
+            // rows changed after now, hiding all existing source data forever.
+            await prisma.integrationCursor.update({
+              where: { reportKey },
+              data: {
+                lastStatus: "OK",
+                lastNote: `First sync returned 0 rows from ${pulled.location}. Cursor left unset so the next sync loads everything.`,
+              },
+            });
+            summary[reportKey] = { source: pulled.location, pulled: 0, committed: 0, note: "0 rows on first sync - cursor not advanced", since: null, through: throughAt };
+            anyOk = true;
+            continue;
+          }
           await prisma.integrationCursor.update({
             where: { reportKey },
             data: {
@@ -204,35 +187,36 @@ export async function runSync(trigger: "manual" | "scheduled" = "manual") {
           continue;
         }
 
-        // DIRECT INSERT - bypass the broken sync chain
-        let committed = 0;
-        if (reportKey === "employers") {
-          const stats = await directInsertEmployers(result.rows);
-          committed = stats.inserted + stats.updated;
-          for (const row of result.rows) {
-            if (row.employer_ref) touchedEmployers.add(String(row.employer_ref));
-          }
-          summary[reportKey] = {
-            source: pulled.location,
-            pulled: pulled.records.length,
-            committed,
-            inserted: stats.inserted,
-            updated: stats.updated,
-            since: requestSince,
-            through: throughAt,
-          };
-        } else {
-          // For non-employer reports, just mark as committed without processing
-          committed = result.rowCount;
-          summary[reportKey] = {
-            source: pulled.location,
-            pulled: pulled.records.length,
-            committed,
-            since: requestSince,
-            through: throughAt,
-            note: "Report type not yet implemented in direct sync",
-          };
-        }
+        // Real commit path: stage as an ImportBatch, then commitBatch() does the
+        // natural-key upserts, dated history, deletes and dashboard recompute
+        // for ALL ten reports (not just employers).
+        const batch = await prisma.importBatch.create({
+          data: {
+            reportKey,
+            filename: `${adapter.mode.toLowerCase()}-sync:${reportKey}`,
+            fileFormat: adapter.mode.toLowerCase(),
+            status: "VALIDATED",
+            rowCount: result.rowCount,
+            errorCount: 0,
+            stagedRows: result.rows as Json,
+            uploadedBy: `${adapter.mode.toLowerCase()}-sync (${trigger})`,
+            sourceSince: cursor.lastSourceUpdatedAt,
+            sourceThrough: throughAt,
+          },
+        });
+        const committed = await commitBatch(batch.id, { recompute: false });
+        for (const employerId of committed.touchedEmployers ?? []) touchedEmployers.add(employerId);
+        summary[reportKey] = {
+          source: pulled.location,
+          pulled: pulled.records.length,
+          committed: result.rowCount,
+          inserted: committed.inserted,
+          updated: committed.updated,
+          deleted: committed.deleted,
+          staleSkipped: committed.skipped,
+          since: requestSince,
+          through: throughAt,
+        };
 
         await prisma.integrationCursor.update({
           where: { reportKey },
@@ -240,7 +224,7 @@ export async function runSync(trigger: "manual" | "scheduled" = "manual") {
             lastSuccessAt: new Date(),
             lastSourceUpdatedAt: throughAt,
             lastStatus: "OK",
-            lastNote: `${committed} rows committed via ${adapter.mode}.`,
+            lastNote: `${committed.inserted} inserted, ${committed.updated} updated, ${committed.deleted} deleted, ${committed.skipped} stale skipped via ${adapter.mode}.`,
           },
         });
         anyOk = true;
@@ -324,4 +308,3 @@ export async function testConnection(patch: IntegrationConfigPatch = {}) {
 export async function recentSyncLogs(n = 10) {
   return prisma.syncLog.findMany({ orderBy: { startedAt: "desc" }, take: n });
 }
-
