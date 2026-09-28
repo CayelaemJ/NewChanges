@@ -59,7 +59,7 @@ export async function triggerRefreshNow() {
   try {
     const useSqlProc = (process.env.DAILY_REFRESH_MODE ?? "app") === "sqlproc";
     const result = useSqlProc ? await refreshViaDbProcedure() : await refreshViaAppPipeline();
-    return { ok: true, ...result };
+    return { ...result };
   } catch (error: any) {
     const message = error?.message ?? String(error);
     console.error("Manual refresh failed:", message);
