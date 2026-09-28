@@ -149,7 +149,11 @@ export async function runSync(trigger: "manual" | "scheduled" = "manual") {
       });
 
       try {
-        const requestSince = overlapCursor(cursor.lastSourceUpdatedAt);
+        const isFirstSync = cursor.lastSourceUpdatedAt === null && cursor.lastSuccessAt === null;
+        const requestSince = isFirstSync ? null : overlapCursor(cursor.lastSourceUpdatedAt);
+        if (isFirstSync) {
+          console.log(`[sync] ${reportKey}: first sync detected, loading all records without date filtering.`);
+        }
         const pulled = await adapter.fetchReport(reportKey, {
           since: requestSince,
           through: throughAt,
