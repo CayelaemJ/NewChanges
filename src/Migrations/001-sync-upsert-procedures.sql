@@ -4,11 +4,11 @@
 -- Each function takes one JSONB array of CANONICAL SOURCE ROWS (exactly the
 -- column names defined in src/services/reportFormats.ts) and merges them
 -- into the portal tables with the same semantics as importService.ts:
---   • source refs are used as IDs where the app uses them (journey_ref, …)
---   • deterministic md5 IDs elsewhere, so re-runs never duplicate
---   • is_deleted tombstones set source_deleted_at = source_updated_at
---   • stale rows (older source_updated_at) are skipped, never resurrected
---   • rand decimals are converted to integer cents here
+--   · source refs are used as IDs where the app uses them (journey_ref, …)
+--   · deterministic md5 IDs elsewhere, so re-runs never duplicate
+--   · is_deleted tombstones set source_deleted_at = source_updated_at
+--   · stale rows (older source_updated_at) are skipped, never resurrected
+--   · rand decimals are converted to integer cents here
 -- Verified against prisma/schema.prisma (no @map — quoted camelCase columns).
 -- ═══════════════════════════════════════════════════════════════════════════
 
@@ -198,7 +198,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- ── Journeys (PK id = journey_ref; platformUserId resolved via Employee→PlatformUser)
+-- ── Journeys (PK id = journey_ref) ──────────────────────────────────────────
 CREATE OR REPLACE FUNCTION sync_upsert_journeys(p_rows JSONB DEFAULT NULL)
 RETURNS TABLE (inserted BIGINT, updated BIGINT, deleted BIGINT) AS $$
 BEGIN
@@ -295,7 +295,7 @@ BEGIN
       "closedAt"=EXCLUDED."closedAt", "sourceUpdatedAt"=EXCLUDED."sourceUpdatedAt",
       "sourceDeletedAt"=EXCLUDED."sourceDeletedAt", "updatedAt"=NOW()
     WHERE EXCLUDED."sourceUpdatedAt" >= "DebtAccount"."sourceUpdatedAt"
-    RETURNING xmax = 0 AS is_ins, "id" AS account_id, "observedAt" AS obs_at
+    RETURNING xmax = 0 AS is_ins
   )
   SELECT COUNT(*) FILTER (WHERE is_ins), COUNT(*) FILTER (WHERE NOT is_ins)
   INTO v_ins, v_upd FROM ups;

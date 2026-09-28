@@ -1,5 +1,10 @@
+-- ═══════════════════════════════════════════════════════════════════════════
 -- 003 — BULK WINDOW REPLACE for the heaviest feeds (200k+ rows).
--- Deletes the touched window then bulk-inserts, in one transaction per call.
+-- Deletes the touched window, then reloads via the direct procedures, in a
+-- single transaction per call. Use for initial loads / full rebuilds of a
+-- window, not for steady-state incremental syncs.
+-- ═══════════════════════════════════════════════════════════════════════════
+
 CREATE OR REPLACE PROCEDURE sync_employees_bulk(
   p_source_schema TEXT DEFAULT 'source', p_view_prefix TEXT DEFAULT 'v_',
   p_since TIMESTAMP DEFAULT NULL, p_through TIMESTAMP DEFAULT NOW(),
@@ -11,7 +16,7 @@ BEGIN
     AND e."sourceUpdatedAt" <= p_through
     AND (p_since IS NULL OR e."sourceUpdatedAt" > p_since);
   GET DIAGNOSTICS p_deleted = ROW_COUNT;
-  CALL sync_employees_direct(p_source_schema, p_view_prefix, p_since, p_through, p_inserted, p_deleted);
+  CALL sync_employees_direct(p_source_schema, p_view_prefix, p_since, p_through, p_inserted);
 END;
 $$;
 
@@ -25,8 +30,8 @@ BEGIN
   WHERE "sourceUpdatedAt" <= p_through
     AND (p_since IS NULL OR "sourceUpdatedAt" > p_since);
   GET DIAGNOSTICS p_deleted = ROW_COUNT;
-  -- then upsert the fresh window via the canonical JSONB path (app can push rows),
-  -- or extend 002 with a journeys_direct procedure following the same pattern.
+  -- Reload fresh rows through the canonical JSONB path (app pushes the window),
+  -- or add a journeys_direct procedure following the identical 002 pattern.
   p_inserted := 0;
 END;
 $$;

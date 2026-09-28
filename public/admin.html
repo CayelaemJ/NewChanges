@@ -657,18 +657,30 @@ async function syncNow(){
     if(!saveResp.ok) throw new Error(saved.error || 'Could not save settings before syncing');
     $('#integ-token').value=''; $('#integ-sql-password').value='';
   }catch(e){ $('#integ-result').innerHTML = `<div class="banner err">✕ ${e.message}</div>`; return; }
-  $('#integ-result').innerHTML = `<div class="banner ok">Syncing all reports from ${mode}… this may take a minute for large datasets.</div>`;
+  $('#integ-result').innerHTML = `<div class="banner ok">Syncing all reports from ${mode}… you can leave this page; the job runs server-side.</div>`;
   try{
     const r = await fetch(`${API}/api/admin/integration/sync`,{method:'POST'});
     const d = await r.json();
-    if(d.error){ $('#integ-result').innerHTML = `<div class="banner err">✕ ${d.error}</div>`; return; }
-    const rows = Object.entries(d.summary||{}).map(([k,v])=>{
-      const txt = v.error ? `<span style="color:#b5391f">${v.error}</span>` : v.errorCount ? `<span style="color:#b5391f">${v.errorCount} validation error(s)</span>` : `${v.committed ?? 0} loaded`;
-      return `<tr><td style="font-weight:700">${k}</td><td>${txt}</td></tr>`;
-    }).join('');
-    const cls = d.status==='OK'?'ok':d.status==='FAILED'?'err':'ok';
-    $('#integ-result').innerHTML = `<div class="banner ${cls}">${d.status}: ${d.note}</div><table class="hist" style="margin-top:8px"><tbody>${rows}</tbody></table>`;
-    loadInteg();
+    if(!r.ok || d.error){ $('#integ-result').innerHTML = `<div class="banner err">✕ ${d.error||'sync failed to start'}</div>`; return; }
+    const jobId = d.jobId;
+    const render = (j)=>{
+      const rows = Object.entries(j.summary||{}).map(([k,v])=>{
+        const txt = v.error ? `<span style="color:#b5391f">${v.error}</span>` : v.errorCount ? `<span style="color:#b5391f">${v.errorCount} validation error(s)</span>` : `${v.committed ?? 0} loaded${v.inserted!=null?` (${v.inserted} new, ${v.updated} updated)`:''}`;
+        return `<tr><td style="font-weight:700">${k}</td><td>${txt}</td></tr>`;
+      }).join('');
+      const cls = j.status==='OK'?'ok':j.status==='FAILED'?'err':'ok';
+      $('#integ-result').innerHTML = `<div class="banner ${cls}">${j.status}: ${j.note}</div><table class="hist" style="margin-top:8px"><tbody>${rows}</tbody></table>`;
+      loadInteg();
+    };
+    const poll = setInterval(async ()=>{
+      try{
+        const j = await fetch(`${API}/api/admin/sync-jobs/${jobId}`).then(x=>x.json());
+        if(j.status==='PROCESSING') return;
+        clearInterval(poll);
+        if(j.status==='FAILED'){ $('#integ-result').innerHTML = `<div class="banner err">✕ ${j.error||'sync failed'}</div>`; return; }
+        render(j);
+      }catch(e){ clearInterval(poll); $('#integ-result').innerHTML = `<div class="banner err">✕ ${e.message}</div>`; }
+    }, 2000);
   }catch(e){ $('#integ-result').innerHTML = `<div class="banner err">✕ ${e.message}</div>`; }
 }
 async function loadIntegLogs(){

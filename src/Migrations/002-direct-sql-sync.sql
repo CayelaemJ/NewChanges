@@ -1,9 +1,23 @@
+-- ═══════════════════════════════════════════════════════════════════════════
 -- 002 — DIRECT SQL-TO-SQL SYNC. Same merge rules as 001, but reads source
--- views straight from the foreign schema: zero JSONB, zero Node round-trips.
+-- views straight from a foreign schema (postgres_fdw), e.g. MySQL source
+-- views mounted as source.v_employers … — zero JSONB, zero Node round-trips.
+--
+-- Prerequisites (one-time, in the portal database):
+--   CREATE EXTENSION IF NOT EXISTS postgres_fdw;
+--   CREATE SERVER source_srv FOREIGN DATA WRAPPER postgres_fdw
+--     OPTIONS (host '<mysql-host>', port '3306', dbname '<mysql-db>');
+--   CREATE USER MAPPING FOR CURRENT_USER SERVER source_srv
+--     OPTIONS (username '<u>', password '<p>');
+--   CREATE SCHEMA source;
+--   IMPORT FOREIGN SCHEMA public LIMIT TO (v_employers, v_workforce_snapshots, v_employees)
+--     FROM SERVER source_srv INTO source;
+-- ═══════════════════════════════════════════════════════════════════════════
+
 CREATE OR REPLACE PROCEDURE sync_employers_direct(
   p_source_schema TEXT DEFAULT 'source', p_view_prefix TEXT DEFAULT 'v_',
   p_since TIMESTAMP DEFAULT NULL, p_through TIMESTAMP DEFAULT NOW(),
-  OUT p_inserted BIGINT, OUT p_updated BIGINT)
+  OUT p_merged BIGINT)
 LANGUAGE plpgsql AS $$
 BEGIN
   EXECUTE format($sql$
@@ -20,15 +34,14 @@ BEGIN
     WHERE EXCLUDED."sourceUpdatedAt" >= "Employer"."sourceUpdatedAt"
   $sql$, p_source_schema, p_view_prefix)
   USING p_through, p_since;
-  GET DIAGNOSTICS p_updated = ROW_COUNT;  -- merged count (inserts + updates)
-  p_inserted := p_updated; p_updated := 0;  -- split not available from INSERT…SELECT; see 001 for exact counts
+  GET DIAGNOSTICS p_merged = ROW_COUNT;
 END;
 $$;
 
 CREATE OR REPLACE PROCEDURE sync_workforce_snapshots_direct(
   p_source_schema TEXT DEFAULT 'source', p_view_prefix TEXT DEFAULT 'v_',
   p_since TIMESTAMP DEFAULT NULL, p_through TIMESTAMP DEFAULT NOW(),
-  OUT p_inserted BIGINT, OUT p_updated BIGINT)
+  OUT p_merged BIGINT)
 LANGUAGE plpgsql AS $$
 BEGIN
   EXECUTE format($sql$
@@ -46,15 +59,14 @@ BEGIN
     WHERE EXCLUDED."sourceUpdatedAt" >= "EmployerHeadcountSnapshot"."sourceUpdatedAt"
   $sql$, p_source_schema, p_view_prefix)
   USING p_through, p_since;
-  GET DIAGNOSTICS p_inserted = ROW_COUNT; p_updated := 0;
+  GET DIAGNOSTICS p_merged = ROW_COUNT;
 END;
 $$;
 
--- Employee direct sync: sites + projection + version observation.
 CREATE OR REPLACE PROCEDURE sync_employees_direct(
   p_source_schema TEXT DEFAULT 'source', p_view_prefix TEXT DEFAULT 'v_',
   p_since TIMESTAMP DEFAULT NULL, p_through TIMESTAMP DEFAULT NOW(),
-  OUT p_inserted BIGINT, OUT p_updated BIGINT)
+  OUT p_merged BIGINT)
 LANGUAGE plpgsql AS $$
 BEGIN
   EXECUTE format($sql$
@@ -94,7 +106,7 @@ BEGIN
       WHERE EXCLUDED."observedAt" > "Employee"."observedAt"
          OR (EXCLUDED."observedAt" = "Employee"."observedAt"
              AND EXCLUDED."sourceUpdatedAt" >= "Employee"."sourceUpdatedAt")
-      RETURNING "id" AS employee_id, observed_at, xmax = 0 AS is_ins
+      RETURNING "id" AS employee_id, "observedAt" AS observed_at, xmax = 0 AS is_ins
     )
     INSERT INTO "EmployeeVersion"
       ("id","employeeId","observedAt","siteName","active","eligibleFrom","eligibleTo",
@@ -110,6 +122,6 @@ BEGIN
       "isDeleted"=EXCLUDED."isDeleted", "sourceUpdatedAt"=EXCLUDED."sourceUpdatedAt"
     WHERE EXCLUDED."sourceUpdatedAt" >= "EmployeeVersion"."sourceUpdatedAt"
   $sql$, p_source_schema, p_view_prefix) USING p_through, p_since;
-  GET DIAGNOSTICS p_inserted = ROW_COUNT; p_updated := 0;
+  GET DIAGNOSTICS p_merged = ROW_COUNT;
 END;
 $$;

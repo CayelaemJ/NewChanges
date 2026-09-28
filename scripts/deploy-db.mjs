@@ -38,13 +38,19 @@ if (status !== 0) {
   process.exit(status);
 }
 
-// ── Configure MySQL as sync source if credentials are available ──
+// ── Configure MySQL as live data sync source if credentials are available ──
 if (process.env.MYSQLHOST && process.env.MYSQLUSER && process.env.MYSQLPASSWORD && process.env.MYSQLDATABASE) {
   console.log("\n📡 Configuring MySQL as live data sync source...");
   const syncStatus = spawnSync("node", ["scripts/configure-mysql-sync.mjs"], { stdio: "inherit" });
   if (syncStatus.status !== 0) {
     console.warn("⚠️  MySQL sync configuration skipped (credentials incomplete or connection failed)");
   }
+}
+
+// ── Apply server-side sync procedures (idempotent) ──
+if (process.env.APPLY_SYNC_MIGRATIONS === "true") {
+  console.log("\n🧩 Applying sync stored procedures...");
+  spawnSync("node", ["scripts/apply-sync-migrations.mjs"], { stdio: "inherit" });
 }
 
 process.exit(0);
