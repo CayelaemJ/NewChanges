@@ -7,100 +7,137 @@
 
 import { randomUUID } from "node:crypto";
 import { uploadAndValidate, commitBatch } from "./importService.js";
+import { runSync } from "./syncService.js";
 import { prisma } from "./snapshotBuilder.js";
 
-export type JobStatus = "PENDING" | "DONE" | "FAILED";
-
-export interface AsyncJob {
-  status: JobStatus;
-  result?: any;
-  error?: string;
-  timer: NodeJS.Timeout;
-}
-
-const uploadJobs = new Map<string, AsyncJob>();
-const commitJobs = new Map<string, AsyncJob>();
+const uploadJobs = new Map<string, any>();
+const commitJobs = new Map<string, any>();
+const syncJobs = new Map<string, any>();
 
 // Jobs expire after 30 minutes so the maps don't grow forever.
-function startJob(map: Map<string, AsyncJob>): string {
+function startJob(map: Map<string, any>) {
   const id = randomUUID();
   const timer = setTimeout(() => map.delete(id), 30 * 60 * 1000);
   map.set(id, { status: "PENDING", timer });
   return id;
 }
 
-export function startUploadJob(opts: {
-  reportKey: string;
-  filename: string;
-  buffer: Buffer;
-  uploadedBy?: string;
-}): string {
+function currentPeriod(): string {
+  const d = new Date();
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+export function startUploadJob(opts: any) {
   const jobId = startJob(uploadJobs);
-  const job = uploadJobs.get(jobId)!;
+  const job = uploadJobs.get(jobId);
 
   (async () => {
     try {
       const { batch, result } = await uploadAndValidate(opts);
+
+      // Always mark DONE — let frontend decide if it's an error or success based on status/errorCount
       job.status = "DONE";
       job.result = {
-        batchId: batch.id,
-        status: batch.status,
+        batchId: batch?.id,
+        status: batch?.status,
         rowCount: result.rowCount,
         errors: result.errors.slice(0, 200),
         errorCount: result.errors.length,
+        errorSummary: "",
         missingColumns: result.missingColumns,
         unknownColumns: result.unknownColumns,
-        preview: result.rows.slice(0, 10),
+        preview: result.rows.slice(0, 3),
       };
-    } catch (e: any) {
-      job.status = "FAILED";
-      job.error = e?.message || String(e);
-      console.error("[upload-job] validation failed:", e);
+
+      // If validation failed, don't auto-commit
+      if (!result.ok || batch?.status !== "VALIDATED") {
+        return;
+      }
+
+      // Import means import: once validation succeeds, commit immediately in
+      // the same background job. The HTTP request has already returned 202, so
+      // this expensive DB work never blocks the admin UI.
+      const commit = await commitBatch(batch.id);
+      job.result = {
+        ...job.result,
+        status: "COMMITTED",
+        errors: [],
+        errorCount: 0,
+        errorSummary: "",
+        ...commit,
+        period: currentPeriod(),
+      };
+    } catch (e) {
+      // Even on exception, mark DONE with error status so frontend can display it
+      job.status = "DONE";
+      job.result = {
+        batchId: opts.batchId || "unknown",
+        status: "ERROR",
+        rowCount: 0,
+        errors: [],
+        errorCount: 0,
+        errorSummary: `Upload failed: ${(e as any)?.message || String(e)}`,
+        missingColumns: [],
+        unknownColumns: [],
+        preview: [],
+      };
+      console.error("[upload-job] validation/commit failed:", e);
     }
   })();
 
   return jobId;
 }
 
-export function getUploadJob(jobId: string): AsyncJob | undefined {
+export function getUploadJob(jobId: string) {
   return uploadJobs.get(jobId);
 }
 
-export function startCommitJob(batchId: string): string {
+export function startCommitJob(batchId: string) {
   const jobId = startJob(commitJobs);
-  const job = commitJobs.get(jobId)!;
+  const job = commitJobs.get(jobId);
 
   (async () => {
     try {
       const result = await commitBatch(batchId);
-
-      // Harmless if commitBatch already set this itself.
-      await prisma.importBatch.update({
-        where: { id: batchId },
-        data: { status: "COMMITTED" },
-      }).catch(() => {});
-
       job.status = "DONE";
-      job.result = result;
-    } catch (e: any) {
+      job.result = { ...result, period: currentPeriod() };
+    } catch (e) {
       job.status = "FAILED";
-      job.error = String(e?.message || "Import commit failed.").replace(/\s+/g, " ").trim();
+      job.error = (e as any)?.message || String(e);
       console.error("[commit-job] commit failed:", e);
-
-      // Deliberately NOT setting the batch's own status to FAILED here.
-      // commitBatch commits in bounded chunks (see importService.ts) and each
-      // row upsert is already idempotent/re-runnable — if a chunk fails
-      // partway through a large file, the batch is left in VALIDATED with
-      // whatever landed so far, specifically so the user can just hit
-      // Commit again and it resumes cleanly. Forcing FAILED here would
-      // silently strip that recovery path and make them re-upload the whole
-      // file from scratch after a transient failure (e.g. a DB hiccup).
     }
   })();
 
   return jobId;
 }
 
-export function getCommitJob(jobId: string): AsyncJob | undefined {
+export function getCommitJob(jobId: string) {
   return commitJobs.get(jobId);
 }
+
+// Integration syncs (API or SQL) can take minutes for large datasets.
+// Run them in the background and let the browser poll
+// /api/admin/sync-jobs/:jobId, same pattern as uploads/commits.
+export function startSyncJob(trigger: "manual" | "scheduled" = "manual") {
+  const jobId = startJob(syncJobs);
+  const job = syncJobs.get(jobId);
+
+  (async () => {
+    try {
+      const result = await runSync(trigger);
+      job.status = "DONE";
+      job.result = result;
+    } catch (e) {
+      job.status = "FAILED";
+      job.error = (e as any)?.message || String(e);
+      console.error("[sync-job] sync failed:", e);
+    }
+  })();
+
+  return jobId;
+}
+
+export function getSyncJob(jobId: string) {
+  return syncJobs.get(jobId);
+}
+

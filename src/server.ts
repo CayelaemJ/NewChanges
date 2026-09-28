@@ -18,7 +18,7 @@ import { prisma, snapshotEmployer, getDashboardPayload, monthKey } from "./servi
 import { REPORT_FORMATS, LOAD_ORDER, getFormat } from "./services/reportFormats.js";
 import { csvTemplate, xlsxTemplate, formatManifest } from "./services/templateGenerator.js";
 import { uploadAndValidate, commitBatch, revertBatch, resetAllData } from "./services/importService.js";
-import { startUploadJob, getUploadJob, startCommitJob, getCommitJob } from "./services/asyncJobs.js";
+import { startUploadJob, getUploadJob, startCommitJob, getCommitJob, startSyncJob, getSyncJob } from "./services/asyncJobs.js";
 import { getConfig as getSyncConfig, saveConfig as saveSyncConfig, publicConfig as publicSyncConfig, testConnection as testSyncConnection, runSync, recentSyncLogs } from "./services/syncService.js";
 import { listPartners, createPartner, updatePartner, deletePartner, assignUserToPartner, assignEmployerToPartner, themeForUser, themeForSlug } from "./services/partnerService.js";
 import { login, resolveSession, destroySession, canViewEmployer, canAccessModule, allowedEmployerIds, AuthUser } from "./services/authService.js";
@@ -578,6 +578,25 @@ app.post<{ Params: { batchId: string } }>(
   },
 );
 
+// download the exact canonical rows that were uploaded for an import batch
+app.get<{ Params: { batchId: string } }>("/api/admin/batches/:batchId/download", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  try {
+    const batch = await prisma.importBatch.findUnique({
+      where: { id: req.params.batchId },
+      select: { filename: true, reportKey: true },
+    });
+    if (!batch) return reply.code(404).send({ error: "import batch not found" });
+    const csv = await exportImportBatchCsv(req.params.batchId);
+    reply.header("Content-Type", "text/csv; charset=utf-8");
+    reply.header("Content-Disposition", `attachment; filename="${batch.reportKey}_uploaded_${new Date().toISOString().slice(0,10)}.csv"`);
+    return reply.send(csv);
+  } catch (e: any) {
+    req.log.error({ err: e, batchId: req.params.batchId }, "import batch download failed");
+    return reply.code(404).send({ error: e?.message || "uploaded data is no longer available" });
+  }
+});
+
 // import history
 app.get("/api/admin/batches", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
@@ -605,28 +624,6 @@ app.get("/api/admin/batches", async (req, reply) => {
   });
 });
 
-// download the exact source rows uploaded for an import batch as CSV
-app.get<{ Params: { batchId: string } }>("/api/admin/batches/:batchId/csv", async (req, reply) => {
-    if (!(await requireAdmin(req, reply)))
-        return;
-    try {
-        const batch = await prisma.importBatch.findUnique({
-            where: { id: req.params.batchId },
-            select: { id: true, reportKey: true },
-        });
-        if (!batch)
-            return reply.code(404).send({ error: "import batch not found" });
-        const csv = await exportImportBatchCsv(batch.id);
-        const safeReport = String(batch.reportKey).replace(/[^a-zA-Z0-9_-]/g, "_");
-        reply.header("Content-Type", "text/csv; charset=utf-8");
-        reply.header("Content-Disposition", `attachment; filename="${safeReport}-uploaded-data.csv"`);
-        return reply.send(csv);
-    }
-    catch (e: any) {
-        req.log.error(e);
-        return reply.code(400).send({ error: e?.message || "Could not export import data." });
-    }
-});
 // ── DANGER: wipe ALL imported data (clean slate for go-live). Admin only,
 //    and the body must contain confirm: "RESET" so it can't fire by accident. ──
 app.post<{ Body: { confirm?: string } }>("/api/admin/reset-all", async (req, reply) => {
@@ -684,33 +681,27 @@ app.post<{ Body: Record<string, unknown> }>("/api/admin/integration/test", async
   return testSyncConnection((req.body || {}) as any);
 });
 
+// Trigger an integration sync (API or SQL). Returns 202 immediately; the
+// browser polls /api/admin/sync-jobs/:jobId. Pulling and validating a full
+// dataset from an external source can take minutes, and doing it inline on
+// the request used to hang the HTTP connection until it finished.
 app.post("/api/admin/integration/sync", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
-  return runSync("manual");
+  const jobId = startSyncJob("manual");
+  return reply.code(202).send({ status: "ACCEPTED", jobId });
 });
 
-// ── DANGER: wipe every synced row and pull a fresh full copy from the
-//    connected API/SQL source in one action. Cursor-based "Sync now" only
-//    ever pulls what's changed since the last cursor, so rows the source
-//    deleted (or a bad prior sync left half-committed) can linger forever.
-//    This is the explicit "throw it all away and reload from scratch"
-//    button for that — admin only, and confirm: "RESET" is required so it
-//    can never fire from a stray click. ──
-app.post<{ Body: { confirm?: string } }>("/api/admin/integration/full-resync", async (req, reply) => {
-  const admin = await requireAdmin(req, reply); if (!admin) return;
-  if ((req.body?.confirm) !== "RESET") {
-    return reply.code(400).send({ error: 'confirmation phrase missing — expected confirm: "RESET"' });
-  }
-  try {
-    const wiped = await resetAllData();
-    logAdminAction(admin, "data.reset_all", `Wiped all imported data (full resync)`, { detail: wiped });
-    const synced = await runSync("manual");
-    return { wiped, synced };
-  } catch (e: any) {
-    req.log.error({ err: e }, "full resync failed");
-    return reply.code(500).send({ error: e?.message || "Full resync failed." });
-  }
-});
+app.get<{ Params: { jobId: string } }>(
+  "/api/admin/sync-jobs/:jobId",
+  async (req, reply) => {
+    if (!(await requireAdmin(req, reply))) return;
+    const job = getSyncJob(req.params.jobId);
+    if (!job) return reply.code(404).send({ error: "unknown sync job" });
+    if (job.status === "PENDING") return { status: "PROCESSING" };
+    if (job.status === "FAILED") return { status: "FAILED", error: job.error };
+    return { status: "DONE", ...job.result };
+  },
+);
 
 app.get("/api/admin/integration/logs", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
@@ -879,9 +870,10 @@ app.get<{ Params: { employerId: string }; Querystring: { site?: string; income?:
     // the dashboard request after a period is selected; the period picker must
     // never calculate twelve full cohort dashboards.
     const employerId = req.params.employerId;
-    // The period picker is a dimension selector, not a dashboard calculator.
-    // Never rebuild the full dashboard once per month just to populate it.
-
+    // The picker is deliberately a fixed rolling window: twelve months of
+    // actual employer data, newest first. Do not expose every historical row
+    // and do not calculate the dashboard twelve times just to build a menu
+    // as a dimension selector, not a dashboard calculator.
     const snapshots = await prisma.scoreSnapshot.findMany({
       where: { employerId, payloadVersion: { gte: 4 } },
       select: {
@@ -1098,7 +1090,7 @@ function startAutomationScheduler(app: any) {
   setTimeout(tick, 45000);
 }
 
-// ── scheduled-report checker: claims due jobs in the database and sends them via SMTP ──
+// ── scheduled-report checker: claims due jobs in the database and sends them via SMTP, we do need to make sure that this can be altered to schema changes ──
 function startReportScheduler(app: any) {
   const CHECK_MS = 60 * 1000;
   const tick = async () => {
@@ -1109,7 +1101,7 @@ function startReportScheduler(app: any) {
   setTimeout(tick, 20000);
 }
 
-// ── portfolio view: same dated calculation model as each employer dashboard ──
+// ── portfolio view: same dated calculation model as each employer dashboard only execs and people can see this ──
 app.get<{ Querystring: { period?: string; quarter?: string; range?: "30d" | "quarter" | "all" | "month" | "30" | "q" | "latest" } }>(
   "/api/portfolio",
   async (req, reply) => {
