@@ -48,19 +48,11 @@ export interface SourceAdapter {
   label: string;
   fetchReport(reportKey: string, window?: SourceWindow): Promise<SourceFetchResult>;
   test(): Promise<{ ok: true; note: string; details?: unknown }>;
+  describe?(reportKey: string): Promise<{ database: string | null; totalRows: number; newest: string | null; location: string }>;
   close(): Promise<void>;
 }
 
 const IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
-
-function sourceAdapterLog(scope: string, message: string, details?: Record<string, unknown>): void {
-  const timestamp = new Date().toISOString();
-  if (details !== undefined) {
-    console.log(`[sourceAdapter] [${timestamp}] [${scope}] ${message}`, details);
-  } else {
-    console.log(`[sourceAdapter] [${timestamp}] [${scope}] ${message}`);
-  }
-}
 
 function intSetting(value: number | null | undefined, fallback: number, min: number, max: number): number {
   const n = Number(value ?? fallback);
@@ -219,6 +211,7 @@ interface SqlExecutor {
   dialect: SqlDialect;
   queryReport(reportKey: string, window: SourceWindow, maxRows: number): Promise<SqlQueryResult>;
   probe(reportKey: string): Promise<string[]>;
+  describe(reportKey: string): Promise<{ database: string | null; totalRows: number; newest: string | null }>;
   close(): Promise<void>;
 }
 
@@ -274,6 +267,12 @@ async function openPostgresExecutor(config: IntegrationSourceConfig): Promise<Sq
       const result = await client.query(`SELECT * FROM ${view} WHERE 1 = 0`);
       return result.fields?.map((f: any) => String(f.name)) ?? [];
     },
+    async describe(reportKey) {
+      const view = qualifiedView("POSTGRESQL", config, reportKey);
+      const r = await client.query(`SELECT current_database() AS db, COUNT(*)::text AS n, MAX(source_updated_at)::text AS newest FROM ${view}`);
+      const row = r.rows[0] ?? {};
+      return { database: row.db ?? null, totalRows: Number(row.n ?? 0), newest: row.newest ?? null };
+    },
     async close() { await client.end(); },
   };
 }
@@ -308,60 +307,22 @@ async function openMysqlExecutor(config: IntegrationSourceConfig): Promise<SqlEx
       if (window.through) { params.push(window.through); where.push("source_updated_at <= ?"); }
       params.push(maxRows + 1);
       const sql = `SELECT * FROM ${view}${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY source_updated_at ASC LIMIT ?`;
-      sourceAdapterLog("mysql.queryReport", `Executing query for report "${reportKey}" against view ${view}`, {
-        reportKey,
-        view,
-        sql,
-        params,
-        since: window.since ? window.since.toISOString() : null,
-        through: window.through ? window.through.toISOString() : null,
-        maxRows,
-      });
-      try {
-        const [rows, fields] = await connection.query({ sql, timeout: queryTimeout }, params);
-        const rowCount = Array.isArray(rows) ? rows.length : 0;
-        sourceAdapterLog("mysql.queryReport", `Query for report "${reportKey}" against view ${view} returned ${rowCount} row(s)`, {
-          reportKey,
-          view,
-          rowCount,
-        });
-        return {
-          rows: Array.isArray(rows) ? rows as Record<string, unknown>[] : [],
-          columns: Array.isArray(fields) ? fields.map((f: any) => String(f.name)) : [],
-        };
-      } catch (error: any) {
-        sourceAdapterLog("mysql.queryReport", `Query for report "${reportKey}" against view ${view} failed`, {
-          reportKey,
-          view,
-          sql,
-          params,
-          error: error?.message ?? String(error),
-        });
-        throw error;
-      }
+      const [rows, fields] = await connection.query({ sql, timeout: queryTimeout }, params);
+      return {
+        rows: Array.isArray(rows) ? rows as Record<string, unknown>[] : [],
+        columns: Array.isArray(fields) ? fields.map((f: any) => String(f.name)) : [],
+      };
     },
     async probe(reportKey) {
       const view = qualifiedView("MYSQL", config, reportKey);
-      const sql = `SELECT * FROM ${view} WHERE 1 = 0`;
-      sourceAdapterLog("mysql.probe", `Probing view ${view} for report "${reportKey}"`, { reportKey, view, sql });
-      try {
-        const [, fields] = await connection.query({ sql, timeout: queryTimeout });
-        const columns = Array.isArray(fields) ? fields.map((f: any) => String(f.name)) : [];
-        sourceAdapterLog("mysql.probe", `Probe of view ${view} for report "${reportKey}" returned ${columns.length} column(s)`, {
-          reportKey,
-          view,
-          columns,
-        });
-        return columns;
-      } catch (error: any) {
-        sourceAdapterLog("mysql.probe", `Probe of view ${view} for report "${reportKey}" failed`, {
-          reportKey,
-          view,
-          sql,
-          error: error?.message ?? String(error),
-        });
-        throw error;
-      }
+      const [, fields] = await connection.query({ sql: `SELECT * FROM ${view} WHERE 1 = 0`, timeout: queryTimeout });
+      return Array.isArray(fields) ? fields.map((f: any) => String(f.name)) : [];
+    },
+    async describe(reportKey) {
+      const view = qualifiedView("MYSQL", config, reportKey);
+      const [rows]: any = await connection.query({ sql: `SELECT DATABASE() AS db, COUNT(*) AS n, CAST(MAX(source_updated_at) AS CHAR) AS newest FROM ${view}`, timeout: queryTimeout });
+      const row = Array.isArray(rows) ? rows[0] ?? {} : {};
+      return { database: row.db ?? null, totalRows: Number(row.n ?? 0), newest: row.newest ?? null };
     },
     async close() { await connection.end(); },
   };
@@ -408,6 +369,12 @@ async function openMssqlExecutor(config: IntegrationSourceConfig): Promise<SqlEx
       if (result.recordset?.columns) return Object.keys(result.recordset.columns);
       return [];
     },
+    async describe(reportKey) {
+      const view = qualifiedView("MSSQL", config, reportKey);
+      const r = await pool.request().query(`SELECT DB_NAME() AS db, COUNT(*) AS n, CONVERT(varchar(40), MAX(source_updated_at), 127) AS newest FROM ${view}`);
+      const row: any = r.recordset?.[0] ?? {};
+      return { database: row.db ?? null, totalRows: Number(row.n ?? 0), newest: row.newest ?? null };
+    },
     async close() { await pool.close(); },
   };
 }
@@ -447,43 +414,13 @@ async function createSqlAdapter(config: IntegrationSourceConfig): Promise<Source
   }
 
   async function fetchReport(reportKey: string, window: SourceWindow = {}): Promise<SourceFetchResult> {
-    const location = `${dialect}:${formatSqlLocation(config, reportKey)}`;
-    sourceAdapterLog("sqlAdapter.fetchReport", `Fetching report "${reportKey}" from ${location}`, {
-      reportKey,
-      location,
-      since: window.since ? window.since.toISOString() : null,
-      through: window.through ? window.through.toISOString() : null,
-      maxRows,
-    });
-    let result: SqlQueryResult;
-    try {
-      result = await executor.queryReport(reportKey, window, maxRows);
-    } catch (error: any) {
-      sourceAdapterLog("sqlAdapter.fetchReport", `Failed to fetch report "${reportKey}" from ${location}`, {
-        reportKey,
-        location,
-        error: error?.message ?? String(error),
-      });
-      throw error;
-    }
-    sourceAdapterLog("sqlAdapter.fetchReport", `Report "${reportKey}" from ${location} returned ${result.rows.length} row(s) before normalization`, {
-      reportKey,
-      location,
-      rowCount: result.rows.length,
-      columns: result.columns,
-    });
+    const result = await executor.queryReport(reportKey, window, maxRows);
     if (result.rows.length > maxRows) {
       throw new Error(`${reportKey}: SQL extraction exceeded the configured ${maxRows.toLocaleString("en-ZA")} row safety limit for one sync window. Increase sync frequency or sqlMaxRowsPerReport.`);
     }
-    const records = normalizeSqlRows(reportKey, result.rows);
-    sourceAdapterLog("sqlAdapter.fetchReport", `Report "${reportKey}" from ${location} produced ${records.length} normalized record(s)`, {
-      reportKey,
-      location,
-      recordCount: records.length,
-    });
     return {
-      records,
-      location,
+      records: normalizeSqlRows(reportKey, result.rows),
+      location: `${dialect}:${formatSqlLocation(config, reportKey)}`,
     };
   }
 
@@ -491,6 +428,10 @@ async function createSqlAdapter(config: IntegrationSourceConfig): Promise<Source
     mode: "SQL",
     label: `${dialect} ${config.sqlHost}/${config.sqlDatabase}`,
     fetchReport,
+    async describe(reportKey: string) {
+      const d = await executor.describe(reportKey);
+      return { ...d, location: `${dialect}:${config.sqlHost}:${config.sqlPort ?? "default"}/${d.database ?? config.sqlDatabase}.${formatSqlLocation(config, reportKey)}` };
+    },
     async test() {
       const details: Record<string, unknown> = {};
       for (const reportKey of LOAD_ORDER) {
