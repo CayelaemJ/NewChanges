@@ -1,468 +1,115 @@
--- ═══════════════════════════════════════════════════════════════════════════
--- DIRECT SQL UPSERT FOR SQL SOURCE INTEGRATION
---
--- For SQL-to-SQL integration: Query source views directly and upsert atomically
--- in a single transaction. Zero JSONB parsing, zero row-by-row inserts.
--- ═══════════════════════════════════════════════════════════════════════════
-
--- ─────────────────────────────────────────────────────────────────────────
--- Employers: INSERT ... SELECT ... ON CONFLICT
--- ─────────────────────────────────────────────────────────────────────────
+-- 002 — DIRECT SQL-TO-SQL SYNC. Same merge rules as 001, but reads source
+-- views straight from the foreign schema: zero JSONB, zero Node round-trips.
 CREATE OR REPLACE PROCEDURE sync_employers_direct(
-  p_schema_name TEXT DEFAULT 'public',
-  p_view_prefix TEXT DEFAULT 'v_',
-  p_since TIMESTAMP DEFAULT NULL,
-  p_through TIMESTAMP DEFAULT NOW(),
-  OUT p_inserted BIGINT,
-  OUT p_updated BIGINT
-)
-LANGUAGE plpgsql
-AS $$
+  p_source_schema TEXT DEFAULT 'source', p_view_prefix TEXT DEFAULT 'v_',
+  p_since TIMESTAMP DEFAULT NULL, p_through TIMESTAMP DEFAULT NOW(),
+  OUT p_inserted BIGINT, OUT p_updated BIGINT)
+LANGUAGE plpgsql AS $$
 BEGIN
-  WITH upsert AS (
-    INSERT INTO "Employer" (
-      "employer_ref", "name", "eligible_count", "eligible_count_as_at",
-      "source_updated_at", "source_deleted_at", "created_at", "updated_at"
-    )
-    SELECT
-      employer_ref, name, eligible_count, eligible_count_as_at,
-      source_updated_at,
-      CASE WHEN is_deleted THEN NOW() ELSE NULL END,
-      NOW(), NOW()
-    FROM v_employers
-    WHERE source_updated_at <= p_through
-      AND (p_since IS NULL OR source_updated_at > p_since)
-    ON CONFLICT ("employer_ref") DO UPDATE SET
-      "name" = EXCLUDED."name",
-      "eligible_count" = EXCLUDED."eligible_count",
-      "eligible_count_as_at" = EXCLUDED."eligible_count_as_at",
-      "source_updated_at" = EXCLUDED."source_updated_at",
-      "source_deleted_at" = EXCLUDED."source_deleted_at",
-      "updated_at" = NOW()
-    RETURNING xmax = 0 AS is_insert
-  )
-  SELECT
-    COUNT(*) FILTER (WHERE is_insert)::BIGINT,
-    COUNT(*) FILTER (WHERE NOT is_insert)::BIGINT
-  INTO p_inserted, p_updated
-  FROM upsert;
+  EXECUTE format($sql$
+    INSERT INTO "Employer" ("id","name","eligibleCount","eligibleCountAsAt","sourceUpdatedAt","sourceDeletedAt","updatedAt")
+    SELECT employer_ref, name, COALESCE(eligible_count,0), eligible_count_as_at, source_updated_at,
+           CASE WHEN is_deleted THEN source_updated_at ELSE NULL END, NOW()
+    FROM %I.%Iemployers
+    WHERE source_updated_at <= $1 AND ($2::timestamp IS NULL OR source_updated_at > $2)
+    ON CONFLICT ("id") DO UPDATE SET
+      "name"=EXCLUDED."name", "eligibleCount"=EXCLUDED."eligibleCount",
+      "eligibleCountAsAt"=EXCLUDED."eligibleCountAsAt",
+      "sourceUpdatedAt"=EXCLUDED."sourceUpdatedAt",
+      "sourceDeletedAt"=EXCLUDED."sourceDeletedAt", "updatedAt"=NOW()
+    WHERE EXCLUDED."sourceUpdatedAt" >= "Employer"."sourceUpdatedAt"
+  $sql$, p_source_schema, p_view_prefix)
+  USING p_through, p_since;
+  GET DIAGNOSTICS p_updated = ROW_COUNT;  -- merged count (inserts + updates)
+  p_inserted := p_updated; p_updated := 0;  -- split not available from INSERT…SELECT; see 001 for exact counts
 END;
 $$;
 
--- ─────────────────────────────────────────────────────────────────────────
--- Employees: Direct INSERT ... SELECT
--- ─────────────────────────────────────────────────────────────────────────
-CREATE OR REPLACE PROCEDURE sync_employees_direct(
-  p_schema_name TEXT DEFAULT 'public',
-  p_view_prefix TEXT DEFAULT 'v_',
-  p_since TIMESTAMP DEFAULT NULL,
-  p_through TIMESTAMP DEFAULT NOW(),
-  OUT p_inserted BIGINT,
-  OUT p_updated BIGINT
-)
-LANGUAGE plpgsql
-AS $$
-BEGIN
-  WITH upsert AS (
-    INSERT INTO "Employee" (
-      "employer_ref", "payroll_ref", "observed_at", "site_name", "income_band",
-      "eligible_from", "eligible_to", "active", "source_updated_at",
-      "source_deleted_at", "created_at", "updated_at"
-    )
-    SELECT
-      employer_ref, payroll_ref, observed_at, site_name, income_band,
-      eligible_from, eligible_to, active, source_updated_at,
-      CASE WHEN is_deleted THEN NOW() ELSE NULL END,
-      NOW(), NOW()
-    FROM v_employees
-    WHERE source_updated_at <= p_through
-      AND (p_since IS NULL OR source_updated_at > p_since)
-    ON CONFLICT ("employer_ref", "payroll_ref", "observed_at") DO UPDATE SET
-      "site_name" = EXCLUDED."site_name",
-      "income_band" = EXCLUDED."income_band",
-      "eligible_from" = EXCLUDED."eligible_from",
-      "eligible_to" = EXCLUDED."eligible_to",
-      "active" = EXCLUDED."active",
-      "source_updated_at" = EXCLUDED."source_updated_at",
-      "source_deleted_at" = EXCLUDED."source_deleted_at",
-      "updated_at" = NOW()
-    RETURNING xmax = 0 AS is_insert
-  )
-  SELECT
-    COUNT(*) FILTER (WHERE is_insert)::BIGINT,
-    COUNT(*) FILTER (WHERE NOT is_insert)::BIGINT
-  INTO p_inserted, p_updated
-  FROM upsert;
-END;
-$$;
-
--- ─────────────────────────────────────────────────────────────────────────
--- Journeys: Direct INSERT ... SELECT
--- ─────────────────────────────────────────────────────────────────────────
-CREATE OR REPLACE PROCEDURE sync_journeys_direct(
-  p_schema_name TEXT DEFAULT 'public',
-  p_view_prefix TEXT DEFAULT 'v_',
-  p_since TIMESTAMP DEFAULT NULL,
-  p_through TIMESTAMP DEFAULT NOW(),
-  OUT p_inserted BIGINT,
-  OUT p_updated BIGINT
-)
-LANGUAGE plpgsql
-AS $$
-BEGIN
-  WITH upsert AS (
-    INSERT INTO "Journey" (
-      "journey_ref", "employer_ref", "payroll_ref", "type", "status",
-      "started_at", "completed_at", "monthly_saving_rand", "balance_impact_rand",
-      "source_updated_at", "source_deleted_at", "created_at", "updated_at"
-    )
-    SELECT
-      journey_ref, employer_ref, payroll_ref, type, status,
-      started_at, completed_at, monthly_saving_rand, balance_impact_rand,
-      source_updated_at,
-      CASE WHEN is_deleted THEN NOW() ELSE NULL END,
-      NOW(), NOW()
-    FROM v_journeys
-    WHERE source_updated_at <= p_through
-      AND (p_since IS NULL OR source_updated_at > p_since)
-    ON CONFLICT ("journey_ref") DO UPDATE SET
-      "type" = EXCLUDED."type",
-      "status" = EXCLUDED."status",
-      "started_at" = EXCLUDED."started_at",
-      "completed_at" = EXCLUDED."completed_at",
-      "monthly_saving_rand" = EXCLUDED."monthly_saving_rand",
-      "balance_impact_rand" = EXCLUDED."balance_impact_rand",
-      "source_updated_at" = EXCLUDED."source_updated_at",
-      "source_deleted_at" = EXCLUDED."source_deleted_at",
-      "updated_at" = NOW()
-    RETURNING xmax = 0 AS is_insert
-  )
-  SELECT
-    COUNT(*) FILTER (WHERE is_insert)::BIGINT,
-    COUNT(*) FILTER (WHERE NOT is_insert)::BIGINT
-  INTO p_inserted, p_updated
-  FROM upsert;
-END;
-$$;
-
--- ─────────────────────────────────────────────────────────────────────────
--- Debt Accounts: Direct INSERT ... SELECT
--- ─────────────────────────────────────────────────────────────────────────
-CREATE OR REPLACE PROCEDURE sync_debt_accounts_direct(
-  p_schema_name TEXT DEFAULT 'public',
-  p_view_prefix TEXT DEFAULT 'v_',
-  p_since TIMESTAMP DEFAULT NULL,
-  p_through TIMESTAMP DEFAULT NOW(),
-  OUT p_inserted BIGINT,
-  OUT p_updated BIGINT
-)
-LANGUAGE plpgsql
-AS $$
-BEGIN
-  WITH upsert AS (
-    INSERT INTO "DebtAccount" (
-      "account_ref", "employer_ref", "payroll_ref", "observed_at", "closed_at",
-      "creditor_name", "credit_type", "balance_rand", "in_arrears", "state",
-      "challenge_status", "journey_ref", "source_updated_at", "source_deleted_at",
-      "created_at", "updated_at"
-    )
-    SELECT
-      account_ref, employer_ref, payroll_ref, observed_at, closed_at,
-      creditor_name, credit_type, balance_rand, in_arrears, state,
-      challenge_status, journey_ref, source_updated_at,
-      CASE WHEN is_deleted THEN NOW() ELSE NULL END,
-      NOW(), NOW()
-    FROM v_debt_accounts
-    WHERE source_updated_at <= p_through
-      AND (p_since IS NULL OR source_updated_at > p_since)
-    ON CONFLICT ("account_ref") DO UPDATE SET
-      "observed_at" = EXCLUDED."observed_at",
-      "closed_at" = EXCLUDED."closed_at",
-      "balance_rand" = EXCLUDED."balance_rand",
-      "in_arrears" = EXCLUDED."in_arrears",
-      "state" = EXCLUDED."state",
-      "challenge_status" = EXCLUDED."challenge_status",
-      "source_updated_at" = EXCLUDED."source_updated_at",
-      "source_deleted_at" = EXCLUDED."source_deleted_at",
-      "updated_at" = NOW()
-    RETURNING xmax = 0 AS is_insert
-  )
-  SELECT
-    COUNT(*) FILTER (WHERE is_insert)::BIGINT,
-    COUNT(*) FILTER (WHERE NOT is_insert)::BIGINT
-  INTO p_inserted, p_updated
-  FROM upsert;
-END;
-$$;
-
--- ─────────────────────────────────────────────────────────────────────────
--- Policies: Direct INSERT ... SELECT
--- ─────────────────────────────────────────────────────────────────────────
-CREATE OR REPLACE PROCEDURE sync_policies_direct(
-  p_schema_name TEXT DEFAULT 'public',
-  p_view_prefix TEXT DEFAULT 'v_',
-  p_since TIMESTAMP DEFAULT NULL,
-  p_through TIMESTAMP DEFAULT NOW(),
-  OUT p_inserted BIGINT,
-  OUT p_updated BIGINT
-)
-LANGUAGE plpgsql
-AS $$
-BEGIN
-  WITH upsert AS (
-    INSERT INTO "Policy" (
-      "policy_ref", "employer_ref", "payroll_ref", "observed_at", "effective_from",
-      "effective_to", "resolved_at", "type", "premium_rand", "is_wasteful",
-      "is_resolved", "source_updated_at", "source_deleted_at", "created_at", "updated_at"
-    )
-    SELECT
-      policy_ref, employer_ref, payroll_ref, observed_at, effective_from,
-      effective_to, resolved_at, type, premium_rand, is_wasteful,
-      is_resolved, source_updated_at,
-      CASE WHEN is_deleted THEN NOW() ELSE NULL END,
-      NOW(), NOW()
-    FROM v_policies
-    WHERE source_updated_at <= p_through
-      AND (p_since IS NULL OR source_updated_at > p_since)
-    ON CONFLICT ("policy_ref") DO UPDATE SET
-      "observed_at" = EXCLUDED."observed_at",
-      "effective_from" = EXCLUDED."effective_from",
-      "effective_to" = EXCLUDED."effective_to",
-      "resolved_at" = EXCLUDED."resolved_at",
-      "premium_rand" = EXCLUDED."premium_rand",
-      "is_wasteful" = EXCLUDED."is_wasteful",
-      "is_resolved" = EXCLUDED."is_resolved",
-      "source_updated_at" = EXCLUDED."source_updated_at",
-      "source_deleted_at" = EXCLUDED."source_deleted_at",
-      "updated_at" = NOW()
-    RETURNING xmax = 0 AS is_insert
-  )
-  SELECT
-    COUNT(*) FILTER (WHERE is_insert)::BIGINT,
-    COUNT(*) FILTER (WHERE NOT is_insert)::BIGINT
-  INTO p_inserted, p_updated
-  FROM upsert;
-END;
-$$;
-
--- ─────────────────────────────────────────────────────────────────────────
--- Ratings: Direct INSERT ... SELECT
--- ─────────────────────────────────────────────────────────────────────────
-CREATE OR REPLACE PROCEDURE sync_ratings_direct(
-  p_schema_name TEXT DEFAULT 'public',
-  p_view_prefix TEXT DEFAULT 'v_',
-  p_since TIMESTAMP DEFAULT NULL,
-  p_through TIMESTAMP DEFAULT NOW(),
-  OUT p_inserted BIGINT,
-  OUT p_updated BIGINT
-)
-LANGUAGE plpgsql
-AS $$
-BEGIN
-  WITH upsert AS (
-    INSERT INTO "Rating" (
-      "rating_ref", "employer_ref", "payroll_ref", "journey_type", "stars",
-      "created_at", "source_updated_at", "source_deleted_at", "updated_at"
-    )
-    SELECT
-      rating_ref, employer_ref, payroll_ref, journey_type, stars,
-      created_at, source_updated_at,
-      CASE WHEN is_deleted THEN NOW() ELSE NULL END,
-      NOW()
-    FROM v_ratings
-    WHERE source_updated_at <= p_through
-      AND (p_since IS NULL OR source_updated_at > p_since)
-    ON CONFLICT ("rating_ref") DO UPDATE SET
-      "stars" = EXCLUDED."stars",
-      "source_updated_at" = EXCLUDED."source_updated_at",
-      "source_deleted_at" = EXCLUDED."source_deleted_at",
-      "updated_at" = NOW()
-    RETURNING xmax = 0 AS is_insert
-  )
-  SELECT
-    COUNT(*) FILTER (WHERE is_insert)::BIGINT,
-    COUNT(*) FILTER (WHERE NOT is_insert)::BIGINT
-  INTO p_inserted, p_updated
-  FROM upsert;
-END;
-$$;
-
--- ─────────────────────────────────────────────────────────────────────────
--- Referrals: Direct INSERT ... SELECT
--- ─────────────────────────────────────────────────────────────────────────
-CREATE OR REPLACE PROCEDURE sync_referrals_direct(
-  p_schema_name TEXT DEFAULT 'public',
-  p_view_prefix TEXT DEFAULT 'v_',
-  p_since TIMESTAMP DEFAULT NULL,
-  p_through TIMESTAMP DEFAULT NOW(),
-  OUT p_inserted BIGINT,
-  OUT p_updated BIGINT
-)
-LANGUAGE plpgsql
-AS $$
-BEGIN
-  WITH upsert AS (
-    INSERT INTO "Referral" (
-      "referral_ref", "employer_ref", "payroll_ref", "channel", "shared_at",
-      "converted", "converted_at", "source_updated_at", "source_deleted_at",
-      "created_at", "updated_at"
-    )
-    SELECT
-      referral_ref, employer_ref, payroll_ref, channel, shared_at,
-      converted, converted_at, source_updated_at,
-      CASE WHEN is_deleted THEN NOW() ELSE NULL END,
-      NOW(), NOW()
-    FROM v_referrals
-    WHERE source_updated_at <= p_through
-      AND (p_since IS NULL OR source_updated_at > p_since)
-    ON CONFLICT ("referral_ref") DO UPDATE SET
-      "shared_at" = EXCLUDED."shared_at",
-      "converted" = EXCLUDED."converted",
-      "converted_at" = EXCLUDED."converted_at",
-      "source_updated_at" = EXCLUDED."source_updated_at",
-      "source_deleted_at" = EXCLUDED."source_deleted_at",
-      "updated_at" = NOW()
-    RETURNING xmax = 0 AS is_insert
-  )
-  SELECT
-    COUNT(*) FILTER (WHERE is_insert)::BIGINT,
-    COUNT(*) FILTER (WHERE NOT is_insert)::BIGINT
-  INTO p_inserted, p_updated
-  FROM upsert;
-END;
-$$;
-
--- ─────────────────────────────────────────────────────────────────────────
--- Salary Advances: Direct INSERT ... SELECT
--- ─────────────────────────────────────────────────────────────────────────
-CREATE OR REPLACE PROCEDURE sync_salary_advances_direct(
-  p_schema_name TEXT DEFAULT 'public',
-  p_view_prefix TEXT DEFAULT 'v_',
-  p_since TIMESTAMP DEFAULT NULL,
-  p_through TIMESTAMP DEFAULT NOW(),
-  OUT p_inserted BIGINT,
-  OUT p_updated BIGINT
-)
-LANGUAGE plpgsql
-AS $$
-BEGIN
-  WITH upsert AS (
-    INSERT INTO "SalaryAdvance" (
-      "salary_advance_id", "employer_ref", "client_id", "payroll_ref", "amount",
-      "salary_advance_status", "bank_account_verification_status", "blacklisted",
-      "advanced_at", "source_updated_at", "source_deleted_at", "created_at", "updated_at"
-    )
-    SELECT
-      salary_advance_id, employer_ref, client_id, payroll_ref, amount,
-      salary_advance_status, bank_account_verification_status, blacklisted,
-      advanced_at, source_updated_at,
-      CASE WHEN is_deleted THEN NOW() ELSE NULL END,
-      NOW(), NOW()
-    FROM v_salary_advances
-    WHERE source_updated_at <= p_through
-      AND (p_since IS NULL OR source_updated_at > p_since)
-    ON CONFLICT ("salary_advance_id") DO UPDATE SET
-      "amount" = EXCLUDED."amount",
-      "salary_advance_status" = EXCLUDED."salary_advance_status",
-      "bank_account_verification_status" = EXCLUDED."bank_account_verification_status",
-      "blacklisted" = EXCLUDED."blacklisted",
-      "advanced_at" = EXCLUDED."advanced_at",
-      "source_updated_at" = EXCLUDED."source_updated_at",
-      "source_deleted_at" = EXCLUDED."source_deleted_at",
-      "updated_at" = NOW()
-    RETURNING xmax = 0 AS is_insert
-  )
-  SELECT
-    COUNT(*) FILTER (WHERE is_insert)::BIGINT,
-    COUNT(*) FILTER (WHERE NOT is_insert)::BIGINT
-  INTO p_inserted, p_updated
-  FROM upsert;
-END;
-$$;
-
--- ─────────────────────────────────────────────────────────────────────────
--- Workforce Snapshots: Direct INSERT ... SELECT
--- ─────────────────────────────────────────────────────────────────────────
 CREATE OR REPLACE PROCEDURE sync_workforce_snapshots_direct(
-  p_schema_name TEXT DEFAULT 'public',
-  p_view_prefix TEXT DEFAULT 'v_',
-  p_since TIMESTAMP DEFAULT NULL,
-  p_through TIMESTAMP DEFAULT NOW(),
-  OUT p_inserted BIGINT,
-  OUT p_updated BIGINT
-)
-LANGUAGE plpgsql
-AS $$
+  p_source_schema TEXT DEFAULT 'source', p_view_prefix TEXT DEFAULT 'v_',
+  p_since TIMESTAMP DEFAULT NULL, p_through TIMESTAMP DEFAULT NOW(),
+  OUT p_inserted BIGINT, OUT p_updated BIGINT)
+LANGUAGE plpgsql AS $$
 BEGIN
-  WITH upsert AS (
-    INSERT INTO "EmployerHeadcountSnapshot" (
-      "employer_ref", "as_of_date", "eligible_count", "source_updated_at",
-      "source_deleted_at", "created_at", "updated_at"
-    )
-    SELECT
-      employer_ref, as_of_date, eligible_count, source_updated_at,
-      CASE WHEN is_deleted THEN NOW() ELSE NULL END,
-      NOW(), NOW()
-    FROM v_workforce_snapshots
-    WHERE source_updated_at <= p_through
-      AND (p_since IS NULL OR source_updated_at > p_since)
-    ON CONFLICT ("employer_ref", "as_of_date") DO UPDATE SET
-      "eligible_count" = EXCLUDED."eligible_count",
-      "source_updated_at" = EXCLUDED."source_updated_at",
-      "source_deleted_at" = EXCLUDED."source_deleted_at",
-      "updated_at" = NOW()
-    RETURNING xmax = 0 AS is_insert
-  )
-  SELECT
-    COUNT(*) FILTER (WHERE is_insert)::BIGINT,
-    COUNT(*) FILTER (WHERE NOT is_insert)::BIGINT
-  INTO p_inserted, p_updated
-  FROM upsert;
+  EXECUTE format($sql$
+    INSERT INTO "EmployerHeadcountSnapshot"
+      ("id","employerId","asOfDate","eligibleCount","sourceUpdatedAt","sourceDeletedAt","createdAt")
+    SELECT md5(employer_ref||'|'||as_of_date::text), employer_ref, as_of_date,
+           COALESCE(eligible_count,0), source_updated_at,
+           CASE WHEN is_deleted THEN source_updated_at ELSE NULL END, NOW()
+    FROM %I.%Iworkforce_snapshots
+    WHERE source_updated_at <= $1 AND ($2::timestamp IS NULL OR source_updated_at > $2)
+    ON CONFLICT ("employerId","asOfDate") DO UPDATE SET
+      "eligibleCount"=EXCLUDED."eligibleCount",
+      "sourceUpdatedAt"=EXCLUDED."sourceUpdatedAt",
+      "sourceDeletedAt"=EXCLUDED."sourceDeletedAt"
+    WHERE EXCLUDED."sourceUpdatedAt" >= "EmployerHeadcountSnapshot"."sourceUpdatedAt"
+  $sql$, p_source_schema, p_view_prefix)
+  USING p_through, p_since;
+  GET DIAGNOSTICS p_inserted = ROW_COUNT; p_updated := 0;
 END;
 $$;
 
--- ─────────────────────────────────────────────────────────────────────────
--- Platform Users: Direct INSERT ... SELECT
--- ─────────────────────────────────────────────────────────────────────────
-CREATE OR REPLACE PROCEDURE sync_platform_users_direct(
-  p_schema_name TEXT DEFAULT 'public',
-  p_view_prefix TEXT DEFAULT 'v_',
-  p_since TIMESTAMP DEFAULT NULL,
-  p_through TIMESTAMP DEFAULT NOW(),
-  OUT p_inserted BIGINT,
-  OUT p_updated BIGINT
-)
-LANGUAGE plpgsql
-AS $$
+-- Employee direct sync: sites + projection + version observation.
+CREATE OR REPLACE PROCEDURE sync_employees_direct(
+  p_source_schema TEXT DEFAULT 'source', p_view_prefix TEXT DEFAULT 'v_',
+  p_since TIMESTAMP DEFAULT NULL, p_through TIMESTAMP DEFAULT NOW(),
+  OUT p_inserted BIGINT, OUT p_updated BIGINT)
+LANGUAGE plpgsql AS $$
 BEGIN
-  WITH upsert AS (
-    INSERT INTO "PlatformUser" (
-      "employer_ref", "payroll_ref", "enrolled_at", "activated_at",
-      "has_credit_profile", "source_updated_at", "source_deleted_at",
-      "created_at", "updated_at"
+  EXECUTE format($sql$
+    INSERT INTO "Site" ("id","employerId","name")
+    SELECT DISTINCT md5(employer_ref||'|'||site_name), employer_ref, site_name
+    FROM %I.%Iemployees
+    WHERE site_name IS NOT NULL
+      AND source_updated_at <= $1 AND ($2::timestamp IS NULL OR source_updated_at > $2)
+    ON CONFLICT ("employerId","name") DO NOTHING
+  $sql$, p_source_schema, p_view_prefix) USING p_through, p_since;
+
+  EXECUTE format($sql$
+    WITH src AS (
+      SELECT employer_ref, payroll_ref, observed_at, site_name, income_band,
+             eligible_from, eligible_to, active, source_updated_at,
+             COALESCE(is_deleted,FALSE) AS is_deleted
+      FROM %I.%Iemployees
+      WHERE source_updated_at <= $1 AND ($2::timestamp IS NULL OR source_updated_at > $2)
+    ),
+    ins AS (
+      INSERT INTO "Employee"
+        ("id","employerId","payrollRef","siteId","incomeBand","active","observedAt",
+         "eligibleFrom","eligibleTo","sourceUpdatedAt","sourceDeletedAt","updatedAt")
+      SELECT md5(employer_ref||'|'||payroll_ref), employer_ref, payroll_ref,
+             (SELECT s."id" FROM "Site" s WHERE s."employerId"=employer_ref AND s."name"=src.site_name),
+             income_band,
+             CASE WHEN is_deleted THEN FALSE ELSE COALESCE(active, eligible_to IS NULL) END,
+             observed_at, eligible_from, eligible_to, source_updated_at,
+             CASE WHEN is_deleted THEN source_updated_at ELSE NULL END, NOW()
+      FROM src
+      ON CONFLICT ("employerId","payrollRef") DO UPDATE SET
+        "siteId"=EXCLUDED."siteId", "incomeBand"=EXCLUDED."incomeBand",
+        "active"=EXCLUDED."active", "observedAt"=EXCLUDED."observedAt",
+        "eligibleFrom"=EXCLUDED."eligibleFrom", "eligibleTo"=EXCLUDED."eligibleTo",
+        "sourceUpdatedAt"=EXCLUDED."sourceUpdatedAt",
+        "sourceDeletedAt"=EXCLUDED."sourceDeletedAt", "updatedAt"=NOW()
+      WHERE EXCLUDED."observedAt" > "Employee"."observedAt"
+         OR (EXCLUDED."observedAt" = "Employee"."observedAt"
+             AND EXCLUDED."sourceUpdatedAt" >= "Employee"."sourceUpdatedAt")
+      RETURNING "id" AS employee_id, observed_at, xmax = 0 AS is_ins
     )
-    SELECT
-      employer_ref, payroll_ref, enrolled_at, activated_at,
-      has_credit_profile, source_updated_at,
-      CASE WHEN is_deleted THEN NOW() ELSE NULL END,
-      NOW(), NOW()
-    FROM v_platform_users
-    WHERE source_updated_at <= p_through
-      AND (p_since IS NULL OR source_updated_at > p_since)
-    ON CONFLICT ("employer_ref", "payroll_ref") DO UPDATE SET
-      "enrolled_at" = EXCLUDED."enrolled_at",
-      "activated_at" = EXCLUDED."activated_at",
-      "has_credit_profile" = EXCLUDED."has_credit_profile",
-      "source_updated_at" = EXCLUDED."source_updated_at",
-      "source_deleted_at" = EXCLUDED."source_deleted_at",
-      "updated_at" = NOW()
-    RETURNING xmax = 0 AS is_insert
-  )
-  SELECT
-    COUNT(*) FILTER (WHERE is_insert)::BIGINT,
-    COUNT(*) FILTER (WHERE NOT is_insert)::BIGINT
-  INTO p_inserted, p_updated
-  FROM upsert;
+    INSERT INTO "EmployeeVersion"
+      ("id","employeeId","observedAt","siteName","active","eligibleFrom","eligibleTo",
+       "isDeleted","sourceUpdatedAt","createdAt")
+    SELECT md5(i.employee_id||'|'||s.observed_at::text), i.employee_id, s.observed_at,
+           s.site_name,
+           CASE WHEN s.is_deleted THEN FALSE ELSE COALESCE(s.active, s.eligible_to IS NULL) END,
+           s.eligible_from, s.eligible_to, s.is_deleted, s.source_updated_at, NOW()
+    FROM ins i JOIN src s ON md5(s.employer_ref||'|'||s.payroll_ref) = i.employee_id
+    ON CONFLICT ("employeeId","observedAt") DO UPDATE SET
+      "siteName"=EXCLUDED."siteName", "active"=EXCLUDED."active",
+      "eligibleFrom"=EXCLUDED."eligibleFrom", "eligibleTo"=EXCLUDED."eligibleTo",
+      "isDeleted"=EXCLUDED."isDeleted", "sourceUpdatedAt"=EXCLUDED."sourceUpdatedAt"
+    WHERE EXCLUDED."sourceUpdatedAt" >= "EmployeeVersion"."sourceUpdatedAt"
+  $sql$, p_source_schema, p_view_prefix) USING p_through, p_since;
+  GET DIAGNOSTICS p_inserted = ROW_COUNT; p_updated := 0;
 END;
 $$;
-
