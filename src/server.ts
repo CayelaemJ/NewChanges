@@ -18,7 +18,9 @@ import { prisma, snapshotEmployer, getDashboardPayload, monthKey } from "./servi
 import { REPORT_FORMATS, LOAD_ORDER, getFormat } from "./services/reportFormats.js";
 import { csvTemplate, xlsxTemplate, formatManifest } from "./services/templateGenerator.js";
 import { uploadAndValidate, commitBatch, revertBatch, resetAllData } from "./services/importService.js";
-import { startUploadJob, getUploadJob, startCommitJob, getCommitJob, startSyncJob, getSyncJob } from "./services/asyncJobs.js";
+import { startUploadJob, getUploadJob, startCommitJob, getCommitJob } from "./services/asyncJobs.js";
+import { startSyncJob, getSyncJob } from "./services/syncJobs.js";
+import { startDailyRefresh, triggerRefreshNow } from "./services/dailyRefresh.js";
 import { getConfig as getSyncConfig, saveConfig as saveSyncConfig, publicConfig as publicSyncConfig, testConnection as testSyncConnection, runSync, recentSyncLogs } from "./services/syncService.js";
 import { listPartners, createPartner, updatePartner, deletePartner, assignUserToPartner, assignEmployerToPartner, themeForUser, themeForSlug } from "./services/partnerService.js";
 import { login, resolveSession, destroySession, canViewEmployer, canAccessModule, allowedEmployerIds, AuthUser } from "./services/authService.js";
@@ -685,6 +687,10 @@ app.post<{ Body: Record<string, unknown> }>("/api/admin/integration/test", async
 // browser polls /api/admin/sync-jobs/:jobId. Pulling and validating a full
 // dataset from an external source can take minutes, and doing it inline on
 // the request used to hang the HTTP connection until it finished.
+// Trigger an integration sync (API or SQL). Returns 202 immediately; the
+// browser polls /api/admin/sync-jobs/:jobId. Pulling and validating a full
+// dataset from an external source can take minutes and must never hold the
+// HTTP connection (and the admin UI) open until it finishes.
 app.post("/api/admin/integration/sync", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
   const jobId = startSyncJob("manual");
@@ -702,6 +708,14 @@ app.get<{ Params: { jobId: string } }>(
     return { status: "DONE", ...job.result };
   },
 );
+
+// Manual run of the scheduled daily live refresh (app pipeline by default;
+// set DAILY_REFRESH_MODE=sqlproc to run refresh_all_reports() in the DB).
+app.post("/api/admin/integration/refresh", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  return triggerRefreshNow();
+});
+
 
 app.get("/api/admin/integration/logs", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
@@ -1151,5 +1165,6 @@ app.get<{ Querystring: { period?: string; quarter?: string; range?: "30d" | "qua
 // Register all routes before opening the listener.
   app.log.info({ portalVersion: "0.6.0", publicDir: PUBLIC_DIR }, "starting empower-fin Dashboard Portal");
 app.listen({ port: PORT, host: "0.0.0.0" })
-  .then(async () => { await bootstrapAdmin(); await ensureSectionDefaults(); startSyncScheduler(app); startReportScheduler(app); startAutomationScheduler(app); app.log.info(`empower-fin Dashboard Portal on :${PORT}`); })
+  .then(async () => { await bootstrapAdmin(); await ensureSectionDefaults(); startSyncScheduler(app); startReportScheduler(app);  startDailyRefresh();
+; startAutomationScheduler(app); app.log.info(`empower-fin Dashboard Portal on :${PORT}`); })
   .catch((err) => { app.log.error(err); process.exit(1); });
