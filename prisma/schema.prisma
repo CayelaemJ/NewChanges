@@ -604,7 +604,8 @@ model IntegrationConfig {
   sqlQueryTimeoutMs         Int       @default(60000)
   sqlMaxRowsPerReport       Int       @default(250000)
 
-  scheduleHours             Int       @default(24)
+  // Incremental source pulls are cheap after the initial cursor-based load.
+  scheduleHours             Int       @default(1)
   lastSyncAt                DateTime?
   lastSuccessfulSyncAt      DateTime?
   lastSyncStatus            String?

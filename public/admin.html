@@ -552,7 +552,7 @@ async function loadInteg(){
     const c = await fetch(`${API}/api/admin/integration`).then(r=>r.json());
     setIntegMode((c.effectiveSourceMode || c.sourceMode || 'API').toUpperCase());
     $('#integ-url').value = c.baseUrl || '';
-    $('#integ-hours').value = c.scheduleHours || 24;
+    $('#integ-hours').value = c.scheduleHours || 1;
     $('#integ-enabled').checked = !!c.enabled;
     if(c.hasToken) $('#integ-token').placeholder = c.apiTokenFromEnvironment ? '•••••• (provided by SOURCE_API_TOKEN)' : '•••••• (saved — leave blank to keep)';
 
@@ -602,7 +602,7 @@ function integrationDraft(){
   const body = {
     sourceMode: mode,
     baseUrl: $('#integ-url').value.trim(),
-    scheduleHours: parseInt($('#integ-hours').value)||24,
+    scheduleHours: parseInt($('#integ-hours').value)||1,
     enabled: $('#integ-enabled').checked,
     sqlDialect: $('#integ-sql-dialect').value,
     sqlHost: $('#integ-sql-host').value.trim(),

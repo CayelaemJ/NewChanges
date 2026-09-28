@@ -10,13 +10,15 @@ import { LOAD_ORDER, getFormat } from "./reportFormats.js";
 import { validate } from "./importParser.js";
 import { snapshotEmployer } from "./snapshotBuilder.js";
 import { notifyScoreChangeIfCurrentPeriod } from "./automationService.js";
-import { commitBatch } from "./importService.js";
+import { commitBatch, commitSyncRows } from "./importService.js";
 import { createSourceAdapter, configuredSourceMode, sourceIsConfigured } from "./sourceAdapter.js";
 
 const prisma = new PrismaClient();
 type Json = Prisma.InputJsonValue;
 const CURSOR_OVERLAP_MS = 5 * 60 * 1000;
 const CLOCK_SKEW_TOLERANCE_MS = 5 * 60 * 1000;
+const pendingSnapshotEmployers = new Set<string>();
+let snapshotDrainScheduled = false;
 
 function overlapCursor(value?: Date | null): Date | null {
   return value ? new Date(value.getTime() - CURSOR_OVERLAP_MS) : null;
@@ -193,9 +195,16 @@ export async function runSync(trigger: "manual" | "scheduled" = "manual") {
           continue;
         }
 
-        // Real commit path: stage as an ImportBatch, then commitBatch() does the
-        // natural-key upserts, dated history, deletes and dashboard recompute
-        // for ALL ten reports (not just employers).
+        // Fast sync path: keep a lightweight audit row, but do not copy the
+        // validated rows into ImportBatch/ImportBatchRow only to read them back.
+        // PostgreSQL performs the natural-key INSERT ... ON CONFLICT merge in
+        // bounded bulk operations instead of one Prisma lookup/upsert per row.
+        const syncTouchedEmployers = new Set<string>();
+        for (const row of result.rows as Record<string, any>[]) {
+          if (row.employer_ref) syncTouchedEmployers.add(String(row.employer_ref));
+        }
+        for (const employerId of syncTouchedEmployers) touchedEmployers.add(employerId);
+
         const batch = await prisma.importBatch.create({
           data: {
             reportKey,
@@ -204,14 +213,34 @@ export async function runSync(trigger: "manual" | "scheduled" = "manual") {
             status: "VALIDATED",
             rowCount: result.rowCount,
             errorCount: 0,
-            stagedRows: result.rows as Json,
             uploadedBy: `${adapter.mode.toLowerCase()}-sync (${trigger})`,
             sourceSince: cursor.lastSourceUpdatedAt,
             sourceThrough: throughAt,
           },
         });
-        const committed = await commitBatch(batch.id, { recompute: false });
-        for (const employerId of committed.touchedEmployers ?? []) touchedEmployers.add(employerId);
+        let committed;
+        try {
+          committed = await commitSyncRows(reportKey, result.rows as Record<string, any>[]);
+        } catch (error: any) {
+          // Keep older deployments functional until the idempotent server-side
+          // procedures are applied. New deployments should set
+          // APPLY_SYNC_MIGRATIONS=true so the fast path is always used.
+          const message = error?.message ?? String(error);
+          if (!/function sync_upsert_.* does not exist/i.test(message)) throw error;
+          await prisma.importBatch.update({ where: { id: batch.id }, data: { stagedRows: result.rows as Json } });
+          committed = await commitBatch(batch.id, { recompute: false });
+        }
+        await prisma.importBatch.update({
+          where: { id: batch.id },
+          data: {
+            status: "COMMITTED",
+            committedAt: new Date(),
+            insertedCount: committed.inserted,
+            updatedCount: committed.updated,
+            deletedCount: committed.deleted,
+            employerRef: syncTouchedEmployers.size === 1 ? [...syncTouchedEmployers][0] : null,
+          },
+        });
         summary[reportKey] = {
           source: pulled.location,
           pulled: pulled.records.length,
@@ -254,21 +283,37 @@ export async function runSync(trigger: "manual" | "scheduled" = "manual") {
     }
   }
 
-  for (const employerId of touchedEmployers) {
-    try {
-      const r = await snapshotEmployer(employerId);
-      if (r.persisted) notifyScoreChangeIfCurrentPeriod(employerId, r.period, r.period).catch(() => {}); // best-effort
-    } catch (error: any) {
-      summary.snapshot = summary.snapshot ?? { errors: [] };
-      summary.snapshot.errors.push({ employerId, error: error?.message ?? String(error) });
-      anyFailed = true;
-    }
+  // Snapshot calculation is deliberately off the sync critical path. The
+  // source tables are authoritative once the feed commits; rebuilding the
+  // read model can therefore happen once per changed employer in the
+  // background without keeping the sync transaction/request open.
+  for (const employerId of touchedEmployers) pendingSnapshotEmployers.add(employerId);
+  if (touchedEmployers.size && !snapshotDrainScheduled) {
+    snapshotDrainScheduled = true;
+    setImmediate(() => {
+      void (async () => {
+        try {
+          while (pendingSnapshotEmployers.size) {
+            const employerId = pendingSnapshotEmployers.values().next().value as string;
+            pendingSnapshotEmployers.delete(employerId);
+            try {
+              const r = await snapshotEmployer(employerId);
+              if (r.persisted) notifyScoreChangeIfCurrentPeriod(employerId, r.period, r.period).catch(() => {});
+            } catch (error: any) {
+              console.error(`[sync] background snapshot failed for ${employerId}:`, error?.message ?? error);
+            }
+          }
+        } finally {
+          snapshotDrainScheduled = false;
+        }
+      })();
+    });
   }
 
   const status = anyFailed ? (anyOk ? "PARTIAL" : "FAILED") : "OK";
   const mode = configuredSourceMode(config);
   const note = status === "OK"
-    ? `All reports synced successfully from ${mode} and employer snapshots were rebuilt.`
+    ? `All reports synced successfully from ${mode}; changed employer snapshots were queued in the background.`
     : status === "PARTIAL"
       ? `Some ${mode} reports synced. Failed report cursors were not advanced; see details.`
       : `${mode} sync failed; no report cursor was advanced for failed feeds.`;

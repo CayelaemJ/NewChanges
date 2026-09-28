@@ -633,6 +633,57 @@ async function commitRowsChunk(
     }
 }
 
+
+const SYNC_BULK_CHUNK_SIZE = Number(process.env.SYNC_BULK_CHUNK_SIZE ?? 5000);
+const SYNC_FUNCTIONS: Record<string, string> = {
+  employers: "sync_upsert_employers",
+  workforce_snapshots: "sync_upsert_workforce_snapshots",
+  employees: "sync_upsert_employees",
+  platform_users: "sync_upsert_platform_users",
+  journeys: "sync_upsert_journeys",
+  debt_accounts: "sync_upsert_debt_accounts",
+  policies: "sync_upsert_policies",
+  ratings: "sync_upsert_ratings",
+  referrals: "sync_upsert_referrals",
+  salary_advances: "sync_upsert_salary_advances",
+};
+
+/**
+ * Fast path for API/SQL integration syncs.
+ *
+ * Sync rows are already validated in memory, so there is no reason to write
+ * them to ImportBatchRow and immediately read the same JSON back. PostgreSQL
+ * performs one INSERT .. ON CONFLICT operation per bounded chunk instead.
+ * ImportBatch remains a lightweight audit record, but it is not a staging
+ * transport for live syncs.
+ */
+export async function commitSyncRows(
+  reportKey: string,
+  rows: Record<string, any>[],
+): Promise<CommitStats> {
+  const functionName = SYNC_FUNCTIONS[reportKey];
+  if (!functionName) throw new Error(`bulk sync handler not implemented for report ${reportKey}`);
+
+  const stats: CommitStats = { inserted: 0, updated: 0, deleted: 0, skipped: 0 };
+  for (let offset = 0; offset < rows.length; offset += SYNC_BULK_CHUNK_SIZE) {
+    const chunk = rows.slice(offset, offset + SYNC_BULK_CHUNK_SIZE);
+    const result = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT inserted, updated, deleted FROM ${functionName}($1::jsonb)`,
+      JSON.stringify(chunk),
+    );
+    const merged = result?.[0];
+    stats.inserted += Number(merged?.inserted ?? 0);
+    stats.updated += Number(merged?.updated ?? 0);
+    stats.deleted += Number(merged?.deleted ?? 0);
+  }
+
+  // The SQL procedures intentionally do not report stale rows separately.
+  // They simply leave older records untouched, so this is the only useful
+  // aggregate available on the bulk path.
+  stats.skipped = Math.max(0, rows.length - stats.inserted - stats.updated);
+  return stats;
+}
+
 export async function commitBatch(batchId: string, options: CommitOptions = {}) {
   const batch = await prisma.importBatch.findUniqueOrThrow({ where: { id: batchId } });
   if (batch.status !== "VALIDATED") throw new Error(`batch not in VALIDATED state (is ${batch.status})`);

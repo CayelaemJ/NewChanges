@@ -263,7 +263,7 @@ BEGIN
            (r->>'credit_type')::VARCHAR(30) AS credit_type,
            ROUND((r->>'balance_rand')::NUMERIC * 100)::INT AS balance_cents,
            COALESCE((r->>'in_arrears')::BOOLEAN, FALSE) AS in_arrears,
-           NULLIF(r->>'state','')::VARCHAR(30) AS state,
+           COALESCE(NULLIF(r->>'state','')::VARCHAR(30), 'NONE') AS state,
            NULLIF(r->>'challenge_status','')::VARCHAR(30) AS challenge_status,
            NULLIF(r->>'journey_ref','')::VARCHAR(64) AS journey_ref,
            (r->>'source_updated_at')::TIMESTAMP AS source_updated_at,
@@ -301,25 +301,30 @@ BEGIN
   INTO v_ins, v_upd FROM ups;
 
   INSERT INTO "DebtAccountVersion"
-    ("id","accountId","observedAt","creditorName","balanceCents","inArrears",
-     "journeyId","closedAt","isDeleted","sourceUpdatedAt","createdAt")
+    ("id","accountId","observedAt","creditorName","creditType","balanceCents","inArrears",
+     "state","challengeStatus","journeyId","closedAt","isDeleted","sourceUpdatedAt","createdAt")
   SELECT md5(d."id" || '|' || s.observed_at::TEXT), d."id", s.observed_at,
-         s.creditor_name, s.balance_cents, s.in_arrears, s.journey_ref, s.closed_at,
-         s.is_deleted, s.source_updated_at, NOW()
+         s.creditor_name, s.credit_type, s.balance_cents, s.in_arrears, s.state,
+         s.challenge_status, s.journey_ref, s.closed_at, s.is_deleted, s.source_updated_at, NOW()
   FROM jsonb_array_elements(COALESCE(p_rows, '[]'::JSONB)) r
   CROSS JOIN LATERAL (SELECT (r->>'account_ref')::VARCHAR(64) AS account_ref,
                              (r->>'observed_at')::DATE AS observed_at,
                              (r->>'creditor_name')::VARCHAR(150) AS creditor_name,
+                             (r->>'credit_type')::VARCHAR(30) AS credit_type,
                              ROUND((r->>'balance_rand')::NUMERIC * 100)::INT AS balance_cents,
                              COALESCE((r->>'in_arrears')::BOOLEAN, FALSE) AS in_arrears,
+                             COALESCE(NULLIF(r->>'state','')::VARCHAR(30), 'NONE') AS state,
+                             NULLIF(r->>'challenge_status','')::VARCHAR(30) AS challenge_status,
                              NULLIF(r->>'journey_ref','')::VARCHAR(64) AS journey_ref,
                              (r->>'closed_at')::DATE AS closed_at,
                              COALESCE((r->>'is_deleted')::BOOLEAN, FALSE) AS is_deleted,
                              (r->>'source_updated_at')::TIMESTAMP AS source_updated_at) s
   JOIN "DebtAccount" d ON d."id" = s.account_ref
   ON CONFLICT ("accountId","observedAt") DO UPDATE SET
-    "creditorName"=EXCLUDED."creditorName", "balanceCents"=EXCLUDED."balanceCents",
-    "inArrears"=EXCLUDED."inArrears", "journeyId"=EXCLUDED."journeyId",
+    "creditorName"=EXCLUDED."creditorName", "creditType"=EXCLUDED."creditType",
+    "balanceCents"=EXCLUDED."balanceCents", "inArrears"=EXCLUDED."inArrears",
+    "state"=EXCLUDED."state", "challengeStatus"=EXCLUDED."challengeStatus",
+    "journeyId"=EXCLUDED."journeyId",
     "closedAt"=EXCLUDED."closedAt", "isDeleted"=EXCLUDED."isDeleted",
     "sourceUpdatedAt"=EXCLUDED."sourceUpdatedAt"
   WHERE EXCLUDED."sourceUpdatedAt" >= "DebtAccountVersion"."sourceUpdatedAt";

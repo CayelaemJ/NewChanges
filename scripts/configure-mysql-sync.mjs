@@ -50,7 +50,7 @@ async function configureSync() {
         "sqlUsername" = $4,
         "sqlPassword" = $5,
         "sqlSsl" = false,
-        "scheduleHours" = 24
+        "scheduleHours" = 1
       WHERE id = 'default'
       RETURNING *;
       `,
