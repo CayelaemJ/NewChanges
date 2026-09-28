@@ -159,18 +159,24 @@ export async function runSync(trigger: "manual" | "scheduled" = "manual") {
 
         if (result.rowCount === 0) {
           if (isFirstSync) {
-            // Nothing came back on a first sync: do NOT advance the cursor.
-            // Advancing it to "now" would make every later sync ask only for
-            // rows changed after now, hiding all existing source data forever.
-            await prisma.integrationCursor.update({
-              where: { reportKey },
-              data: {
-                lastStatus: "OK",
-                lastNote: `First sync returned 0 rows from ${pulled.location}. Cursor left unset so the next sync loads everything.`,
-              },
-            });
-            summary[reportKey] = { source: pulled.location, pulled: 0, committed: 0, note: "0 rows on first sync - cursor not advanced", since: null, through: throughAt };
-            anyOk = true;
+            // A first sync that returns nothing is almost always a wrong
+            // database/view, not "no data". Report exactly what was queried
+            // instead of a false "OK", and leave the cursor unset.
+            let detail = "";
+            try {
+              const d = adapter.describe ? await adapter.describe(reportKey) : null;
+              if (d) {
+                detail = d.totalRows > 0
+                  ? ` The view holds ${d.totalRows} row(s), newest source_updated_at ${d.newest}, but none fell inside the requested window (through ${throughAt.toISOString()}). Check source_updated_at values/timezone.`
+                  : ` The view is EMPTY here. Connected as database "${d.database}" (${d.location}). Is this the database you loaded the data into?`;
+              }
+            } catch (e: any) {
+              detail = ` Could not inspect the view: ${e?.message ?? e}`;
+            }
+            const note = `First sync returned 0 rows for ${reportKey} from ${pulled.location}.${detail}`;
+            await prisma.integrationCursor.update({ where: { reportKey }, data: { lastStatus: "FAILED", lastNote: note } });
+            summary[reportKey] = { error: note, source: pulled.location, pulled: 0, committed: 0 };
+            anyFailed = true;
             continue;
           }
           await prisma.integrationCursor.update({
