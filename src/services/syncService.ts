@@ -1,4 +1,4 @@
-// ════════════════════════════════════════════════════════════════════
+════════════════════════════════════════════════════════════════════
 //  EXTERNAL SOURCE SYNC — API OR DIRECT SQL
 //
 //  Each report owns its cursor. A failed report never advances its cursor.
@@ -80,6 +80,26 @@ export function publicConfig(config: Awaited<ReturnType<typeof getConfig>>) {
   } catch {
     effectiveSourceMode = String(config.sourceMode ?? "API").toUpperCase();
   }
+  // Several SOURCE_SQL_* / SOURCE_MODE / SOURCE_API_* environment variables
+  // silently override whatever is saved here (see withEnvironment() in
+  // sourceAdapter.ts) — deliberately, so production connection details can
+  // be locked outside the UI. But that also means changing these fields in
+  // Admin can look like it does nothing, with no clue why. Surface any
+  // active override explicitly so that isn't a silent mystery.
+  const ENV_OVERRIDE_FIELDS: [string, string][] = [
+    ["SOURCE_MODE", "Source mode"],
+    ["SOURCE_API_BASE_URL", "API base URL"],
+    ["SOURCE_SQL_DIALECT", "SQL platform"],
+    ["SOURCE_SQL_HOST", "SQL host"],
+    ["SOURCE_SQL_PORT", "SQL port"],
+    ["SOURCE_SQL_DATABASE", "SQL database/catalog"],
+    ["SOURCE_SQL_SCHEMA", "SQL schema"],
+    ["SOURCE_SQL_USERNAME", "SQL username"],
+    ["SOURCE_SQL_VIEW_PREFIX", "SQL view prefix"],
+  ];
+  const envOverrides = ENV_OVERRIDE_FIELDS
+    .filter(([envName]) => process.env[envName] != null && process.env[envName] !== "")
+    .map(([envName, label]) => ({ envName, label, value: process.env[envName] as string }));
   return {
     ...safe,
     effectiveSourceMode,
@@ -88,6 +108,7 @@ export function publicConfig(config: Awaited<ReturnType<typeof getConfig>>) {
     hasSqlPassword: Boolean(process.env.SOURCE_SQL_PASSWORD || sqlPassword),
     sqlPasswordFromEnvironment: Boolean(process.env.SOURCE_SQL_PASSWORD),
     apiTokenFromEnvironment: Boolean(process.env.SOURCE_API_TOKEN),
+    envOverrides,
   };
 }
 
