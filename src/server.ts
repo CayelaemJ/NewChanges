@@ -689,6 +689,29 @@ app.post("/api/admin/integration/sync", async (req, reply) => {
   return runSync("manual");
 });
 
+// ── DANGER: wipe every synced row and pull a fresh full copy from the
+//    connected API/SQL source in one action. Cursor-based "Sync now" only
+//    ever pulls what's changed since the last cursor, so rows the source
+//    deleted (or a bad prior sync left half-committed) can linger forever.
+//    This is the explicit "throw it all away and reload from scratch"
+//    button for that — admin only, and confirm: "RESET" is required so it
+//    can never fire from a stray click. ──
+app.post<{ Body: { confirm?: string } }>("/api/admin/integration/full-resync", async (req, reply) => {
+  const admin = await requireAdmin(req, reply); if (!admin) return;
+  if ((req.body?.confirm) !== "RESET") {
+    return reply.code(400).send({ error: 'confirmation phrase missing — expected confirm: "RESET"' });
+  }
+  try {
+    const wiped = await resetAllData();
+    logAdminAction(admin, "data.reset_all", `Wiped all imported data (full resync)`, { detail: wiped });
+    const synced = await runSync("manual");
+    return { wiped, synced };
+  } catch (e: any) {
+    req.log.error({ err: e }, "full resync failed");
+    return reply.code(500).send({ error: e?.message || "Full resync failed." });
+  }
+});
+
 app.get("/api/admin/integration/logs", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
   return recentSyncLogs(10);
