@@ -1,4 +1,4 @@
-════════════════════════════════════════════════════════════════════
+// 
 //  EXTERNAL SOURCE SYNC — API OR DIRECT SQL
 //
 //  Each report owns its cursor. A failed report never advances its cursor.
