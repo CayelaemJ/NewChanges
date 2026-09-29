@@ -1029,3 +1029,139 @@ table.ct th,table.ct td{vertical-align:middle;}
   grid-template-columns:repeat(2,minmax(0,1fr));
 }
 .comparison-legend{justify-content:flex-start;}
+
+/* ── Enterprise command rail, insight and trust UI ─────────────────────── */
+.enterprise-toolbar{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto auto;
+  align-items:start;
+  gap:12px;
+  margin:6px 0 14px;
+}
+.enterprise-insight{
+  min-width:0;
+  padding:13px 16px;
+  background:linear-gradient(135deg,var(--white),var(--brand-soft));
+  border:1px solid var(--line);
+  border-radius:13px;
+}
+.enterprise-insight-eyebrow{
+  font-size:9.5px;
+  font-weight:850;
+  letter-spacing:.11em;
+  text-transform:uppercase;
+  color:var(--blue);
+  margin-bottom:4px;
+}
+.enterprise-insight-copy{
+  font-size:12.5px;
+  line-height:1.5;
+  color:var(--ink);
+}
+.enterprise-toolbar-actions{display:flex;gap:8px;align-items:center;white-space:nowrap;}
+.kbd{
+  display:inline-block;
+  margin-left:6px;
+  padding:1px 5px;
+  border-radius:5px;
+  border:1px solid var(--line);
+  background:var(--ice);
+  font-size:9px;
+  font-weight:800;
+}
+.data-trust-pill{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  min-height:36px;
+  padding:0 11px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:var(--white);
+  color:var(--ink);
+  font:700 11px Manrope,sans-serif;
+  cursor:pointer;
+  white-space:nowrap;
+}
+.data-trust-pill.good .data-trust-dot{background:var(--green);}
+.data-trust-pill.attention .data-trust-dot{background:var(--amber);}
+.data-trust-pill.incomplete .data-trust-dot{background:var(--red);}
+.data-trust-dot{width:7px;height:7px;border-radius:50%;box-shadow:0 0 0 3px rgba(24,122,77,.08);}
+.data-trust-list{margin:12px 0 0;padding-left:18px;color:var(--grey);font-size:12px;line-height:1.5;}
+.data-trust-grid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:9px;
+  margin:0 0 13px;
+}
+.data-trust-grid>div{
+  padding:12px;
+  border-radius:10px;
+  background:var(--ice-2);
+}
+.data-trust-grid strong{display:block;font-size:19px;font-variant-numeric:tabular-nums;}
+.data-trust-grid span{display:block;margin-top:3px;font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--grey-l);}
+.command-backdrop{
+  position:fixed;
+  inset:0;
+  z-index:100;
+  display:flex;
+  align-items:flex-start;
+  justify-content:center;
+  padding:9vh 20px 20px;
+  background:rgba(15,36,56,.28);
+  backdrop-filter:blur(6px);
+}
+.command-palette{
+  width:min(620px,94vw);
+  max-height:min(640px,80vh);
+  overflow:auto;
+  padding:12px;
+  background:var(--white);
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:var(--shadow-lg);
+}
+.command-search{
+  width:100%;
+  min-height:42px;
+  padding:0 13px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:var(--ice-2);
+  color:var(--ink);
+  font:700 13px Manrope,sans-serif;
+  outline:none;
+}
+.command-results{display:grid;gap:5px;margin-top:9px;}
+.command-item{
+  width:100%;
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  padding:11px 12px;
+  border:0;
+  border-radius:9px;
+  background:transparent;
+  color:var(--ink);
+  text-align:left;
+  font:700 12px Manrope,sans-serif;
+  cursor:pointer;
+}
+.command-item:hover,.command-item:focus-visible{background:var(--ice);color:var(--brand-primary);}
+.command-item span{font-size:9.5px;color:var(--grey-l);text-transform:uppercase;letter-spacing:.06em;}
+.command-empty{padding:16px 10px;color:var(--grey-l);font-size:12px;text-align:center;}
+
+@media (max-width:900px){
+  .enterprise-toolbar{grid-template-columns:1fr;align-items:stretch;}
+  .enterprise-toolbar-actions{justify-content:flex-start;flex-wrap:wrap;}
+  .data-trust-pill{justify-content:center;width:fit-content;}
+}
+@media (max-width:640px){
+  .enterprise-insight{padding:12px 13px;}
+  .enterprise-insight-copy{font-size:12px;}
+  .enterprise-toolbar-actions{display:grid;grid-template-columns:1fr 1fr;}
+  .enterprise-toolbar-actions .btn{width:100%;}
+  .data-trust-pill{width:100%;justify-content:flex-start;}
+  .data-trust-grid{grid-template-columns:1fr 1fr;}
+}
