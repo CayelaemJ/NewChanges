@@ -1,7 +1,7 @@
 /*! brand-engine.js — client-side brand colour extraction + theme token generation.
  *
  *  Pipeline (all local, no network, no third-party code):
- *   1. Decode logo pixels at up to 128px, aspect-ratio preserved.
+ *   1. Decode logo pixels at up to 256px, aspect-ratio preserved; higher-resolution uploads get more representative colour sampling.
  *   2. Detect and discard an opaque background (border-pixel clustering in OKLab).
  *   3. Convert every kept pixel to OKLab/OKLCH (perceptually uniform), weight by alpha
  *      (anti-aliased edge blends count for less).
@@ -127,7 +127,7 @@
     }
 
     // 2. hue histogram over chromatic pixels; track neutrals separately
-    var BINS = 36, bin = [];
+    var BINS = 48, bin = [];
     for (i = 0; i < BINS; i++) bin.push({ area: 0, sal: 0, wL: 0, wA: 0, wB: 0, wt: 0 });
     var used = 0, total = 0, neutralDark = 0, neutralLight = 0, darkChromaArea = 0;
     for (i = 0; i < n; i++) {
@@ -230,7 +230,7 @@
         var img = new Image();
         img.onload = function () {
           try {
-            var iw = img.naturalWidth || 128, ih = img.naturalHeight || 128, m = maxSide || 128;
+            var iw = img.naturalWidth || 256, ih = img.naturalHeight || 256, m = maxSide || 256;
             var s = Math.min(1, m / Math.max(iw, ih)); if (iw < m && ih < m) s = Math.min(2, m / Math.max(iw, ih));
             var w = Math.max(8, Math.round(iw * s)), h = Math.max(8, Math.round(ih * s));
             var cv = document.createElement('canvas'); cv.width = w; cv.height = h;
@@ -337,7 +337,7 @@
   function forDark(hex, surfaceHex) { return '#' + ensureContrast(String(hex).replace(/^#/, ''), String(surfaceHex).replace(/^#/, ''), 3.2); }
 
   return {
-    analyzePixels: analyzePixels, extractFromImage: extractFromImage, themeTokens: themeTokens, themeController: themeController, forDark: forDark,
+    analyzePixels: analyzePixels, extractFromImage: extractFromImage, deriveChartPalette: deriveChartPalette, themeTokens: themeTokens, themeController: themeController, forDark: forDark,
     contrast: contrast, ensureContrast: ensureContrast, mixHex: mixHex, hexToLch: hexToLch, lch: lch, luminance: luminance
   };
 });
