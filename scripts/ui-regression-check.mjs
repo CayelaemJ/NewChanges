@@ -79,6 +79,13 @@ must(everyPage(src => /<meta[^>]+name=["']viewport["'][^>]+content=["']width=dev
 must(/\.wrap\s*\{[^}]*max-width:\s*1280px/i.test(dashboardHtml), "dashboard desktop layout must have a bounded content width");
 must(/@media\s*\(max-width:\s*1080px\)/.test(dashboardCss), "dashboard must have a tablet breakpoint");
 must(/@media\s*\(max-width:\s*640px\)/.test(dashboardCss), "dashboard must have a phone breakpoint");
+must(/@media\s*\(max-width:\s*900px\)\s*and\s*\(orientation:\s*landscape\)/.test(dashboardCss), "dashboard must have an explicit mobile-landscape breakpoint");
+must(/orientation:\s*landscape[\s\S]*?\.g-12\s*\{grid-template-columns:\s*1fr/.test(dashboardCss), "mobile landscape must collapse the 12-column dashboard grid");
+must(pages.dashboard.includes("function formatRandThousands") && pages.dashboard.includes("function niceTicks"), "financial charts must use explicit full-rand formatting and nice axis ticks");
+must(pages.dashboard.includes("formatRandThousands(pts[pts.length-1])"), "savings/EWA charts must label values in full rand amounts");
+must(!/toFixed\([^)]*\)[^\n]*['"]m['"]|toFixed\([^)]*\)[^\n]*['"]k['"]/.test(pages.dashboard), "dashboard source must not create compact m/k financial labels");
+must(!/Math\.round\([^\n]+\/\s*(?:1e6|1000000|1e3|1000)\)[^\n]*['"]m?['"]/.test(pages.dashboard), "dashboard must not abbreviate financial amounts into m/k labels");
+
 must(/@media\s*\(max-width:\s*420px\)/.test(dashboardCss), "dashboard must have a small-phone breakpoint");
 must(/\.g-4\s*\{[^}]*grid-template-columns:\s*repeat\(4,1fr\)/.test(dashboardHtml) && /@media\s*\(max-width:\s*1080px\)[\s\S]*?\.g-4\s*\{[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/.test(dashboardCss), "dashboard KPI grid must collapse from four columns on smaller screens");
 must(/\.g-2\s*\{[^}]*grid-template-columns:\s*repeat\(2,1fr\)/.test(dashboardHtml) && /@media\s*\(max-width:\s*640px\)[\s\S]*?\.grid,\s*\.g-4,\s*\.g-3,\s*\.g-2\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/.test(dashboardCss), "dashboard two-column sections must stack on phones");
