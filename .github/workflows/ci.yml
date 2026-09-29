@@ -28,4 +28,5 @@ jobs:
       - run: npm run check:brand
       - run: npm run check:accessibility
       - run: npm run check:performance
+      - run: npm run check:period-comparison
       - run: npm audit --audit-level=high
