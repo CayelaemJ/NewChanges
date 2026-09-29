@@ -85,6 +85,11 @@ must(/\.g-2\s*\{[^}]*grid-template-columns:\s*repeat\(2,1fr\)/.test(dashboardHtm
 must(/overflow-x:\s*auto/.test(dashboardCss), "data tables must have a horizontal overflow escape hatch on small screens");
 must(/overflow-wrap:\s*anywhere/.test(dashboardCss), "long labels and values must wrap instead of forcing horizontal page overflow");
 must(/max-width:\s*100%/.test(dashboardCss), "media/form content must be bounded to the viewport");
+must(/\.stat-strip\s*\{[\s\S]*?grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)/.test(dashboardCss), "enterprise value strip must use bounded desktop columns");
+must(/\.stat-cell \.v\s*\{[\s\S]*?white-space:\s*nowrap/.test(dashboardCss), "financial values must remain atomic and never wrap character-by-character");
+must(/@media\s*\(max-width:\s*640px\)[\s\S]*?\.stat-strip\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\)/.test(dashboardCss), "enterprise value strip must become a single readable column on phones");
+must(pages.dashboard.includes('fitResponsiveDataValues') && pages.dashboard.includes('scrollWidth>maxWidth'), "dashboard must auto-fit numeric values to their available card width");
+
 must(!pages.dashboard.includes("ui-enhance-v1.css") && !pages.dashboard.includes("ui-enhance-v2.css") && !pages.dashboard.includes("responsive-v1.css") && !pages.dashboard.includes("responsive-v2.css"), "dashboard must use one canonical responsive stylesheet, not stacked legacy layers");
 
 must(read("public/enterprise.css").includes("img[data-custom-logo]") && read("public/dashboard.html").includes("setAttribute('data-custom-logo','1')"), "uploaded company logos must be exempt from the white-out filter");
