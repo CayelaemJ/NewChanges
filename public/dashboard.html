@@ -1818,9 +1818,22 @@ function renderIncome(){
 /* ─────────────────── ACT 4: ratings ─────────────────── */
 function renderRatings(){
   const wrap=document.getElementById('ratings'); const rt=DATA.ratings;
+  const avg=Math.max(0,Math.min(5,Number(rt.avg)||0));
+  const rounded=Math.round(avg*2)/2;
+  const stars=Array.from({length:5},(_,i)=>{
+    const fill=rounded-i;
+    const state=fill>=1?'full':fill>=0.5?'half':'empty';
+    return `<span class="rating-star ${state}" aria-hidden="true">★</span>`;
+  }).join('');
   let bars=[5,4,3,2,1].map(s=>`<div class="rb-row"><div class="rb-lbl">${s} ★</div><div class="rb-track"><div class="rb-fill" style="width:${rt.dist[s]}%;${s<=2?'background:var(--chart-high)':s===3?'background:var(--chart-mid)':''}"></div></div><div class="rb-val">${rt.dist[s]}%</div></div>`).join('');
   wrap.appendChild(el(`<div>
-    <div class="rating-hero"><div class="rating-big">${rt.avg.toFixed(1)}</div><div><div class="rating-stars">★★★★★</div><div style="font-size:11.5px;color:#8497a7;font-weight:700;margin-top:2px">${rt.responses.toLocaleString()} ratings</div></div></div>
+    <div class="rating-hero">
+      <div class="rating-big">${avg.toFixed(1)}</div>
+      <div class="rating-summary">
+        <div class="rating-stars" role="img" aria-label="${avg.toFixed(1)} out of 5 stars">${stars}</div>
+        <div class="rating-response-count">${rt.responses.toLocaleString()} ratings</div>
+      </div>
+    </div>
     <div class="rating-bars">${bars}</div>
     <div class="rating-share-pill"><div><div class="l">5-star ratings ${employerInfoButton('fiveStarPct')}</div></div><div class="v">${rt.fiveStarPct}%</div></div>
     <div class="rating-share-pill"><div><div class="l">Net Promoter Score ${employerInfoButton('nps')}</div></div><div class="v">${rt.nps == null ? '—' : rt.nps}</div></div>
@@ -3109,6 +3122,36 @@ function applyTheme(theme, user){
 // Create a full, repeatable chart palette from any valid employer brand hex.
 // Hue rotation makes the charts complementary to (not copies of) the logo hues.
 function complementaryPalette(accent, primary){
+  // Build a restrained, perceptually balanced enterprise chart system from the
+  // extracted brand hues. OKLCH keeps perceived brightness more consistent than
+  // the old HSL offsets, while contrast guards keep labels/marks readable.
+  const BE=window.BrandEngine;
+  if(BE && BE.hexToLch && BE.lch && BE.ensureContrast){
+    const a=BE.hexToLch(accent), p=BE.hexToLch(primary||accent);
+    const hue=(a.C>.035?a.h:p.h);
+    const chroma=Math.min(Math.max(a.C,.055),.16);
+    const make=(offset,L,C=chroma)=>BE.lch(clamp01(L),Math.min(C,.18),(hue+offset+360)%360);
+    const safe=(hex,bg='#ffffff')=>BE.ensureContrast(hex,bg,3.4);
+    const colors={
+      engagement:safe(make(150,.50,chroma*.78)),
+      cashflow:safe(make(175,.58,chroma*.70)),
+      debt:safe(make(25,.50,chroma*.62)),
+      insurance:safe(make(285,.48,chroma*.78)),
+      workforce:safe(make(205,.54,chroma*.72)),
+      low:safe(make(150,.58,chroma*.68)),
+      mid:safe(make(65,.58,Math.max(.07,chroma*.62))),
+      high:safe(make(5,.55,Math.max(.07,chroma*.62)))
+    };
+    // Guarantee a visually useful separation even when the source logo is
+    // nearly monochromatic.
+    const seen=new Set();
+    for(const k of Object.keys(colors)){
+      if(seen.has(colors[k])) colors[k]=safe(make((Object.keys(colors).indexOf(k)+1)*43,.54,.075));
+      seen.add(colors[k]);
+    }
+    return Object.fromEntries(Object.entries(colors).map(([k,v])=>[k,'#'+v.replace(/^#/,'')]));
+  }
+  // Legacy fallback for an unavailable brand engine.
   const toHsl = hex => {
     const h=String(hex||'#777777').replace('#','');
     const r=parseInt(h.slice(0,2),16)/255,g=parseInt(h.slice(2,4),16)/255,b=parseInt(h.slice(4,6),16)/255;
@@ -3124,12 +3167,9 @@ function complementaryPalette(accent, primary){
   };
   const [h,s]=toHsl(accent), [ph]=toHsl(primary);
   const make=(offset,light=.43,sat=Math.max(.42,s))=>fromHsl((h+offset+360)%360,sat,light);
-  return {
-    engagement:make(145,.43), cashflow:make(205,.43), debt:make(32,.48),
-    insurance:make(265,.48), workforce:fromHsl((ph+180)%360,.42,.39),
-    low:make(165,.43), mid:make(35,.49), high:make(0,.43,.66)
-  };
+  return {engagement:make(145,.43),cashflow:make(205,.43),debt:make(32,.48),insurance:make(265,.48),workforce:fromHsl((ph+180)%360,.42,.39),low:make(165,.43),mid:make(35,.49),high:make(0,.43,.66)};
 }
+function clamp01(v){ return Math.max(0.05,Math.min(0.95,v)); }
 // darken a hex colour by pct (negative) for the hover/darker accent
 function shade(hex,pct){
   hex=String(hex).replace(/^#/,''); const n=parseInt(hex,16);
