@@ -505,3 +505,29 @@ button, input, select, textarea { max-width: 100%; }
   .btn, button, select, a.nav-link { -webkit-tap-highlight-color: transparent; }
   .btn:hover, .nav-link:hover { transform: none !important; }
 }
+
+
+/* Canonical mobile stabilization: final rules in the consolidated dashboard stylesheet. */
+@media (max-width: 640px) {
+  html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
+  .wrap, .topbar-inner, .head, .card, .kpi, .panel, .filters, .section-gap { min-width: 0 !important; box-sizing: border-box; }
+  .wrap > *, .card > *, .kpi > *, .filters > *, .topbar-inner > * { min-width: 0; max-width: 100%; }
+  .topbar-meta, .nav-inline, .portal-primary-nav, .portal-mobile-links { min-width: 0; max-width: 100%; }
+  .nav-inline, .portal-primary-nav { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .nav-inline::-webkit-scrollbar, .portal-primary-nav::-webkit-scrollbar { display: none; }
+  .nav-link, .portal-nav-link { flex: 0 0 auto; }
+  h1, h2, h3, h4, p, .card-title, .head-sub, .nav-who { overflow-wrap: anywhere; }
+  input, select, textarea, button { max-width: 100%; box-sizing: border-box; }
+  img, svg, canvas, video { max-width: 100%; height: auto; }
+  .card-bd, .table-wrap, .table-scroll, .chart-wrap { min-width: 0; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { max-width: none; }
+  .dropdown-menu, .portal-account-menu, .schedule-modal, .portal-modal { max-width: calc(100vw - 24px); box-sizing: border-box; }
+  .schedule-modal, .portal-modal { max-height: calc(100dvh - 24px); overflow: auto; }
+  .home-actions, .actions, .toolbar, .filters { min-width: 0; flex-wrap: wrap; }
+}
+@media (max-width: 420px) {
+  .wrap { padding-left: 10px !important; padding-right: 10px !important; }
+  .topbar-inner { padding-left: 10px !important; padding-right: 10px !important; }
+  .card-hd { padding-inline: 14px !important; }
+  .card-bd { padding-inline: 14px !important; }
+}
