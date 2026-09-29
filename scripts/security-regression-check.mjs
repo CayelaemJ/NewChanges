@@ -56,3 +56,6 @@ console.log('Security regression checks passed.');
 assert.match(fs.readFileSync("src/services/sourceAdapter.ts", "utf8"), /SOURCE_API_ALLOWED_HOSTS/);
 assert.match(fs.readFileSync("src/services/sourceAdapter.ts", "utf8"), /privateOrLocalAddress/);
 assert.match(fs.readFileSync("src/services/sourceAdapter.ts", "utf8"), /redirect: "error"/);
+
+assert.match(fs.readFileSync("public/dashboard.css", "utf8"), /Canonical mobile stabilization/);
+assert.match(fs.readFileSync("public/dashboard.css", "utf8"), /max-width: 640px/);
