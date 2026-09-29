@@ -1050,7 +1050,7 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
   let comparisonPayload: any = null;
   let comparisonLabel = "previous period";
   let comparisonMode = "none";
-  if (!skipPrior && score.complete) {
+  if (!skipPrior) {
     const cohort = { site: filter.site ?? undefined, income: filter.income ?? undefined };
     let priorQuery: DashboardQuery | null = null;
     if (filter.period) {
