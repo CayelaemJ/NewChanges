@@ -3126,6 +3126,7 @@ function complementaryPalette(accent, primary){
   // extracted brand hues. OKLCH keeps perceived brightness more consistent than
   // the old HSL offsets, while contrast guards keep labels/marks readable.
   const BE=window.BrandEngine;
+  if(BE && BE.deriveChartPalette) return BE.deriveChartPalette({accentColor:accent,primaryColor:primary});
   if(BE && BE.hexToLch && BE.lch && BE.ensureContrast){
     const a=BE.hexToLch(accent), p=BE.hexToLch(primary||accent);
     const hue=(a.C>.035?a.h:p.h);
