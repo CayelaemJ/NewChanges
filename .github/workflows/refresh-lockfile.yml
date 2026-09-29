@@ -1,0 +1,29 @@
+name: refresh-lockfile
+
+on:
+  push:
+    branches:
+      - production-hardening-2026-09
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    if: !contains(github.event.head_commit.message, 'chore: refresh lockfile')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm install --package-lock-only --ignore-scripts
+      - name: Commit lockfile
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          git diff --cached --quiet && exit 0
+          git commit -m "chore: refresh lockfile"
+          git push origin HEAD:production-hardening-2026-09
