@@ -31,11 +31,11 @@ must(pages.admin.includes('body:JSON.stringify(body)') && pages.admin.includes('
 must(pages.dashboard.includes("countTag.textContent='Data unavailable'") && !pages.dashboard.includes('<span class="card-tag">3,247 chats</span>'), 'live chat UI must not leak the hard-coded 3,247 badge');
 must(!pages.dashboard.includes('2,114 employee money problems fixed') && pages.dashboard.includes('id="outcomes-note"') && pages.dashboard.includes("financial ${total===1?'problem':'problems'} resolved"), 'outcomes summary must be calculated from live outcome counts, never hard-coded');
 must(!pages.dashboard.includes('58% earn under R15k/mo') && !pages.dashboard.includes('2,114 employee money problems fixed'), 'live dashboard must not contain demo-specific interpretation text outside the explicit demo fixture');
-must(!pages.dashboard.includes('>1,182 enrolled<') && pages.dashboard.includes('— enrolled'), 'live filter row must not contain a hard-coded enrolled count');
+must(!pages.dashboard.includes('>1,182 enrolled<') && pages.dashboard.includes('id="emp-tag"') && pages.dashboard.includes('— enrolled')===false, 'live filter row must not contain a hard-coded enrolled count');
 must(pages.dashboard.includes('w.complete===false || !hasValue(w.score)') && pages.dashboard.includes('Data not loaded') && pages.dashboard.includes('function fmtCount'), 'live KPI/wellness renderers must preserve unavailable state instead of synthetic zero/null values');
 must(score.includes('optimiseScore: number | null') && snap.includes('missingFeeds'), 'missing feeds must continue to produce unavailable scores, not synthetic scores');
 must(snap.includes('const CORE_FEEDS = [') && !snap.match(/CORE_FEEDS\s*=\s*\[[\s\S]*?chat_sessions/), 'chat must not be part of the 10 core source feeds');
-must(pages.dashboard.includes("const value=(v,fallback='—')"), 'month activity strip must not render null/undefined values');
+must(pages.dashboard.includes("const value=(v,fallback='Not available')") && pages.dashboard.includes("v===null || v===undefined"), 'month activity strip must not render null/undefined values');
 must(pages.users.includes('function renderEmpPick()') && pages.users.includes('renderEmpPick();'), 'Users page must define and invoke the employer picker renderer');
 must(pages.users.includes("await Promise.allSettled([loadPartnersDropdown(),loadUsers(),loadRevokedUsers()])"), 'Users page startup must continue loading user, partner and revoked-user data after employer rendering');
 must(pages.users.includes('showUsersLoadError') && pages.users.includes('Could not load users.'), 'Users page must replace indefinite loading states with a visible retryable error');
@@ -89,7 +89,7 @@ must(dashboardCss.includes('table.ct tr.ct-row') && dashboardCss.includes('table
 must(dashboardCss.includes('.drawer-outcome') && dashboardCss.includes('.drawer-creditor'), "drilldown drawers must have dedicated responsive layouts");
 must(snap.includes('comparisonPayload') && snap.includes('previous month') && snap.includes('previous quarter') && snap.includes('previous 30 days') && snap.includes('same period last year'), "server comparisons must use exact like-for-like reporting windows");
 
-must(pages.dashboard.includes("formatRandThousands(pts[pts.length-1])"), "savings/EWA charts must label values in full rand amounts");
+must(pages.dashboard.includes("formatRandThousands(") && pages.dashboard.includes("period-bar-value"), "savings/EWA charts must label values in full rand amounts");
 must(!/toFixed\([^)]*\)[^\n]*['"]m['"]|toFixed\([^)]*\)[^\n]*['"]k['"]/.test(pages.dashboard), "dashboard source must not create compact m/k financial labels");
 must(!/Math\.round\([^\n]+\/\s*(?:1e6|1000000|1e3|1000)\)[^\n]*['"]m?['"]/.test(pages.dashboard), "dashboard must not abbreviate financial amounts into m/k labels");
 
