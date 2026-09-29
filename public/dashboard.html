@@ -1677,11 +1677,11 @@ function renderEwa(){
   const pts=(e&&e.trend)||[], labels=(e&&e.trendLabels)||[];
   if(pts.length<2){
     wrap.appendChild(el(`<div style="padding:28px 8px;text-align:center;">
-      <div style="font-family:'Fraunces',serif;font-size:30px;font-weight:600;color:var(--brand-primary);">${e?e.total:'R 0'}</div>
+      <div style="font-family:'Fraunces',serif;font-size:30px;font-weight:600;color:var(--brand-primary);">${e?displayMoney(e.total):'R 0'}</div>
       <div style="font-size:12.5px;color:#8497a7;margin-top:6px;">${pts.length?'Total advanced so far.':'No advances yet.'}<br>The monthly trend appears with two or more months of data.</div></div>`));
     return;
   }
-  const w=860,h=210,pad=44,max=Math.max(...pts)*1.12;
+  const w=860,h=230,pad=52,ticks=niceTicks(pts,5),max=ticks[ticks.length-1];
   const px=i=>pad+(i*(w-pad*2)/(pts.length-1));
   const py=v=>h-pad-(v/max)*(h-pad*1.4);
   const line=pts.map((p,i)=>(i?'L':'M')+px(i).toFixed(1)+' '+py(p).toFixed(1)).join(' ');
@@ -1690,11 +1690,11 @@ function renderEwa(){
   const xlabels=labels.map((l,i)=>`<text x="${px(i)}" y="${h-8}" font-size="9.5" fill="#8497a7" text-anchor="middle" font-weight="600">${l}</text>`).join('');
   wrap.appendChild(el(`<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;">
     <defs><linearGradient id="ewag" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--blue)" stop-opacity=".16"/><stop offset="1" stop-color="var(--blue)" stop-opacity="0"/></linearGradient></defs>
-    ${[0,.5,1].map(f=>`<line x1="${pad}" x2="${w-pad}" y1="${h-pad-f*(h-pad*1.4)}" y2="${h-pad-f*(h-pad*1.4)}" stroke="#f7f4ff" stroke-width="1"/><text x="${pad-6}" y="${(h-pad-f*(h-pad*1.4)+3).toFixed(1)}" text-anchor="end" font-size="9.5" font-weight="700" fill="#8497a7">R${Math.round(max*f)}k</text>`).join('')}
+    ${ticks.map(v=>{const y=py(v);return `<line x1="${pad}" x2="${w-pad}" y1="${y}" y2="${y}" stroke="#f7f4ff" stroke-width="1"/><text x="${pad-8}" y="${y+3}" text-anchor="end" font-size="9.5" font-weight="700" fill="#8497a7">${formatRandThousands(v)}</text>`}).join('')}
     <path d="${area}" fill="url(#ewag)"/>
     <path d="${line}" fill="none" stroke="var(--chart-cashflow)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
     ${dots}${xlabels}
-    <text x="${px(pts.length-1)}" y="${py(pts[pts.length-1])-12}" font-size="12" font-weight="800" fill="var(--chart-cashflow)" text-anchor="end">R${pts[pts.length-1]}k</text>
+    <text x="${px(pts.length-1)}" y="${py(pts[pts.length-1])-12}" font-size="12" font-weight="800" fill="var(--chart-cashflow)" text-anchor="end">${formatRandThousands(pts[pts.length-1])}</text>
   </svg>`));
 }
 
@@ -1705,12 +1705,12 @@ function renderSavings(){
   if(pts.length<2){
     const val = pts.length ? pts[pts.length-1] : 0;
     wrap.appendChild(el(`<div style="padding:28px 8px;text-align:center;">
-      <div style="font-family:'Fraunces',serif;font-size:30px;font-weight:600;color:var(--chart-cashflow);">R${val}k<span style="font-size:15px;">/mo</span></div>
+      <div style="font-family:'Fraunces',serif;font-size:30px;font-weight:600;color:var(--chart-cashflow);">${formatRandThousands(val)}<span style="font-size:15px;">/mo</span></div>
       <div style="font-size:12.5px;color:#8497a7;margin-top:6px;">${pts.length? 'Cumulative savings unlocked so far.' : 'No savings recorded yet.'}<br>The trend line appears once there are two or more months of data.</div>
     </div>`));
     return;
   }
-  const w=420,h=200,pad=40,max=Math.max(...pts)*1.12;
+  const w=560,h=230,pad=58,ticks=niceTicks(pts,5),max=ticks[ticks.length-1];
   const px=i=>pad+(i*(w-pad*2)/(pts.length-1));
   const py=v=>h-pad-(v/max)*(h-pad*1.4);
   let line=pts.map((p,i)=>(i?'L':'M')+px(i).toFixed(1)+' '+py(p).toFixed(1)).join(' ');
@@ -1719,11 +1719,11 @@ function renderSavings(){
   let xlabels=labels.map((l,i)=> i%2===0||i===labels.length-1 ? `<text x="${px(i)}" y="${h-8}" font-size="9.5" fill="#8497a7" text-anchor="middle" font-weight="600">${l}</text>`:'').join('');
   wrap.appendChild(el(`<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;">
     <defs><linearGradient id="savg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--chart-cashflow)" stop-opacity=".18"/><stop offset="1" stop-color="var(--chart-cashflow)" stop-opacity="0"/></linearGradient></defs>
-    ${[0,.5,1].map(f=>`<line x1="${pad}" x2="${w-pad}" y1="${h-pad-f*(h-pad*1.4)}" y2="${h-pad-f*(h-pad*1.4)}" stroke="#f7f4ff" stroke-width="1"/><text x="${pad-6}" y="${(h-pad-f*(h-pad*1.4)+3).toFixed(1)}" text-anchor="end" font-size="9.5" font-weight="700" fill="#8497a7">R${Math.round(max*f)}k</text>`).join('')}
+    ${ticks.map(v=>{const y=py(v);return `<line x1="${pad}" x2="${w-pad}" y1="${y}" y2="${y}" stroke="#f7f4ff" stroke-width="1"/><text x="${pad-8}" y="${y+3}" text-anchor="end" font-size="9.5" font-weight="700" fill="#8497a7">${formatRandThousands(v)}</text>`}).join('')}
     <path d="${area}" fill="url(#savg)"/>
     <path d="${line}" fill="none" stroke="var(--chart-cashflow)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
     ${dots}${xlabels}
-    <text x="${px(pts.length-1)}" y="${py(pts[pts.length-1])-12}" font-size="12" font-weight="800" fill="var(--chart-cashflow)" text-anchor="end">R${pts[pts.length-1]}k/mo</text>
+    <text x="${px(pts.length-1)}" y="${py(pts[pts.length-1])-12}" font-size="12" font-weight="800" fill="var(--chart-cashflow)" text-anchor="end">${formatRandThousands(pts[pts.length-1])}/mo</text>
   </svg>`));
 }
 
@@ -2094,6 +2094,30 @@ function safeRender(fn){
   try{ fn(); }catch(err){ console.warn('Dashboard visual failed:', err); }
 }
 
+function formatRand(v){
+  const n=Number(v);
+  if(!Number.isFinite(n)) return '—';
+  return 'R '+Math.round(n).toLocaleString('en-ZA');
+}
+function formatRandThousands(v){
+  const n=Number(v);
+  if(!Number.isFinite(n)) return '—';
+  return 'R '+Math.round(n*1000).toLocaleString('en-ZA');
+}
+function niceTicks(values,count=5){
+  const nums=values.map(Number).filter(Number.isFinite);
+  if(!nums.length) return [0];
+  const min=Math.min(0,...nums), max=Math.max(...nums);
+  if(max<=min) return [min];
+  const raw=(max-min)/Math.max(1,count-1);
+  const mag=Math.pow(10,Math.floor(Math.log10(raw)));
+  const unit=raw/mag;
+  const step=(unit>=5?5:unit>=2?2:1)*mag;
+  const start=Math.floor(min/step)*step, end=Math.ceil(max/step)*step;
+  const ticks=[];
+  for(let v=start;v<=end+step*.001&&ticks.length<12;v+=step) ticks.push(Math.round(v*1e6)/1e6);
+  return ticks.length>=2?ticks:[min,max];
+}
 function displayMoney(v){
   const s=String(v??'');
   return s.replace(/R\s*([0-9][0-9,]*(?:\.[0-9]+)?)\s*([kKmM])\b/g,(_,num,unit)=>{
