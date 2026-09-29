@@ -301,6 +301,40 @@
 
 
   /**
+   * Derive a semantic chart palette from extracted brand colours.
+   * Uses OKLCH hue separation and contrast guards so enterprise charts remain
+   * harmonious, distinct and readable across light/dark surfaces.
+   */
+  function deriveChartPalette(theme) {
+    theme = theme || {};
+    var accent = String(theme.accentColor || theme.primaryColor || 'B15BE8').replace(/^#/, '');
+    var primary = String(theme.primaryColor || accent).replace(/^#/, '');
+    if (!parseHex(accent)) accent = 'B15BE8';
+    if (!parseHex(primary)) primary = accent;
+    var a = hexToLch(accent), p = hexToLch(primary);
+    var hue = a.C > 0.035 ? a.h : p.h;
+    var baseC = Math.min(Math.max(a.C, 0.055), 0.16);
+    var defs = {
+      engagement:[150,0.50,0.78], cashflow:[175,0.58,0.70],
+      debt:[25,0.50,0.62], insurance:[285,0.48,0.78],
+      workforce:[205,0.54,0.72], low:[150,0.58,0.68],
+      mid:[65,0.58,0.62], high:[5,0.55,0.62]
+    };
+    var out = {};
+    Object.keys(defs).forEach(function (key) {
+      var d = defs[key], cc = Math.min(d[2] * baseC, 0.18);
+      out[key] = '#' + ensureContrast(lch(d[1], cc, (hue + d[0] + 360) % 360), 'FFFFFF', 3.4);
+    });
+    var seen = {};
+    Object.keys(out).forEach(function (key, idx) {
+      var bare = out[key].replace(/^#/,'').toUpperCase();
+      if (seen[bare]) out[key] = '#' + ensureContrast(lch(0.54, 0.075, (hue + idx * 43) % 360), 'FFFFFF', 3.4);
+      seen[out[key].replace(/^#/,'').toUpperCase()] = true;
+    });
+    return out;
+  }
+
+  /**
    * Browser controller: owns the <html> inline custom properties and re-renders whenever the
    * page toggles the `portal-dark` class, so light/dark always derive from the same brand.
    *   set({ brand, light, charts })
