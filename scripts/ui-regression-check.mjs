@@ -82,6 +82,13 @@ must(/@media\s*\(max-width:\s*640px\)/.test(dashboardCss), "dashboard must have 
 must(/@media\s*\(max-width:\s*900px\)\s*and\s*\(orientation:\s*landscape\)/.test(dashboardCss), "dashboard must have an explicit mobile-landscape breakpoint");
 must(/orientation:\s*landscape[\s\S]*?\.g-12\s*\{grid-template-columns:\s*1fr/.test(dashboardCss), "mobile landscape must collapse the 12-column dashboard grid");
 must(pages.dashboard.includes("function formatRandThousands") && pages.dashboard.includes("function niceTicks"), "financial charts must use explicit full-rand formatting and nice axis ticks");
+must(pages.dashboard.includes('function alignSeries(current, previous)') && pages.dashboard.includes('DATA.comparison'), "time-series charts must share an aligned selected-period versus comparison-period data model");
+must(pages.dashboard.includes("DATA.filterContext?.comparison?.label"), "dashboard comparison labels must reflect the exact selected comparison window");
+must(pages.dashboard.includes('data-label="Creditor"') && pages.dashboard.includes('data-label="Average per account"'), "creditor detail must expose mobile-readable row labels");
+must(dashboardCss.includes('table.ct tr.ct-row') && dashboardCss.includes('table.ct tr.ct-row td::before'), "creditor table must reflow into readable mobile cards");
+must(dashboardCss.includes('.drawer-outcome') && dashboardCss.includes('.drawer-creditor'), "drilldown drawers must have dedicated responsive layouts");
+must(snap.includes('comparisonPayload') && snap.includes('previous month') && snap.includes('previous quarter') && snap.includes('previous 30 days') && snap.includes('same period last year'), "server comparisons must use exact like-for-like reporting windows");
+
 must(pages.dashboard.includes("formatRandThousands(pts[pts.length-1])"), "savings/EWA charts must label values in full rand amounts");
 must(!/toFixed\([^)]*\)[^\n]*['"]m['"]|toFixed\([^)]*\)[^\n]*['"]k['"]/.test(pages.dashboard), "dashboard source must not create compact m/k financial labels");
 must(!/Math\.round\([^\n]+\/\s*(?:1e6|1000000|1e3|1000)\)[^\n]*['"]m?['"]/.test(pages.dashboard), "dashboard must not abbreviate financial amounts into m/k labels");
