@@ -157,7 +157,7 @@ app.setErrorHandler((error, req, reply) => {
   req.log.error({ err: error, method: req.method, url: req.url }, "unhandled request error");
   if (reply.sent) return;
   const status = Number((error as any)?.statusCode);
-  if (status >= 400 && status < 500) return reply.code(status).send({ error: error.message || "request rejected" });
+  if (status >= 400 && status < 500) { const message = error instanceof Error ? error.message : "request rejected"; return reply.code(status).send({ error: message }); }
   return reply.code(500).send({ error: "internal server error" });
 });
 
@@ -174,12 +174,12 @@ app.register(fastifyStatic, {
   // cannot appear to retain an older navigation/integration screen.
   setHeaders(res, filePath) {
     if (/\.(?:js|css|html)$/i.test(filePath)) {
-      res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
-      res.setHeader("Pragma", "no-cache");
-      res.setHeader("Expires", "0");
+      res.header("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+      res.header("Pragma", "no-cache");
+      res.header("Expires", "0");
     } else if (/\.(?:png|jpg|jpeg|webp|ico|svg|woff2?)$/i.test(filePath)) {
       // URLs are not content-hashed, so keep this short: a replaced logo/OG image reaches users within a day.
-      res.setHeader("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
+      res.header("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
     }
   },
 });
