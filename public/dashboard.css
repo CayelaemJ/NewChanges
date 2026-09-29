@@ -722,3 +722,111 @@ button, input, select, textarea { max-width: 100%; }
   .stat-cell .v{font-size:17px !important;letter-spacing:-.045em;}
   .kpi-value,.stat-value,.metric-value{font-size:20px !important;letter-spacing:-.04em;}
 }
+
+
+/* ── Final viewport contract: explicit component-level mobile layouts ─────
+   Specificity is intentional here. These rules must win over the inline
+   desktop grid-column declarations used by the dashboard cards. */
+@media (max-width:640px){
+  html,body,#app,.page,.shell,.main,.wrap{
+    max-width:100% !important;
+    min-width:0 !important;
+  }
+
+  /* Value Delivered: four executive metrics are a reading sequence on a
+     phone. Each metric owns the full available width. */
+  .dash-section[data-section="valueDelivered"] #value-strip,
+  .dash-section[data-section="valueDelivered"] #value-strip .stat-strip{
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    display:grid !important;
+    grid-template-columns:1fr !important;
+    grid-auto-flow:row !important;
+    gap:0 !important;
+    overflow:visible !important;
+  }
+  .dash-section[data-section="valueDelivered"] #value-strip .stat-cell{
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    box-sizing:border-box !important;
+    display:block !important;
+    padding:14px 15px !important;
+    overflow:visible !important;
+    border-right:0 !important;
+    border-bottom:1px solid var(--line-soft) !important;
+  }
+  .dash-section[data-section="valueDelivered"] #value-strip .stat-cell:last-child{
+    border-bottom:0 !important;
+  }
+  .dash-section[data-section="valueDelivered"] #value-strip .stat-cell .l,
+  .dash-section[data-section="valueDelivered"] #value-strip .stat-cell .d{
+    display:block !important;
+    width:100% !important;
+    max-width:100% !important;
+  }
+  .dash-section[data-section="valueDelivered"] #value-strip .stat-cell .v{
+    display:block !important;
+    width:100% !important;
+    max-width:100% !important;
+    margin:7px 0 0 !important;
+    font-family:'Fraunces',serif !important;
+    font-size:clamp(20px,7.2vw,29px) !important;
+    line-height:1.05 !important;
+    letter-spacing:-.045em !important;
+    white-space:nowrap !important;
+    word-break:normal !important;
+    overflow-wrap:normal !important;
+    overflow:visible !important;
+  }
+
+  /* Cards with desktop inline grid-column spans must occupy the full phone
+     width. This covers Value Delivered, debt profile, stress map, EWA and
+     every other section using the shared 12-column system. */
+  .grid.g-12 > .card{
+    grid-column:1 / -1 !important;
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    box-sizing:border-box !important;
+  }
+
+  /* Four-up KPI systems become a vertical sequence on narrow phones. */
+  .grid.g-4{
+    grid-template-columns:1fr !important;
+    min-width:0 !important;
+  }
+  .grid.g-4 > .card{
+    min-width:0 !important;
+    width:100% !important;
+  }
+
+  /* Never let a card header force the card wider than the viewport. */
+  .card,.card-hd,.card-hd>div,.card-title,.card-note,.head,.head>div{
+    min-width:0 !important;
+    max-width:100% !important;
+  }
+  .card-title,.card-note,.head-sub{
+    overflow-wrap:anywhere !important;
+  }
+
+  /* Long data strings stay intact; the containing component is what reflows. */
+  .num,.kpi-value,.stat-value,.metric-value,.hbar-val,.dsv,.outcome-stat .v{
+    max-width:100% !important;
+    min-width:0 !important;
+    white-space:nowrap !important;
+    word-break:normal !important;
+    overflow-wrap:normal !important;
+    overflow:visible !important;
+    text-overflow:clip !important;
+    font-variant-numeric:tabular-nums lining-nums !important;
+  }
+}
+
+@media (max-width:360px){
+  .dash-section[data-section="valueDelivered"] #value-strip .stat-cell .v{
+    font-size:20px !important;
+    letter-spacing:-.05em !important;
+  }
+}
