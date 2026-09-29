@@ -11,6 +11,8 @@
 // ════════════════════════════════════════════════════════════════════
 
 import { LOAD_ORDER, getFormat } from "./reportFormats.js";
+import { lookup } from "node:dns/promises";
+import { isIP } from "node:net";
 
 export type SourceMode = "API" | "SQL";
 export type SqlDialect = "POSTGRESQL" | "MSSQL" | "MYSQL";
@@ -165,9 +167,50 @@ function normalizeSqlRows(reportKey: string, rows: Record<string, unknown>[]): R
   });
 }
 
+function privateOrLocalAddress(address: string): boolean {
+  if (isIP(address) === 6) {
+    const a = address.toLowerCase();
+    return a === "::1" || a.startsWith("fc") || a.startsWith("fd") || a.startsWith("fe8") || a.startsWith("fe9") || a.startsWith("fea") || a.startsWith("feb") || a.startsWith("::ffff:127.") || a.startsWith("::ffff:10.") || a.startsWith("::ffff:192.168.") || a.startsWith("::ffff:172.16.");
+  }
+  if (isIP(address) === 4) {
+    const [a,b] = address.split(".").map(Number);
+    return a === 10 || a === 127 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127) || a === 0;
+  }
+  return false;
+}
+
+async function assertSafeApiBaseUrl(raw: string): Promise<string> {
+  let url: URL;
+  try { url = new URL(raw); } catch { throw new Error("API base URL must be a valid URL."); }
+  if (url.protocol !== "https:" && url.protocol !== "http:") throw new Error("API base URL must use HTTP or HTTPS.");
+  if (url.username || url.password || url.hash) throw new Error("API base URL must not contain credentials or fragments.");
+  const hostname = url.hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  if (!hostname || hostname === "localhost" || hostname.endsWith(".local") || hostname === "metadata.google.internal") {
+    throw new Error("API base URL hostname is not allowed.");
+  }
+  const allow = String(process.env.SOURCE_API_ALLOWED_HOSTS || "").split(",").map(v => v.trim().toLowerCase()).filter(Boolean);
+  if (allow.length && !allow.some(h => hostname === h || (h.startsWith("*.") && hostname.endsWith(h.slice(1))))) {
+    throw new Error("API base URL hostname is not on SOURCE_API_ALLOWED_HOSTS.");
+  }
+  if (privateOrLocalAddress(hostname)) throw new Error("API base URL must not target a private, loopback, link-local or reserved IP address.");
+  try {
+    const addresses = await lookup(hostname, { all: true });
+    if (addresses.some(a => privateOrLocalAddress(a.address))) {
+      throw new Error("API base URL resolves to a private, loopback, link-local or reserved address.");
+    }
+  } catch (error: any) {
+    if (error?.code || /resolv|ENOTFOUND|EAI_/i.test(String(error?.message ?? ""))) {
+      throw new Error("API base URL hostname could not be safely resolved.");
+    }
+    throw error;
+  }
+  return url.toString().replace(/\/$/, "");
+}
+
 async function createApiAdapter(config: IntegrationSourceConfig): Promise<SourceAdapter> {
-  const baseUrl = String(config.baseUrl ?? "").trim();
-  if (!baseUrl) throw new Error("No API base URL configured.");
+  const rawBaseUrl = String(config.baseUrl ?? "").trim();
+  if (!rawBaseUrl) throw new Error("No API base URL configured.");
+  const baseUrl = await assertSafeApiBaseUrl(rawBaseUrl);
   const token = process.env.SOURCE_API_TOKEN || config.authToken || null;
 
   async function fetchReport(reportKey: string, window?: SourceWindow): Promise<SourceFetchResult> {
@@ -181,6 +224,7 @@ async function createApiAdapter(config: IntegrationSourceConfig): Promise<Source
         ? { Authorization: `Bearer ${token}`, Accept: "application/json" }
         : { Accept: "application/json" },
       signal: AbortSignal.timeout(60_000),
+      redirect: "error",
     });
     if (!response.ok) throw new Error(`HTTP ${response.status} from ${reportKey} endpoint`);
 
