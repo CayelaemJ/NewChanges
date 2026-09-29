@@ -813,10 +813,10 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
     if (!employee?.incomeBand) continue;
     incomeCounts.set(employee.incomeBand, (incomeCounts.get(employee.incomeBand) ?? 0) + 1);
   }
-  const income = [...incomeCounts.entries()].map(([band, count], index) => ({
+  const income = INCOME_VALUES.map((band, index) => ({
     value: band,
     name: INCOME_LABEL[band] ?? band,
-    count,
+    count: incomeCounts.get(band) ?? 0,
     color: incomeColors[index % incomeColors.length],
   }));
 
