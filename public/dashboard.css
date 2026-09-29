@@ -1016,3 +1016,16 @@ table.ct th,table.ct td{vertical-align:middle;}
   }
   table.ct tr.ct-row td:first-child .cred-name{justify-content:flex-end;}
 }
+
+
+/* Enterprise drilldown numerics and comparison charts */
+.drawer-stat-grid .dsv{
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  font-variant-numeric:tabular-nums lining-nums;
+}
+.drawer-outcome .drawer-stat-grid{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+}
+.comparison-legend{justify-content:flex-start;}
