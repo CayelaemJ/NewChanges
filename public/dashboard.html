@@ -2250,9 +2250,9 @@ function fitResponsiveDataValues(root=document){
     // If even the minimum would not fit, the parent must reflow; never clip
     // the financial value to make a grid appear narrower than its content.
     if(node.scrollWidth>maxWidth+1){
+      // The containing layout must reflow rather than breaking a financial
+      // number into individual characters. Keep the value atomic.
       node.style.fontSize=min+'px';
-      node.style.whiteSpace='normal';
-      node.style.overflowWrap='anywhere';
     }
   });
 }
