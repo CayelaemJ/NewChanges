@@ -973,3 +973,46 @@ table.ct th,table.ct td{vertical-align:middle;}
 
 /* ── Comparison chart and drilldown presentation ───────────────────────── */
 .comparison-legend{font-size:11px;}
+
+
+/* Mobile landscape uses the same readable field-card treatment for creditor
+   detail. Landscape phones are wide enough to avoid portrait styles but still
+   too narrow for five financial columns. */
+@media (max-width:900px) and (orientation:landscape){
+  table.ct, table.ct tbody, table.ct tr, table.ct td { display:block; width:100%; }
+  table.ct thead{display:none;}
+  table.ct tr.ct-row, table.ct tr.ct-total{
+    display:grid;
+    grid-template-columns:minmax(0,1fr);
+    gap:0;
+    margin:0 0 8px;
+    padding:9px 11px;
+    border:1px solid var(--line-soft);
+    border-radius:11px;
+    background:var(--white);
+  }
+  table.ct tr.ct-row td, table.ct tr.ct-total td{
+    display:grid;
+    grid-template-columns:minmax(130px,40%) minmax(0,1fr);
+    align-items:center;
+    gap:10px;
+    padding:6px 0;
+    border:0;
+    min-width:0;
+    text-align:right;
+  }
+  table.ct tr.ct-row td::before, table.ct tr.ct-total td::before{
+    content:attr(data-label);
+    text-align:left;
+    font-size:9px;
+    font-weight:800;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+    color:var(--grey-l);
+  }
+  table.ct tr.ct-row td:first-child, table.ct tr.ct-total td:first-child{
+    padding-bottom:8px;
+    border-bottom:1px solid var(--line-soft);
+  }
+  table.ct tr.ct-row td:first-child .cred-name{justify-content:flex-end;}
+}
