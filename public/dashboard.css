@@ -531,3 +531,83 @@ button, input, select, textarea { max-width: 100%; }
   .card-hd { padding-inline: 14px !important; }
   .card-bd { padding-inline: 14px !important; }
 }
+
+
+/* ── Enterprise rating presentation ─────────────────────────────────────
+   The star glyphs are data-driven: full / half / empty states mirror the
+   displayed average instead of implying a five-star score. */
+.rating-hero{display:flex;align-items:center;gap:14px;min-width:0;}
+.rating-summary{min-width:0;}
+.rating-stars{display:flex;align-items:center;gap:1px;line-height:1;font-size:19px;letter-spacing:0;}
+.rating-star{display:inline-block;font-size:19px;line-height:1;color:#d8dee6;}
+.rating-star.full{color:var(--chart-mid);}
+.rating-star.half{
+  background:linear-gradient(90deg,var(--chart-mid) 50%,#d8dee6 50%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.rating-response-count{font-size:11.5px;color:#8497a7;font-weight:700;margin-top:4px;white-space:nowrap;}
+.rating-bars{min-width:0;}
+.rating-share-pill{min-width:0;}
+
+@media (max-width:640px){
+  /* Value Delivered is intentionally a single-column executive story on phones.
+     Do not allow the original desktop card proportions to survive inside a
+     320–430px viewport. */
+  .dash-section[data-section="valueDelivered"] > .head{
+    padding:24px 0 12px !important;
+  }
+  .dash-section[data-section="valueDelivered"] > .head h1{
+    font-size:24px !important;
+    line-height:1.08 !important;
+    max-width:18ch;
+  }
+  .dash-section[data-section="valueDelivered"] .grid.g-12{
+    gap:12px !important;
+  }
+  .dash-section[data-section="valueDelivered"] .card{
+    width:100%;
+    overflow:hidden;
+  }
+  .dash-section[data-section="valueDelivered"] #value-strip{
+    margin-bottom:4px;
+  }
+  .dash-section[data-section="valueDelivered"] .stat-strip{
+    grid-template-columns:1fr 1fr !important;
+    gap:1px !important;
+    border-radius:12px;
+    overflow:hidden;
+  }
+  .dash-section[data-section="valueDelivered"] .stat-cell{
+    min-width:0 !important;
+    padding:13px 11px !important;
+  }
+  .dash-section[data-section="valueDelivered"] .stat-cell .v{
+    font-size:22px !important;
+    overflow-wrap:anywhere;
+  }
+  .dash-section[data-section="valueDelivered"] .stat-cell .d{
+    line-height:1.35;
+    overflow-wrap:anywhere;
+  }
+  .dash-section[data-section="valueDelivered"] #savings-chart,
+  .dash-section[data-section="valueDelivered"] #debt-profile{
+    min-width:0;
+    width:100%;
+  }
+  .dash-section[data-section="valueDelivered"] #savings-chart svg{
+    width:100% !important;
+    min-width:0 !important;
+  }
+  .dash-section[data-section="valueDelivered"] #creditor-table{
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+
+  .rating-hero{gap:12px;}
+  .rating-big{font-size:38px !important;}
+  .rating-stars,.rating-star{font-size:17px;}
+  .rating-response-count{font-size:10.5px;}
+  .rb-row{grid-template-columns:42px minmax(0,1fr) 38px !important;gap:7px !important;}
+  .rb-track{min-width:0;}
+  .rating-share-pill{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+}
