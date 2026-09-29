@@ -14,7 +14,8 @@ must(dashboardKb < 900, `dashboard.html is ${dashboardKb.toFixed(0)} KB; keep th
 must(cssKb < 450, `dashboard.css is ${cssKb.toFixed(0)} KB; keep the canonical stylesheet under 450 KB`);
 must(/function safeRender/.test(dashboard), "dashboard visuals must be isolated behind safeRender");
 must(/cache:s*['"]no-store['"]/.test(dashboard), "live dashboard fetches must explicitly avoid stale financial payloads");
-must(/dashboardCaches/.test(fs.readFileSync(path.join(root, "src/services/snapshotBuilder.ts"), "utf8")), "dashboard should use the persistent cohort/read-model path");
+const snapshotSource=fs.readFileSync(path.join(root, "src/services/snapshotBuilder.ts"), "utf8");
+must(snapshotSource.includes("dashboardCache") && snapshotSource.includes("DASHBOARD_CACHE_TTL_MS"), "dashboard should use a bounded server-side cohort cache");
 
 if (failures.length) {
   console.error("PERFORMANCE REGRESSION CHECK FAILED:");
