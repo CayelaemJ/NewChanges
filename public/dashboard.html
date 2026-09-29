@@ -883,7 +883,7 @@
       <div class="card-hd">
         <div>
           <div class="card-title">Total advanced per month <button type="button" class="metric-info" data-metric="ewaTrend" aria-label="What is total advanced per month?">i</button></div>
-          <div class="card-note">Finalised advances only · cumulative value drawn</div>
+          <div class="card-note">Finalised advances only · total value drawn in each month</div>
         </div>
         <span class="card-tag">Trend</span>
       </div>
@@ -1696,14 +1696,28 @@ function renderEwa(){
   }
   if(!wrap) return;
   const current=e?.trend||[], prior=DATA.comparison?.previous?.ewa||[];
-  wrap.innerHTML=renderPeriodLineChart(current,prior,DATA.filterContext?.label||'Selected period',DATA.comparison?.label||'Previous period',formatRandThousands,'var(--chart-cashflow)');
+  wrap.innerHTML=renderPeriodLineChart(
+    current,
+    prior,
+    DATA.filterContext?.comparison?.current || DATA.filterContext?.label || 'Selected period',
+    DATA.filterContext?.comparison?.previous || DATA.comparison?.label || 'Previous period',
+    formatRandThousands,
+    'var(--chart-cashflow)'
+  );
 }
 
 
 function renderSavings(){
   const wrap=document.getElementById('savings-chart');
   const current=DATA.savings||[], prior=DATA.comparison?.previous?.savings||[];
-  wrap.innerHTML=renderPeriodLineChart(current,prior,DATA.filterContext?.label||'Selected period',DATA.comparison?.label||'Previous period',formatRandThousands,'var(--chart-cashflow)');
+  wrap.innerHTML=renderPeriodLineChart(
+    current,
+    prior,
+    DATA.filterContext?.comparison?.current || DATA.filterContext?.label || 'Selected period',
+    DATA.filterContext?.comparison?.previous || DATA.comparison?.label || 'Previous period',
+    formatRandThousands,
+    'var(--chart-cashflow)'
+  );
 }
 
 
