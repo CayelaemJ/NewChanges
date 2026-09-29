@@ -91,6 +91,11 @@ must(dashboardCss.includes('@media (max-width:900px) and (orientation:landscape)
 must(pages.dashboard.includes('data-label="Creditor"') && pages.dashboard.includes('data-label="Average per account"'), "creditor detail must expose mobile-readable row labels");
 must(dashboardCss.includes('table.ct tr.ct-row') && dashboardCss.includes('table.ct tr.ct-row td::before'), "creditor table must reflow into readable mobile cards");
 must(dashboardCss.includes('.drawer-outcome') && dashboardCss.includes('.drawer-creditor'), "drilldown drawers must have dedicated responsive layouts");
+must(pages.dashboard.includes('function renderPeriodLineChart') && !pages.dashboard.includes('period-bar-chart'), "monthly and quarter comparisons must use line charts, not bar fallback cards");
+must(pages.dashboard.includes('const rows=Array.isArray(DATA.income)?DATA.income:[]') && pages.dashboard.includes('brandSeries(i)'), "income reach must be robust and use the dashboard brand palette");
+must(snap.includes('INCOME_VALUES.map((band, index)') && snap.includes('incomeCounts.get(band) ?? 0'), "income reach data must preserve zero-count configured bands");
+must(dashboardCss.includes('.drawer-outcome .drawer-stat-grid') && dashboardCss.includes('white-space:nowrap'), "drilldown financial values must not wrap within stat cards");
+
 must(snap.includes('comparisonPayload') && snap.includes('previous month') && snap.includes('previous quarter') && snap.includes('previous 30 days') && snap.includes('same period last year'), "server comparisons must use exact like-for-like reporting windows");
 
 must(pages.dashboard.includes("formatRandThousands(") && pages.dashboard.includes("period-bar-value"), "savings/EWA charts must label values in full rand amounts");
