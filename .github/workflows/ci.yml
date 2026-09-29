@@ -14,4 +14,5 @@ jobs:
       - run: npm run check:ui
       - run: npm run check:imports
       - run: npm run check:scheduling
+      - run: npm run test:score
       - run: npm audit --audit-level=high
