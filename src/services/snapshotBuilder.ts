@@ -957,14 +957,6 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
     (outcomes[i] as any).delta = trendDelta((outcomes[i] as any).trend);
   }
 
-  if (comparisonPayload?.outcomes && Array.isArray(outcomes)) {
-    const previousByKey = new Map((comparisonPayload.outcomes as any[]).map((row: any) => [row.key, Number(row.count) || 0]));
-    for (const outcome of outcomes as any[]) {
-      const previousCount = previousByKey.get(outcome.key);
-      outcome.delta = previousCount == null ? null : Number(outcome.count || 0) - previousCount;
-    }
-  }
-
   const regions: any[] = [];
   const stressMap: any[] = [];
   const siteStats: any[] = [];
@@ -1090,6 +1082,14 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
       if (comparisonPayload?.wellness?.complete && comparisonPayload?.wellness?.score != null) priorScore = Number(comparisonPayload.wellness.score);
     }
   }
+  if (comparisonPayload?.outcomes && Array.isArray(outcomes)) {
+    const previousByKey = new Map((comparisonPayload.outcomes as any[]).map((row: any) => [row.key, Number(row.count) || 0]));
+    for (const outcome of outcomes as any[]) {
+      const previousCount = previousByKey.get(outcome.key);
+      outcome.delta = previousCount == null ? null : Number(outcome.count || 0) - previousCount;
+    }
+  }
+
   const sectionAvailability = {
     workforce: headcountDataAvailable,
     enrolment: headcountDataAvailable && feedCoverage.platform_users.available,
