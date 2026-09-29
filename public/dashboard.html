@@ -2799,7 +2799,7 @@ function creditorDrill(c){
         :'<div class="muted" style="padding:10px 0;font-size:12.5px;">No status breakdown available for this creditor.</div>'}
     </div>
     <div class="drawer-note">Employees deal with ${esc(c.name)} directly through a guided, do-it-yourself settlement Not available no debt-review flag, no third party taking over their money. Figures aggregated across ${esc(c.accounts)} employees.</div>`;
-  openDrawer(c.name, 'Unsecured arrears · settlement journey', body);
+  openDrawer(c.name, 'Unsecured arrears, settlement journey', body, 'creditor');
 }
 
 /* ─────── toast ─────── */
