@@ -92,7 +92,7 @@ must(pages.dashboard.includes('data-label="Creditor"') && pages.dashboard.includ
 must(dashboardCss.includes('table.ct tr.ct-row') && dashboardCss.includes('table.ct tr.ct-row td::before'), "creditor table must reflow into readable mobile cards");
 must(dashboardCss.includes('.drawer-outcome') && dashboardCss.includes('.drawer-creditor'), "drilldown drawers must have dedicated responsive layouts");
 must(pages.dashboard.includes('function renderPeriodLineChart') && !pages.dashboard.includes('period-bar-chart'), "monthly and quarter comparisons must use line charts, not bar fallback cards");
-must(pages.dashboard.includes('DATA.filterContext?.comparison?.current') && pages.dashboard.includes('DATA.filterContext?.comparison?.previous'), "comparison charts must use exact current and previous period labels");
+must((pages.dashboard.includes('pc.current.label') && pages.dashboard.includes('pc.previous.label')) || (pages.dashboard.includes('DATA.filterContext?.comparison?.current') && pages.dashboard.includes('DATA.filterContext?.comparison?.previous')), "comparison charts must use exact current and previous period labels");
 must(!pages.dashboard.includes('cumulative value drawn'), "monthly EWA chart copy must not describe a monthly series as cumulative");
 
 must(pages.dashboard.includes('const rows=Array.isArray(DATA.income)?DATA.income:[]') && pages.dashboard.includes('brandSeries(i)'), "income reach must be robust and use the dashboard brand palette");
