@@ -1578,7 +1578,7 @@ function renderWellness(){
     <text x="80" y="74" text-anchor="middle" font-family="Fraunces,serif" font-size="34" font-weight="600" fill="var(--brand-primary)">${w.score}</text><text x="80" y="90" text-anchor="middle" font-size="9.5" font-weight="700" fill="#8497a7">/ 100</text></svg>`;
   const drivers=(w.drivers||[]).map(d=>{ const available=d.available!==false&&hasValue(d.score); const score=available?Number(d.score):0; const col=available?bandTone(score).c:'var(--chart-mid)'; const mk=employerMetricKey(d.name); return `<div class="wd-row"><div class="wd-name">${esc(d.name)} ${employerInfoButton(mk)}<small>${d.note||''}</small></div><div class="wd-track"><div class="wd-fill" style="width:0;background:${available?col:'var(--brand-soft)'}" data-w="${available?score:0}"></div></div><div class="wd-val">${available?score:'Not available'}</div></div>`; }).join('');
   const bt=bandTone(Number(w.score)||0);
-  wrap.appendChild(el(`<div class="wellness-inner"><div class="wellness-left">${gauge}<div class="wellness-band" style="color:${bt.c};background:${bt.bg};border-color:${bt.border}">${ragLights(bt.rag)}${w.band||'Index'}</div><div class="wellness-delta">${delta===null?'No prior period':(delta>=0?'▲ +'+delta:'▼ '+delta)+' pts vs. last period'}</div><div class="wellness-note">A composite of four weighted drivers. Use it to track workforce financial health over time.</div></div><div class="wellness-right">${drivers}</div></div>`));
+  wrap.appendChild(el(`<div class="wellness-inner"><div class="wellness-left">${gauge}<div class="wellness-band" style="color:${bt.c};background:${bt.bg};border-color:${bt.border}">${ragLights(bt.rag)}${w.band||'Index'}</div><div class="wellness-delta">${delta===null?'No prior period':(delta>0?'▲ +'+delta:'▼ '+delta)+' pts vs. '+(DATA.filterContext?.comparison?.label||'previous period')}</div><div class="wellness-note">A composite of four weighted drivers. Use it to track workforce financial health over time.</div></div><div class="wellness-right">${drivers}</div></div>`));
   setTimeout(()=>wrap.querySelectorAll('.wd-fill').forEach(f=>f.style.width=f.dataset.w+'%'),150);
 }
 
@@ -1771,7 +1771,7 @@ function renderIncome(){
     const s=`<circle cx="70" cy="70" r="${r}" fill="none" stroke="${incomePalette[i%incomePalette.length]}" stroke-width="20" stroke-dasharray="${len} ${c-len}" stroke-dashoffset="${-off}" transform="rotate(-90 70 70)" />`;
     off+=len; return s;
   }).join('');
-  let legend=DATA.income.map(b=>`<div class="legend-row"><span class="legend-dot" style="background:${incomePalette[i%incomePalette.length]}"></span><span class="legend-name">${esc(b.name)}</span><span class="legend-val">${b.count}</span></div>`).join('');
+  let legend=DATA.income.map((b,i)=>`<div class="legend-row"><span class="legend-dot" style="background:${incomePalette[i%incomePalette.length]}"></span><span class="legend-name">${esc(b.name)}</span><span class="legend-val">${b.count.toLocaleString('en-ZA')}</span></div>`).join('');
   wrap.appendChild(el(`<div class="donut-wrap">
     <svg width="140" height="140" viewBox="0 0 140 140">${segs}
       <text x="70" y="65" text-anchor="middle" font-size="22" font-weight="800" fill="var(--brand-primary)" font-family="Fraunces,serif">${total}</text>
