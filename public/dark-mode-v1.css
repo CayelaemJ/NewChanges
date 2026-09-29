@@ -1,26 +1,5 @@
-/* ════════════════════════════════════════════════════════════════════
-   DARK MODE
-   Most of this app's colour is hardcoded inline hex (style="color:#32217c"
-   etc.), not CSS variables, so a per-rule dark palette would miss most of
-   the UI. Inverting + hue-rotating the whole page is the standard fix for
-   retrofitting dark mode onto a light-only app like this — it works
-   uniformly regardless of how a colour was declared. Images/logos are
-   un-inverted so they still look correct.
-   ════════════════════════════════════════════════════════════════════ */
-
-html[data-theme="dark"] {
-  background: #fff; /* covered before inversion so the page doesn't flash black at the edges */
-  filter: invert(1) hue-rotate(180deg);
-}
-
-/* photos, logos, and anything already colour-correct get un-inverted back */
-html[data-theme="dark"] img,
-html[data-theme="dark"] svg image,
-html[data-theme="dark"] video,
-html[data-theme="dark"] .welcome-splash-logo,
-html[data-theme="dark"] [data-no-invert] {
-  filter: invert(1) hue-rotate(180deg);
-}
+/* Dark mode is token-driven now (dark-theme-v2.css + brand-engine.js). The old invert(1) filter hack was removed; the sign-in page has its own dark rules. */
+/* Dark mode is token-driven (dark-theme-v2.css / brand-engine.js); the old invert(1) hack was removed. */
 
 /* the theme toggle itself stays put regardless of scroll/zoom */
 #theme-toggle-btn {

@@ -1,6 +1,6 @@
 {
   "name": "empower-fin-dashboard-portal",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "type": "module",
   "engines": {
     "node": ">=20"
@@ -21,7 +21,8 @@
     "security:audit": "npm audit --audit-level=high",
     "check:security": "node scripts/security-regression-check.mjs",
     "sync:configure": "node scripts/configure-mysql-sync.mjs",
-    "check:production": "node scripts/production-readiness-check.mjs"
+    "check:production": "node scripts/production-readiness-check.mjs",
+    "check:brand": "node tests/brand-engine.test.mjs"
   },
   "dependencies": {
     "@fastify/cookie": "^9.3.1",

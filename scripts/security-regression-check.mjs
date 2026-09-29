@@ -42,7 +42,7 @@ for (const f of ['404', 'contact', 'thank-you', 'login', 'privacy', 'terms', 'co
 }
 for (const f of ['robots.txt', 'sitemap.xml']) assert.match(server, new RegExp(f.replace('.', '\\.')));
 for (const a of ['og-image.png', 'favicon.ico', 'apple-touch-icon.png', 'site.webmanifest', 'shell.js', 'enterprise.css']) assert.ok(fs.existsSync(`public/${a}`), a);
-// v0.9.0 review fixes
+// v0.10.0 review fixes
 assert.doesNotMatch(server, /public, max-age=31536000/, 'unversioned static assets must not get a one-year cache');
 assert.match(server, /hostOrigin/, 'CSRF check must accept the request host origin as well as PUBLIC_BASE_URL');
 assert.match(fs.readFileSync('src/services/partnerService.ts', 'utf8'), /name is required \(max 120 characters\)/, 'createPartner must validate input');

@@ -1,0 +1,83 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Dark theme v2 — token driven.
+   brand-engine.js derives --dm-*, --white, --ink, --blue, --bar-bg … from each
+   partner's own brand colours and sets them on <html> when `portal-dark` is on.
+   Nothing here hard-codes a brand colour; the fallbacks only apply if the engine
+   failed to load, so the page still degrades to a sensible neutral dark.
+   ═══════════════════════════════════════════════════════════════════════════ */
+html.portal-dark { color-scheme: dark; }
+html.portal-dark body { background: var(--dm-bg, #15171f) !important; color: var(--ink, #eceef4) !important; }
+
+/* app bar keeps the partner's brand (deep, brand-tinted) with the accent rule */
+html.portal-dark .topbar {
+  background: var(--bar-bg, #1c1f2b) !important;
+  border-color: var(--dm-line, #343849) !important;
+  box-shadow: inset 0 -3px 0 var(--brand-vivid, var(--blue, #b15be8)), 0 1px 0 rgba(0,0,0,.35) !important;
+}
+
+/* surfaces */
+html.portal-dark :is(.card, .panel, .kpi, .drawer, .schedule-modal, .portal-account-menu, .source-mode-card, .stat-strip, .opp-card, .ds-card, .portal-modal) {
+  background: var(--dm-surface, #1d2029) !important;
+  border-color: var(--dm-line, #343849) !important;
+  color: var(--ink, #eceef4);
+  box-shadow: 0 1px 0 rgba(255,255,255,.03) inset, 0 6px 20px rgba(0,0,0,.28) !important;
+}
+html.portal-dark .kpi { border-top-color: var(--brand-vivid, var(--blue)) !important; }
+html.portal-dark :is(.drawer-note, .ds, .pf-toolbar, .pf-filter-menu, .dropdown-menu) {
+  background: var(--dm-surface-2, #262a36) !important; border-color: var(--dm-line, #343849) !important;
+}
+html.portal-dark :is(.dropdown-item, .pf-filter-option):hover { background: var(--ice); }
+
+/* controls */
+html.portal-dark :is(.btn:not(.btn-primary), .pf-filter-btn, .schedule-mini, .filter-month, .filter-tag, .portal-modal-cancel, .emp-pick,
+  input:not([type=checkbox]):not([type=radio]), select, textarea) {
+  background: var(--dm-surface-2, #262a36) !important; color: var(--ink, #eceef4) !important; border-color: var(--dm-line, #343849) !important;
+}
+html.portal-dark :is(input, textarea)::placeholder { color: var(--grey-l); opacity: .9; }
+html.portal-dark :is(.btn:not(.btn-primary), .filter-month, .filter-tag):hover { background: var(--ice) !important; border-color: var(--blue) !important; color: var(--ink) !important; }
+html.portal-dark :is(.btn-primary, .filter-emp, .seg button.on, .pf-chip.on, table.pf-heat th.pf-mh.sort) {
+  background: var(--blue) !important; border-color: var(--blue) !important; color: var(--dm-on-accent, #fff) !important;
+}
+html.portal-dark :is(.btn-primary, .filter-emp):hover { background: var(--blue-d) !important; border-color: var(--blue-d) !important; }
+html.portal-dark :is(input, select, textarea, button, a):focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+html.portal-dark .emp-pick label { color: var(--ink) !important; }
+html.portal-dark .emp-pick input { accent-color: var(--blue); }
+
+/* navigation + account */
+html.portal-dark .portal-nav-link.is-active { background: var(--dm-surface-2); color: var(--ink); border-color: var(--dm-line); }
+html.portal-dark .portal-account-avatar { background: linear-gradient(135deg, var(--blue), var(--bar-bg)); }
+html.portal-dark .metric-info { background: var(--ice); color: var(--ink); border-color: var(--blue); }
+
+/* source cards */
+html.portal-dark .source-mode-card:hover { background: var(--dm-surface-2) !important; border-color: var(--blue) !important; }
+html.portal-dark .source-mode-card.on { background: var(--ice) !important; border-color: var(--blue) !important; }
+html.portal-dark .source-mode-icon { background: var(--ice) !important; color: var(--blue) !important; }
+
+/* data-viz tracks, table rules */
+html.portal-dark :is(.funnel-bar-bg, .hbar-track, .rb-track, .wd-track, .theme-track, .chat-jbar-track) { background: var(--ice); border-color: var(--dm-line); }
+html.portal-dark :is(table.ct th, table.ct td, .outcome, .risk-row, .trend-row) { border-color: var(--dm-line); }
+html.portal-dark svg [stroke="#f7f4ff"] { stroke: var(--dm-line); }
+html.portal-dark svg [stroke="#fff"], html.portal-dark svg [stroke="#ffffff"] { stroke: var(--dm-surface); }
+
+/* welcome splash, tinted by the brand accent */
+html.portal-dark #welcome-splash {
+  background: radial-gradient(1200px 700px at 50% -10%, color-mix(in srgb, var(--blue) 22%, transparent), transparent 60%), linear-gradient(160deg, var(--dm-bg) 0%, var(--dm-surface) 100%) !important;
+}
+
+/* inline-styled legacy text/backgrounds (few remain; mapped to tokens, case-insensitive) */
+html.portal-dark [style*="color:#32217c" i] { color: var(--brand-primary) !important; }
+html.portal-dark [style*="color:#8497a7" i], html.portal-dark [style*="color:#7b8792" i] { color: var(--grey-l) !important; }
+html.portal-dark [style*="color:#5b6b7a" i] { color: var(--grey) !important; }
+html.portal-dark [style*="color:#b5391f" i] { color: #ff9c8a !important; }
+html.portal-dark [style*="color:#137a47" i] { color: #6fe3a6 !important; }
+html.portal-dark :is([style*="color:#8a6610" i], [style*="color:#7a5512" i], [style*="color:#7a4a00" i]) { color: #f2c46b !important; }
+html.portal-dark :is([style*="background:#f7f4ff" i], [style*="background:#f7f6fb" i], [style*="background:#f7f9fb" i], [style*="background:#f7fafd" i], [style*="background:#eef3f8" i]) { background: var(--dm-surface-2) !important; }
+html.portal-dark [style*="background:#fff8e8" i] { background: var(--amber-soft) !important; }
+html.portal-dark [style*="background:#fdf5f3" i] { background: var(--red-soft) !important; }
+html.portal-dark :is([style*="border:1px solid #e8e1f7" i], [style*="border:1px solid #efd49b" i], [style*="border:1px solid #f3c9c0" i]) { border-color: var(--dm-line) !important; }
+html.portal-dark [id^="editor-"] td[style*="background:#eef3f8" i] { background: var(--dm-surface-2) !important; }
+html.portal-dark [id^="editor-"] div[style*="background:#fff" i] { background: var(--ice) !important; border-color: var(--dm-line) !important; }
+
+/* scrollbars + selection */
+html.portal-dark { scrollbar-color: var(--dm-line) var(--dm-bg); }
+html.portal-dark ::selection { background: color-mix(in srgb, var(--blue) 45%, transparent); color: #fff; }

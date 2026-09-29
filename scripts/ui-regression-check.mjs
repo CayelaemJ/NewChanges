@@ -19,11 +19,11 @@ const must=(ok,msg)=>{ if(!ok) failures.push(msg); };
 const everyPage=(predicate)=>Object.entries(pages).every(([name,src])=>predicate(src,name));
 
 must(existsSync(join(root,"public/portal-nav-v080.js")) && existsSync(join(root,"public/portal-nav-v080.css")), "versioned navigation assets must exist");
-must(everyPage(src=>src.includes('/static/portal-nav-v080.css?v=0.9.0') && src.includes('/static/portal-nav-v080.js?v=0.9.0')), "all protected pages must load v0.9.0 versioned navigation assets");
-must(everyPage(src=>src.includes('data-portal-build="0.9.0"')), "all protected pages must carry the v0.9.0 build marker");
+must(everyPage(src=>src.includes('/static/portal-nav-v080.css?v=0.10.0') && src.includes('/static/portal-nav-v080.js?v=0.10.0')), "all protected pages must load v0.10.0 versioned navigation assets");
+must(everyPage(src=>src.includes('data-portal-build="0.10.0"')), "all protected pages must carry the v0.10.0 build marker");
 must(everyPage(src=>!src.includes('class="nav-name"') && !src.includes('class="nav-signout"') && !src.includes('onclick="signOut();return false;"')), "legacy inline username/sign-out navigation must be absent from every protected page");
 must(pages.dashboard.includes('id="portal-account"') && pages.admin.includes('id="portal-account"') && pages.users.includes('id="portal-account"'), "all protected pages need the shared account mount");
-must(nav.includes("PORTAL_BUILD='0.9.0'") && nav.includes('portal-account-menu') && nav.includes('Portal v${PORTAL_BUILD}') && nav.includes('Sign out'), "account dropdown must contain profile metadata, version and sign out");
+must(nav.includes("PORTAL_BUILD='0.10.0'") && nav.includes('portal-account-menu') && nav.includes('Portal v${PORTAL_BUILD}') && nav.includes('Sign out'), "account dropdown must contain profile metadata, version and sign out");
 must(navCss.includes('.portal-account-menu') && navCss.includes('.portal-account-build'), "account dropdown styling must be present");
 must(pages.admin.includes('id="source-tab-sql"') && pages.admin.includes('Database integration'), 'Administration must expose Database integration as a first-class option');
 must(pages.admin.includes('Database connection (Direct SQL)') && pages.admin.includes('id="integ-sql-host"'), 'Administration must retain SQL connection fields');
@@ -44,7 +44,7 @@ must(pages.users.includes("const users=await getJson('/api/users')"), 'Users pag
 must(pages.admin.includes('function openReset()') && pages.admin.includes('async function doReset()') && pages.admin.includes('/api/admin/reset-all'), 'Administration reset control must have working open/reset handlers');
 must(pages.admin.includes('b.revertable') && pages.admin.includes('Could not revert this import'), 'Import history must expose safe revert controls and visible revert failures');
 must(server.includes('revertable') && server.includes('reply.code(409)') && imports.includes('batch.reportKey === "employers"'), 'Backend must publish revertability and safely support insert-only employer rollback');
-must(server.includes('X-Empower-Portal-Build') && server.includes('no-store, no-cache') && server.includes('version: "0.9.0"'), 'server must expose build identity and disable stale UI caching');
+must(server.includes('X-Empower-Portal-Build') && server.includes('no-store, no-cache') && server.includes('version: "0.10.0"'), 'server must expose build identity and disable stale UI caching');
 must(pages.admin.includes('System Email &amp; Scheduled Reports') && pages.admin.includes('id="mail-host"') && pages.admin.includes('Send test email'), 'Administration must expose SMTP system email setup');
 must(pages.dashboard.includes('function openScheduleReport()') && pages.dashboard.includes('/api/report-schedules') && pages.dashboard.includes('Save schedule'), 'Dashboard Schedule report must open a real scheduling workflow');
 must(pages.dashboard.includes('id="pf-employer-filter"') && pages.dashboard.includes('id="pf-select-all"') && pages.dashboard.includes('id="pf-clear-all"') && pages.dashboard.includes('function pfVisibleEmployers()'), 'Portfolio view must provide employer multi-select filtering with Select all/Clear all');
@@ -69,6 +69,16 @@ must(snap.includes('{ range: "30d", asAt: priorEnd.toISOString(), ...cohort }'),
 must(snap.includes('platformUsers.length > 0 && liveJourneys.length > 0') && snap.includes('policies.length > 0 && platformUsers.length > 0'), 'Historical score availability must be based on selected-period records, not only global sync cursors');
 must(pages.dashboard.includes('Score ${Math.round(Number(score))}') && pages.dashboard.includes('replace(" · Score ", ": Score ")'), 'Month selector labels must show the actual score for each month');
 
-if(failures.length){ console.error('UI regression check failed:\n- '+failures.join('\n- ')); process.exit(1); }
 must(read("public/enterprise.css").includes("img[data-custom-logo]") && read("public/dashboard.html").includes("setAttribute('data-custom-logo','1')"), "uploaded company logos must be exempt from the white-out filter");
-console.log('UI regression check passed: v0.9.0 navigation, SQL integration, users/import controls, live-data availability and demo-leak safeguards are present.');
+must(!/invert\(1\)\s+hue-rotate/.test(read("public/dark-mode-v1.css")) && !/invert\(1\)\s+hue-rotate/.test(read("public/portal-nav-v080.css")), "dark mode must not use the whole-page invert filter");
+must(!/portal-dark[^{]*\{[^}]*#e5d8ff/.test(read("public/portal-nav-v080.css")), "dark mode must not hard-code a fixed brand colour");
+for (const page of ["dashboard", "admin", "users"]) {
+  const h = read(`public/${page}.html`);
+  must(h.includes("/static/dark-theme-v2.css") && h.includes("/static/brand-engine.js"), `${page}: token-driven dark theme + brand engine must be loaded`);
+  must(!h.includes("dark-mode-v1.css"), `${page}: legacy dark-mode stylesheet must not be loaded`);
+}
+must(read("public/dashboard.html").includes("BrandEngine.themeController()"), "dashboard theme must be applied through the brand engine controller");
+must(read("public/admin.html").includes("BrandEngine.extractFromImage"), "admin logo detection must use the brand engine");
+must(/background:var\(--white,#fff\)!important/.test(read("public/enterprise.css")), "enterprise surfaces must be token-driven so dark mode can restyle them");
+if(failures.length){ console.error('UI regression check failed:\n- '+failures.join('\n- ')); process.exit(1); }
+console.log('UI regression check passed: v0.10.0 navigation, SQL integration, users/import controls, live-data availability and demo-leak safeguards are present.');

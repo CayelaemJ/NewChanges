@@ -43,3 +43,9 @@ Fixed:
 2. `npm audit --audit-level=high` will most likely FAIL on `xlsx@0.18.5` (no fix on npm). Use SheetJS's own build: `npm i https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz`, then re-run the import checks.
 3. Set `CONTACT_EMAIL`, `PRIVACY_EMAIL`, `LEGAL_EMAIL`, `INFORMATION_OFFICER`, `PUBLIC_BASE_URL`, SMTP and DB variables. Published contact on empowerfin.co.za is admin@empowerfs.co.za / 010 900 3212, but use whatever mailbox you actually monitor.
 4. Have the responsible party's legal/privacy owner approve the legal text and the "Last updated" date.
+
+## 0.10.0 brand engine + dark mode rebuild
+- `public/brand-engine.js` (client-side, dependency-free, 98 unit assertions in `tests/brand-engine.test.mjs`): OKLab/OKLCH analysis, opaque-background detection, 36-bin hue histogram with circular smoothing and watershed clustering, chroma-weighted scoring, WCAG contrast enforcement by lightness only, monochrome/tiny-logo warnings and a confidence score. Outputs: `accentColor` = dominant hue (text-safe >= 4.5:1), `primaryColor` = secondary brand hue, `navyColor` = brand bar (>= 8:1 for white text).
+- Dark mode is token-driven (`dark-theme-v2.css` + `BrandEngine.themeController()`), derived from each partner's colours. The whole-page `invert(1)` hack and the fixed lavender palette were removed. Admin light mode keeps its original palette.
+- Root cause of the broken dark mode: `enterprise.css` hard-coded `#fff` surfaces and used the brand colour as a button background; both are now tokens.
+- The UI regression guard for the logo fix sat after the script's failure exit and could never fail; it is now inside it, and mutation-tested.

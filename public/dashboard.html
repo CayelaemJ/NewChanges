@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="/static/portal-nav-v080.css?v=0.9.0">
+<link rel="stylesheet" href="/static/portal-nav-v080.css?v=0.10.0">
 <link rel="stylesheet" href="/static/ui-enhance-v1.css?v=1">
 <link rel="stylesheet" href="/static/ui-enhance-v2.css?v=1">
 <link rel="stylesheet" href="/static/responsive-v1.css?v=1">
 <link rel="stylesheet" href="/static/responsive-v2.css?v=0.6.0">
-<link rel="stylesheet" href="/static/dark-mode-v1.css?v=2">
 <script src="/static/safe.js?v=1"></script>
+<script src="/static/brand-engine.js?v=1"></script>
 <title>Financial Wellbeing Dashboard | empower-fin</title>
 <meta name="description" content="Workforce financial-wellbeing scores, drivers and trends for your organisation.">
 <meta name="robots" content="noindex,nofollow">
@@ -700,8 +700,9 @@
 </style>
 <link rel="stylesheet" href="/static/enterprise.css?v=2">
   <link rel="stylesheet" href="/static/enterprise-v3.css?v=3">
+<link rel="stylesheet" href="/static/dark-theme-v2.css?v=1">
 </head>
-<body data-portal-build="0.9.0">
+<body data-portal-build="0.10.0">
 
 <!-- ════════════════════════ WELCOME SPLASH ════════════════════════ -->
 <div id="welcome-splash">
@@ -1113,7 +1114,7 @@
 </div>
 
 <script src="/static/engagement-v1.js?v=1" defer></script>
-<script src="/static/portal-nav-v080.js?v=0.9.0"></script>
+<script src="/static/portal-nav-v080.js?v=0.10.0"></script>
 <script>
 /* ════════════════════════════════════════════════════════════════════
    EMPOWER-FIN DASHBOARD PORTAL — EMPLOYER DASHBOARD
@@ -3028,6 +3029,7 @@ function applySectionVisibility(me){
   });
 }
 
+const BrandTheme = window.BrandEngine ? BrandEngine.themeController() : null; // owns light/dark brand tokens
 function applyTheme(theme, user){
   const root=document.documentElement.style;
   // Admins retain the portal's original dashboard palette. Employer branding is
@@ -3049,7 +3051,13 @@ function applyTheme(theme, user){
       '--eligible-workforce-color':'#20a6b2','--stress-low-color':'#159b68',
       '--stress-mid-color':'#e59a18','--stress-high-color':'#d94b45'
     };
-    Object.entries(adminPalette).forEach(([k,v])=>root.setProperty(k,v));
+    if(BrandTheme){
+      // original admin palette in light mode; brand-derived tokens (and lifted chart colours) in dark mode
+      const charts={}; Object.entries(adminPalette).forEach(([k,v])=>{ if(/^--chart-|-color$/.test(k)) charts[k]=v; });
+      BrandTheme.set({ brand:{ accentColor:'7D2FA3', primaryColor:'B15BE8', navyColor:'2B1B68' }, light:adminPalette, charts });
+    } else {
+      Object.entries(adminPalette).forEach(([k,v])=>root.setProperty(k,v));
+    }
     return;
   }
   if(!theme) return;
@@ -3057,6 +3065,7 @@ function applyTheme(theme, user){
   const baseName='empower-fin Dashboard Portal';
   const accent=hex(theme.accentColor||theme.primaryColor||'#b15be8');
   const primary=hex(theme.navyColor||theme.primaryColor||accent);
+  if(!BrandTheme){ // legacy fallback (engine failed to load)
   root.setProperty('--blue', accent);
   root.setProperty('--blue-d', shade(accent,-18));
   root.setProperty('--brand-primary', primary);
@@ -3068,11 +3077,17 @@ function applyTheme(theme, user){
   root.setProperty('--brand-grad-3', accent);
   root.setProperty('--brand-grad-4', mix(accent,'#ffffff',.28));
   root.setProperty('--brand-grad-5', mix(accent,'#ffffff',.55));
+  }
   // Employer-only chart palette: derive harmonious hues from the uploaded brand
   // colours rather than reusing the logo colours for every data series. Stable
   // semantic assignments keep each metric recognisable across all chart types.
   const chartPalette = complementaryPalette(accent, primary);
-  Object.entries(chartPalette).forEach(([key,value])=>root.setProperty('--chart-'+key,value));
+  if(BrandTheme){
+    const charts={}; Object.entries(chartPalette).forEach(([k,v])=>{ charts['--chart-'+k]=v; });
+    BrandTheme.set({ brand:{ accentColor:accent, primaryColor:hex(theme.primaryColor)||accent, navyColor:primary }, light:'engine', charts });
+  } else {
+    Object.entries(chartPalette).forEach(([key,value])=>root.setProperty('--chart-'+key,value));
+  }
   root.setProperty('--engagement-color','var(--chart-engagement)');
   root.setProperty('--cashflow-color','var(--chart-cashflow)');
   root.setProperty('--debt-risk-color','var(--chart-debt)');

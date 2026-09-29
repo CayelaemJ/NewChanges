@@ -6,7 +6,7 @@
   /* Palette inherits each page's own brand tokens (admin: #32217c / #b15be8;
      white-label partners override them inline), so nothing here hard-codes a colour scheme. */
   --ent-navy:var(--brand-primary,#32217c); --ent-navy-2:color-mix(in srgb,var(--brand-primary,#32217c) 82%,#fff);
-  --ent-brass:var(--blue,#b15be8); --ent-paper:#f6f4fb;
+  --ent-brass:var(--brand-vivid,var(--blue,#b15be8)); --ent-paper:#f6f4fb;
   --shadow:0 1px 0 rgba(50,33,124,.04),0 1px 3px rgba(50,33,124,.07);
   --shadow-lg:0 4px 12px rgba(50,33,124,.08),0 12px 32px rgba(50,33,124,.09);
   --radius:6px; --radius-sm:4px;
@@ -18,7 +18,7 @@ h1,h2,h3,.h-serif{font-family:'Source Serif 4',Georgia,serif!important;font-weig
 :focus-visible{outline:2px solid var(--blue)!important;outline-offset:2px;border-radius:3px}
 
 /* shell */
-.topbar{background:var(--ent-navy)!important;border-bottom:0!important;box-shadow:inset 0 -3px 0 var(--ent-brass)!important;position:sticky;top:0;z-index:50}
+.topbar{background:var(--bar-bg,var(--ent-navy))!important;border-bottom:0!important;box-shadow:inset 0 -3px 0 var(--ent-brass)!important;position:sticky;top:0;z-index:50}
 .topbar-inner{height:64px!important}
 .topbar .nav-link,.topbar .topbar-meta,.topbar .nav-who,.topbar label{color:#ddd5f3!important}
 .topbar .nav-link{border-radius:3px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;font-size:11px}
@@ -29,7 +29,7 @@ h1,h2,h3,.h-serif{font-family:'Source Serif 4',Georgia,serif!important;font-weig
 .topbar .nav-emp option{color:#101a2b}
 
 /* surfaces */
-.card,.panel,.kpi{background:#fff!important;border:1px solid var(--line)!important;border-radius:var(--radius)!important;box-shadow:var(--shadow)!important}
+.card,.panel,.kpi{background:var(--white,#fff)!important;border:1px solid var(--line)!important;border-radius:var(--radius)!important;box-shadow:var(--shadow)!important}
 .kpi{border-top:3px solid var(--ent-navy)!important;transition:box-shadow .15s,transform .15s}
 .kpi:hover{box-shadow:var(--shadow-lg)!important;transform:translateY(-1px)}
 .kpi-label,.dsl,th{font-size:10.5px!important;font-weight:700!important;text-transform:uppercase;letter-spacing:.09em;color:var(--grey-l)!important}
@@ -45,11 +45,11 @@ tbody tr:hover td{background:#faf8fe}
 .btn:hover{background:var(--ice)!important;border-color:var(--ent-navy)!important;color:var(--ent-navy)!important}
 .btn-primary{background:var(--ent-navy)!important;border-color:var(--ent-navy)!important;color:#fff!important}
 .btn-primary:hover{background:var(--ent-navy-2)!important;border-color:var(--ent-navy-2)!important;color:#fff!important}
-input:not([type=checkbox]):not([type=radio]),select,textarea{border-radius:4px!important;border:1px solid #cfc6e6!important;background:#fff!important;font-family:inherit}
+input:not([type=checkbox]):not([type=radio]),select,textarea{border-radius:4px!important;border:1px solid var(--line-strong,#cfc6e6)!important;background:var(--white,#fff)!important;font-family:inherit}
 input:focus,select:focus,textarea:focus{border-color:var(--blue)!important;box-shadow:0 0 0 3px rgba(125,47,163,.18)!important}
 .filter-tag,.filter-month,.filter-emp,.chip-mini,.pf-chip{border-radius:3px!important;font-weight:600!important;font-size:11.5px!important;letter-spacing:.02em}
 .filter-emp{background:var(--ent-navy)!important;border-color:var(--ent-navy)!important}
-.filter-month,.filter-tag{background:#fff!important;color:var(--ent-navy)!important;border:1px solid #cfc6e6!important}
+.filter-month,.filter-tag{background:var(--white,#fff)!important;color:var(--ent-navy)!important;border:1px solid #cfc6e6!important}
 .banner{border-radius:4px!important;border-left:3px solid currentColor}
 
 /* motion respects user preference */
@@ -173,3 +173,8 @@ button[aria-busy="true"]{opacity:.75;cursor:progress}
   filter:none!important;opacity:1!important;background:#fff;padding:4px 10px;border-radius:4px;
   height:34px;width:auto;max-width:200px;object-fit:contain}
 html .welcome-splash-logo[data-custom-logo]{filter:none!important}
+
+/* Retail-banking polish: softer geometry, brand-true accent rules */
+:root{--radius:10px;--radius-sm:6px}
+.card,.panel,.kpi{border-radius:10px!important}
+.kpi{border-top-color:var(--brand-vivid,var(--ent-navy))!important}

@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const PORTAL_BUILD='0.9.0';
+  const PORTAL_BUILD='0.10.0';
   window.__EMPOWER_PORTAL_BUILD__=PORTAL_BUILD;
   console.info('[empower-fin Dashboard Portal] UI build', PORTAL_BUILD);
 
