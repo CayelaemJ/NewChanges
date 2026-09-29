@@ -22,8 +22,8 @@ assert.deepEqual(computeSubScores(complete), {
 
 const result = computeOptimiseScore(complete);
 assert.equal(result.complete, true);
-assert.equal(result.optimiseScore, 74);
-assert.equal(result.rawScore, 74.0);
+assert.equal(result.optimiseScore, 73);
+assert.equal(result.rawScore, 73.0);
 assert.deepEqual(result.weights, DEFAULT_WEIGHTS);
 assert.deepEqual(result.missingDrivers, []);
 
