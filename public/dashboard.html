@@ -3,14 +3,36 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="icon" type="image/png" href="/static/favicon.png">
-<link rel="stylesheet" href="/static/portal-nav-v054.css?v=0.5.4">
+<link rel="stylesheet" href="/static/portal-nav-v080.css?v=0.9.0">
 <link rel="stylesheet" href="/static/ui-enhance-v1.css?v=1">
 <link rel="stylesheet" href="/static/ui-enhance-v2.css?v=1">
 <link rel="stylesheet" href="/static/responsive-v1.css?v=1">
 <link rel="stylesheet" href="/static/responsive-v2.css?v=0.6.0">
 <link rel="stylesheet" href="/static/dark-mode-v1.css?v=2">
-<title>empower-fin Dashboard Portal — Employer Insights</title>
+<script src="/static/safe.js?v=1"></script>
+<title>Financial Wellbeing Dashboard | empower-fin</title>
+<meta name="description" content="Workforce financial-wellbeing scores, drivers and trends for your organisation.">
+<meta name="robots" content="noindex,nofollow">
+<link rel="canonical" href="{{BASE_URL}}/dashboard">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="empower-fin Dashboard Portal">
+<meta property="og:title" content="Financial Wellbeing Dashboard | empower-fin">
+<meta property="og:description" content="Workforce financial-wellbeing scores, drivers and trends for your organisation.">
+<meta property="og:url" content="{{BASE_URL}}/dashboard">
+<meta property="og:image" content="{{BASE_URL}}/static/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="empower-fin Dashboard Portal: financial wellbeing, measured with rigour.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Financial Wellbeing Dashboard | empower-fin">
+<meta name="twitter:description" content="Workforce financial-wellbeing scores, drivers and trends for your organisation.">
+<meta name="twitter:image" content="{{BASE_URL}}/static/og-image.png">
+<meta name="theme-color" content="#32217c">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
+<link rel="manifest" href="/static/site.webmanifest">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap');
 
@@ -676,13 +698,15 @@
   .welcome-splash-greeting{font-family:'Fraunces',serif;font-weight:600;font-size:26px;color:var(--brand-primary);}
   .welcome-splash-sub{margin-top:6px;font-size:13.5px;color:var(--grey);font-weight:600;}
 </style>
+<link rel="stylesheet" href="/static/enterprise.css?v=2">
+  <link rel="stylesheet" href="/static/enterprise-v3.css?v=3">
 </head>
-<body data-portal-build="0.5.4">
+<body data-portal-build="0.9.0">
 
 <!-- ════════════════════════ WELCOME SPLASH ════════════════════════ -->
 <div id="welcome-splash">
   <div class="welcome-splash-inner">
-    <img id="welcome-splash-logo" class="welcome-splash-logo" src="/static/logo-large.png" alt="">
+    <img id="welcome-splash-logo" class="welcome-splash-logo" src="/static/logo-large.png" alt="empower-fin logo">
     <div class="welcome-splash-spinner"></div>
     <div class="welcome-splash-greeting" id="welcome-splash-greeting">Welcome</div>
     <div class="welcome-splash-sub">Loading your dashboard…</div>
@@ -713,7 +737,7 @@
 
   <div class="pdf-print-header" aria-hidden="true">
     <div class="pdf-brand">
-      <img src="/static/logo.png" alt="">
+      <img src="/static/logo.png" alt="empower-fin logo">
       <div>
         <div class="pdf-kicker">empower-fin · Workforce Financial Wellbeing</div>
         <div class="pdf-title" id="pdf-report-title">Employer Insights</div>
@@ -1089,8 +1113,7 @@
 </div>
 
 <script src="/static/engagement-v1.js?v=1" defer></script>
-<script src="/static/ui-enhance-v2.js?v=1" defer></script>
-<script src="/static/portal-nav-v054.js?v=0.5.4"></script>
+<script src="/static/portal-nav-v080.js?v=0.9.0"></script>
 <script>
 /* ════════════════════════════════════════════════════════════════════
    EMPOWER-FIN DASHBOARD PORTAL — EMPLOYER DASHBOARD
@@ -1543,7 +1566,7 @@ function renderWellness(){
       const available=d.available!==false && hasValue(d.score);
       const score=available?Number(d.score):null;
       const col=available?bandTone(score).c:'var(--chart-mid)';
-      const mk=employerMetricKey(d.name); return `<div class="wd-row"><div class="wd-name">${d.name} ${employerInfoButton(mk)}<small>${d.note||''}</small></div><div class="wd-track"><div class="wd-fill" style="width:${available?score:0}%;background:${available?col:'var(--brand-soft)'}"></div></div><div class="wd-val">${available?score:'—'}</div></div>`;
+      const mk=employerMetricKey(d.name); return `<div class="wd-row"><div class="wd-name">${esc(d.name)} ${employerInfoButton(mk)}<small>${d.note||''}</small></div><div class="wd-track"><div class="wd-fill" style="width:${available?score:0}%;background:${available?col:'var(--brand-soft)'}"></div></div><div class="wd-val">${available?score:'—'}</div></div>`;
     }).join('');
     wrap.appendChild(el(`<div class="wellness-inner"><div class="wellness-left"><div style="font-family:'Fraunces',serif;font-size:46px;color:var(--brand-primary);line-height:1">—</div><div style="font-size:11px;color:#8497a7;font-weight:800;margin-top:4px">/ 100</div><div class="wellness-band" style="color:#8a6610;background:#fff8e8;border-color:#efd49b">${ragLights('amber')}Data incomplete</div><div class="wellness-note">The score is calculated only when all required driver feeds are available. Missing data is never treated as zero.</div></div><div class="wellness-right">${drivers||'<div class="muted">Required score drivers have not been loaded.</div>'}</div></div>`));
     return;
@@ -1555,7 +1578,7 @@ function renderWellness(){
     <path d="M16 88 A64 64 0 0 1 144 88" fill="none" stroke="url(#wg)" stroke-width="13" stroke-linecap="round" stroke-dasharray="${(C*frac).toFixed(1)} ${C.toFixed(1)}"/>
     <defs><linearGradient id="wg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="var(--brand-grad-1)"/><stop offset=".5" stop-color="var(--brand-grad-3)"/><stop offset="1" stop-color="var(--brand-grad-5)"/></linearGradient></defs>
     <text x="80" y="74" text-anchor="middle" font-family="Fraunces,serif" font-size="34" font-weight="600" fill="var(--brand-primary)">${w.score}</text><text x="80" y="90" text-anchor="middle" font-size="9.5" font-weight="700" fill="#8497a7">/ 100</text></svg>`;
-  const drivers=(w.drivers||[]).map(d=>{ const available=d.available!==false&&hasValue(d.score); const score=available?Number(d.score):0; const col=available?bandTone(score).c:'var(--chart-mid)'; const mk=employerMetricKey(d.name); return `<div class="wd-row"><div class="wd-name">${d.name} ${employerInfoButton(mk)}<small>${d.note||''}</small></div><div class="wd-track"><div class="wd-fill" style="width:0;background:${available?col:'var(--brand-soft)'}" data-w="${available?score:0}"></div></div><div class="wd-val">${available?score:'—'}</div></div>`; }).join('');
+  const drivers=(w.drivers||[]).map(d=>{ const available=d.available!==false&&hasValue(d.score); const score=available?Number(d.score):0; const col=available?bandTone(score).c:'var(--chart-mid)'; const mk=employerMetricKey(d.name); return `<div class="wd-row"><div class="wd-name">${esc(d.name)} ${employerInfoButton(mk)}<small>${d.note||''}</small></div><div class="wd-track"><div class="wd-fill" style="width:0;background:${available?col:'var(--brand-soft)'}" data-w="${available?score:0}"></div></div><div class="wd-val">${available?score:'—'}</div></div>`; }).join('');
   const bt=bandTone(Number(w.score)||0);
   wrap.appendChild(el(`<div class="wellness-inner"><div class="wellness-left">${gauge}<div class="wellness-band" style="color:${bt.c};background:${bt.bg};border-color:${bt.border}">${ragLights(bt.rag)}${w.band||'Index'}</div><div class="wellness-delta">${delta===null?'No prior period':(delta>=0?'▲ +'+delta:'▼ '+delta)+' pts vs. last period'}</div><div class="wellness-note">A composite of four weighted drivers. Use it to track workforce financial health over time.</div></div><div class="wellness-right">${drivers}</div></div>`));
   setTimeout(()=>wrap.querySelectorAll('.wd-fill').forEach(f=>f.style.width=f.dataset.w+'%'),150);
@@ -1614,7 +1637,7 @@ function renderOutcomes(){
   if(note) note.textContent=available?`${total.toLocaleString('en-ZA')} financial ${total===1?'problem':'problems'} resolved — and the value created`:'Journey data not loaded.';
   if(!available){wrap.innerHTML='<div class="muted" style="padding:22px 8px">Journey data has not been loaded for this employer.</div>';return;}
   if(!rows.length){wrap.innerHTML='<div class="muted" style="padding:22px 8px">No completed outcomes in the selected reporting window.</div>';return;}
-  rows.forEach(o=>{ const row=el(`<div class="outcome clickable"><div class="outcome-ico">${svgIco(o.ico)}</div><div><div class="outcome-name">${o.name}</div><div class="outcome-meta">${fmtCount(o.count)} completed · ${o.meta}</div></div><div class="outcome-stat"><div class="v">${displayMoney(o.stat)}</div><div class="l">${o.statL}</div></div><div class="row-chevron">›</div></div>`); row.addEventListener('click',()=>outcomeDrill(o)); wrap.appendChild(row); });
+  rows.forEach(o=>{ const row=el(`<div class="outcome clickable"><div class="outcome-ico">${svgIco(o.ico)}</div><div><div class="outcome-name">${esc(o.name)}</div><div class="outcome-meta">${fmtCount(o.count)} completed · ${o.meta}</div></div><div class="outcome-stat"><div class="v">${displayMoney(o.stat)}</div><div class="l">${esc(o.statL)}</div></div><div class="row-chevron">›</div></div>`); row.addEventListener('click',()=>outcomeDrill(o)); wrap.appendChild(row); });
 }
 
 /* ─────────────────── ACT 3: value strip ─────────────────── */
@@ -1710,8 +1733,8 @@ function renderSavings(){
 function renderDebtProfile(){
   const wrap=document.getElementById('debt-profile'); if(!wrap) return;
   // stacked bar by type
-  let seg=DATA.debtProfile.map((d,i)=>`<div class="dp-seg" style="width:${d.pct}%;background:${brandSeries(i)}" title="${d.type}"></div>`).join('');
-  let legend=DATA.debtProfile.map((d,i)=>`<div class="dp-leg"><span class="dp-dot" style="background:${brandSeries(i)}"></span><span class="dp-type">${d.type}</span><span class="dp-bal">${displayMoney(d.balance)}</span><span class="dp-pct">${d.pct}%</span></div>`).join('');
+  let seg=DATA.debtProfile.map((d,i)=>`<div class="dp-seg" style="width:${d.pct}%;background:${brandSeries(i)}" title="${esc(d.type)}"></div>`).join('');
+  let legend=DATA.debtProfile.map((d,i)=>`<div class="dp-leg"><span class="dp-dot" style="background:${brandSeries(i)}"></span><span class="dp-type">${esc(d.type)}</span><span class="dp-bal">${displayMoney(d.balance)}</span><span class="dp-pct">${d.pct}%</span></div>`).join('');
   wrap.appendChild(el(`<div>
     <div class="dp-bar">${seg}</div>
     <div class="dp-legend">${legend}</div>
@@ -1731,17 +1754,17 @@ function initials(n){ return n.split(/\s|\//)[0].slice(0,2).toUpperCase(); }
 function renderCreditors(){
   const wrap=document.getElementById('creditor-table');
   let rows=DATA.creditors.map((c,i)=>`<tr class="ct-row" data-i="${i}">
-    <td><div class="cred-name"><span class="cred-logo" style="background:${c.color}">${initials(c.name)}</span>${c.name}</div></td>
-    <td class="r num">${c.accounts}</td>
+    <td><div class="cred-name"><span class="cred-logo" style="background:${c.color}">${initials(c.name)}</span>${esc(c.name)}</div></td>
+    <td class="r num">${esc(c.accounts)}</td>
     <td class="r num">${displayMoney(c.balance)}</td>
     <td class="r muted">${displayMoney(c.avg)}</td>
-    <td class="r"><span class="chip-mini ${c.status==='elig'?'chip-elig':'chip-prog'}">${c.statusL}</span></td>
+    <td class="r"><span class="chip-mini ${c.status==='elig'?'chip-elig':'chip-prog'}">${esc(c.statusL)}</span></td>
   </tr>`).join('');
   const tbl=el(`<table class="ct">
     <thead><tr><th>Creditor</th><th class="r">Accounts</th><th class="r">Balance</th><th class="r">Avg / acct</th><th class="r">Status</th></tr></thead>
     <tbody>${rows}
       <tr style="border-top:2px solid var(--brand-soft)"><td style="font-weight:800;color:var(--brand-primary)">Total in arrears journey</td>
-      <td class="r num">${DATA.creditorsTotal.accounts}</td><td class="r num">${displayMoney(DATA.creditorsTotal.balance)}</td><td class="r"></td><td class="r"></td></tr>
+      <td class="r num">${esc(DATA.creditorsTotal.accounts)}</td><td class="r num">${displayMoney(DATA.creditorsTotal.balance)}</td><td class="r"></td><td class="r"></td></tr>
     </tbody></table>`);
   tbl.querySelectorAll('.ct-row').forEach(r=>r.addEventListener('click',()=>creditorDrill(DATA.creditors[+r.dataset.i])));
   wrap.appendChild(tbl);
@@ -1752,7 +1775,7 @@ function renderRegions(){
   const wrap=document.getElementById('region-bars');
   DATA.regions.forEach((r,i)=>{
     const col = r.stress>=70?'var(--chart-high)' : r.stress>=55?'var(--chart-mid)' : r.stress>=45?'var(--chart-debt)' : 'var(--chart-low)';
-    const row=el(`<div class="hbar-row"><div class="hbar-lbl">${r.name}</div><div class="hbar-track"><div class="hbar-fill" style="width:0;background:${col}"></div></div><div class="hbar-val">${r.stress}</div></div>`);
+    const row=el(`<div class="hbar-row"><div class="hbar-lbl">${esc(r.name)}</div><div class="hbar-track"><div class="hbar-fill" style="width:0;background:${col}"></div></div><div class="hbar-val">${r.stress}</div></div>`);
     wrap.appendChild(row);
     setTimeout(()=>row.querySelector('.hbar-fill').style.width=r.stress+'%', 150+i*80);
   });
@@ -1784,7 +1807,7 @@ function renderIncome(){
     const s=`<circle cx="70" cy="70" r="${r}" fill="none" stroke="${incomePalette[i%incomePalette.length]}" stroke-width="20" stroke-dasharray="${len} ${c-len}" stroke-dashoffset="${-off}" transform="rotate(-90 70 70)" />`;
     off+=len; return s;
   }).join('');
-  let legend=DATA.income.map(b=>`<div class="legend-row"><span class="legend-dot" style="background:${incomePalette[i%incomePalette.length]}"></span><span class="legend-name">${b.name}</span><span class="legend-val">${b.count}</span></div>`).join('');
+  let legend=DATA.income.map(b=>`<div class="legend-row"><span class="legend-dot" style="background:${incomePalette[i%incomePalette.length]}"></span><span class="legend-name">${esc(b.name)}</span><span class="legend-val">${b.count}</span></div>`).join('');
   wrap.appendChild(el(`<div class="donut-wrap">
     <svg width="140" height="140" viewBox="0 0 140 140">${segs}
       <text x="70" y="65" text-anchor="middle" font-size="22" font-weight="800" fill="var(--brand-primary)" font-family="Fraunces,serif">${total}</text>
@@ -1848,7 +1871,7 @@ function renderPrescription(){
   const top=el(`<div style="display:flex;gap:26px;margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid #f7f4ff">
     <div><div style="font-size:11px;font-weight:700;color:#8497a7;text-transform:uppercase;letter-spacing:.05em">Value challenged ${employerInfoButton('prescriptionValue')}</div><div style="font-family:Fraunces,serif;font-size:30px;font-weight:600;color:var(--brand-primary);letter-spacing:-1px;margin-top:5px">${displayMoney(p.total)}</div></div>
     <div><div style="font-size:11px;font-weight:700;color:#8497a7;text-transform:uppercase;letter-spacing:.05em">Already written off ${employerInfoButton('prescriptionWrittenOff')}</div><div style="font-family:Fraunces,serif;font-size:30px;font-weight:600;color:var(--chart-cashflow);letter-spacing:-1px;margin-top:5px">${displayMoney(p.writtenOff)}</div></div>
-    <div><div style="font-size:11px;font-weight:700;color:#8497a7;text-transform:uppercase;letter-spacing:.05em">Accounts ${employerInfoButton('prescriptionAccounts')}</div><div style="font-family:Fraunces,serif;font-size:30px;font-weight:600;color:var(--brand-primary);letter-spacing:-1px;margin-top:5px">${p.accounts}</div></div>
+    <div><div style="font-size:11px;font-weight:700;color:#8497a7;text-transform:uppercase;letter-spacing:.05em">Accounts ${employerInfoButton('prescriptionAccounts')}</div><div style="font-family:Fraunces,serif;font-size:30px;font-weight:600;color:var(--brand-primary);letter-spacing:-1px;margin-top:5px">${esc(p.accounts)}</div></div>
   </div>`);
   wrap.appendChild(top);
   const hb=el('<div class="hbar"></div>'); bars.forEach(b=>hb.appendChild(b)); wrap.appendChild(hb);
@@ -1873,7 +1896,7 @@ function renderOpportunities(){
   const o=DATA.opportunities;
   const cards=o.cards.map(c=>`<div class="opp-card">
     <div class="opp-ico">${svgIco(c.icon)}</div>
-    <div class="opp-name">${c.name} ${employerInfoButton('opportunities')}</div>
+    <div class="opp-name">${esc(c.name)} ${employerInfoButton('opportunities')}</div>
     <div class="opp-elig"><span class="opp-n">${c.eligible}</span> employees eligible</div>
     <div class="opp-save">${c.saving!=='—'?'+ '+c.saving+'/mo potential':(c.extra||'')}</div>
   </div>`).join('');
@@ -1954,8 +1977,8 @@ function renderChatJourneys(){
   const max=Math.max(1,...rows.map(j=>Number(j.convos||0)));
   rows.forEach((j,i)=>{
     const col=JOURNEY_COLOR[j.key]||'var(--blue)';
-    const row=el(`<div class="chat-jrow${j.key===CHAT_SELECTED?' sel':''}" data-k="${j.key}">
-      <div class="chat-jbar-lbl"><span class="chat-jdot" style="background:${col}"></span>${j.name}</div>
+    const row=el(`<div class="chat-jrow${j.key===CHAT_SELECTED?' sel':''}" data-k="${esc(j.key)}">
+      <div class="chat-jbar-lbl"><span class="chat-jdot" style="background:${col}"></span>${esc(j.name)}</div>
       <div class="chat-jbar-track"><div class="chat-jbar" style="width:0;background:${col}"></div></div>
       <div class="chat-jmeta">${j.convos.toLocaleString()}<small>${sentBadge(j.sentiment)}</small></div>
     </div>`);
@@ -2481,7 +2504,7 @@ function renderPfKpis(E){
 function renderPfHeatmap(E){
   const wrap=document.getElementById('pf-heatmap'); wrap.innerHTML=''; const M=PORTFOLIO.metrics;
   const colVals={}; M.forEach(m=>colVals[m.key]=E.map(e=>e[m.key]));
-  const head='<tr><th class="pf-emp-h">Employer</th>'+M.map(m=>`<th class="pf-mh${m.key===PF_SORT?' sort':''}" data-k="${m.key}"><span>${m.label}</span>${pfInfoButton(m.key)}</th>`).join('')+'</tr>';
+  const head='<tr><th class="pf-emp-h">Employer</th>'+M.map(m=>`<th class="pf-mh${m.key===PF_SORT?' sort':''}" data-k="${esc(m.key)}"><span>${m.label}</span>${pfInfoButton(m.key)}</th>`).join('')+'</tr>';
   const rows=E.map(e=>{
     const cells=M.map(m=>{ const v=pfFinite(e[m.key]); return `<td class="${v===null?'pf-no-data':''}" style="background:${pfHeat(m,v,colVals[m.key])};color:${pfTextColor(m,v,colVals[m.key])};font-weight:700" title="${v===null?'Data not loaded for this measure':''}">${pfFmt(m,v)}</td>`; }).join('');
     return `<tr><td class="pf-emp">${pfEsc(e.name)}<small>${(pfFinite(e.heads)||0).toLocaleString('en-ZA')} staff</small></td>${cells}</tr>`;
@@ -2492,7 +2515,7 @@ function renderPfHeatmap(E){
 }
 function renderPfPicker(){
   const wrap=document.getElementById('pf-metric-picker'); wrap.innerHTML='';
-  PORTFOLIO.metrics.forEach(m=>{ const b=el(`<button class="pf-chip${m.key===PF_SORT?' on':''}" data-k="${m.key}"><span>${m.label}</span>${pfInfoButton(m.key)}</button>`); b.addEventListener('click',ev=>{ if(ev.target.closest('.metric-info')) return; PF_SORT=m.key; renderPfPicker(); renderPfLeague(pfVisibleEmployers()); document.querySelectorAll('.pf-mh').forEach(x=>x.classList.toggle('sort',x.dataset.k===PF_SORT)); }); wrap.appendChild(b); });
+  PORTFOLIO.metrics.forEach(m=>{ const b=el(`<button class="pf-chip${m.key===PF_SORT?' on':''}" data-k="${esc(m.key)}"><span>${m.label}</span>${pfInfoButton(m.key)}</button>`); b.addEventListener('click',ev=>{ if(ev.target.closest('.metric-info')) return; PF_SORT=m.key; renderPfPicker(); renderPfLeague(pfVisibleEmployers()); document.querySelectorAll('.pf-mh').forEach(x=>x.classList.toggle('sort',x.dataset.k===PF_SORT)); }); wrap.appendChild(b); });
   wireMetricTips(wrap);
 }
 function renderPfLeague(E){
@@ -2655,7 +2678,7 @@ async function loadMySchedules(){
   try{
     const r=await fetch('/api/report-schedules'); const rows=await r.json(); if(!r.ok) throw new Error(rows.error||'Could not load schedules');
     if(!rows.length){wrap.innerHTML='<div class="muted">No scheduled reports yet.</div>';return;}
-    wrap.innerHTML=rows.map(s=>`<div class="schedule-row"><div><strong>${scheduleEsc(s.name)}</strong><small>${scheduleEsc(s.employer?.name||'')} · ${scheduleFrequencyLabel(s)} · ${s.active?'next '+scheduleLocalWhen(s.nextRunAt):'paused'}</small>${s.lastStatus==='FAILED'?`<small style="color:#b5391f">Last send failed: ${scheduleEsc(s.lastError||'')}</small>`:''}</div><div class="schedule-row-actions"><button class="schedule-mini" onclick="scheduleSendNow('${s.id}')">Send now</button><button class="schedule-mini" onclick="scheduleToggleActive('${s.id}',${!s.active})">${s.active?'Pause':'Resume'}</button><button class="schedule-mini danger" onclick="scheduleDelete('${s.id}')">Delete</button></div></div>`).join('');
+    wrap.innerHTML=rows.map(s=>`<div class="schedule-row"><div><strong>${scheduleEsc(s.name)}</strong><small>${scheduleEsc(s.employer?.name||'')} · ${scheduleFrequencyLabel(s)} · ${s.active?'next '+scheduleLocalWhen(s.nextRunAt):'paused'}</small>${s.lastStatus==='FAILED'?`<small style="color:#b5391f">Last send failed: ${scheduleEsc(s.lastError||'')}</small>`:''}</div><div class="schedule-row-actions"><button class="schedule-mini" onclick="scheduleSendNow('${esc(s.id)}')">Send now</button><button class="schedule-mini" onclick="scheduleToggleActive('${esc(s.id)}',${!s.active})">${s.active?'Pause':'Resume'}</button><button class="schedule-mini danger" onclick="scheduleDelete('${esc(s.id)}')">Delete</button></div></div>`).join('');
   }catch(e){wrap.innerHTML=`<div class="schedule-note err">${scheduleEsc(e.message)}</div>`;}
 }
 async function scheduleToggleActive(id,active){
@@ -2694,7 +2717,7 @@ function outcomeDrill(o){
   const body=`
     <div class="drawer-stats">
       <div class="ds"><div class="dsl">Fixes completed</div><div class="dsv">${o.count.toLocaleString()}</div></div>
-      <div class="ds"><div class="dsl">${o.statL}</div><div class="dsv">${displayMoney(o.stat)}</div></div>
+      <div class="ds"><div class="dsl">${esc(o.statL)}</div><div class="dsv">${displayMoney(o.stat)}</div></div>
       <div class="ds"><div class="dsl">Avg per employee</div><div class="dsv">${o.avgPerEmployee ?? '—'}</div></div>
     </div>
     <div class="drawer-section-title">Completion trend</div>
@@ -2719,7 +2742,7 @@ function creditorDrill(c){
   const stages=Array.isArray(c.stateBreakdown)?c.stateBreakdown:[];
   const body=`
     <div class="drawer-stats">
-      <div class="ds"><div class="dsl">Accounts in journey</div><div class="dsv">${c.accounts}</div></div>
+      <div class="ds"><div class="dsl">Accounts in journey</div><div class="dsv">${esc(c.accounts)}</div></div>
       <div class="ds"><div class="dsl">Total balance</div><div class="dsv">${c.balance}</div></div>
       <div class="ds"><div class="dsl">Avg per account</div><div class="dsv">${c.avg}</div></div>
     </div>
@@ -2729,7 +2752,7 @@ function creditorDrill(c){
         `<div class="hbar-row" style="grid-template-columns:190px 1fr 68px"><div class="hbar-lbl">${s.label}</div><div class="hbar-track"><div class="hbar-fill" style="width:${s.pct}%"></div></div><div class="hbar-val">${s.count} · ${s.pct}%</div></div>`).join('')
         :'<div class="muted" style="padding:10px 0;font-size:12.5px;">No status breakdown available for this creditor.</div>'}
     </div>
-    <div class="drawer-note">Employees deal with ${c.name} directly through a guided, do-it-yourself settlement — no debt-review flag, no third party taking over their money. Figures aggregated across ${c.accounts} employees.</div>`;
+    <div class="drawer-note">Employees deal with ${esc(c.name)} directly through a guided, do-it-yourself settlement — no debt-review flag, no third party taking over their money. Figures aggregated across ${esc(c.accounts)} employees.</div>`;
   openDrawer(c.name, 'Unsecured arrears · settlement journey', body);
 }
 
@@ -2916,7 +2939,7 @@ async function populateMonthSelect(employerId, selected, selectedQuarter){
     }
     extra+=`<optgroup label="Months / dates">`+periods.map(p=>{
       const score=Number.isFinite(Number(p.optimiseScore)) ? Math.round(Number(p.optimiseScore)) : null;
-      return `<option value="${p.period}" data-score="${score??''}" ${p.period===selected?'selected':''}>${fmt(p.period)}${scoreText(score).replace(" · Score ", ": Score ")}</option>`;
+      return `<option value="${esc(p.period)}" data-score="${score??''}" ${p.period===selected?'selected':''}>${fmt(p.period)}${scoreText(score).replace(" · Score ", ": Score ")}</option>`;
     }).join('')+`</optgroup>`;
     sel.insertAdjacentHTML('beforeend', extra);
   }catch(e){ /* static options still work fine without a periods list */ }
@@ -2972,7 +2995,7 @@ function populateEmployerSelect(me){
   const sel=document.getElementById('employer-select');
   if(!sel || !me.employers || !me.employers.length) return;
   const cur=employerIdFromUrl()||me.employers[0].id;
-  sel.innerHTML=me.employers.map(e=>`<option value="${e.id}" ${e.id===cur?'selected':''}>${e.name}</option>`).join('');
+  sel.innerHTML=me.employers.map(e=>`<option value="${esc(e.id)}" ${e.id===cur?'selected':''}>${esc(e.name)}</option>`).join('');
   // always show the field (even with one employer) so it's clearly filterable
   sel.style.display='inline-block';
 }
@@ -3213,5 +3236,6 @@ loadLiveData();
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
 </script>
+<script src="/static/shell.js?v=1"></script>
 </body>
 </html>

@@ -48,22 +48,27 @@ export function digestSetupToken(token: string): string {
 }
 
 // ── sessions ──
+// Only a SHA-256 digest of the session token is stored, so a database leak
+// does not hand out live sessions. The raw token exists only in the cookie.
+const digestSession = (token: string) => createHash("sha256").update(token, "utf8").digest("hex");
+
 export async function createSession(userId: string, days: number = SESSION_DAYS) {
   const token = randomBytes(32).toString("hex");
   const expiresAt = new Date(Date.now() + days * 864e5);
-  await prisma.session.create({ data: { userId, token, expiresAt } });
+  await prisma.session.create({ data: { userId, token: digestSession(token), expiresAt } });
   return { token, expiresAt };
 }
 
 export async function resolveSession(token?: string) {
-  if (!token) return null;
+  if (!token || typeof token !== "string" || token.length > 256) return null;
+  const digest = digestSession(token);
   const session = await prisma.session.findUnique({
-    where: { token },
+    where: { token: digest },
     include: { user: { include: { links: true } } },
   });
   if (!session) return null;
   if (session.expiresAt < new Date()) {
-    await prisma.session.deleteMany({ where: { token } });
+    await prisma.session.deleteMany({ where: { token: digest } });
     return null;
   }
   if (!session.user.active) return null;
@@ -71,8 +76,8 @@ export async function resolveSession(token?: string) {
 }
 
 export async function destroySession(token?: string) {
-  if (!token) return;
-  await prisma.session.deleteMany({ where: { token } });
+  if (!token || typeof token !== "string") return;
+  await prisma.session.deleteMany({ where: { token: digestSession(token) } });
 }
 
 // used when an account is deactivated (self or admin) so access ends immediately
@@ -85,9 +90,14 @@ export async function destroyAllSessionsForUser(userId: string) {
 // `remember` controls session lifetime: 30 days when the user checked "Remember
 // me", 7 days otherwise. The cookie itself (persistent vs session-only) is set
 // by the caller in server.ts, based on the same flag.
+const DUMMY_HASH = hashPassword("timing-equaliser-not-a-real-password");
+
 export async function login(email: string, password: string, remember: boolean = false) {
   const user = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
-  if (!user || !user.active || !user.passwordHash) return null;
+  if (!user || !user.active || !user.passwordHash) {
+    verifyPassword(password, DUMMY_HASH); // equalise timing so unknown accounts can't be enumerated
+    return null;
+  }
   if (!verifyPassword(password, user.passwordHash)) return null;
   // Successful login upgrades legacy password hashes to the stronger v2 scrypt
   // parameters without forcing a password reset for existing users.

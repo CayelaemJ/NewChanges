@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="icon" type="image/png" href="/static/favicon.png">
 <link rel="stylesheet" href="/static/ui-enhance-v1.css?v=1">
 <link rel="stylesheet" href="/static/responsive-v1.css?v=1">
 <link rel="stylesheet" href="/static/dark-mode-v1.css?v=1">
@@ -17,7 +16,29 @@
 })();
 </script>
 <script src="/static/dark-mode-v1.js?v=1"></script>
-<title>empower-fin Dashboard Portal — Sign in</title>
+<title>Sign in | empower-fin Dashboard Portal</title>
+<meta name="description" content="Sign in to the empower-fin Dashboard Portal: secure, auditable financial-wellbeing analytics for employers and their partners.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="{{BASE_URL}}/login">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="empower-fin Dashboard Portal">
+<meta property="og:title" content="Sign in | empower-fin Dashboard Portal">
+<meta property="og:description" content="Sign in to the empower-fin Dashboard Portal: secure, auditable financial-wellbeing analytics for employers and their partners.">
+<meta property="og:url" content="{{BASE_URL}}/login">
+<meta property="og:image" content="{{BASE_URL}}/static/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="empower-fin Dashboard Portal: financial wellbeing, measured with rigour.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Sign in | empower-fin Dashboard Portal">
+<meta name="twitter:description" content="Sign in to the empower-fin Dashboard Portal: secure, auditable financial-wellbeing analytics for employers and their partners.">
+<meta name="twitter:image" content="{{BASE_URL}}/static/og-image.png">
+<meta name="theme-color" content="#32217c">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
+<link rel="manifest" href="/static/site.webmanifest">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap');
   :root{--blue:#b15be8;--blue-d:#8e42bd;--brand-primary:#32217c;--ice:#f3efff;--line:#e8e1f7;--ink:#0f2438;--grey:#5b6b7a;--red:#e0492f;--red-soft:#fdecea;}
@@ -57,14 +78,27 @@
   html[data-theme="dark"] #cookie-banner .dismiss{background:#162535;color:#c8d5df;border-color:#304458;}
   html[data-theme="dark"] #forgot-link,html[data-theme="dark"] .card a{color:#c89bea !important;}
 </style>
+<link rel="stylesheet" href="/static/enterprise.css?v=2">
+  <link rel="stylesheet" href="/static/enterprise-v3.css?v=3">
 </head>
-<body>
+<body class="auth has-sticky-cta">
+  <aside class="auth-side">
+    <div><img src="/static/logo-large.png" alt="empower-fin logo" id="side-logo"></div>
+    <div>
+      <h2>Financial wellbeing, measured with rigour.</h2>
+      <p>A secure analytics workspace giving employers and their partners a clear, auditable view of workforce financial health.</p>
+      <ul><li>Role-based access with full administrative audit trail</li><li>Encrypted sessions and an enforced password policy</li><li>Every score calculated from your own source data</li></ul>
+    </div>
+    <a class="ent-cta ghost side-cta" href="/contact" style="align-self:flex-start">Request access</a>
+    <small>&copy; empower-fin &nbsp;·&nbsp; Confidential &nbsp;·&nbsp; <a href="mailto:{{CONTACT_EMAIL}}" style="color:inherit">{{CONTACT_EMAIL}}</a></small>
+  </aside>
+  <main class="auth-main">
   <div class="card">
     <div class="logo"><img src="/static/logo-large.png" alt="empower-fin Dashboard Portal" style="height:54px;width:auto;"></div>
-    <h1>Sign in</h1>
+    <h1>Sign in to your workspace</h1>
     <div class="sub" id="brand-sub">Employee financial wellbeing platform</div>
     <label for="email">Email</label>
-    <input id="email" type="email" autocomplete="username" placeholder="you@company.com">
+    <input id="email" type="email" autocomplete="username" placeholder="you@company.com" required aria-describedby="err">
     <label for="password">Password</label>
     <input id="password" type="password" autocomplete="current-password" placeholder="••••••••">
     <div style="text-align:right;margin-top:8px;">
@@ -92,6 +126,8 @@
     <a href="/privacy" style="color:#8497a7;">Privacy Policy</a> · <a href="/terms" style="color:#8497a7;">Terms of Service</a> · <a href="/cookies" style="color:#8497a7;">Cookie Notice</a>
   </div>
 
+    </main>
+  <div class="sticky-cta"><a class="ent-cta" href="/contact">Request access</a></div>
   <div id="cookie-banner">
     <div class="inner">
       <p>We use a strictly necessary cookie to keep you signed in — no advertising or tracking cookies. See our <a href="/cookies">Cookie Notice</a> for details.</p>
@@ -126,7 +162,10 @@ if(new URLSearchParams(location.search).get('deactivated')==='1'){
 }
 async function signIn(){
   const btn=$('#btn'), err=$('#err');
-  err.style.display='none'; btn.disabled=true; btn.textContent='Signing in…';
+  err.style.display='none'; err.setAttribute('role','alert');
+  const em=$('#email'), pw=$('#password'); em.removeAttribute('aria-invalid'); pw.removeAttribute('aria-invalid');
+  if(!em.value.trim()||!pw.value){ const bad=!em.value.trim()?em:pw; bad.setAttribute('aria-invalid','true'); bad.focus(); err.textContent=!em.value.trim()?'Enter your email address.':'Enter your password.'; err.style.display='block'; return; }
+  btn.disabled=true; btn.setAttribute('aria-busy','true'); btn.textContent='Signing in…';
   try{
     const r=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({email:$('#email').value,password:$('#password').value,remember:$('#remember').checked})});
@@ -137,7 +176,7 @@ async function signIn(){
     if(me.modules.dashboard) location.href='/dashboard';
     else if(me.modules.admin) location.href='/admin';
     else location.href='/dashboard';
-  }catch(e){ err.textContent=e.message; err.style.display='block'; btn.disabled=false; btn.textContent='Sign in'; }
+  }catch(e){ err.textContent=e.message; err.style.display='block'; btn.disabled=false; btn.removeAttribute('aria-busy'); btn.textContent='Sign in'; $('#password').setAttribute('aria-invalid','true'); }
 }
 $('#password').addEventListener('keydown',e=>{ if(e.key==='Enter') signIn(); });
 
@@ -177,5 +216,7 @@ function dismissCookieBanner(){
   if(!dismissed){ const b=document.getElementById('cookie-banner'); if(b) b.style.display='block'; }
 })();
 </script>
+<script src="/static/shell.js?v=1"></script>
+<script src="/static/engagement-v1.js?v=1"></script>
 </body>
 </html>

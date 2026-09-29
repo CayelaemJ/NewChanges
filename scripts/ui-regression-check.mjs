@@ -8,8 +8,8 @@ const pages = {
   admin: read("public/admin.html"),
   users: read("public/users.html"),
 };
-const nav = read("public/portal-nav-v054.js");
-const navCss = read("public/portal-nav-v054.css");
+const nav = read("public/portal-nav-v080.js");
+const navCss = read("public/portal-nav-v080.css");
 const server = read("src/server.ts");
 const snap = read("src/services/snapshotBuilder.ts");
 const score = read("src/services/scoreEngine.ts");
@@ -18,12 +18,12 @@ const failures=[];
 const must=(ok,msg)=>{ if(!ok) failures.push(msg); };
 const everyPage=(predicate)=>Object.entries(pages).every(([name,src])=>predicate(src,name));
 
-must(existsSync(join(root,"public/portal-nav-v054.js")) && existsSync(join(root,"public/portal-nav-v054.css")), "versioned navigation assets must exist");
-must(everyPage(src=>src.includes('/static/portal-nav-v054.css?v=0.5.4') && src.includes('/static/portal-nav-v054.js?v=0.5.4')), "all protected pages must load v0.5.4 versioned navigation assets");
-must(everyPage(src=>src.includes('data-portal-build="0.5.4"')), "all protected pages must carry the v0.5.4 build marker");
+must(existsSync(join(root,"public/portal-nav-v080.js")) && existsSync(join(root,"public/portal-nav-v080.css")), "versioned navigation assets must exist");
+must(everyPage(src=>src.includes('/static/portal-nav-v080.css?v=0.9.0') && src.includes('/static/portal-nav-v080.js?v=0.9.0')), "all protected pages must load v0.9.0 versioned navigation assets");
+must(everyPage(src=>src.includes('data-portal-build="0.9.0"')), "all protected pages must carry the v0.9.0 build marker");
 must(everyPage(src=>!src.includes('class="nav-name"') && !src.includes('class="nav-signout"') && !src.includes('onclick="signOut();return false;"')), "legacy inline username/sign-out navigation must be absent from every protected page");
 must(pages.dashboard.includes('id="portal-account"') && pages.admin.includes('id="portal-account"') && pages.users.includes('id="portal-account"'), "all protected pages need the shared account mount");
-must(nav.includes("PORTAL_BUILD='0.5.4'") && nav.includes('portal-account-menu') && nav.includes('Portal v${PORTAL_BUILD}') && nav.includes('Sign out'), "account dropdown must contain profile metadata, version and sign out");
+must(nav.includes("PORTAL_BUILD='0.9.0'") && nav.includes('portal-account-menu') && nav.includes('Portal v${PORTAL_BUILD}') && nav.includes('Sign out'), "account dropdown must contain profile metadata, version and sign out");
 must(navCss.includes('.portal-account-menu') && navCss.includes('.portal-account-build'), "account dropdown styling must be present");
 must(pages.admin.includes('id="source-tab-sql"') && pages.admin.includes('Database integration'), 'Administration must expose Database integration as a first-class option');
 must(pages.admin.includes('Database connection (Direct SQL)') && pages.admin.includes('id="integ-sql-host"'), 'Administration must retain SQL connection fields');
@@ -44,7 +44,7 @@ must(pages.users.includes("const users=await getJson('/api/users')"), 'Users pag
 must(pages.admin.includes('function openReset()') && pages.admin.includes('async function doReset()') && pages.admin.includes('/api/admin/reset-all'), 'Administration reset control must have working open/reset handlers');
 must(pages.admin.includes('b.revertable') && pages.admin.includes('Could not revert this import'), 'Import history must expose safe revert controls and visible revert failures');
 must(server.includes('revertable') && server.includes('reply.code(409)') && imports.includes('batch.reportKey === "employers"'), 'Backend must publish revertability and safely support insert-only employer rollback');
-must(server.includes('X-Empower-Portal-Build') && server.includes('no-store, no-cache') && server.includes('version: "0.6.0"'), 'server must expose build identity and disable stale UI caching');
+must(server.includes('X-Empower-Portal-Build') && server.includes('no-store, no-cache') && server.includes('version: "0.9.0"'), 'server must expose build identity and disable stale UI caching');
 must(pages.admin.includes('System Email &amp; Scheduled Reports') && pages.admin.includes('id="mail-host"') && pages.admin.includes('Send test email'), 'Administration must expose SMTP system email setup');
 must(pages.dashboard.includes('function openScheduleReport()') && pages.dashboard.includes('/api/report-schedules') && pages.dashboard.includes('Save schedule'), 'Dashboard Schedule report must open a real scheduling workflow');
 must(pages.dashboard.includes('id="pf-employer-filter"') && pages.dashboard.includes('id="pf-select-all"') && pages.dashboard.includes('id="pf-clear-all"') && pages.dashboard.includes('function pfVisibleEmployers()'), 'Portfolio view must provide employer multi-select filtering with Select all/Clear all');
@@ -70,4 +70,4 @@ must(snap.includes('platformUsers.length > 0 && liveJourneys.length > 0') && sna
 must(pages.dashboard.includes('Score ${Math.round(Number(score))}') && pages.dashboard.includes('replace(" · Score ", ": Score ")'), 'Month selector labels must show the actual score for each month');
 
 if(failures.length){ console.error('UI regression check failed:\n- '+failures.join('\n- ')); process.exit(1); }
-console.log('UI regression check passed: v0.5.4 navigation, SQL integration, users/import controls, live-data availability and demo-leak safeguards are present.');
+console.log('UI regression check passed: v0.9.0 navigation, SQL integration, users/import controls, live-data availability and demo-leak safeguards are present.');

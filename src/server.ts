@@ -40,8 +40,11 @@ const PUBLIC_DIR = [join(__dirname, "public"), join(__dirname, "..", "public")]
 const MAX_UPLOAD_BYTES = Number(process.env.UPLOAD_MAX_BYTES ?? 50 * 1024 * 1024);
 
 const app = Fastify({
-  logger: true,
-  bodyLimit: 64 * 1024 * 1024,
+  logger: { redact: ["req.headers.authorization", "req.headers.cookie", "res.headers[\"set-cookie\"]"] },
+  // Behind Railway's proxy, req.ip is the proxy unless this is enabled, which
+  // collapsed every visitor into a single rate-limit bucket.
+  trustProxy: process.env.TRUST_PROXY === "false" ? false : true,
+  bodyLimit: 8 * 1024 * 1024, // JSON bodies (partner logos are data URLs); file uploads are streamed via multipart and capped separately
   connectionTimeout: 0,
   keepAliveTimeout: 75_000,
   maxRequestsPerSocket: 1000,
@@ -64,6 +67,8 @@ const SECURITY_HEADERS: Record<string, string> = {
   "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
   "Cross-Origin-Opener-Policy": "same-origin",
   "Cross-Origin-Resource-Policy": "same-origin",
+  "X-DNS-Prefetch-Control": "off",
+  "X-Permitted-Cross-Domain-Policies": "none",
   "Content-Security-Policy": [
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline'",
@@ -112,7 +117,7 @@ app.addHook("onRequest", async (req, reply) => {
     reply.header("Pragma", "no-cache");
   }
   const ip = req.ip || "unknown";
-  const authPath = path === "/api/auth/login" || path === "/api/auth/forgot-password" || path === "/api/auth/set-password";
+  const authPath = path === "/api/auth/login" || path === "/api/auth/forgot-password" || path === "/api/auth/set-password" || path === "/api/contact";
   if (!rateLimit(reply, `${authPath ? "auth" : "api"}:${ip}`, authPath ? AUTH_RATE_LIMIT : RATE_LIMIT, authPath ? AUTH_WINDOW_MS : RATE_WINDOW_MS)) return;
 
   // Cookie-authenticated state-changing API calls must originate from this
@@ -122,12 +127,19 @@ app.addHook("onRequest", async (req, reply) => {
     const authHeader = req.headers.authorization;
     const origin = req.headers.origin;
     const referer = req.headers.referer;
-    if (!authHeader && (origin || referer)) {
+    if (!authHeader) {
+      const hasSessionCookie = Boolean(req.cookies?.session);
       const forwardedProto = String(req.headers["x-forwarded-proto"] || req.protocol).split(",")[0].trim();
       const configuredOrigin = String(process.env.PUBLIC_BASE_URL || "").replace(/\/$/, "");
       const expectedOrigin = configuredOrigin || `${forwardedProto}://${req.headers.host}`;
       const suppliedOrigin = origin || (() => { try { return new URL(referer as string).origin; } catch { return ""; } })();
-      if (suppliedOrigin && suppliedOrigin !== expectedOrigin) {
+      // Browser session requests must prove same-origin. Bearer-token clients
+      // remain usable without Origin/Referer because they have no browser cookie.
+      if (hasSessionCookie && !suppliedOrigin) return reply.code(403).send({ error: "same-origin request required" });
+      // A custom domain plus the platform domain (or a preview URL) are both legitimate; a cross-site
+      // attacker's Origin can never equal the host this request was addressed to.
+      const hostOrigin = `${forwardedProto}://${req.headers.host}`;
+      if (suppliedOrigin && suppliedOrigin !== expectedOrigin && suppliedOrigin !== hostOrigin) {
         return reply.code(403).send({ error: "cross-origin request rejected" });
       }
     }
@@ -165,6 +177,9 @@ app.register(fastifyStatic, {
       res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
       res.setHeader("Pragma", "no-cache");
       res.setHeader("Expires", "0");
+    } else if (/\.(?:png|jpg|jpeg|webp|ico|svg|woff2?)$/i.test(filePath)) {
+      // URLs are not content-hashed, so keep this short: a replaced logo/OG image reaches users within a day.
+      res.setHeader("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
     }
   },
 });
@@ -184,14 +199,38 @@ function dashboardQueryError(query: { period?: string; quarter?: string; range?:
   if (query.income && query.income !== "all" && !VALID_INCOME_BANDS.has(query.income)) return "income is not a supported income-band code";
   return null;
 }
-const serveHtml = async (reply: FastifyReply, file: string) =>
-  reply
+const escAttr = (v: string) => v.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
+// Public origin used for canonical/OG URLs and the sitemap. Prefer the configured
+// PUBLIC_BASE_URL; otherwise derive it from the request but only accept a sane host
+// (never reflect an arbitrary Host header into markup).
+function publicOrigin(req: FastifyRequest): string {
+  const configured = String(process.env.PUBLIC_BASE_URL || "").trim().replace(/\/$/, "");
+  if (/^https?:\/\/[a-z0-9.\-]+(:\d+)?$/i.test(configured)) return configured;
+  const host = String(req.headers.host || "");
+  const proto = req.protocol === "https" ? "https" : "http";
+  return /^[a-z0-9.\-]+(:\d+)?$/i.test(host) ? `${proto}://${host}` : "http://localhost";
+}
+const CONTACT_EMAIL = (process.env.CONTACT_EMAIL || "").trim();
+const siteVars = (req: FastifyRequest): Record<string, string> => ({
+  BASE_URL: publicOrigin(req),
+  CONTACT_EMAIL: CONTACT_EMAIL || "the portal administrator",
+  PRIVACY_EMAIL: (process.env.PRIVACY_EMAIL || CONTACT_EMAIL || "the portal administrator").trim(),
+  LEGAL_EMAIL: (process.env.LEGAL_EMAIL || CONTACT_EMAIL || "the portal administrator").trim(),
+  INFORMATION_OFFICER: (process.env.INFORMATION_OFFICER || "our designated Information Officer").trim(),
+  CONTACT_ADDRESS: (process.env.CONTACT_ADDRESS || "Deloitte Building, 5 Magwa Crescent, Midrand, 2090, Gauteng, South Africa").trim(),
+});
+const serveHtml = async (reply: FastifyReply, file: string, status = 200) => {
+  const vars = siteVars(reply.request);
+  const html = (await readFile(join(PUBLIC_DIR, file), "utf-8")).replace(/\{\{([A-Z_]+)\}\}/g, (m, k) => (k in vars ? escAttr(vars[k]) : m));
+  return reply
+    .code(status)
     .header("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate")
     .header("Pragma", "no-cache")
     .header("Expires", "0")
-    .header("X-Empower-Portal-Build", "0.6.0")
-    .type("text/html")
-    .send(await readFile(join(PUBLIC_DIR, file), "utf-8"));
+    .header("X-Empower-Portal-Build", "0.9.0")
+    .type("text/html; charset=utf-8")
+    .send(html);
+};
 
 // ── auth helpers ──
 async function currentUser(req: FastifyRequest): Promise<AuthUser | null> {
@@ -223,8 +262,58 @@ function redactAuditDetail(value: unknown): unknown {
 
 
 // ── public pages ──
-app.get("/favicon.ico", async (_req, reply) => reply.redirect("/static/favicon.png"));
-app.get("/", async (_req, reply) => reply.redirect("/dashboard"));
+app.get("/favicon.ico", async (_req, reply) => reply.redirect("/static/favicon.ico"));
+app.get("/contact", async (_req, reply) => serveHtml(reply, "contact.html"));
+app.get("/thank-you", async (_req, reply) => serveHtml(reply, "thank-you.html"));
+app.get("/robots.txt", async (req, reply) => reply.type("text/plain; charset=utf-8").header("Cache-Control", "public, max-age=3600").send(
+  ["User-agent: *", "Allow: /login", "Allow: /contact", "Allow: /privacy", "Allow: /terms", "Allow: /cookies", "Allow: /static/og-image.png",
+   "Disallow: /api/", "Disallow: /admin", "Disallow: /dashboard", "Disallow: /users", "Disallow: /set-password", "Disallow: /thank-you", "",
+   `Sitemap: ${publicOrigin(req)}/sitemap.xml`, ""].join("\n")));
+app.get("/sitemap.xml", async (req, reply) => {
+  const base = publicOrigin(req), today = new Date().toISOString().slice(0, 10);
+  const urls = [["/", "1.0"], ["/contact", "0.8"], ["/login", "0.8"], ["/privacy", "0.4"], ["/terms", "0.4"], ["/cookies", "0.3"]];
+  return reply.type("application/xml; charset=utf-8").header("Cache-Control", "public, max-age=3600").send(
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
+    urls.map(([p, pr]) => `  <url><loc>${base}${p}</loc><lastmod>${today}</lastmod><priority>${pr}</priority></url>`).join("\n") + `\n</urlset>\n`);
+});
+
+// custom 404: branded page for browsers, JSON for API clients
+app.setNotFoundHandler(async (req, reply) => {
+  const path = req.url.split("?", 1)[0];
+  if (path.startsWith("/api/")) return reply.code(404).send({ error: "not found" });
+  return serveHtml(reply, "404.html", 404);
+});
+
+// public contact / request-access form. Throttled, honeypot-protected, validated;
+// delivered by SMTP to CONTACT_EMAIL. Nothing is stored beyond the outgoing email.
+app.post<{ Body: { name?: unknown; email?: unknown; organisation?: unknown; message?: unknown; website?: unknown } }>("/api/contact", async (req, reply) => {
+  const b = req.body ?? {};
+  if (typeof b.website === "string" && b.website.trim()) return { ok: true }; // honeypot: pretend success to bots
+  const str = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
+  const name = str(b.name, 120), email = str(b.email, 254), organisation = str(b.organisation, 120), message = str(b.message, 2000);
+  if (!name) return reply.code(400).send({ error: "Please enter your name." });
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return reply.code(400).send({ error: "Please enter a valid email address." });
+  if (message.length < 10) return reply.code(400).send({ error: "Please write at least 10 characters." });
+  if (!CONTACT_EMAIL) return reply.code(503).send({ error: "The contact form is not available yet. Please try again later." });
+  try {
+    const { sendMail } = await import("./services/reportScheduler.js");
+    const e = escAttr;
+    await sendMail({
+      to: CONTACT_EMAIL, replyTo: email,
+      subject: `Portal contact request from ${name.replace(/[\r\n]+/g, " ")}`,
+      html: `<div style="font-family:Arial,sans-serif;color:#241536"><h2 style="color:#32217c">New contact request</h2><p><b>Name:</b> ${e(name)}<br><b>Email:</b> ${e(email)}<br><b>Organisation:</b> ${e(organisation || "—")}</p><p style="white-space:pre-wrap">${e(message)}</p></div>`,
+    });
+    return { ok: true };
+  } catch (err) {
+    req.log.error({ err }, "contact form delivery failed");
+    return reply.code(502).send({ error: "We couldn't send your message right now. Please try again or email us directly." });
+  }
+});
+app.get("/", async (req, reply) => {
+  const user = await currentUser(req);
+  if (user && canAccessModule(user, "dashboard")) return reply.redirect("/dashboard");
+  return serveHtml(reply, "home.html");
+});
 app.get("/login", async (_req, reply) => serveHtml(reply, "login.html"));
 app.get("/set-password", async (_req, reply) => serveHtml(reply, "set-password.html"));
 app.get("/privacy", async (_req, reply) => serveHtml(reply, "privacy.html"));
@@ -252,21 +341,27 @@ app.get("/users", async (req, reply) => {
 
 app.get("/health", async () => ({ ok: true }));
 // lets you confirm the NEW build is live: should report the live-dashboard version
-app.get("/version", async () => ({ product: "empower-fin Dashboard Portal", version: "0.6.0", contractVersion: "2.6", coreSourceFeeds: 10, sourceModes: ["API", "SQL"], sqlDialects: ["POSTGRESQL", "MSSQL", "MYSQL"], channelPartners: true, scheduledReports: true, emailDelivery: "SMTP", portfolioEmployerFilter: true, portfolioMetricHelp: true, employerMetricHelp: true, uiNavigation: "account-dropdown-v2", routes: ["/login", "/dashboard", "/admin", "/users"] }));
+app.get("/version", async () => ({ product: "empower-fin Dashboard Portal", version: "0.9.0", contractVersion: "2.6", coreSourceFeeds: 10, sourceModes: ["API", "SQL"], sqlDialects: ["POSTGRESQL", "MSSQL", "MYSQL"], channelPartners: true, scheduledReports: true, emailDelivery: "SMTP", portfolioEmployerFilter: true, portfolioMetricHelp: true, employerMetricHelp: true, uiNavigation: "account-dropdown-v2", routes: ["/login", "/dashboard", "/admin", "/users"] }));
 
 // ════════════════════ AUTH ════════════════════
 const COOKIE_SECURE = !["0", "false", "no"].includes(String(process.env.COOKIE_SECURE ?? "true").toLowerCase());
-const COOKIE = { httpOnly: true, sameSite: "lax" as const, secure: COOKIE_SECURE, path: "/", maxAge: 30 * 86400 };
+const COOKIE = { httpOnly: true, sameSite: "lax" as const, secure: COOKIE_SECURE, path: "/" };
+const REMEMBER_COOKIE = { ...COOKIE, maxAge: 30 * 86400 };
 
 app.post<{ Body: { email: string; password: string; remember?: boolean } }>("/api/auth/login", async (req, reply) => {
   const { email, password, remember } = req.body ?? ({} as any);
-  const result = await login(email ?? "", password ?? "", !!remember);
+  if (typeof email !== "string" || typeof password !== "string" || email.length > 254 || password.length > 256) {
+    return reply.code(400).send({ error: "email and password are required" });
+  }
+  // Per-account throttle (in addition to per-IP) to blunt distributed guessing.
+  if (!rateLimit(reply, `login:${email.toLowerCase().trim()}`, 10, AUTH_WINDOW_MS)) return;
+  const result = await login(email, password, !!remember);
   if (!result) return reply.code(401).send({ error: "invalid email or password" });
   // "Remember me": persistent cookie lasting as long as the session (30 days).
   // Otherwise: a session-only cookie (no `expires`) that the browser clears on
   // close, even though the underlying session itself stays valid for 7 days
   // server-side in case the browser doesn't actually close it (e.g. mobile).
-  reply.setCookie("session", result.token, remember ? { ...COOKIE, expires: result.expiresAt } : { ...COOKIE });
+  reply.setCookie("session", result.token, remember ? { ...REMEMBER_COOKIE, expires: result.expiresAt } : COOKIE);
   return { ok: true, user: { name: result.user.name, role: result.user.role } };
 });
 
@@ -305,6 +400,7 @@ app.get("/api/auth/me", async (req, reply) => {
 app.post<{ Body: { token: string; password: string } }>("/api/auth/set-password", async (req, reply) => {
   try {
     const { token, password } = req.body ?? ({} as any);
+    if (typeof token !== "string" || typeof password !== "string") return reply.code(400).send({ error: "token and password are required" });
     if (!password || password.length < 12) return reply.code(400).send({ error: "password must be at least 12 characters and include upper-case, lower-case, and numeric characters" });
     await completeSetup(token, password);
     return { ok: true };
@@ -318,8 +414,13 @@ app.post<{ Body: { token: string; password: string } }>("/api/auth/set-password"
 // limiter if you add one later.
 const forgotPasswordThrottle = new Map<string, number>();
 app.post<{ Body: { email: string } }>("/api/auth/forgot-password", async (req, reply) => {
-  const email = String(req.body?.email || "").toLowerCase().trim();
+  const raw = req.body?.email;
+  const email = typeof raw === "string" ? raw.toLowerCase().trim().slice(0, 254) : "";
   if (!email) return { ok: true };
+  if (forgotPasswordThrottle.size > 5000) {
+    const cutoff = Date.now() - 60_000;
+    for (const [k, t] of forgotPasswordThrottle) if (t < cutoff) forgotPasswordThrottle.delete(k);
+  }
   const last = forgotPasswordThrottle.get(email) || 0;
   if (Date.now() - last < 60_000) return { ok: true }; // silently no-op if requested <60s ago
   forgotPasswordThrottle.set(email, Date.now());
@@ -346,7 +447,30 @@ app.post<{ Body: { email: string; name: string; role: any; employerIds?: string[
 });
 app.patch<{ Params: { id: string }; Body: any }>("/api/users/:id", async (req, reply) => {
   const admin = await requireAdmin(req, reply); if (!admin) return;
-  const body: Record<string, any> = { ...(req.body ?? {}) };
+  const input: Record<string, any> = req.body && typeof req.body === "object" ? req.body : {};
+  // Allow-list fields: never pass an arbitrary client object through to the DB layer.
+  const body: Record<string, any> = {};
+  if (input.name !== undefined) {
+    if (typeof input.name !== "string" || !input.name.trim() || input.name.length > 120) return reply.code(400).send({ error: "name must be 1–120 characters" });
+    body.name = input.name.trim();
+  }
+  if (input.role !== undefined) {
+    if (!["ADMIN", "EMPLOYER_VIEW", "PORTFOLIO_VIEW"].includes(input.role)) return reply.code(400).send({ error: "invalid role" });
+    body.role = input.role;
+  }
+  if (input.active !== undefined) {
+    if (typeof input.active !== "boolean") return reply.code(400).send({ error: "active must be true or false" });
+    body.active = input.active;
+  }
+  if (input.employerIds !== undefined) {
+    if (!Array.isArray(input.employerIds) || input.employerIds.length > 5000 || input.employerIds.some((x: unknown) => typeof x !== "string")) return reply.code(400).send({ error: "employerIds must be an array of ids" });
+    body.employerIds = input.employerIds;
+  }
+  if ("partnerId" in input) body.partnerId = typeof input.partnerId === "string" ? input.partnerId : null;
+  if (typeof input.reason === "string") body.reason = input.reason.slice(0, 300);
+  if (req.params.id === admin.id && (body.active === false || (body.role && body.role !== "ADMIN"))) {
+    return reply.code(400).send({ error: "you cannot deactivate or demote your own account" });
+  }
   // when an admin flips a user inactive, capture who did it and why for the
   // Past users audit trail (self-service uses a separate endpoint that always
   // records "self")
@@ -354,16 +478,20 @@ app.patch<{ Params: { id: string }; Body: any }>("/api/users/:id", async (req, r
     body.revokedBy = admin.email;
     body.revokedReason = body.reason || body.revokedReason || "Deactivated by admin";
   }
-  const updated = await updateUser(req.params.id, body);
+  let updated;
+  try { updated = await updateUser(req.params.id, body); }
+  catch (e: any) { return reply.code(e?.code === "P2025" ? 404 : 400).send({ error: e?.code === "P2025" ? "user not found" : (e?.message || "could not update user") }); }
   const changedKeys = Object.keys(body).join(", ") || "no fields";
   logAdminAction(admin, "user.update", `Updated user ${req.params.id} (${changedKeys})`, { targetType: "User", targetId: req.params.id, detail: redactAuditDetail(body) });
   return updated;
 });
 app.post<{ Params: { id: string }; Body: { password: string } }>("/api/users/:id/reset-password", async (req, reply) => {
   const admin = await requireAdmin(req, reply); if (!admin) return;
-  const result = await resetPassword(req.params.id, req.body.password);
-  logAdminAction(admin, "user.reset_password", `Reset password for user ${req.params.id}`, { targetType: "User", targetId: req.params.id });
-  return result;
+  try {
+    const result = await resetPassword(req.params.id, String(req.body?.password ?? ""));
+    logAdminAction(admin, "user.reset_password", `Reset password for user ${req.params.id}`, { targetType: "User", targetId: req.params.id });
+    return result;
+  } catch (e: any) { return reply.code(400).send({ error: e?.message || "could not reset password" }); }
 });
 
 // self-service: a signed-in user disables their own account (not a hard delete —
@@ -404,7 +532,12 @@ app.post<{ Body: { type: "PAGEVIEW" | "SCROLL_DEPTH" | "SESSION_END" | "CTA_CLIC
   async (req, reply) => {
     const user = await currentUser(req); // best-effort — allow anonymous beacons to no-op rather than 401 spam
     const b = req.body ?? ({} as any);
-    if (!b.type || !b.path) return reply.code(400).send({ error: "type and path are required" });
+    const EVENT_TYPES = ["PAGEVIEW", "SCROLL_DEPTH", "SESSION_END", "CTA_CLICK", "FORM_SUBMIT", "OUTBOUND_CLICK", "CLIENT_ERROR"];
+    if (!EVENT_TYPES.includes(b.type) || typeof b.path !== "string" || !b.path) return reply.code(400).send({ error: "valid type and path are required" });
+    // Anonymous visitors may only record a pageview on the public marketing/legal pages;
+    // everything else requires a signed-in session so the table can't be spammed.
+    const PUBLIC_PATHS = ["/login", "/contact", "/thank-you", "/privacy", "/terms", "/cookies"];
+    if (!user && !(b.type === "PAGEVIEW" && PUBLIC_PATHS.includes(b.path))) return { ok: true };
     try {
       await recordEvent({ userId: user?.id ?? null, type: b.type, path: b.path, value: b.value, partnerId: (user as any)?.partnerId ?? null });
       return { ok: true };
@@ -467,7 +600,7 @@ app.post<{ Params: { key: string }; Body: { userId: string } }>(
 // admin-only: audit log viewer
 app.get<{ Querystring: { limit?: string } }>("/api/admin/audit-log", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
-  return listAuditLog({ limit: req.query.limit ? parseInt(req.query.limit) : undefined });
+  return listAuditLog({ limit: Math.min(1000, Math.max(1, parseInt(req.query.limit ?? "", 10) || 200)) });
 });
 app.get("/api/admin/audit-log.csv", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
@@ -831,14 +964,18 @@ app.get("/api/admin/partners", async (req, reply) => {
 });
 app.post<{ Body: { name: string; displayName?: string } }>("/api/admin/partners", async (req, reply) => {
   const admin = await requireAdmin(req, reply); if (!admin) return;
-  if (!req.body?.name?.trim()) return reply.code(400).send({ error: "partner name required" });
-  const created = await createPartner(req.body);
+  if (typeof req.body?.name !== "string" || !req.body.name.trim()) return reply.code(400).send({ error: "partner name required" });
+  let created;
+  try { created = await createPartner(req.body); }
+  catch (e: any) { return reply.code(400).send({ error: e?.message || "could not create partner" }); }
   logAdminAction(admin, "partner.create", `Created channel partner "${req.body.name}"`, { targetType: "Partner", targetId: (created as any)?.id });
   return created;
 });
 app.put<{ Params: { id: string }; Body: any }>("/api/admin/partners/:id", async (req, reply) => {
   const admin = await requireAdmin(req, reply); if (!admin) return;
-  const updated = await updatePartner(req.params.id, req.body || {});
+  let updated;
+  try { updated = await updatePartner(req.params.id, req.body || {}); }
+  catch (e: any) { return reply.code(e?.code === "P2025" ? 404 : 400).send({ error: e?.code === "P2025" ? "partner not found" : (e?.message || "could not update partner") }); }
   const keys = Object.keys(req.body || {}).join(", ") || "no fields";
   logAdminAction(admin, "partner.update", `Updated channel partner ${req.params.id} (${keys})`, { targetType: "Partner", targetId: req.params.id });
   return updated;
@@ -1064,7 +1201,9 @@ app.post<{ Params: { employerId: string }; Body: { period: string } }>(
   "/api/employers/:employerId/snapshot",
   async (req, reply) => {
     if (!(await requireAdmin(req, reply))) return;
-    const result = await snapshotEmployer(req.params.employerId, req.body.period);
+    const period = req.body?.period;
+    if (typeof period !== "string" || !/^\d{4}-(0[1-9]|1[0-2])$/.test(period)) return reply.code(400).send({ error: "period must be YYYY-MM" });
+    const result = await snapshotEmployer(req.params.employerId, period);
     if (result.persisted) notifyScoreChangeIfCurrentPeriod(req.params.employerId, result.period, currentPeriod()).catch(() => {});
     return result;
   },
@@ -1078,6 +1217,10 @@ async function bootstrapAdmin() {
     const email = process.env.ADMIN_EMAIL, password = process.env.ADMIN_PASSWORD;
     if (!email || !password) {
       app.log.warn("No users yet and ADMIN_EMAIL/ADMIN_PASSWORD not set — set them to create the first admin.");
+      return;
+    }
+    if (password.length < 12 || !/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
+      app.log.error("ADMIN_PASSWORD does not meet the password policy (12+ chars with upper, lower, digit); admin not created.");
       return;
     }
     const { hashPassword } = await import("./services/authService.js");
@@ -1182,8 +1325,20 @@ app.get<{ Querystring: { period?: string; quarter?: string; range?: "30d" | "qua
   },
 );
 
+process.on("unhandledRejection", (reason) => app.log.error({ err: reason }, "unhandled promise rejection"));
+for (const sig of ["SIGTERM", "SIGINT"] as const) {
+  process.once(sig, () => {
+    app.log.info({ sig }, "shutting down");
+    const force = setTimeout(() => process.exit(1), 25_000); force.unref();
+    app.close().then(() => prisma.$disconnect()).finally(() => process.exit(0));
+  });
+}
+// purge expired sessions hourly so the table cannot grow without bound
+setInterval(() => { prisma.session.deleteMany({ where: { expiresAt: { lt: new Date() } } }).catch(() => {}); }, 60 * 60_000).unref();
+
 // Register all routes before opening the listener.
-  app.log.info({ portalVersion: "0.6.0", publicDir: PUBLIC_DIR }, "starting empower-fin Dashboard Portal");
+  if (!CONTACT_EMAIL) app.log.warn("CONTACT_EMAIL is not set: the contact form is disabled and legal pages show a placeholder contact.");
+  app.log.info({ portalVersion: "0.9.0", publicDir: PUBLIC_DIR }, "starting empower-fin Dashboard Portal");
 app.listen({ port: PORT, host: "0.0.0.0" })
   .then(async () => { await bootstrapAdmin(); await ensureSectionDefaults(); startSyncScheduler(app); startReportScheduler(app);
 startDailyRefresh(); startAutomationScheduler(app); app.log.info(`empower-fin Dashboard Portal on :${PORT}`); })

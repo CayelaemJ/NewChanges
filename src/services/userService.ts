@@ -158,7 +158,8 @@ export async function updateUser(userId: string, patch: {
   if (patch.employerIds) {
     // replace links wholesale
     await prisma.userEmployer.deleteMany({ where: { userId } });
-    await prisma.userEmployer.createMany({ data: patch.employerIds.map((employerId) => ({ userId, employerId })) });
+    const valid = await prisma.employer.findMany({ where: { id: { in: patch.employerIds } }, select: { id: true } });
+    await prisma.userEmployer.createMany({ data: valid.map((e: any) => ({ userId, employerId: e.id })), skipDuplicates: true });
   }
   // `active` transitions carry a revocation audit trail: who revoked access and
   // why, kept even after re-enabling so history isn't lost. Cleared once the
@@ -196,7 +197,7 @@ export async function deactivateSelf(userId: string, reason?: string) {
   await destroyAllSessionsForUser(userId);
   notifyAdmins({
     subject: "A user deactivated their own account",
-    html: `<div style="font-family:Arial,sans-serif;color:#241536"><h2 style="color:#32217c">Self-deactivation</h2><p><b>${user.name}</b> (${user.email}) deactivated their own account.</p>${reason ? `<p>Reason given: "${reason}"</p>` : ""}<p style="color:#6b7280;font-size:13px">Reactivate from Past users if this wasn't intended.</p></div>`,
+    html: `<div style="font-family:Arial,sans-serif;color:#241536"><h2 style="color:#32217c">Self-deactivation</h2><p><b>${escapeHtml(user.name)}</b> (${escapeHtml(user.email)}) deactivated their own account.</p>${reason ? `<p>Reason given: "${escapeHtml(String(reason).slice(0, 300))}"</p>` : ""}<p style="color:#6b7280;font-size:13px">Reactivate from Past users if this wasn't intended.</p></div>`,
     slackText: `:door: ${user.name} (${user.email}) deactivated their own account${reason ? `: "${reason}"` : "."}`,
   }).catch(() => {}); // best-effort — never block the user's own deactivation on this
   return sanitize(user);
@@ -239,6 +240,7 @@ export async function resetPassword(userId: string, newPassword: string) {
 // set-password flow (user clicks the emailed link)
 export async function completeSetup(token: string, newPassword: string) {
   validatePassword(newPassword);
+  if (typeof token !== "string" || token.length < 32 || token.length > 256) throw new Error("this setup link is invalid or has expired");
   const digest = digestSetupToken(token);
   const user = await prisma.user.findFirst({
     where: { OR: [{ setupToken: digest }, { setupToken: token }] },

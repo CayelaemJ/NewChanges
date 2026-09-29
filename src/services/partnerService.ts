@@ -32,6 +32,9 @@ export async function listPartners() {
 }
 
 export async function createPartner(input: { name: string; displayName?: string }) {
+  if (!input || typeof input.name !== "string" || !input.name.trim() || input.name.length > 120) throw new Error("name is required (max 120 characters)");
+  if (input.displayName != null && (typeof input.displayName !== "string" || input.displayName.length > 120)) throw new Error("displayName is invalid or too long");
+  input = { ...input, name: input.name.trim() };
   const base = slugify(input.name);
   let slug = base || "partner";
   let n = 1;
@@ -40,13 +43,29 @@ export async function createPartner(input: { name: string; displayName?: string 
 }
 
 export async function updatePartner(id: string, patch: any) {
+  if (!patch || typeof patch !== "object" || Array.isArray(patch)) throw new Error("invalid partner update");
   const data: any = {};
   for (const k of ["name", "displayName", "primaryColor", "accentColor", "navyColor", "logoDataUrl", "tagline", "active"]) {
     if (k in patch) data[k] = patch[k] === "" ? null : patch[k];
   }
-  // normalise hex (strip leading #)
+  for (const k of ["name", "displayName", "tagline"]) {
+    if (data[k] != null && (typeof data[k] !== "string" || data[k].length > (k === "tagline" ? 240 : 120))) {
+      throw new Error(`${k} is invalid or too long`);
+    }
+  }
+  if (data.active != null && typeof data.active !== "boolean") throw new Error("active must be true or false");
+  // Normalise colours and reject CSS/control-character injection before values
+  // can reach inline styles in the browser or generated report HTML.
   for (const c of ["primaryColor", "accentColor", "navyColor"]) {
-    if (typeof data[c] === "string") data[c] = data[c].replace(/^#/, "").toUpperCase();
+    if (data[c] != null) {
+      if (typeof data[c] !== "string" || !/^#?[0-9a-fA-F]{6}$/.test(data[c])) throw new Error(`${c} must be a six-digit hexadecimal colour`);
+      data[c] = data[c].replace(/^#/, "").toUpperCase();
+    }
+  }
+  if (data.logoDataUrl != null) {
+    if (typeof data.logoDataUrl !== "string" || data.logoDataUrl.length > 1_500_000 || !/^data:image\/(?:png|jpe?g|webp|svg\+xml);base64,[A-Za-z0-9+/=]+$/.test(data.logoDataUrl)) {
+      throw new Error("logoDataUrl must be a base64 PNG, JPEG, WebP or SVG image no larger than 1.5 MB");
+    }
   }
   return prisma.partner.update({ where: { id }, data });
 }

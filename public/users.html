@@ -3,12 +3,34 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="icon" type="image/png" href="/static/favicon.png">
-<link rel="stylesheet" href="/static/portal-nav-v054.css?v=0.5.4">
+<link rel="stylesheet" href="/static/portal-nav-v080.css?v=0.9.0">
 <link rel="stylesheet" href="/static/ui-enhance-v1.css?v=1">
 <link rel="stylesheet" href="/static/ui-enhance-v2.css?v=1">
 <link rel="stylesheet" href="/static/responsive-v1.css?v=1">
-<title>empower-fin Dashboard Portal — Users</title>
+<script src="/static/safe.js?v=1"></script>
+<title>User Management | empower-fin</title>
+<meta name="description" content="Manage user access, roles and employer assignments.">
+<meta name="robots" content="noindex,nofollow">
+<link rel="canonical" href="{{BASE_URL}}/users">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="empower-fin Dashboard Portal">
+<meta property="og:title" content="User Management | empower-fin">
+<meta property="og:description" content="Manage user access, roles and employer assignments.">
+<meta property="og:url" content="{{BASE_URL}}/users">
+<meta property="og:image" content="{{BASE_URL}}/static/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="empower-fin Dashboard Portal: financial wellbeing, measured with rigour.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="User Management | empower-fin">
+<meta name="twitter:description" content="Manage user access, roles and employer assignments.">
+<meta name="twitter:image" content="{{BASE_URL}}/static/og-image.png">
+<meta name="theme-color" content="#32217c">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
+<link rel="manifest" href="/static/site.webmanifest">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap');
   :root{--blue:#7d2fa3;--blue-d:#682487;--brand-primary:#2b1b68;--ice:#eee8fb;--ice-2:#edf4fa;--line:#d7cde9;--line-soft:#e8e3f1;--ink:#0f2438;--grey:#425466;--grey-l:#617486;--green:#187a4d;--green-soft:#dff3e8;--amber:#9a5b00;--amber-soft:#fcedd4;--red:#b5391f;--red-soft:#fbe4df;--shadow:0 1px 2px rgba(13,42,71,.06),0 8px 24px rgba(13,42,71,.08);}
@@ -72,8 +94,10 @@
   .portal-menu-action svg{width:16px;height:16px;}
   @media(max-width:860px){.portal-primary-nav{display:none;}.portal-mobile-links{display:block;}}
 </style>
+<link rel="stylesheet" href="/static/enterprise.css?v=2">
+  <link rel="stylesheet" href="/static/enterprise-v3.css?v=3">
 </head>
-<body data-portal-build="0.5.4">
+<body data-portal-build="0.9.0">
 <div class="topbar"><div class="topbar-inner">
   <img src="/static/logo.png" alt="empower-fin Dashboard Portal" style="height:30px;width:auto;">
   <span class="pill">User Management</span>
@@ -141,8 +165,7 @@
 </div>
 
 <script src="/static/engagement-v1.js?v=1" defer></script>
-<script src="/static/ui-enhance-v2.js?v=1" defer></script>
-<script src="/static/portal-nav-v054.js?v=0.5.4"></script>
+<script src="/static/portal-nav-v080.js?v=0.9.0"></script>
 <script>
 const $=s=>document.querySelector(s);
 const escHtml=value=>String(value??'').replace(/[&<>\"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[ch]));
@@ -294,10 +317,10 @@ function editUser(id){
   document.getElementById('editor-'+id)?.remove();
   const empIds=new Set(u.employers.map(e=>e.id));
   const empBoxes = EMPLOYERS.length
-    ? EMPLOYERS.map(e=>`<label style="display:inline-flex;align-items:center;gap:6px;margin:3px 12px 3px 0;font-weight:600;"><input type="checkbox" value="${e.id}" ${empIds.has(e.id)?'checked':''} style="width:auto;"> ${e.name}</label>`).join('')
+    ? EMPLOYERS.map(e=>`<label style="display:inline-flex;align-items:center;gap:6px;margin:3px 12px 3px 0;font-weight:600;"><input type="checkbox" value="${esc(e.id)}" ${empIds.has(e.id)?'checked':''} style="width:auto;"> ${esc(e.name)}</label>`).join('')
     : '<span class="muted">No employers yet.</span>';
   const partnerOpts = '<option value="">None (standard branding)</option>'+
-    PARTNERS_LIST.map(p=>`<option value="${p.id}" ${u.partner&&u.partner.id===p.id?'selected':''}>${p.displayName||p.name}</option>`).join('');
+    PARTNERS_LIST.map(p=>`<option value="${esc(p.id)}" ${u.partner&&u.partner.id===p.id?'selected':''}>${p.displayName||p.name}</option>`).join('');
   const roleOpts = ['EMPLOYER_VIEW','PORTFOLIO_VIEW','ADMIN'].map(r=>`<option value="${r}" ${u.role===r?'selected':''}>${r.replace('_',' ')}</option>`).join('');
   const tr=document.createElement('tr');
   tr.id='editor-'+id;
@@ -390,5 +413,6 @@ async function deleteUserForever(id,name){
 function show(el,t,m){ el.className='msg '+t; el.textContent=m; el.style.display='block'; }
 boot();
 </script>
+<script src="/static/shell.js?v=1"></script>
 </body>
 </html>

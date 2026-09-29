@@ -1,4 +1,4 @@
-## v0.5.4 metric help
+## v0.9.0 metric help
 
 Employer view now uses the same accessible information icons as Portfolio view. Hover, focus or click an **i** icon to see a plain-language definition and calculation for the measure. The glossary covers the executive summary, score and drivers, KPIs, funnel, outcomes, value, debt, EWA, stress, ratings, risk, opportunities and separate chat metrics.
 
@@ -6,7 +6,7 @@ Portfolio view retains employer multi-select filtering, metric-definition toolti
 
 # empower-fin Dashboard Portal
 
-Version 0.5.4 / source contract 2.6
+Version 0.9.0 / source contract 2.6
 
 The empower-fin Dashboard Portal is the core multi-tenant financial-wellness dashboard. Channel partners are configured inside the portal and can have their own name, logo, colours, users and employer assignments. Optimise is a channel partner configuration; it is not the product name.
 
