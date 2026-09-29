@@ -70,4 +70,5 @@ must(snap.includes('platformUsers.length > 0 && liveJourneys.length > 0') && sna
 must(pages.dashboard.includes('Score ${Math.round(Number(score))}') && pages.dashboard.includes('replace(" · Score ", ": Score ")'), 'Month selector labels must show the actual score for each month');
 
 if(failures.length){ console.error('UI regression check failed:\n- '+failures.join('\n- ')); process.exit(1); }
+must(read("public/enterprise.css").includes("img[data-custom-logo]") && read("public/dashboard.html").includes("setAttribute('data-custom-logo','1')"), "uploaded company logos must be exempt from the white-out filter");
 console.log('UI regression check passed: v0.9.0 navigation, SQL integration, users/import controls, live-data availability and demo-leak safeguards are present.');

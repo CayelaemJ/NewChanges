@@ -3083,7 +3083,7 @@ function applyTheme(theme, user){
   root.setProperty('--stress-high-color','var(--chart-high)');
   const brandName=document.getElementById('channel-brand-name');
   if(theme.logoDataUrl){
-    document.querySelectorAll('.logo img, .topbar .logo img, .pdf-brand img').forEach(img=>{ img.src=theme.logoDataUrl; });
+    document.querySelectorAll('.logo img, .topbar .logo img, .pdf-brand img').forEach(img=>{ img.src=theme.logoDataUrl; img.setAttribute('data-custom-logo','1'); });
     if(brandName) brandName.textContent='';
   }else if(brandName){
     brandName.textContent=theme.name && theme.name!==baseName ? theme.name : '';
@@ -3152,7 +3152,7 @@ function handleWelcomeSplash(me){
   var first=(me.name||'').trim().split(/\s+/)[0]||'there';
   if(greet) greet.textContent='Hi '+first+' \uD83D\uDC4B';
   var logo=document.getElementById('welcome-splash-logo');
-  if(logo && me.theme && me.theme.logoDataUrl) logo.src=me.theme.logoDataUrl;
+  if(logo && me.theme && me.theme.logoDataUrl){ logo.src=me.theme.logoDataUrl; logo.setAttribute('data-custom-logo','1'); }
   try{ sessionStorage.setItem('ef_splash_shown','1'); }catch(_){}
   setTimeout(function(){ el.classList.add('hide'); }, 700);
 }

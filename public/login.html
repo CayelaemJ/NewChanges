@@ -152,7 +152,7 @@ async function loadPartnerTheme(){
     if(theme.accentColor) root.setProperty('--blue',hex(theme.accentColor));
     if(theme.navyColor) root.setProperty('--brand-primary',hex(theme.navyColor));
     if(theme.primaryColor) root.setProperty('--ice',hex(theme.primaryColor));
-    if(theme.logoDataUrl){ const img=document.querySelector('.logo img'); if(img) img.src=theme.logoDataUrl; }
+    if(theme.logoDataUrl){ const img=document.querySelector('.logo img'); if(img){ img.src=theme.logoDataUrl; img.setAttribute('data-custom-logo','1'); } }
     if(theme.name){ document.title=theme.name+' — Sign in'; const sub=document.getElementById('brand-sub'); if(sub) sub.textContent=theme.tagline||theme.name; }
   }catch{}
 }
