@@ -85,7 +85,7 @@ must(pages.dashboard.includes("function formatRandThousands") && pages.dashboard
 must(pages.dashboard.includes('function alignSeries(current, previous)') && pages.dashboard.includes('DATA.comparison'), "time-series charts must share an aligned selected-period versus comparison-period data model");
 must(pages.dashboard.includes("DATA.filterContext?.comparison?.label"), "dashboard comparison labels must reflect the exact selected comparison window");
 must(!pages.dashboard.includes("pts vs. last period") && !pages.dashboard.includes("vs. last period"), "dashboard visible comparison copy must use the selected comparison label");
-must(pages.dashboard.includes('DATA.income.map((b,i)') || pages.dashboard.includes('DATA.income.map((b, i)'), "income chart legend must receive its palette index explicitly");
+must(pages.dashboard.includes("const legend=rows.map((b,i)") && pages.dashboard.includes("brandSeries(i)"), "income chart legend must receive its palette index explicitly");
 must(dashboardCss.includes('@media (max-width:900px) and (orientation:landscape)') && dashboardCss.includes('table.ct tr.ct-row td::before'), "creditor detail must reflow in landscape as well as portrait");
 
 must(pages.dashboard.includes('data-label="Creditor"') && pages.dashboard.includes('data-label="Average per account"'), "creditor detail must expose mobile-readable row labels");
@@ -101,7 +101,7 @@ must(dashboardCss.includes('.drawer-outcome .drawer-stat-grid') && dashboardCss.
 
 must(snap.includes('comparisonPayload') && snap.includes('previous month') && snap.includes('previous quarter') && snap.includes('previous 30 days') && snap.includes('same period last year'), "server comparisons must use exact like-for-like reporting windows");
 
-must(pages.dashboard.includes("formatRandThousands(") && pages.dashboard.includes("period-bar-value"), "savings/EWA charts must label values in full rand amounts");
+must(pages.dashboard.includes("formatRandThousands(") && pages.dashboard.includes("valueFormatter(v)") && pages.dashboard.includes("function renderPeriodLineChart"), "savings/EWA charts must label values in full rand amounts");
 must(!/toFixed\([^)]*\)[^\n]*['"]m['"]|toFixed\([^)]*\)[^\n]*['"]k['"]/.test(pages.dashboard), "dashboard source must not create compact m/k financial labels");
 must(!/Math\.round\([^\n]+\/\s*(?:1e6|1000000|1e3|1000)\)[^\n]*['"]m?['"]/.test(pages.dashboard), "dashboard must not abbreviate financial amounts into m/k labels");
 
