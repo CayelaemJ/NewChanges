@@ -1,0 +1,15 @@
+import fs from "node:fs";
+import path from "node:path";
+const snap=fs.readFileSync(path.join(process.cwd(),"src/services/snapshotBuilder.ts"),"utf8");
+const dash=fs.readFileSync(path.join(process.cwd(),"public/dashboard.html"),"utf8");
+const failures=[];
+const must=(ok,msg)=>{if(!ok)failures.push(msg);};
+must(snap.includes("const periodComparison = comparisonPayload ?"),"server must expose explicit current/previous period financial comparison points");
+must(snap.includes("monthlyCashFreedUp: Number(rand(cumulativeMonthlySaving))"),"monthly cash freed up current point must be explicit");
+must(snap.includes("monthlyCashFreedUp: Number(comparisonPayload?.kpis?.monthlySaving?.rand ?? 0)"),"monthly cash freed up previous point must be explicit, including zero");
+must(snap.includes("totalAdvanced: Number(rand(ewaTotal))"),"total advanced current point must be explicit");
+must(snap.includes("totalAdvanced: Number(comparisonPayload?.ewa?.totalRaw ?? 0)"),"total advanced previous point must be explicit, including zero");
+must(dash.includes("DATA.periodComparison") && dash.includes("renderPeriodLineChart"),"financial charts must consume period comparison points");
+must(!dash.includes("period-bar-chart"),"selected-period financial comparisons must not regress to bar fallback charts");
+if(failures.length){console.error("PERIOD COMPARISON REGRESSION CHECK FAILED:"); failures.forEach(x=>console.error(" - "+x)); process.exit(1);}
+console.log("Period comparison regression checks passed.");
