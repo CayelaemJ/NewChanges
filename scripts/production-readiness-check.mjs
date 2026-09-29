@@ -14,7 +14,7 @@ for (const f of pages) {
   if (!/property=["']og:image["']/i.test(s)) errors.push(`${f}: missing Open Graph image`);
   for (const m of s.matchAll(/<img\b[^>]*>/gi)) if (!/\balt\s*=/i.test(m[0])) errors.push(`${f}: image missing alt text`);
 }
-for (const f of ['favicon.ico','favicon-16.png','favicon-32.png','apple-touch-icon.png','og-image.png','site.webmanifest','enterprise-v3.css','home.html']) if (!fs.existsSync(path.join(pub,f))) errors.push(`missing public asset: ${f}`);
+for (const f of ['favicon.ico','favicon-16.png','favicon-32.png','apple-touch-icon.png','og-image.png','site.webmanifest','enterprise-v3.css','dashboard.css','home.html']) if (!fs.existsSync(path.join(pub,f))) errors.push(`missing public asset: ${f}`);
 const server = fs.readFileSync(path.join(root,'src/server.ts'),'utf8');
 for (const needle of ['robots.txt','sitemap.xml','setNotFoundHandler','Strict-Transport-Security','X-Content-Type-Options','Content-Security-Policy','/api/auth/login']) if (!server.includes(needle)) errors.push(`server missing security/SEO control: ${needle}`);
 for (const needle of ['COOKIE_SECURE','httpOnly: true','sameSite: "lax"','rateLimit']) if (!server.includes(needle)) errors.push(`server missing auth control: ${needle}`);
