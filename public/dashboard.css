@@ -611,3 +611,114 @@ button, input, select, textarea { max-width: 100%; }
   .rb-track{min-width:0;}
   .rating-share-pill{display:flex;align-items:center;justify-content:space-between;gap:10px;}
 }
+
+
+/* ── Enterprise responsive data contract ─────────────────────────────────
+   Financial values are atomic data. They may shrink within a safe range or
+   reflow their containing card, but they must never wrap character-by-character,
+   clip, or disappear at any viewport width. */
+.stat-strip{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:1px;
+  width:100%;
+  min-width:0;
+  overflow:hidden;
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:var(--line);
+}
+.stat-cell{
+  min-width:0;
+  padding:18px 16px;
+  background:var(--paper,#fff);
+}
+.stat-cell .l{
+  min-width:0;
+  font-size:10px;
+  line-height:1.3;
+  font-weight:800;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:var(--muted,#8497a7);
+  overflow-wrap:anywhere;
+}
+.stat-cell .v{
+  display:block;
+  width:100%;
+  min-width:0;
+  margin-top:7px;
+  font-size:clamp(18px,2.25vw,29px);
+  line-height:1.05;
+  font-weight:850;
+  letter-spacing:-.035em;
+  font-variant-numeric:tabular-nums lining-nums;
+  white-space:nowrap;
+  overflow:visible;
+  text-overflow:clip;
+}
+.stat-cell .d{
+  min-width:0;
+  margin-top:7px;
+  font-size:11px;
+  line-height:1.4;
+  color:var(--muted,#8497a7);
+  overflow-wrap:anywhere;
+}
+.kpi-value,.stat-value,.metric-value{
+  max-width:100%;
+  min-width:0;
+  font-variant-numeric:tabular-nums lining-nums;
+  white-space:nowrap;
+  overflow:visible;
+  text-overflow:clip;
+}
+
+/* At intermediate widths, give each value enough room instead of forcing
+   three dense columns to survive a tablet viewport. */
+@media (max-width:900px) and (min-width:641px){
+  .stat-strip{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .stat-cell:last-child{grid-column:1/-1;}
+}
+
+/* Phones: financial KPI tiles become a vertical reading sequence. This is
+   deliberate: three complete numbers are more useful than three cramped
+   columns. */
+@media (max-width:640px){
+  .stat-strip{
+    grid-template-columns:minmax(0,1fr) !important;
+    gap:1px !important;
+    overflow:hidden;
+  }
+  .stat-cell{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    column-gap:12px;
+    align-items:start;
+    padding:14px 13px !important;
+  }
+  .stat-cell .l{grid-column:1/-1;}
+  .stat-cell .v{
+    grid-column:1/-1;
+    margin-top:6px;
+    font-size:clamp(17px,6vw,24px) !important;
+    line-height:1.08;
+    white-space:nowrap !important;
+  }
+  .stat-cell .d{grid-column:1/-1;}
+  .dash-section[data-section="valueDelivered"] .stat-cell .v{
+    overflow-wrap:normal !important;
+    word-break:normal !important;
+  }
+  .kpi-value,.stat-value,.metric-value{
+    font-size:clamp(20px,7vw,32px);
+    white-space:nowrap !important;
+  }
+}
+
+/* Very narrow phones: reduce type before allowing any data container to
+   overflow the viewport. */
+@media (max-width:380px){
+  .stat-cell .v{font-size:17px !important;letter-spacing:-.045em;}
+  .kpi-value,.stat-value,.metric-value{font-size:20px !important;letter-spacing:-.04em;}
+}
