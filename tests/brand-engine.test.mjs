@@ -34,6 +34,15 @@ r = load("pastel_mint"); ok(BE.contrast(r.accentColor, "FFFFFF") >= 4.5, "pastel
 const big = Buffer.alloc(128 * 128 * 4); for (let i = 0; i < big.length; i += 4) { big[i] = (i * 7) & 255; big[i + 1] = (i * 13) & 255; big[i + 2] = (i * 3) & 255; big[i + 3] = 255; }
 const t0 = performance.now(); BE.analyzePixels(big, 128, 128); const ms = performance.now() - t0; ok(ms < 200, `128x128 analysed in ${ms.toFixed(1)}ms`);
 
+// semantic chart palette: distinct, contrast-safe enterprise series derived from the same brand.
+for (const th of [{accentColor:"009DA5",primaryColor:"FF8000",navyColor:"0B3C40"},{accentColor:"B15BE8",primaryColor:"B15BE8",navyColor:"330A36"}]) {
+  const p=BE.deriveChartPalette(th);
+  const keys=["engagement","cashflow","debt","insurance","workforce","low","mid","high"];
+  ok(keys.every(k=>/^#[0-9A-F]{6}$/i.test(p[k])), "chart palette returns valid colours");
+  ok(new Set(keys.map(k=>p[k].toUpperCase())).size>=7, "chart palette keeps series visually distinct");
+  ok(keys.every(k=>BE.contrast(p[k].replace(/^#/,""),"FFFFFF")>=3.4), "chart palette maintains readable contrast on light surfaces");
+}
+
 // theme tokens
 for (const th of [{ accentColor: "009DA5", primaryColor: "FF8000", navyColor: "0B3C40" }, { accentColor: "B15BE8", navyColor: "330A36" }, { accentColor: "FFC800", navyColor: "0C235A" }, {}]) {
   const L = BE.themeTokens(th, "light"), D = BE.themeTokens(th, "dark");
