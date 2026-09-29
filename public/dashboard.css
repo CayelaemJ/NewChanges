@@ -969,3 +969,7 @@ table.ct th,table.ct td{vertical-align:middle;}
   .drawer .dsv{font-size:18px;}
   .period-bar-chart{min-height:180px;gap:30px;}
 }
+
+
+/* ── Comparison chart and drilldown presentation ───────────────────────── */
+.comparison-legend{font-size:11px;}
