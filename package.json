@@ -22,7 +22,9 @@
     "check:security": "node scripts/security-regression-check.mjs",
     "sync:configure": "node scripts/configure-mysql-sync.mjs",
     "check:production": "node scripts/production-readiness-check.mjs",
-    "check:brand": "node tests/brand-engine.test.mjs"
+    "check:brand": "node tests/brand-engine.test.mjs",
+    "test:score": "node scripts/run-score-test.mjs",
+    "check:all": "npm run build && npm run check:production && npm run check:security && npm run check:ui && npm run check:imports && npm run check:scheduling && npm run test:score && npm audit --audit-level=high"
   },
   "dependencies": {
     "@fastify/cookie": "^9.3.1",
