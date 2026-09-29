@@ -2138,15 +2138,14 @@ function installMoneyFormatter(){
 
 /* helpers to scale numbers/strings */
 function scaleNum(n,f){ return Math.round(n*f); }
-function randMoney(v,f){ // scale a "R 2.41m"/"R 222k" style string
+function randMoney(v,f){
   const m=String(v).match(/R?\s*([\d.,]+)\s*([mk]?)/i);
   if(!m) return v;
-  let num=parseFloat(m[1].replace(/,/g,'')); let unit=m[2].toLowerCase();
-  let abs = unit==='m'?num*1e6 : unit==='k'?num*1e3 : num;
+  const num=parseFloat(m[1].replace(/,/g,''));
+  const unit=m[2].toLowerCase();
+  let abs=unit==='m'?num*1e6:unit==='k'?num*1e3:num;
   abs*=f;
-  if(abs>=1e6) return 'R '+(abs/1e6).toFixed(2).replace(/\.00$/,'')+'m';
-  if(abs>=1e3) return 'R '+Math.round(abs/1e3)+'k';
-  return 'R '+Math.round(abs);
+  return 'R '+Math.round(abs).toLocaleString('en-ZA');
 }
 
 /* rebuild DATA from BASE according to STATE, then re-render everything */
