@@ -1090,6 +1090,23 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
     }
   }
 
+  const periodComparison = comparisonPayload ? {
+    mode: comparisonMode,
+    label: comparisonLabel,
+    current: {
+      period: filter.period,
+      label: filter.label,
+      monthlyCashFreedUp: Number(rand(cumulativeMonthlySaving)),
+      totalAdvanced: Number(rand(ewaTotal)),
+    },
+    previous: {
+      period: comparisonPayload.filterContext?.period ?? null,
+      label: comparisonPayload.filterContext?.label ?? comparisonLabel,
+      monthlyCashFreedUp: Number(comparisonPayload?.kpis?.monthlySaving?.rand ?? 0),
+      totalAdvanced: Number(comparisonPayload?.ewa?.totalRaw ?? 0),
+    },
+  } : null;
+
   const sectionAvailability = {
     workforce: headcountDataAvailable,
     enrolment: headcountDataAvailable && feedCoverage.platform_users.available,
@@ -1187,6 +1204,7 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
         flow: "Outcomes, ratings, chat, referrals and wage advances are measured inside the selected range.",
       },
     },
+    periodComparison, 
     comparison: comparisonPayload ? {
       mode: comparisonMode,
       label: comparisonLabel,
