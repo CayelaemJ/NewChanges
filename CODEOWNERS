@@ -1,0 +1,9 @@
+* @CayelaemJ
+
+# Security-sensitive server and auth code
+/src/server.ts @CayelaemJ
+/src/services/authService.ts @CayelaemJ
+/src/services/scoreEngine.ts @CayelaemJ
+/src/services/sourceAdapter.ts @CayelaemJ
+/prisma/schema.prisma @CayelaemJ
+/.github/workflows/* @CayelaemJ

@@ -1,0 +1,533 @@
+/* Consolidated from public/ui-enhance-v1.css; canonical dashboard UI/responsive stylesheet. */
+/* ════════════════════════════════════════════════════════════════════
+   UI ENHANCEMENTS — contrast, depth & motion polish.
+   Additive only: layers on top of each page's own styles via CSS variables
+   that already exist on every page (--brand-primary, --blue, --line, --shadow, …).
+   Loaded last on purpose so it wins on equal-specificity rules.
+   ════════════════════════════════════════════════════════════════════ */
+
+/* smoother, slightly springier motion everywhere */
+* { scroll-behavior: smooth; }
+
+/* topbar: subtle gradient hairline instead of a flat border for more depth */
+.topbar { position: sticky; top: 0; z-index: 40; }
+.topbar::after {
+  content: ""; display: block; height: 2px;
+  background: linear-gradient(90deg, var(--blue, #b15be8) 0%, var(--brand-primary, #32217c) 55%, transparent 100%);
+  opacity: .55;
+}
+
+/* cards: crisper shadow + a soft lift on hover so the surface feels alive */
+.card {
+  transition: box-shadow .22s ease, transform .22s ease, border-color .22s ease;
+}
+.card:hover {
+  box-shadow: var(--shadow-lg, 0 16px 40px rgba(13,42,71,.12));
+  border-color: var(--blue, #b15be8);
+}
+.card-hd { position: relative; }
+
+/* buttons: a touch of glow + lift on hover/focus for clearer affordance */
+.btn, button {
+  transition: box-shadow .18s ease, transform .12s ease, filter .18s ease;
+}
+.btn:hover:not(:disabled), button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.03);
+}
+.btn:active:not(:disabled), button:active:not(:disabled) { transform: translateY(0); }
+.btn-primary, button.btn-primary {
+  box-shadow: 0 6px 18px rgba(50,33,124,.18);
+}
+.btn-primary:hover:not(:disabled), button.btn-primary:hover:not(:disabled) {
+  box-shadow: 0 10px 26px rgba(50,33,124,.26);
+}
+
+/* clearer, on-brand focus rings for keyboard users (better contrast than a default outline) */
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, .btn:focus-visible,
+[tabindex]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(177,91,232,.35), 0 0 0 1px var(--blue, #b15be8);
+}
+
+/* table rows: soft highlight on hover so scanning data is easier */
+table tbody tr { transition: background-color .12s ease; }
+table tbody tr:hover { background: var(--ice-2, #f4f9fd); }
+
+/* stat/kpi numbers read a little bolder and higher-contrast */
+.kpi-value, .stat-value, .metric-value { letter-spacing: -.01em; }
+
+/* thin, on-brand scrollbars (Chromium/WebKit + Firefox) */
+* { scrollbar-width: thin; scrollbar-color: var(--blue, #b15be8) transparent; }
+*::-webkit-scrollbar { width: 9px; height: 9px; }
+*::-webkit-scrollbar-thumb { background: var(--line, #e8e1f7); border-radius: 8px; }
+*::-webkit-scrollbar-thumb:hover { background: var(--blue, #b15be8); }
+
+/* status chips/tags: slightly stronger contrast border for legibility */
+.chip, .tag, .role, .pill { box-shadow: inset 0 0 0 1px rgba(15,36,56,.04); }
+
+/* content settles in gently on load instead of popping in — the kind of
+   detail that makes an app feel considered rather than assembled */
+@keyframes ui-fade-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+.card { animation: ui-fade-up .35s ease both; }
+.card:nth-of-type(2) { animation-delay: .04s; }
+.card:nth-of-type(3) { animation-delay: .08s; }
+.card:nth-of-type(4) { animation-delay: .12s; }
+.card:nth-of-type(5) { animation-delay: .16s; }
+
+/* active nav link gets a small animated underline instead of just a
+   background swap */
+.nav a { position: relative; }
+.nav a.on::after {
+  content: ""; position: absolute; left: 13px; right: 13px; bottom: 2px; height: 2px;
+  background: linear-gradient(90deg, var(--blue, #b15be8), var(--brand-primary, #32217c)); border-radius: 2px;
+}
+
+/* primary CTA buttons get a subtle sheen sweep on hover */
+.btn-primary, button.btn-primary {
+  position: relative; overflow: hidden;
+}
+.btn-primary::after, button.btn-primary::after {
+  content: ""; position: absolute; top: 0; left: -60%; width: 40%; height: 100%;
+  background: linear-gradient(120deg, transparent, rgba(255,255,255,.35), transparent);
+  transform: skewX(-20deg); transition: left .5s ease;
+}
+.btn-primary:hover::after, button.btn-primary:hover::after { left: 130%; }
+
+/* banners (save confirmations, errors) slide in instead of just appearing —
+   used throughout Administration for save/test feedback */
+@keyframes ui-banner-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+.banner { animation: ui-banner-in .25s ease both; }
+
+/* status chips/tags get a tiny pop when they first render */
+@keyframes ui-pop { 0% { transform: scale(.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+.tag, .chip, .role, .pill { animation: ui-pop .2s ease both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .card { animation: none; }
+  .btn-primary::after, button.btn-primary::after { display: none; }
+  .banner, .tag, .chip, .role, .pill { animation: none; }
+  * { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
+}
+
+
+/* Consolidated from public/ui-enhance-v2.css; canonical dashboard UI/responsive stylesheet. */
+/* ════════════════════════════════════════════════════════════════════
+   UI ENHANCEMENTS v2 — depth, dimensionality & orchestrated transitions.
+   Additive only, loaded after ui-enhance-v1.css. Uses the same CSS
+   variables already defined on every page (--brand-primary, --blue,
+   --line, --shadow, --shadow-lg, --radius, …).
+
+   Design intent: this is a financial-wellness dashboard trusted with
+   sensitive employee data, not a consumer product — so "3D" here means
+   restrained, physical depth cues (soft tilt, layered shadow, a single
+   light source) rather than decorative spin/bounce. Every effect below
+   answers a person's action (hover, switch, open) rather than looping
+   on its own, and everything is gated behind prefers-reduced-motion and
+   pointer:fine so touch/keyboard users and anyone motion-sensitive get
+   the plain, instant version.
+   ════════════════════════════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: no-preference) {
+
+  /* ── cards: soft physical tilt toward the cursor + a light that tracks it ──
+     Driven by --mx/--my/--rx/--ry, set by ui-enhance-v2.js on pointer move.
+     Falls back to flat if the vars are unset (JS not loaded / touch).
+     perspective() is applied per-card inside `transform`, NOT on a shared
+     ancestor like <body> — putting `perspective` on an ancestor makes that
+     ancestor the containing block for every position:fixed descendant
+     (drawers, modals, backdrops), which pins them to the document instead
+     of the viewport. Keeping it scoped to each card avoids that entirely. */
+  .card {
+    --rx: 0deg; --ry: 0deg; --mx: 50%; --my: 50%;
+    transform-style: preserve-3d;
+    transform: perspective(1000px) rotateX(var(--rx)) rotateY(var(--ry)) translateZ(0);
+    transition: transform .35s cubic-bezier(.2,.7,.2,1), box-shadow .35s ease, border-color .22s ease;
+    isolation: isolate;
+  }
+  .card.tilting { transition: transform .06s linear, box-shadow .12s ease; }
+  .card:hover {
+    box-shadow:
+      0 2px 4px rgba(13,42,71,.06),
+      0 12px 28px rgba(13,42,71,.10),
+      0 32px 64px -12px rgba(50,33,124,.22);
+  }
+  .card::before {
+    content: ""; position: absolute; inset: 0; border-radius: inherit;
+    background: radial-gradient(480px circle at var(--mx) var(--my), rgba(255,255,255,.5), transparent 42%);
+    opacity: 0; transition: opacity .3s ease; pointer-events: none;
+    mix-blend-mode: soft-light; z-index: 1;
+  }
+  .card:hover::before { opacity: 1; }
+
+  /* pull real content above the sheen layer */
+  .card > * { position: relative; z-index: 2; }
+
+  /* KPI/stat numbers sit slightly "raised" off the card on hover — a subtle
+     parallax layer, not a bounce */
+  .kpi-value, .stat-value, .metric-value {
+    display: inline-block;
+    transition: transform .35s cubic-bezier(.2,.7,.2,1);
+  }
+  .card:hover .kpi-value, .card:hover .stat-value, .card:hover .metric-value {
+    transform: translateZ(18px);
+  }
+}
+
+/* touch/imprecise pointers never get the tilt tracking — hover is sticky
+   on touch devices and would leave cards permanently skewed */
+@media (hover: none), (pointer: coarse) {
+  .card { transform: none !important; }
+  .card::before { display: none; }
+}
+
+/* ── a value just changed on screen: a brief, deliberate pop + colour
+   pulse so the eye catches the update. Class is added/removed briefly by
+   ui-enhance-v2.js whenever a KPI's rendered text changes — it never fires
+   on first paint, only on a real value change, so it can't read as fake
+   "loading" motion over static numbers. ── */
+@keyframes ui-value-pop {
+  0%   { transform: scale(1);    color: var(--brand-primary, #32217c); }
+  35%  { transform: scale(1.09); color: var(--blue, #b15be8); }
+  100% { transform: scale(1);    color: inherit; }
+}
+.ui-value-changed { animation: ui-value-pop .5s cubic-bezier(.2,.7,.2,1); }
+
+/* ── audience switch (Employer / Portfolio): a sliding capsule behind the
+   active label instead of an instant background swap ── */
+.audience-switch { position: relative; }
+.audience-switch .switch-pill {
+  position: absolute; top: 3px; bottom: 3px; left: 3px;
+  background: var(--white, #fff); border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(13,42,71,.1), 0 6px 16px rgba(13,42,71,.08);
+  transition: transform .32s cubic-bezier(.2,.7,.2,1), width .32s cubic-bezier(.2,.7,.2,1);
+  pointer-events: none; z-index: 0;
+}
+.audience-switch button { position: relative; z-index: 1; background: transparent !important; }
+.audience-switch button.on { box-shadow: none !important; }
+
+/* ── switching between Employer view and Portfolio view: a soft crossfade
+   + rise instead of an instant display swap. Classes are toggled by
+   wireAudience() in dashboard.html around the existing display change. ── */
+@keyframes ui-view-in { from { opacity: 0; transform: translateY(8px) scale(.99); } to { opacity: 1; transform: none; } }
+@keyframes ui-view-out { from { opacity: 1; } to { opacity: 0; } }
+#employer-view.view-entering, #portfolio-view.view-entering { animation: ui-view-in .32s cubic-bezier(.2,.7,.2,1) both; }
+#employer-view.view-leaving, #portfolio-view.view-leaving { animation: ui-view-out .12s ease both; }
+
+/* ── modal / drawer entrances get real depth: the schedule report modal
+   tilts up out of the surface instead of just fading; the side drawer
+   keeps its existing slide (untouched) but gains a matching backdrop
+   blur ramp ── */
+@keyframes ui-modal-rise {
+  from { opacity: 0; transform: perspective(1200px) rotateX(6deg) translateY(18px) scale(.97); }
+  to   { opacity: 1; transform: perspective(1200px) rotateX(0) translateY(0) scale(1); }
+}
+.schedule-modal { animation: ui-modal-rise .38s cubic-bezier(.2,.7,.2,1) both; transform-origin: 50% 20%; }
+
+/* ── dropdown menus (account menu, filter dropdowns) get the same
+   perspective pop instead of a flat slide ── */
+.dropdown-menu {
+  transform-origin: 18% -8px;
+}
+.dropdown-menu.open {
+  animation: ui-dropdown-in .22s cubic-bezier(.2,.7,.2,1) both;
+}
+@keyframes ui-dropdown-in {
+  from { opacity: 0; transform: perspective(600px) rotateX(-8deg) translateY(-4px) scale(.98); }
+  to   { opacity: 1; transform: perspective(600px) rotateX(0) translateY(0) scale(1); }
+}
+
+/* ── filter chips / portfolio metric chips: a firmer press-in confirmation
+   on selection rather than an instant colour swap ── */
+@keyframes ui-chip-select { 0% { transform: scale(1); } 40% { transform: scale(.94); } 100% { transform: scale(1); } }
+.pf-chip.on, .dropdown-item.on { animation: ui-chip-select .22s ease both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .kpi-value, .stat-value, .metric-value, .card { transition: none !important; }
+  .ui-value-changed, .schedule-modal, .dropdown-menu.open, .pf-chip.on, .dropdown-item.on,
+  #employer-view.view-entering, #portfolio-view.view-entering,
+  #employer-view.view-leaving, #portfolio-view.view-leaving { animation: none !important; }
+  .audience-switch .switch-pill { transition: none !important; }
+}
+
+
+/* Consolidated from public/responsive-v1.css; canonical dashboard UI/responsive stylesheet. */
+/* ════════════════════════════════════════════════════════════════════
+   RESPONSIVE LAYER — phone & tablet fixes shared by every page.
+   The viewport <meta> tag alone only stops the browser faking a desktop
+   view; it does none of the actual layout work. These are the real rules.
+   Breakpoints match what the pages already use: ≤1080px tablet-and-below
+   (dashboard.html already collapses most of its own grids there), plus a
+   ≤640px phone tier and a ≤380px small-phone tier that nothing had before.
+   ════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 1080px) {
+  /* generic two-column form grids collapse to one column on anything
+     tablet-sized or smaller, across every page (dashboard's own grids
+     already do this themselves at this width) */
+  .row2 { grid-template-columns: 1fr !important; }
+}
+
+@media (max-width: 1080px) and (min-width: 641px) {
+  /* tablet tier: the desktop's 28px edge padding felt tight once content
+     reflows to fewer columns at this width — ease it back a bit and give
+     stacked sections more breathing room than the tight desktop rhythm */
+  .wrap, .topbar-inner { padding-left: 22px !important; padding-right: 22px !important; }
+  .section-gap { margin-top: 26px !important; }
+  .card-bd { padding: 18px 20px !important; }
+}
+
+@media (max-width: 900px) {
+  /* tables: rather than squeezing columns illegibly, let the table itself
+     scroll horizontally inside its card. Safe because every table on
+     every page sits inside a .card-bd (or an explicit overflow wrapper
+     already added on the newer panels). */
+  .card-bd { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .card-bd > table, table.hist { min-width: 560px; }
+}
+
+@media (max-width: 640px) {
+  /* container gutters shrink so content isn't fighting the screen edge */
+  .topbar-inner, .wrap { padding-left: 16px !important; padding-right: 16px !important; }
+  .topbar-inner { height: 58px !important; gap: 10px !important; }
+  .topbar-inner img, .logo img { height: 24px !important; }
+  .card { border-radius: 14px !important; }
+  .card-bd { padding: 14px !important; }
+  .card-hd { padding: 14px 16px 10px !important; }
+  .head { padding: 22px 0 14px !important; }
+  .head h1 { font-size: 24px !important; }
+
+  /* inline flex button/toolbar rows throughout the app wrap instead of
+     overflowing off the edge of a phone screen, with enough gap that
+     wrapped rows don't look cramped */
+  [style*="display:flex"] { flex-wrap: wrap; row-gap: 10px; }
+   .topbar-inner, .portal-account-menu { flex-wrap: nowrap; } /* exceptions that must stay in one line */
+
+  /* buttons/links get a real touch target */
+  .btn, button, .nav a { min-height: 40px; }
+
+  /* inputs at 16px+ stop iOS Safari auto-zooming in on focus */
+  input, select, textarea { font-size: 16px !important; }
+
+  /* table cells wrap long emails/names instead of forcing horizontal scroll
+     for content that doesn't need it */
+  td, th { word-break: break-word; }
+
+  /* stat/kpi tiles: never fewer than ~140px, but allow them to reflow to
+     as many columns as actually fit */
+  [style*="grid-template-columns:repeat(auto-fit"] { gap: 8px !important; }
+
+  h1 { font-size: 26px !important; }
+  .card-hd h2 { font-size: 13px !important; }
+}
+
+@media (max-width: 380px) {
+  .topbar-inner, .wrap { padding-left: 12px !important; padding-right: 12px !important; }
+  .pill { display: none; } /* "Administration" / build badges — logo + nav matter more on the smallest screens */
+}
+
+/* nav row: horizontal scroll instead of wrap/overlap when there isn't
+   room for every link, on any page that uses .nav */
+@media (max-width: 640px) {
+  .nav { overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap !important; padding-bottom: 2px; }
+  .nav a { white-space: nowrap; flex-shrink: 0; }
+}
+
+
+/* Consolidated from public/responsive-v2.css; canonical dashboard UI/responsive stylesheet. */
+/* empower-fin Dashboard Portal 0.6.0
+   Responsive system: phone / tablet / laptop / desktop.
+   This layer deliberately overrides the older responsive-v1 rules rather than
+   requiring every existing dashboard component to be rewritten at once. */
+
+html, body { max-width: 100%; overflow-x: hidden; }
+img, svg, canvas, video { max-width: 100%; }
+button, input, select, textarea { max-width: 100%; }
+
+:focus-visible {
+  outline: 3px solid rgba(177, 91, 232, .42);
+  outline-offset: 2px;
+}
+
+/* Tablet: preserve the 12-column analytical layout where it still fits, but
+   stop cards from becoming narrower than their useful content. */
+@media (max-width: 1080px) {
+  .wrap, .topbar-inner { max-width: 100%; }
+  .g-4 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .g-3 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .g-12 { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+  .card { min-width: 0; }
+  .card-hd { min-width: 0; }
+  .card-title, .card-note { min-width: 0; }
+  .head-actions { flex-wrap: wrap; }
+  .funnel-row { grid-template-columns: minmax(110px, 140px) minmax(0, 1fr) auto; }
+  .hbar-row { grid-template-columns: minmax(90px, 118px) minmax(0, 1fr) 54px; }
+  .wellness-right { min-width: 0; }
+}
+
+/* Laptop / small tablet: desktop navigation can consume too much horizontal
+   space, so let it compress without changing the desktop visual hierarchy. */
+@media (max-width: 900px) {
+  .topbar-inner { gap: 10px !important; }
+  .nav-inline { gap: 0; }
+  .nav-link { padding-left: 8px; padding-right: 8px; }
+  .nav-emp { max-width: 150px; }
+  .topbar-meta { min-width: 0; }
+  .topbar-meta > * { min-width: 0; }
+  .filters { gap: 8px; }
+}
+
+/* Phone: one-column dashboard, touch-first controls, and no accidental page
+   horizontal scrolling. Inline grid-column spans from the original prototype
+   are deliberately neutralised here. */
+@media (max-width: 640px) {
+  .wrap { padding: 0 12px 42px !important; }
+  .topbar-inner { padding: 0 12px !important; height: 58px !important; }
+  .topbar { position: sticky; }
+
+  .topbar-divider,
+  .audience-switch,
+  .nav-inline,
+  .data-fresh { display: none !important; }
+  .topbar-meta { margin-left: auto; }
+  .topbar-spacer { display: block; }
+
+  .head { padding: 20px 0 14px !important; gap: 14px; align-items: flex-start; }
+  .head h1 { font-size: clamp(25px, 8vw, 32px) !important; letter-spacing: -.5px; }
+  .head-sub { font-size: 13px; line-height: 1.5; }
+  .head-actions { width: 100%; }
+  .head-actions .btn { flex: 1 1 140px; justify-content: center; }
+
+  .filters {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    margin-bottom: 16px !important;
+    padding: 10px;
+    background: rgba(255,255,255,.72);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+  }
+  .filters > * { width: 100% !important; min-width: 0 !important; max-width: none !important; }
+  .filters .seg { overflow-x: auto; flex-wrap: nowrap !important; }
+  .filters .seg button { flex: 1 0 auto; min-height: 42px; white-space: nowrap; }
+  .filter-emp, .filter-month { width: 100% !important; min-height: 44px; border-radius: 11px; }
+  .period-picker-label { margin: 2px 2px -2px !important; }
+  .filter-tag { min-height: 40px; justify-content: space-between; border-radius: 10px; }
+
+  .grid, .g-4, .g-3, .g-2 { grid-template-columns: minmax(0, 1fr) !important; }
+  .g-12 { grid-template-columns: minmax(0, 1fr) !important; gap: 12px !important; }
+  .section-gap { margin-top: 12px !important; }
+
+  /* Original inline spans are safe on desktop but unsafe on a phone. */
+  [style*="grid-column:span"],
+  [style*="grid-column: 1/-1"],
+  [style*="grid-column:1/-1"] {
+    grid-column: 1 / -1 !important;
+  }
+
+  .card { border-radius: 14px !important; padding: 16px !important; min-width: 0; }
+  .card.tight { padding: 14px !important; }
+  .card-hd { gap: 8px; margin-bottom: 12px; }
+  .card-title { font-size: 13px; }
+  .card-note { font-size: 10.5px; }
+  .card-tag { font-size: 9.5px; }
+
+  .kpi-value { font-size: clamp(28px, 9vw, 36px); }
+  .kpi-spark { width: 40%; }
+
+  .funnel-row,
+  .hbar-row,
+  .rb-row,
+  .risk-row,
+  .outcome,
+  .chat-jrow {
+    grid-template-columns: 1fr !important;
+    gap: 7px !important;
+  }
+  .funnel-bar-bg, .hbar-track, .rb-track, .wd-track, .chat-jbar-track { width: 100%; }
+  .funnel-val, .wd-val { text-align: left; }
+  .chat-jrow { padding: 10px 6px; }
+
+  .wellness-inner { grid-template-columns: 1fr !important; gap: 16px !important; }
+  .wellness-left { border-right: 0 !important; border-bottom: 1px solid var(--line-soft); padding: 0 0 16px !important; }
+  .wd-row { grid-template-columns: minmax(100px, 1fr) 2fr 32px !important; gap: 8px !important; }
+
+  .dp-legend, .opp-grid, .ds-grid, .stress-grid, .exec-grid { grid-template-columns: 1fr !important; }
+  .opp-foot { grid-template-columns: 1fr !important; padding: 16px !important; }
+  .opp-foot-ref { border-left: 0 !important; border-top: 1px solid rgba(255,255,255,.15); padding: 14px 0 0 !important; text-align: left !important; }
+
+  .card-bd { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { max-width: 100%; }
+  table.hist { min-width: 540px; }
+
+  /* SVG charts remain fluid but get a sensible minimum height instead of
+     becoming microscopic inside a one-column card. */
+  .card svg { display: block; max-width: 100%; height: auto; }
+
+  button, .btn, select, input[type="button"], input[type="submit"] {
+    min-height: 44px;
+  }
+  /* Small round icon buttons (the "i" info glyphs, drawer/schedule close
+     buttons) are not full-width tap targets — the 44px rule above was
+     stretching their fixed 15-34px width into tall ovals/pills. Keep them
+     at their intended compact size instead. */
+  .metric-info, .drawer-x, .schedule-close {
+    min-height: 0;
+  }
+  input, select, textarea { font-size: 16px !important; }
+
+  /* Reduce decorative motion / shadow density on small screens. */
+  .card { box-shadow: 0 1px 2px rgba(13,42,71,.04), 0 4px 14px rgba(13,42,71,.05); }
+  .reveal { opacity: 1 !important; transform: none !important; animation: none !important; }
+}
+
+@media (max-width: 380px) {
+  .wrap, .topbar-inner { padding-left: 10px !important; padding-right: 10px !important; }
+  .card { padding: 14px !important; }
+  .kpi-value { font-size: 29px; }
+  .wd-row { grid-template-columns: 1fr 1fr 30px !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Touch devices should not depend on hover for essential affordances. */
+@media (hover: none), (pointer: coarse) {
+  .btn, button, select, a.nav-link { -webkit-tap-highlight-color: transparent; }
+  .btn:hover, .nav-link:hover { transform: none !important; }
+}
+
+
+/* Canonical mobile stabilization: final rules in the consolidated dashboard stylesheet. */
+@media (max-width: 640px) {
+  html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
+  .wrap, .topbar-inner, .head, .card, .kpi, .panel, .filters, .section-gap { min-width: 0 !important; box-sizing: border-box; }
+  .wrap > *, .card > *, .kpi > *, .filters > *, .topbar-inner > * { min-width: 0; max-width: 100%; }
+  .topbar-meta, .nav-inline, .portal-primary-nav, .portal-mobile-links { min-width: 0; max-width: 100%; }
+  .nav-inline, .portal-primary-nav { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .nav-inline::-webkit-scrollbar, .portal-primary-nav::-webkit-scrollbar { display: none; }
+  .nav-link, .portal-nav-link { flex: 0 0 auto; }
+  h1, h2, h3, h4, p, .card-title, .head-sub, .nav-who { overflow-wrap: anywhere; }
+  input, select, textarea, button { max-width: 100%; box-sizing: border-box; }
+  img, svg, canvas, video { max-width: 100%; height: auto; }
+  .card-bd, .table-wrap, .table-scroll, .chart-wrap { min-width: 0; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { max-width: none; }
+  .dropdown-menu, .portal-account-menu, .schedule-modal, .portal-modal { max-width: calc(100vw - 24px); box-sizing: border-box; }
+  .schedule-modal, .portal-modal { max-height: calc(100dvh - 24px); overflow: auto; }
+  .home-actions, .actions, .toolbar, .filters { min-width: 0; flex-wrap: wrap; }
+}
+@media (max-width: 420px) {
+  .wrap { padding-left: 10px !important; padding-right: 10px !important; }
+  .topbar-inner { padding-left: 10px !important; padding-right: 10px !important; }
+  .card-hd { padding-inline: 14px !important; }
+  .card-bd { padding-inline: 14px !important; }
+}

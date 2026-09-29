@@ -69,6 +69,24 @@ must(snap.includes('{ range: "30d", asAt: priorEnd.toISOString(), ...cohort }'),
 must(snap.includes('platformUsers.length > 0 && liveJourneys.length > 0') && snap.includes('policies.length > 0 && platformUsers.length > 0'), 'Historical score availability must be based on selected-period records, not only global sync cursors');
 must(pages.dashboard.includes('Score ${Math.round(Number(score))}') && pages.dashboard.includes('replace(" · Score ", ": Score ")'), 'Month selector labels must show the actual score for each month');
 
+
+// Responsive release gates: the same protected pages must remain bounded on
+// desktop and collapse/wrap cleanly at phone/tablet widths. These are static
+// invariants; browser/device smoke testing remains a deployment-stage check.
+const dashboardHtml = pages.dashboard;
+const dashboardCss = read("public/dashboard.css");
+must(everyPage(src => /<meta[^>]+name=["']viewport["'][^>]+content=["']width=device-width,\s*initial-scale=1(?:\.0)?["']/i.test(src)), "all protected pages need a real responsive viewport");
+must(/\.wrap\s*\{[^}]*max-width:\s*1280px/i.test(dashboardHtml), "dashboard desktop layout must have a bounded content width");
+must(/@media\s*\(max-width:\s*1080px\)/.test(dashboardCss), "dashboard must have a tablet breakpoint");
+must(/@media\s*\(max-width:\s*640px\)/.test(dashboardCss), "dashboard must have a phone breakpoint");
+must(/@media\s*\(max-width:\s*420px\)/.test(dashboardCss), "dashboard must have a small-phone breakpoint");
+must(/\.g-4\s*\{[^}]*grid-template-columns:\s*repeat\(4,1fr\)/.test(dashboardHtml) && /@media\s*\(max-width:\s*1080px\)[\s\S]*?\.g-4\s*\{[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/.test(dashboardCss), "dashboard KPI grid must collapse from four columns on smaller screens");
+must(/\.g-2\s*\{[^}]*grid-template-columns:\s*repeat\(2,1fr\)/.test(dashboardHtml) && /@media\s*\(max-width:\s*640px\)[\s\S]*?\.grid,\s*\.g-4,\s*\.g-3,\s*\.g-2\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/.test(dashboardCss), "dashboard two-column sections must stack on phones");
+must(/overflow-x:\s*auto/.test(dashboardCss), "data tables must have a horizontal overflow escape hatch on small screens");
+must(/overflow-wrap:\s*anywhere/.test(dashboardCss), "long labels and values must wrap instead of forcing horizontal page overflow");
+must(/max-width:\s*100%/.test(dashboardCss), "media/form content must be bounded to the viewport");
+must(!pages.dashboard.includes("ui-enhance-v1.css") && !pages.dashboard.includes("ui-enhance-v2.css") && !pages.dashboard.includes("responsive-v1.css") && !pages.dashboard.includes("responsive-v2.css"), "dashboard must use one canonical responsive stylesheet, not stacked legacy layers");
+
 must(read("public/enterprise.css").includes("img[data-custom-logo]") && read("public/dashboard.html").includes("setAttribute('data-custom-logo','1')"), "uploaded company logos must be exempt from the white-out filter");
 must(!/invert\(1\)\s+hue-rotate/.test(read("public/dark-mode-v1.css")) && !/invert\(1\)\s+hue-rotate/.test(read("public/portal-nav-v080.css")), "dark mode must not use the whole-page invert filter");
 must(!/portal-dark[^{]*\{[^}]*#e5d8ff/.test(read("public/portal-nav-v080.css")), "dark mode must not hard-code a fixed brand colour");

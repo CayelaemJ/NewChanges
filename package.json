@@ -3,7 +3,7 @@
   "version": "0.10.0",
   "type": "module",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "scripts": {
     "build": "prisma generate && tsc",
@@ -22,30 +22,31 @@
     "check:security": "node scripts/security-regression-check.mjs",
     "sync:configure": "node scripts/configure-mysql-sync.mjs",
     "check:production": "node scripts/production-readiness-check.mjs",
-    "check:brand": "node tests/brand-engine.test.mjs"
+    "check:brand": "node tests/brand-engine.test.mjs",
+    "test:score": "node scripts/run-score-test.mjs",
+    "check:all": "npm run build && npm run check:production && npm run check:security && npm run check:ui && npm run check:imports && npm run check:scheduling && npm run test:score && npm audit --audit-level=high"
   },
   "dependencies": {
-    "@fastify/cookie": "^9.3.1",
-    "@fastify/multipart": "^8.3.0",
-    "@fastify/static": "^7.0.4",
+    "@fastify/cookie": "^11.1.2",
+    "@fastify/multipart": "^10.1.2",
+    "@fastify/static": "^10.1.5",
     "@prisma/client": "^5.22.0",
     "@types/node": "^22.9.0",
     "csv-parse": "^7.0.2",
-    "fastify": "^4.28.1",
+    "fastify": "^5.12.5",
     "luxon": "^3.7.2",
     "mssql": "^11.0.1",
     "mysql2": "^3.11.0",
     "node-cron": "^4.6.0",
-    "nodemailer": "^9.1.1",
+    "nodemailer": "^10.0.12",
     "pg": "^8.12.0",
     "prisma": "^5.22.0",
     "typescript": "^5.6.3",
-    "xlsx": "^0.18.5"
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
     "@types/luxon": "^3.6.2",
     "@types/mssql": "^9.1.5",
-    "@types/nodemailer": "^6.4.17",
     "@types/pg": "^8.11.10",
     "tsx": "^4.19.2"
   }
