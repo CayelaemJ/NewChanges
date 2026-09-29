@@ -1164,7 +1164,16 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
     sourceDataUpdatedAt: sourceDataUpdatedAt?.toISOString() ?? null,
     filterContext: {
       period: filter.period,
-      comparison: { mode: comparisonMode, label: comparisonLabel, current: filter.label, previous: comparisonPayload?.filterContext?.label ?? null },
+      comparison: {
+        mode: comparisonMode,
+        label: comparisonLabel,
+        current: filter.range === "all" ? `Programme to date ${filter.asAt.getUTCFullYear()}` : filter.range === "quarter" ? `Q${quarterOf(filter.asAt).q} ${filter.asAt.getUTCFullYear()}` : filter.label,
+        previous: comparisonPayload ? (
+          filter.range === "all" ? `Programme to date ${filter.asAt.getUTCFullYear() - 1}` :
+          filter.range === "quarter" ? `Q${((quarterOf(filter.asAt).q + 2) % 4) + 1} ${quarterOf(filter.asAt).q === 1 ? filter.asAt.getUTCFullYear() - 1 : filter.asAt.getUTCFullYear()}` :
+          comparisonPayload.filterContext?.label ?? comparisonLabel
+        ) : null,
+      },
       range: filter.range,
       label: filter.label,
       rangeStart: filter.rangeStart?.toISOString() ?? null,
