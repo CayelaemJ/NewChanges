@@ -1650,81 +1650,47 @@ function renderValueStrip(){
 
 /* ─────────────────── ACT 3: savings area chart ─────────────────── */
 function renderEwa(){
-  const e = DATA.ewa;
-  const kpiWrap = document.getElementById('ewa-kpis');
+  const e=DATA.ewa, wrap=document.getElementById('ewa-chart'), kpiWrap=document.getElementById('ewa-kpis');
   if(kpiWrap){
     kpiWrap.innerHTML='';
-    if(!e || !e.advances){
-      kpiWrap.appendChild(el('<div class="muted" style="padding:8px 2px;color:#8497a7;font-size:13.5px;grid-column:span 4;">No early wage access activity recorded yet.</div>'));
-    } else {
-      const cards=[
-        {v:e.clients.toLocaleString(), l:'Employees took up', infoKey:'ewaEmployees', sub:e.advances.toLocaleString()+' advances total', bg:'var(--brand-soft)'},
-        {v:e.total, l:'Total advanced', infoKey:'ewaTotal', sub:'all finalised advances', bg:'#e7f7ef'},
-        {v:e.avg, l:'Average advance', infoKey:'ewaAverage', sub:'per drawdown', bg:'var(--brand-soft)'},
-        {v:e.perClient.toFixed(1), l:'Advances per employee', infoKey:'ewaFrequency', sub:'average frequency', bg:'#fdf3e2'},
-      ];
-      cards.forEach((c,i)=>{
-        kpiWrap.appendChild(el(`<div class="card kpi reveal" style="animation-delay:${i*.06}s">
-          <div class="kpi-label"><span class="kpi-ico" style="background:${c.bg}"></span>${c.l}${employerInfoButton(c.infoKey)}</div>
-          <div class="kpi-value">${c.v}</div>
-          <div class="kpi-sub">${c.sub}</div>
-        </div>`));
-      });
-    }
+    if(!e||!e.advances) kpiWrap.appendChild(el('<div class="muted" style="padding:8px 2px;font-size:13.5px;">No early wage access activity recorded yet.</div>'));
+    else [
+      {v:e.clients.toLocaleString('en-ZA'),l:'Employees took up',k:'ewaEmployees',s:e.advances.toLocaleString('en-ZA')+' advances total',bg:'var(--brand-soft)'},
+      {v:e.total,l:'Total advanced',k:'ewaTotal',s:'All finalised advances',bg:'#e7f7ef'},
+      {v:e.avg,l:'Average advance',k:'ewaAverage',s:'Per drawdown',bg:'var(--brand-soft)'},
+      {v:e.perClient.toFixed(1),l:'Advances per employee',k:'ewaFrequency',s:'Average frequency',bg:'#fdf3e2'}
+    ].forEach((x,i)=>kpiWrap.appendChild(el(`<div class="card kpi reveal" style="animation-delay:${i*.06}s"><div class="kpi-label"><span class="kpi-ico" style="background:${x.bg}"></span>${x.l}${employerInfoButton(x.k)}</div><div class="kpi-value">${x.v}</div><div class="kpi-sub">${x.s}</div></div>`)));
   }
-  // monthly trend chart (reuses the savings line style)
-  const wrap=document.getElementById('ewa-chart'); if(!wrap) return;
-  const pts=(e&&e.trend)||[], labels=(e&&e.trendLabels)||[];
-  if(pts.length<2){
-    wrap.appendChild(el(`<div style="padding:28px 8px;text-align:center;">
-      <div style="font-family:'Fraunces',serif;font-size:30px;font-weight:600;color:var(--brand-primary);">${e?displayMoney(e.total):'R 0'}</div>
-      <div style="font-size:12.5px;color:#8497a7;margin-top:6px;">${pts.length?'Total advanced so far.':'No advances yet.'}<br>The monthly trend appears with two or more months of data.</div></div>`));
+  if(!wrap) return;
+  const current=e?.trend||[], prior=DATA.comparison?.previous?.ewa||[], labels=e?.trendLabels||[];
+  if(!current.length&&!prior.length){wrap.innerHTML='<div class="muted" style="padding:28px 8px;text-align:center;">No early wage access data is available for this period.</div>';return;}
+  const aligned=alignSeries(current,prior), values=[...aligned.current,...aligned.previous].filter(v=>Number.isFinite(v));
+  if(aligned.count===1){
+    const a=aligned.current[0]||0,b=aligned.previous[0]||0,top=Math.max(1,a,b)*1.18;
+    wrap.innerHTML=`<div class="period-bar-chart"><div class="period-bar-col"><div class="period-bar-value">${formatRandThousands(a)}</div><div class="period-bar" style="height:${Math.max(8,a/top*170)}px;background:var(--chart-cashflow)"></div><div class="period-bar-label">${esc(DATA.filterContext?.label||'Selected period')}</div></div><div class="period-bar-col"><div class="period-bar-value">${formatRandThousands(b)}</div><div class="period-bar" style="height:${Math.max(8,b/top*170)}px;background:var(--chart-engagement)"></div><div class="period-bar-label">${esc(DATA.comparison?.label||'Previous period')}</div></div></div>`;
     return;
   }
-  const w=860,h=230,pad=52,ticks=niceTicks(pts,5),max=ticks[ticks.length-1];
-  const px=i=>pad+(i*(w-pad*2)/(pts.length-1));
-  const py=v=>h-pad-(v/max)*(h-pad*1.4);
-  const line=pts.map((p,i)=>(i?'L':'M')+px(i).toFixed(1)+' '+py(p).toFixed(1)).join(' ');
-  const area=line+` L${px(pts.length-1)} ${h-pad} L${px(0)} ${h-pad} Z`;
-  const dots=pts.map((p,i)=>`<circle cx="${px(i)}" cy="${py(p)}" r="${i===pts.length-1?4.5:2.5}" fill="var(--chart-engagement)" stroke="#fff" stroke-width="2"/>`).join('');
-  const xlabels=labels.map((l,i)=>`<text x="${px(i)}" y="${h-8}" font-size="9.5" fill="#8497a7" text-anchor="middle" font-weight="600">${l}</text>`).join('');
-  wrap.appendChild(el(`<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;">
-    <defs><linearGradient id="ewag" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--blue)" stop-opacity=".16"/><stop offset="1" stop-color="var(--blue)" stop-opacity="0"/></linearGradient></defs>
-    ${ticks.map(v=>{const y=py(v);return `<line x1="${pad}" x2="${w-pad}" y1="${y}" y2="${y}" stroke="#f7f4ff" stroke-width="1"/><text x="${pad-8}" y="${y+3}" text-anchor="end" font-size="9.5" font-weight="700" fill="#8497a7">${formatRandThousands(v)}</text>`}).join('')}
-    <path d="${area}" fill="url(#ewag)"/>
-    <path d="${line}" fill="none" stroke="var(--chart-cashflow)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-    ${dots}${xlabels}
-    <text x="${px(pts.length-1)}" y="${py(pts[pts.length-1])-12}" font-size="12" font-weight="800" fill="var(--chart-cashflow)" text-anchor="end">${formatRandThousands(pts[pts.length-1])}</text>
-  </svg>`));
+  const w=860,h=250,left=70,right=24,top=24,bottom=44,ticks=niceTicks(values,5),max=ticks[ticks.length-1]||1,px=i=>left+i*(w-left-right)/Math.max(1,aligned.count-1),py=v=>h-bottom-(v/max)*(h-bottom-top);
+  const lineOf=s=>s.map((v,i)=>v==null?'':(i?'L':'M')+px(i).toFixed(1)+' '+py(v).toFixed(1)).filter(Boolean).join(' ');
+  const xlabels=Array.from({length:aligned.count},(_,i)=>{const idx=i-(aligned.count-labels.length);return idx>=0&&labels[idx]?`<text x="${px(i)}" y="${h-12}" text-anchor="middle" font-size="9.5" fill="#8497a7">${labels[idx]}</text>`:''}).join('');
+  const yaxis=ticks.map(v=>{const y=py(v);return `<line x1="${left}" x2="${w-right}" y1="${y}" y2="${y}" stroke="var(--line-soft)"/><text x="${left-10}" y="${y+3}" text-anchor="end" font-size="9.5" font-weight="700" fill="#8497a7">${formatRandThousands(v)}</text>`}).join('');
+  wrap.innerHTML=`<div class="comparison-legend"><span><i class="comparison-dot current"></i>${esc(DATA.filterContext?.label||'Selected period')}</span><span><i class="comparison-dot previous"></i>${esc(DATA.comparison?.label||'Previous period')}</span></div><svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;"><path d="${lineOf(aligned.current)}" fill="none" stroke="var(--chart-cashflow)" stroke-width="2.8" stroke-linecap="round"/><path d="${lineOf(aligned.previous)}" fill="none" stroke="var(--chart-engagement)" stroke-width="2.2" stroke-dasharray="6 5" stroke-linecap="round"/>${yaxis}${xlabels}</svg>`;
 }
 
 function renderSavings(){
-  const wrap=document.getElementById('savings-chart');
-  const pts=DATA.savings||[], labels=DATA.savingsLabels||[];
-  // need at least 2 points to draw a trend line; otherwise show a friendly state
-  if(pts.length<2){
-    const val = pts.length ? pts[pts.length-1] : 0;
-    wrap.appendChild(el(`<div style="padding:28px 8px;text-align:center;">
-      <div style="font-family:'Fraunces',serif;font-size:30px;font-weight:600;color:var(--chart-cashflow);">${formatRandThousands(val)}<span style="font-size:15px;">/mo</span></div>
-      <div style="font-size:12.5px;color:#8497a7;margin-top:6px;">${pts.length? 'Cumulative savings unlocked so far.' : 'No savings recorded yet.'}<br>The trend line appears once there are two or more months of data.</div>
-    </div>`));
+  const wrap=document.getElementById('savings-chart'), current=DATA.savings||[], prior=DATA.comparison?.previous?.savings||[], labels=DATA.savingsLabels||[];
+  if(!current.length&&!prior.length){wrap.innerHTML='<div class="muted" style="padding:28px 8px;text-align:center;">No savings data is available for this period.</div>';return;}
+  const aligned=alignSeries(current,prior), values=[...aligned.current,...aligned.previous].filter(v=>Number.isFinite(v));
+  if(aligned.count===1){
+    const a=aligned.current[0]||0,b=aligned.previous[0]||0,top=Math.max(1,a,b)*1.18;
+    wrap.innerHTML=`<div class="period-bar-chart"><div class="period-bar-col"><div class="period-bar-value">${formatRandThousands(a)}</div><div class="period-bar" style="height:${Math.max(8,a/top*170)}px;background:var(--chart-cashflow)"></div><div class="period-bar-label">${esc(DATA.filterContext?.label||'Selected period')}</div></div><div class="period-bar-col"><div class="period-bar-value">${formatRandThousands(b)}</div><div class="period-bar" style="height:${Math.max(8,b/top*170)}px;background:var(--chart-engagement)"></div><div class="period-bar-label">${esc(DATA.comparison?.label||'Previous period')}</div></div></div>`;
     return;
   }
-  const w=560,h=230,pad=58,ticks=niceTicks(pts,5),max=ticks[ticks.length-1];
-  const px=i=>pad+(i*(w-pad*2)/(pts.length-1));
-  const py=v=>h-pad-(v/max)*(h-pad*1.4);
-  let line=pts.map((p,i)=>(i?'L':'M')+px(i).toFixed(1)+' '+py(p).toFixed(1)).join(' ');
-  let area=line+` L${px(pts.length-1)} ${h-pad} L${px(0)} ${h-pad} Z`;
-  let dots=pts.map((p,i)=>`<circle cx="${px(i)}" cy="${py(p)}" r="${i===pts.length-1?4.5:0}" fill="var(--chart-engagement)" stroke="#fff" stroke-width="2"/>`).join('');
-  let xlabels=labels.map((l,i)=> i%2===0||i===labels.length-1 ? `<text x="${px(i)}" y="${h-8}" font-size="9.5" fill="#8497a7" text-anchor="middle" font-weight="600">${l}</text>`:'').join('');
-  wrap.appendChild(el(`<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;">
-    <defs><linearGradient id="savg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--chart-cashflow)" stop-opacity=".18"/><stop offset="1" stop-color="var(--chart-cashflow)" stop-opacity="0"/></linearGradient></defs>
-    ${ticks.map(v=>{const y=py(v);return `<line x1="${pad}" x2="${w-pad}" y1="${y}" y2="${y}" stroke="#f7f4ff" stroke-width="1"/><text x="${pad-8}" y="${y+3}" text-anchor="end" font-size="9.5" font-weight="700" fill="#8497a7">${formatRandThousands(v)}</text>`}).join('')}
-    <path d="${area}" fill="url(#savg)"/>
-    <path d="${line}" fill="none" stroke="var(--chart-cashflow)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-    ${dots}${xlabels}
-    <text x="${px(pts.length-1)}" y="${py(pts[pts.length-1])-12}" font-size="12" font-weight="800" fill="var(--chart-cashflow)" text-anchor="end">${formatRandThousands(pts[pts.length-1])}/mo</text>
-  </svg>`));
+  const w=560,h=250,left=78,right=20,top=24,bottom=44,ticks=niceTicks(values,5),max=ticks[ticks.length-1]||1,px=i=>left+i*(w-left-right)/Math.max(1,aligned.count-1),py=v=>h-bottom-(v/max)*(h-bottom-top);
+  const lineOf=s=>s.map((v,i)=>v==null?'':(i?'L':'M')+px(i).toFixed(1)+' '+py(v).toFixed(1)).filter(Boolean).join(' ');
+  const xlabels=Array.from({length:aligned.count},(_,i)=>{const idx=i-(aligned.count-labels.length);return idx>=0&&labels[idx]?`<text x="${px(i)}" y="${h-12}" font-size="9.5" fill="#8497a7" text-anchor="middle">${labels[idx]}</text>`:''}).join('');
+  const yaxis=ticks.map(v=>{const y=py(v);return `<line x1="${left}" x2="${w-right}" y1="${y}" y2="${y}" stroke="var(--line-soft)"/><text x="${left-10}" y="${y+3}" text-anchor="end" font-size="9.5" font-weight="700" fill="#8497a7">${formatRandThousands(v)}</text>`}).join('');
+  wrap.innerHTML=`<div class="comparison-legend"><span><i class="comparison-dot current"></i>${esc(DATA.filterContext?.label||'Selected period')}</span><span><i class="comparison-dot previous"></i>${esc(DATA.comparison?.label||'Previous period')}</span></div><svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;"><path d="${lineOf(aligned.current)}" fill="none" stroke="var(--chart-cashflow)" stroke-width="2.8" stroke-linecap="round"/><path d="${lineOf(aligned.previous)}" fill="none" stroke="var(--chart-engagement)" stroke-width="2.2" stroke-dasharray="6 5" stroke-linecap="round"/>${yaxis}${xlabels}</svg>`;
 }
 
 /* ─────────────────── ACT 3: debt pressure profile ─────────────────── */
@@ -1752,19 +1718,19 @@ function initials(n){ return n.split(/\s|\//)[0].slice(0,2).toUpperCase(); }
 function renderCreditors(){
   const wrap=document.getElementById('creditor-table');
   let rows=DATA.creditors.map((c,i)=>`<tr class="ct-row" data-i="${i}">
-    <td><div class="cred-name"><span class="cred-logo" style="background:${c.color}">${initials(c.name)}</span>${esc(c.name)}</div></td>
-    <td class="r num">${esc(c.accounts)}</td>
-    <td class="r num">${displayMoney(c.balance)}</td>
-    <td class="r muted">${displayMoney(c.avg)}</td>
-    <td class="r"><span class="chip-mini ${c.status==='elig'?'chip-elig':'chip-prog'}">${esc(c.statusL)}</span></td>
+    <td data-label="Creditor"><div class="cred-name"><span class="cred-logo" style="background:${c.color}">${initials(c.name)}</span><span class="cred-name-text">${esc(c.name)}</span></div></td>
+    <td data-label="Accounts" class="r num">${esc(c.accounts)}</td>
+    <td data-label="Balance" class="r num">${displayMoney(c.balance)}</td>
+    <td data-label="Average per account" class="r muted">${displayMoney(c.avg)}</td>
+    <td data-label="Status" class="r"><span class="chip-mini ${c.status==='elig'?'chip-elig':'chip-prog'}">${esc(c.statusL)}</span></td>
   </tr>`).join('');
   const tbl=el(`<table class="ct">
-    <thead><tr><th>Creditor</th><th class="r">Accounts</th><th class="r">Balance</th><th class="r">Avg / acct</th><th class="r">Status</th></tr></thead>
+    <thead><tr><th>Creditor</th><th class="r">Accounts</th><th class="r">Balance</th><th class="r">Average per account</th><th class="r">Status</th></tr></thead>
     <tbody>${rows}
-      <tr style="border-top:2px solid var(--brand-soft)"><td style="font-weight:800;color:var(--brand-primary)">Total in arrears journey</td>
-      <td class="r num">${esc(DATA.creditorsTotal.accounts)}</td><td class="r num">${displayMoney(DATA.creditorsTotal.balance)}</td><td class="r"></td><td class="r"></td></tr>
-    </tbody></table>`);
-  tbl.querySelectorAll('.ct-row').forEach(r=>r.addEventListener('click',()=>creditorDrill(DATA.creditors[+r.dataset.i])));
+      <tr class="ct-total"><td data-label="Total"><strong>Total in arrears journey</strong></td><td data-label="Accounts" class="r num">${esc(DATA.creditorsTotal.accounts)}</td><td data-label="Balance" class="r num">${displayMoney(DATA.creditorsTotal.balance)}</td><td data-label="Average per account" class="r"></td><td data-label="Status" class="r"></td></tr>
+    </tbody>
+  </table>`);
+  tbl.querySelectorAll('.ct-row').forEach(row=>row.addEventListener('click',()=>creditorDrill(DATA.creditors[+row.dataset.i])));
   wrap.appendChild(tbl);
 }
 
@@ -2774,30 +2740,50 @@ function closeDrawer(){
 document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeDrawer(); });
 
 function outcomeDrill(o){
+  const prior = DATA.comparison?.previous?.outcomes?.[o.key] || [];
+  const currentLabels = DATA.comparison?.current?.savingsLabels || [];
+  const previousLabels = DATA.comparison?.previous?.savingsLabels || [];
   const body=`
-    <div class="drawer-stats">
-      <div class="ds"><div class="dsl">Fixes completed</div><div class="dsv">${o.count.toLocaleString()}</div></div>
+    <div class="drawer-stat-grid">
+      <div class="ds"><div class="dsl">Fixes completed</div><div class="dsv">${o.count.toLocaleString('en-ZA')}</div></div>
       <div class="ds"><div class="dsl">${esc(o.statL)}</div><div class="dsv">${displayMoney(o.stat)}</div></div>
-      <div class="ds"><div class="dsl">Avg per employee</div><div class="dsv">${o.avgPerEmployee ?? '—'}</div></div>
+      <div class="ds"><div class="dsl">Average per employee</div><div class="dsv">${o.avgPerEmployee || 'Not available'}</div></div>
+      <div class="ds"><div class="dsl">Period change</div><div class="dsv">${hasValue(o.delta)?(Number(o.delta)>0?'+':'')+Number(o.delta).toLocaleString('en-ZA'):'Not available'}</div></div>
     </div>
     <div class="drawer-section-title">Completion trend</div>
-    ${miniTrend(o.trend)}
-    <div class="drawer-note">Employee-level detail is de-identified. The employer sees aggregated outcomes only — never an individual's financial information. ${o.key==='credit'?'Credit life replacement leverages NCA s106(4)(a) substitution rights.':''}</div>`;
-  openDrawer(o.name, o.meta, body);
+    ${miniTrend(o.trend, prior, currentLabels, previousLabels, DATA.comparison?.label)}
+    <div class="drawer-note">Employee-level detail is de-identified. The employer sees aggregated outcomes only. ${o.key==='credit'?'Credit life replacement uses the applicable NCA substitution rules.':''}</div>`;
+  openDrawer(o.name, o.meta, body, 'outcome');
 }
-function miniTrend(trend){
-  const seed=Array.isArray(trend)&&trend.length?trend.map(Number).filter(Number.isFinite):null;
-  if(!seed || !seed.length) return '<div class="muted" style="padding:10px 0;font-size:12.5px;">No monthly trend data for the selected window.</div>';
-  const w=520,h=190,left=58,right=18,top=16,bottom=34,max=Math.max(1,...seed),min=Math.min(0,...seed);
-  const span=Math.max(1,max-min), px=i=>left+i*(w-left-right)/Math.max(1,seed.length-1), py=v=>top+(max-v)/span*(h-top-bottom);
-  const ticks=[0,.25,.5,.75,1].map(f=>max-(max-min)*f);
-  const line=seed.map((v,i)=>(i?'L':'M')+px(i).toFixed(1)+' '+py(v).toFixed(1)).join(' ');
-  const dots=seed.map((v,i)=>`<circle cx="${px(i)}" cy="${py(v)}" r="3.8" fill="var(--chart-engagement)" stroke="var(--white)" stroke-width="2"><title>${v.toLocaleString('en-ZA')}</title></circle>`).join('');
-  const yaxis=ticks.map(v=>`<line x1="${left}" x2="${w-right}" y1="${py(v)}" y2="${py(v)}" stroke="var(--line-soft)" stroke-width="1"/><text x="${left-9}" y="${py(v)+3}" text-anchor="end" font-size="10" font-weight="700" fill="var(--grey-l)">${Math.round(v).toLocaleString('en-ZA')}</text>`).join('');
-  const labels=seed.map((v,i)=>`<text x="${px(i)}" y="${h-10}" text-anchor="middle" font-size="9.5" font-weight="600" fill="var(--grey-l)">${i+1}</text>`).join('');
-  const values=seed.map((v,i)=>`<text x="${px(i)}" y="${Math.max(top+10,py(v)-9)}" text-anchor="middle" font-size="9.5" font-weight="800" fill="var(--chart-cashflow)">${v.toLocaleString('en-ZA')}</text>`).join('');
-  return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:190px;margin:8px 0 4px" role="img" aria-label="Completion trend with actual values"><line x1="${left}" x2="${left}" y1="${top}" y2="${h-bottom}" stroke="var(--line)"/><path d="${line}" fill="none" stroke="var(--chart-cashflow)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>${yaxis}${dots}${values}${labels}</svg>`;
+function alignSeries(current, previous){
+  const a=Array.isArray(current)?current.map(Number):[];
+  const b=Array.isArray(previous)?previous.map(Number):[];
+  const n=Math.max(a.length,b.length);
+  return {
+    current:Array.from({length:n},(_,i)=>a[i-(n-a.length)] ?? null),
+    previous:Array.from({length:n},(_,i)=>b[i-(n-b.length)] ?? null),
+    count:n,
+  };
 }
+function miniTrend(trend, prior=[], labels=[], priorLabels=[], comparisonLabel='previous period'){
+  const aligned=alignSeries(trend,prior);
+  const values=[...aligned.current,...aligned.previous].filter(v=>Number.isFinite(v));
+  if(!values.length) return '<div class="muted" style="padding:10px 0;font-size:12.5px;">No trend data is available for this period.</div>';
+  const w=620,h=250,left=74,right=22,top=24,bottom=46,max=Math.max(1,...values),ticks=niceTicks(values,5).filter(v=>v>=0);
+  const py=v=>h-bottom-(v/max)*(h-bottom-top), px=i=>left+i*(w-left-right)/Math.max(1,aligned.count-1);
+  const lineOf=(series)=>series.map((v,i)=>v==null?'':(i?'L':'M')+px(i).toFixed(1)+' '+py(v).toFixed(1)).filter(Boolean).join(' ');
+  const line=lineOf(aligned.current), priorLine=lineOf(aligned.previous);
+  const dots=aligned.current.map((v,i)=>v==null?'':`<circle cx="${px(i)}" cy="${py(v)}" r="3.8" fill="var(--chart-cashflow)" stroke="var(--white)" stroke-width="2"><title>${v.toLocaleString('en-ZA')}</title></circle>`).join('');
+  const priorDots=aligned.previous.map((v,i)=>v==null?'':`<circle cx="${px(i)}" cy="${py(v)}" r="3.2" fill="var(--chart-engagement)" stroke="var(--white)" stroke-width="2"><title>${v.toLocaleString('en-ZA')}</title></circle>`).join('');
+  const yaxis=ticks.map(v=>`<line x1="${left}" x2="${w-right}" y1="${py(v)}" y2="${py(v)}" stroke="var(--line-soft)" stroke-width="1"/><text x="${left-10}" y="${py(v)+3}" text-anchor="end" font-size="10" font-weight="700" fill="var(--grey-l)">${Math.round(v).toLocaleString('en-ZA')}</text>`).join('');
+  const xlabels=Array.from({length:aligned.count},(_,i)=>{
+    const idx=labels.length?i-(aligned.count-labels.length):i;
+    return idx>=0&&labels[idx]?`<text x="${px(i)}" y="${h-14}" text-anchor="middle" font-size="9.5" font-weight="600" fill="var(--grey-l)">${labels[idx]}</text>`:'';
+  }).join('');
+  return `<div class="comparison-legend"><span><i class="comparison-dot current"></i>${esc(DATA.filterContext?.label||'Selected period')}</span><span><i class="comparison-dot previous"></i>${esc(comparisonLabel||'Previous period')}</span></div>
+  <svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto" role="img" aria-label="Completion trend comparison"><line x1="${left}" x2="${left}" y1="${top}" y2="${h-bottom}" stroke="var(--line)"/>${yaxis}<path d="${line}" fill="none" stroke="var(--chart-cashflow)" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/><path d="${priorLine}" fill="none" stroke="var(--chart-engagement)" stroke-width="2.2" stroke-dasharray="6 5" stroke-linecap="round" stroke-linejoin="round"/>${dots}${priorDots}${xlabels}</svg>`;
+}
+
 function creditorDrill(c){
   const stages=Array.isArray(c.stateBreakdown)?c.stateBreakdown:[];
   const body=`
