@@ -2224,10 +2224,39 @@ function applyState(){
   renderSavings(); renderEwa(); renderDebtProfile(); renderCreditors(); renderRegions(); renderIncome();
   renderRatings(); renderDebtStates(); renderPrescription(); renderRiskSignals(); renderOpportunities(); renderChat();
   renderStressMap();
+  requestAnimationFrame(()=>fitResponsiveDataValues());
   wireMetricTips(document.getElementById('employer-view'));
   updateContextLine();
   const ep=document.getElementById('exec-period'); if(ep) ep.textContent=PERIOD[STATE.period].label+' · at a glance';
 }
+
+function fitResponsiveDataValues(root=document){
+  const nodes=root.querySelectorAll?.('.kpi-value,.stat-value,.metric-value,.stat-cell .v,.rating-big,.stress-v,.hbar-val,.rb-val,.dp-pct')||[];
+  nodes.forEach(node=>{
+    node.style.whiteSpace='nowrap';
+    node.style.overflow='visible';
+    const cs=getComputedStyle(node);
+    const original=parseFloat(cs.fontSize);
+    const min=node.matches('.rating-big')?28:14;
+    const parent=node.parentElement;
+    if(!parent || !Number.isFinite(original)) return;
+    node.style.fontSize=original+'px';
+    let size=original;
+    const maxWidth=Math.max(40,parent.clientWidth);
+    while(size>min && node.scrollWidth>maxWidth+1){
+      size=Math.max(min,size-0.5);
+      node.style.fontSize=size+'px';
+    }
+    // If even the minimum would not fit, the parent must reflow; never clip
+    // the financial value to make a grid appear narrower than its content.
+    if(node.scrollWidth>maxWidth+1){
+      node.style.fontSize=min+'px';
+      node.style.whiteSpace='normal';
+      node.style.overflowWrap='anywhere';
+    }
+  });
+}
+window.addEventListener('resize',()=>requestAnimationFrame(()=>fitResponsiveDataValues()),{passive:true});
 
 function updateContextLine(){
   const parts=[];
