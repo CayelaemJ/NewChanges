@@ -52,3 +52,7 @@ assert.match(server, /could not update partner/, 'partner update must return 400
 assert.match(fs.readFileSync('public/admin.html', 'utf8'), /async function apiOk\(/, 'admin must surface server errors on partner writes');
 assert.match(fs.readFileSync('public/home.html', 'utf8'), /Illustrative sample/, 'landing page figures must be labelled as illustrative');
 console.log('Security regression checks passed.');
+
+assert.match(fs.readFileSync("src/services/sourceAdapter.ts", "utf8"), /SOURCE_API_ALLOWED_HOSTS/);
+assert.match(fs.readFileSync("src/services/sourceAdapter.ts", "utf8"), /privateOrLocalAddress/);
+assert.match(fs.readFileSync("src/services/sourceAdapter.ts", "utf8"), /redirect: "error"/);
