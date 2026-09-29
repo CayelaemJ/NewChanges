@@ -2171,6 +2171,60 @@ function randMoney(v,f){
   return 'R '+Math.round(abs).toLocaleString('en-ZA');
 }
 
+function renderExecutiveInsight(){
+  const host=document.getElementById('executive-insight'); if(!host) return;
+  const w=DATA.wellness||{}, pc=DATA.periodComparison;
+  const score=Number(w.score), prior=Number(w.prior);
+  const delta=Number.isFinite(score)&&Number.isFinite(prior)?score-prior:null;
+  const statements=[];
+  if(Number.isFinite(score)) statements.push('Financial wellbeing score is '+score+'/100'+(delta===null?'':', '+(delta>0?'up ':delta<0?'down ':'unchanged ')+Math.abs(delta)+' points versus '+(pc?.previous?.label||'the comparison period'))+'.');
+  if(Number.isFinite(Number(pc?.current?.monthlyCashFreedUp))) statements.push('Monthly cash freed up is '+formatRandThousands(pc.current.monthlyCashFreedUp)+'.');
+  if(Number.isFinite(Number(pc?.current?.totalAdvanced))) statements.push('Total advanced through early wage access is '+formatRandThousands(pc.current.totalAdvanced)+' in this period.');
+  const box=el('<div class="enterprise-insight"><div class="enterprise-insight-eyebrow">Executive insight</div><div class="enterprise-insight-copy"></div></div>');
+  box.querySelector('.enterprise-insight-copy').textContent=statements.join(' ')||'More data is required to produce an executive insight for this view.';
+  host.innerHTML=''; host.appendChild(box);
+}
+function renderDataTrust(){
+  const host=document.getElementById('data-trust'); if(!host) return;
+  const q=DATA.dataQuality||{}, warnings=Array.isArray(q.warnings)?q.warnings:[];
+  const state=warnings.length===0?'Good':warnings.length<=2?'Attention':'Incomplete';
+  const btn=el('<button class="data-trust-pill '+state.toLowerCase()+'" type="button"><span class="data-trust-dot"></span><span>Data quality: <strong>'+state+'</strong></span></button>');
+  host.innerHTML=''; host.appendChild(btn);
+  btn.addEventListener('click',()=>{
+    const rows=warnings.length?'<ul class="data-trust-list">'+warnings.map(w=>'<li>'+esc(typeof w==='string'?w:(w.message||JSON.stringify(w)))+'</li>').join('')+'</ul>':'<p>No data-quality warnings were returned for this view.</p>';
+    const body='<div class="data-trust-grid"><div><strong>'+((q.loadedFeedCount??0))+'</strong><span>feeds loaded</span></div><div><strong>'+((q.coreFeedCount??0))+'</strong><span>core feeds</span></div><div><strong>'+((q.workforceObservationRows??0))+'</strong><span>workforce observations</span></div><div><strong>'+((q.debtObservationRows??0))+'</strong><span>debt observations</span></div></div>'+rows;
+    openDrawer('Data quality',DATA.filterContext?.label||'Selected view',body,'outcome');
+  });
+}
+function saveCurrentView(){
+  const key='empower-fin.savedViews';
+  const views=JSON.parse(localStorage.getItem(key)||'[]');
+  const name=window.prompt('Name this saved view',DATA.filterContext?.label||'Saved view');
+  if(!name) return;
+  const item={id:Date.now().toString(36),name:name.trim().slice(0,80),url:location.pathname+location.search};
+  localStorage.setItem(key,JSON.stringify([item,...views].slice(0,20)));
+  showToast('Saved view','This view is saved on this browser.');
+}
+function openQuickActions(){
+  if(document.getElementById('quick-actions')) return;
+  const commands=[
+    ['Executive summary','#exec-summary'],['Wellness score','#wellness'],['Financial problems resolved','#outcomes'],['Value delivered to your people','#value-strip'],['Monthly cash freed up','#savings-chart'],['Total advanced per month','#ewa-chart'],['Debt pressure profile','#debt-profile'],['Who the programme is reaching','#income-donut'],['Employee ratings','#ratings']
+  ];
+  const back=el('<div class="command-backdrop" id="quick-actions"></div>');
+  const box=el('<div class="command-palette" role="dialog" aria-label="Quick actions"><input class="command-search" type="search" placeholder="Search dashboard sections" autocomplete="off"><div class="command-results"></div></div>');
+  const results=box.querySelector('.command-results');
+  function draw(term){
+    const q=String(term||'').toLowerCase();
+    const rows=commands.filter(x=>x[0].toLowerCase().includes(q));
+    results.innerHTML=rows.map(x=>'<button type="button" class="command-item" data-target="'+x[1]+'">'+esc(x[0])+'<span>Open</span></button>').join('')||'<div class="command-empty">No matching section</div>';
+    results.querySelectorAll('[data-target]').forEach(b=>b.addEventListener('click',()=>{back.remove();document.querySelector(b.dataset.target)?.scrollIntoView({behavior:'smooth',block:'start'});}));
+  }
+  box.querySelector('.command-search').addEventListener('input',e=>draw(e.target.value));
+  back.appendChild(box); document.body.appendChild(back);
+  back.addEventListener('click',e=>{if(e.target===back) back.remove();});
+  draw(''); box.querySelector('.command-search').focus();
+}
+document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();openQuickActions();}});
 /* rebuild DATA from BASE according to STATE, then re-render everything */
 function applyState(){
   // When real data is loaded from the API, render it directly. The period /
@@ -2178,7 +2232,7 @@ function applyState(){
   // illustrative ratios); applying it to real snapshots would distort them.
   if (window.__LIVE__) {
     clearAll();
-    [renderExec,renderWellness,renderKPIs,renderFunnel,renderOutcomes,renderValueStrip,
+    [renderExec,renderExecutiveInsight,renderDataTrust,renderWellness,renderKPIs,renderFunnel,renderOutcomes,renderValueStrip,
      renderSavings,renderEwa,renderDebtProfile,renderCreditors,renderRegions,renderIncome,
      renderRatings,renderDebtStates,renderPrescription,renderRiskSignals,renderOpportunities,
      renderChat,renderStressMap].forEach(safeRender);
@@ -2304,6 +2358,7 @@ function fitResponsiveDataValues(root=document){
 }
 window.addEventListener('resize',()=>requestAnimationFrame(()=>fitResponsiveDataValues()),{passive:true});
 
+document.addEventListener('DOMContentLoaded',()=>{ document.getElementById('btn-save-view')?.addEventListener('click',saveCurrentView); document.getElementById('btn-command')?.addEventListener('click',openQuickActions); });
 function updateContextLine(){
   const parts=[];
   if(window.__LIVE__ && DATA.filterContext){
