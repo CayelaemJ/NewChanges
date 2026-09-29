@@ -130,10 +130,9 @@ function zar(cents: number): string {
   return "R " + Math.round(rand(cents)).toLocaleString("en-ZA");
 }
 function zarM(cents: number): string {
-  const value = rand(cents);
-  if (Math.abs(value) >= 1_000_000) return `R ${(value / 1_000_000).toFixed(2)}m`;
-  if (Math.abs(value) >= 1_000) return `R ${Math.round(value / 1_000)}k`;
-  return `R ${Math.round(value)}`;
+  // Financial dashboard values are intentionally never abbreviated.
+  // R 1 222 000 is clearer and auditable than R 1.222m or R 1 222k.
+  return "R " + Math.round(rand(cents)).toLocaleString("en-ZA");
 }
 function startOfUtcDay(date: Date): Date {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
