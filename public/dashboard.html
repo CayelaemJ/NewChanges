@@ -1700,11 +1700,18 @@ function renderEwa(){
     ].forEach((x,i)=>kpiWrap.appendChild(el(`<div class="card kpi reveal" style="animation-delay:${i*.06}s"><div class="kpi-label"><span class="kpi-ico" style="background:${x.bg}"></span>${x.l}${employerInfoButton(x.k)}</div><div class="kpi-value">${x.v}</div><div class="kpi-sub">${x.s}</div></div>`)));
   }
   if(!wrap) return;
+  const month=getMonthFinancialComparison('ewa');
   const pc=DATA.periodComparison;
-  if(pc){
+  const comparison=month || (pc ? {
+    current:Number(pc.current.totalAdvanced)||0,
+    previous:Number(pc.previous.totalAdvanced)||0,
+    currentLabel:comparison.currentLabel,
+    previousLabel:comparison.previousLabel
+  } : null);
+  if(comparison){
     wrap.innerHTML=renderPeriodLineChart(
-      [Number(pc.current.totalAdvanced)||0],
-      [Number(pc.previous.totalAdvanced)||0],
+      [comparison.current],
+      [comparison.previous],
       pc.current.label,
       pc.previous.label,
       formatRandThousands,
@@ -1718,11 +1725,18 @@ function renderEwa(){
 
 function renderSavings(){
   const wrap=document.getElementById('savings-chart');
+  const month=getMonthFinancialComparison('savings');
   const pc=DATA.periodComparison;
-  if(pc){
+  const comparison=month || (pc ? {
+    current:Number(pc.current.monthlyCashFreedUp)||0,
+    previous:Number(pc.previous.monthlyCashFreedUp)||0,
+    currentLabel:comparison.currentLabel,
+    previousLabel:comparison.previousLabel
+  } : null);
+  if(comparison){
     wrap.innerHTML=renderPeriodLineChart(
-      [Number(pc.current.monthlyCashFreedUp)||0],
-      [Number(pc.previous.monthlyCashFreedUp)||0],
+      [comparison.current],
+      [comparison.previous],
       pc.current.label,
       pc.previous.label,
       formatRandThousands,
