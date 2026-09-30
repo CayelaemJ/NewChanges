@@ -625,7 +625,7 @@ app.patch<{ Params: { key: string }; Body: { enabled?: boolean; allowedRoles?: s
     const admin = await requireAdmin(req, reply); if (!admin) return;
     try {
       const result = await updateSection(req.params.key, req.body || {});
-      logAdminAction(admin, "section.update", `Updated section "${req.params.key}" (${Object.keys(req.body || {}).join(", ") || "no fields"})`, { targetType: "DashboardSection", targetId: req.params.key, detail: redactAuditDetail(req.body) });
+      logAdminAction(admin, "section.update", "Updated section " + req.params.key, { targetType: "DashboardSection", targetId: req.params.key, detail: redactAuditDetail(req.body), impactCount: Array.isArray(req.body?.allowedRoles) ? req.body.allowedRoles.length : 1, context: requestSecurityContext(req) });
       return result;
     }
     catch (e: any) { return reply.code(400).send({ error: e?.message || "could not update section" }); }
@@ -637,7 +637,7 @@ app.post<{ Params: { key: string }; Body: { userId: string } }>(
     const admin = await requireAdmin(req, reply); if (!admin) return;
     if (!req.body?.userId) return reply.code(400).send({ error: "userId required" });
     const result = await grantUserSection(req.body.userId, req.params.key);
-    logAdminAction(admin, "section.grant", `Granted section "${req.params.key}" to user ${req.body.userId}`, { targetType: "DashboardSection", targetId: req.params.key });
+    logAdminAction(admin, "section.grant", "Granted section " + req.params.key + " to user " + req.body.userId, { targetType: "DashboardSection", targetId: req.params.key, impactCount: 1, context: requestSecurityContext(req) });
     return result;
   },
 );
@@ -647,7 +647,7 @@ app.post<{ Params: { key: string }; Body: { userId: string } }>(
     const admin = await requireAdmin(req, reply); if (!admin) return;
     if (!req.body?.userId) return reply.code(400).send({ error: "userId required" });
     const result = await revokeUserSection(req.body.userId, req.params.key);
-    logAdminAction(admin, "section.revoke", `Revoked section "${req.params.key}" from user ${req.body.userId}`, { targetType: "DashboardSection", targetId: req.params.key });
+    logAdminAction(admin, "section.revoke", "Revoked section " + req.params.key + " from user " + req.body.userId, { targetType: "DashboardSection", targetId: req.body.userId, impactCount: 1, context: requestSecurityContext(req) });
     return result;
   },
 );
@@ -736,8 +736,18 @@ app.get<{ Params: { jobId: string } }>(
 app.post<{ Params: { batchId: string } }>(
   "/api/admin/batches/:batchId/commit",
   async (req, reply) => {
-    if (!(await requireAdmin(req, reply))) return;
+    const admin = await requireAdmin(req, reply); if (!admin) return;
+    const batch = await prisma.importBatch.findUnique({
+      where: { id: req.params.batchId },
+      select: { rowCount: true, insertedCount: true, updatedCount: true, deletedCount: true, reportKey: true },
+    });
+    if (!batch) return reply.code(404).send({ error: "batch not found" });
+    const impactCount = batch.rowCount || batch.insertedCount + batch.updatedCount + batch.deletedCount;
     const jobId = startCommitJob(req.params.batchId);
+    logAdminAction(admin, "import.commit", "Committed import batch " + req.params.batchId + " (" + batch.reportKey + ")", {
+      targetType: "ImportBatch", targetId: req.params.batchId, impactCount, context: requestSecurityContext(req),
+      detail: { rowCount: batch.rowCount, insertedCount: batch.insertedCount, updatedCount: batch.updatedCount, deletedCount: batch.deletedCount },
+    });
     return reply.code(202).send({ status: "ACCEPTED", jobId, batchId: req.params.batchId });
   },
 );
@@ -758,9 +768,14 @@ app.get<{ Params: { jobId: string } }>(
 app.post<{ Params: { batchId: string } }>(
   "/api/admin/batches/:batchId/revert",
   async (req, reply) => {
-    if (!(await requireAdmin(req, reply))) return;
+    const admin = await requireAdmin(req, reply); if (!admin) return;
     try {
-      return await revertBatch(req.params.batchId);
+      const batch = await prisma.importBatch.findUnique({ where: { id: req.params.batchId }, select: { rowCount: true } });
+      const result = await revertBatch(req.params.batchId);
+      logAdminAction(admin, "import.revert", "Reverted import batch " + req.params.batchId, {
+        targetType: "ImportBatch", targetId: req.params.batchId, impactCount: batch?.rowCount || 1, context: requestSecurityContext(req),
+      });
+      return result;
     } catch (e: any) {
       req.log.warn({ err: e, batchId: req.params.batchId }, "import batch revert rejected");
       return reply.code(409).send({ error: e?.message || "This import cannot be safely reverted." });
