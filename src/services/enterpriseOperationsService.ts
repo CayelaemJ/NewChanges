@@ -1,11 +1,13 @@
 import { PrismaClient } from "@prisma/client";
 import { getConfig, listAnalyticsRoutes } from "./syncService.js";
+import { checkMysqlReadReplica } from "./sourceAdapter.js";
 
 const prisma = new PrismaClient();
 
 export async function enterpriseOperationsOverview() {
-  const [config, routes, employers, employees, journeys, debtAccounts, advances, policies, ratings, users, openImports] = await Promise.all([
-    getConfig(),
+  const config = await getConfig();
+  const replica = await checkMysqlReadReplica(config).catch((error: any) => ({ configured: true, healthy: false, note: error?.message ?? String(error) }));
+  const [routes, employers, employees, journeys, debtAccounts, advances, policies, ratings, users, openImports] = await Promise.all([
     listAnalyticsRoutes(),
     prisma.employer.count({ where: { sourceDeletedAt: null } }),
     prisma.employee.count({ where: { sourceDeletedAt: null } }),
@@ -44,6 +46,7 @@ export async function enterpriseOperationsOverview() {
       lastSyncStatus: config.lastSyncStatus,
       freshnessMinutes,
       freshnessState: freshnessMinutes == null ? "UNKNOWN" : freshnessMinutes <= Math.max(60, config.scheduleHours * 60 * 2) ? "FRESH" : "STALE",
+      replica,
     },
     routing: routes.map(route => ({
       reportKey: route.reportKey,
