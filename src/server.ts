@@ -171,7 +171,7 @@ app.addHook("onResponse", async (req, reply) => {
     });
   } catch {}
 });
-\n// Periodically discard old rate-limit buckets so a long-lived process does not
+// Periodically discard old rate-limit buckets so a long-lived process does not
 // retain one entry forever for every IP that ever touched it.
 setInterval(() => {
   const now = Date.now();
