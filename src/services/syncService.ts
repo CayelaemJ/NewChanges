@@ -81,6 +81,14 @@ export async function saveConfig(patch: IntegrationConfigPatch) {
   if (patch.sourceAnalyticsEnabled && patch.sourceAnalyticsReadOnly === false) throw new Error("Source analytics must remain read-only.");
   if (patch.sourceAnalyticsReadOnly === false) throw new Error("Source analytics must remain read-only.");
   data.sourceAnalyticsReadOnly = true;
+  if (patch.sourceAnalyticsReplicaMaxLagSeconds != null) {
+    const lag = Number(patch.sourceAnalyticsReplicaMaxLagSeconds);
+    if (!Number.isInteger(lag) || lag < 0 || lag > 86400) throw new Error("sourceAnalyticsReplicaMaxLagSeconds must be between 0 and 86400 seconds.");
+  }
+  if (patch.sourceAnalyticsReplicaEnabled) {
+    if (!patch.sourceAnalyticsReplicaHost && !process.env.SOURCE_SQL_REPLICA_HOST) throw new Error("A read replica host is required when source replica analytics is enabled.");
+    if (!patch.sourceAnalyticsReplicaUsername && !process.env.SOURCE_SQL_REPLICA_USERNAME) throw new Error("A read replica username is required when source replica analytics is enabled.");
+  }
 
   return prisma.integrationConfig.upsert({
     where: { id: "default" },
