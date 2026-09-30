@@ -198,6 +198,7 @@
 
 <script src="/static/engagement-v1.js?v=1" defer></script>
 <script src="/static/portal-nav-v080.js?v=0.10.0"></script>
+<script src="/static/user-security.js?v=1"></script>
 <script>
 const $=s=>document.querySelector(s);
 const escHtml=value=>String(value??'').replace(/[&<>\"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[ch]));
@@ -238,7 +239,7 @@ async function boot(){
     renderEmpPick();
     onRoleChange();
     onAccessChange();
-    await Promise.allSettled([loadPartnersDropdown(),loadUsers(),loadRevokedUsers()]);
+    await Promise.allSettled([loadPartnersDropdown(),loadUsers(),loadRevokedUsers(),loadSecurityCenter()]);
   }catch(error){
     console.error('[users] startup failed',error);
     const host=$('#emp-pick');
@@ -304,7 +305,7 @@ async function loadUsers(){
   if(rows) rows.innerHTML='<tr><td colspan="7" class="muted" style="padding:16px;">Loading users…</td></tr>';
   try{
     const users=await getJson('/api/users');
-    USERS=Array.isArray(users)?users:[];
+    USERS=Array.isArray(users)?users:[]; window.USERS=USERS;
     if(!PARTNERS_LIST.length){
       try{
         const partners=await getJson('/api/admin/partners');
@@ -332,8 +333,9 @@ async function loadUsers(){
         <td><span class="role ${escHtml(u.role)}">${role}</span></td>
         <td>${emps}</td><td>${partner}</td><td>${status}</td>
         <td style="white-space:nowrap;">
-          <button class="btn btn-sm" onclick="editUser('${id}')">Edit</button>
-          <button class="btn btn-sm" onclick="toggleActive('${id}',${!u.active})">${u.active?'Disable':'Enable'}</button>
+          <button class="btn btn-sm" type="button" onclick="viewUserSecurity('${id}')">Security</button>
+          <button class="btn btn-sm" type="button" onclick="editUser('${id}')">Edit</button>
+          <button class="btn btn-sm" type="button" onclick="toggleActive('${id}',${!u.active})">${u.active?'Disable':'Enable'}</button>
         </td>
       </tr>`;
     }).join('');
