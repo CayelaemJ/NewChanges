@@ -706,6 +706,7 @@ model User {
   reportSchedules ReportSchedule[]
   sectionAccess UserSectionAccess[]
   analyticsEvents AnalyticsEvent[]
+  dataAccessEvents DataAccessEvent[]
 
   @@index([email])
 }
