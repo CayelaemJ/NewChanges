@@ -82,12 +82,18 @@ function isPublicIp(ip?: string) {
 
 async function resolveIpGeography(ip?: string): Promise<{ country?: string; region?: string; city?: string }> {
   if (!isPublicIp(ip)) return {};
+  // External IP geolocation is a cross-border processing activity. It is disabled
+  // by default until the organisation has documented and approved the POPIA s72
+  // transfer basis and vendor/operator controls. Upstream same-request geography
+  // headers can still be used when the hosting/proxy contract authorises them.
   const ipHash = createHash("sha256").update(ip!).digest("hex");
   const cached = await prisma.ipGeolocationCache.findUnique({ where: { ipHash } }).catch(() => null);
   if (cached && cached.expiresAt.getTime() > Date.now()) {
     return { country: cached.country ?? undefined, region: cached.region ?? undefined, city: cached.city ?? undefined };
   }
   try {
+    const externalGeoEnabled = ["1", "true", "yes"].includes(String(process.env.ENABLE_EXTERNAL_IP_GEOLOCATION || "").toLowerCase());
+    if (!externalGeoEnabled) return {};
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 2000);
     const response = await fetch("https://ipwho.is/" + encodeURIComponent(ip!), { signal: controller.signal, headers: { accept: "application/json" } });
