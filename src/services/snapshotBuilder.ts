@@ -9,6 +9,7 @@
 
 import { IncomeBand, PrismaClient } from "@prisma/client";
 import { computeOptimiseScore, DEFAULT_WEIGHTS, DriverAvailability, ScoreInputs, Weights } from "./scoreEngine.js";
+import { compareMetric } from "./analyticsEngineService.js";
 
 const prisma = new PrismaClient();
 
@@ -1109,41 +1110,54 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
       .reduce((sum: number, advance: any) => sum + advance.amountCents, 0)
     : null;
 
-  const periodComparison = selectedMonthKey
+  const currentCashFreed = Number(rand(cumulativeMonthlySaving));
+  const currentTotalAdvanced = Number(rand(ewaTotal));
+  const previousCashFreed = selectedMonthKey
+    ? Number(rand(previousMonthCumulativeSavingCents ?? 0))
+    : comparisonPayload ? Number(comparisonPayload?.kpis?.monthlySaving?.rand ?? 0) : null;
+  const previousTotalAdvanced = selectedMonthKey
+    ? Number(rand(previousMonthAdvancedCents ?? 0))
+    : comparisonPayload ? Number(comparisonPayload?.ewa?.totalRaw ?? 0) : null;
+
+  const periodComparison = (selectedMonthKey || comparisonPayload)
     ? {
-        mode: "month",
-        label: "previous month",
+        mode: selectedMonthKey ? "month" : comparisonMode,
+        label: selectedMonthKey ? "previous month" : comparisonLabel,
         current: {
-          period: selectedMonthKey,
+          period: selectedMonthKey ?? filter.period,
           label: filter.label,
-          monthlyCashFreedUp: Number(rand(cumulativeMonthlySaving)),
-          totalAdvanced: Number(rand(ewaTotal)),
+          monthlyCashFreedUp: currentCashFreed,
+          totalAdvanced: currentTotalAdvanced,
         },
         previous: {
-          period: previousMonthKey,
-          label: previousMonthKey ? monthLabel(previousMonthKey) : "previous month",
-          monthlyCashFreedUp: Number(rand(previousMonthCumulativeSavingCents ?? 0)),
-          totalAdvanced: Number(rand(previousMonthAdvancedCents ?? 0)),
+          period: selectedMonthKey ? previousMonthKey : comparisonPayload?.filterContext?.period ?? null,
+          label: selectedMonthKey ? (previousMonthKey ? monthLabel(previousMonthKey) : "previous month") : (comparisonPayload?.filterContext?.label ?? comparisonLabel),
+          monthlyCashFreedUp: previousCashFreed,
+          totalAdvanced: previousTotalAdvanced,
+        },
+        metrics: {
+          monthlyCashFreedUp: compareMetric(currentCashFreed, previousCashFreed),
+          totalAdvanced: compareMetric(currentTotalAdvanced, previousTotalAdvanced),
         },
       }
-    : comparisonPayload
-      ? {
-          mode: comparisonMode,
-          label: comparisonLabel,
-          current: {
-            period: filter.period,
-            label: filter.label,
-            monthlyCashFreedUp: Number(rand(cumulativeMonthlySaving)),
-            totalAdvanced: Number(rand(ewaTotal)),
-          },
-          previous: {
-            period: comparisonPayload.filterContext?.period ?? null,
-            label: comparisonPayload.filterContext?.label ?? comparisonLabel,
-            monthlyCashFreedUp: Number(comparisonPayload?.kpis?.monthlySaving?.rand ?? 0),
-            totalAdvanced: Number(comparisonPayload?.ewa?.totalRaw ?? 0),
-          },
-        }
-      : null;
+    : null;
+
+  const analyticsRoutes = await prisma.analyticsRoute.findMany({
+    where: {
+      reportKey: { in: ["monthly_cash_freed", "monthly_advances", "creditor_outcomes", "employee_income_bands", "financial_problems_resolved"] },
+      enabled: true,
+    },
+    select: { reportKey: true, executionMode: true, workloadClass: true, sourceView: true, useReplica: true, lastVerifiedAt: true },
+  });
+
+  const analyticsLineage = analyticsRoutes.map((route: any) => ({
+    metric: route.reportKey,
+    executionMode: route.executionMode,
+    workloadClass: route.workloadClass,
+    sourceView: route.sourceView,
+    useReplica: route.useReplica,
+    lastVerifiedAt: route.lastVerifiedAt?.toISOString?.() ?? null,
+  }));
 
   const sectionAvailability = {
     workforce: headcountDataAvailable,
@@ -1388,6 +1402,7 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
       trending: chatTrending,
       volume: chatVolume,
     },
+    analyticsLineage,
     monthActivity: {
       label: filter.label,
       enrolled: sectionAvailability.enrolment ? platformUsers.filter((user: any) => inWindow(user.enrolledAt, filter)).length : null,
