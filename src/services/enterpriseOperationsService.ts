@@ -15,7 +15,7 @@ export async function enterpriseOperationsOverview() {
     prisma.insurancePolicy.count({ where: { sourceDeletedAt: null } }),
     prisma.rating.count({ where: { sourceDeletedAt: null } }),
     prisma.user.count({ where: { deletedAt: null } }),
-    prisma.importBatch.count({ where: { status: { in: ["UPLOADED", "VALIDATED", "PROCESSING"] } } }),
+    prisma.importBatch.count({ where: { status: { in: ["UPLOADED", "VALIDATED"] } } }),
   ]);
 
   const now = Date.now();
