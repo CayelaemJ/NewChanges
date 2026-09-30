@@ -49,6 +49,7 @@ model Employer {
   userLinks          UserEmployer[]
   salaryAdvances     SalaryAdvance[]
   reportSchedules    ReportSchedule[]
+  dataSubjectRequests DataSubjectRequest[]
 
   @@index([name])
   @@index([sourceUpdatedAt])
