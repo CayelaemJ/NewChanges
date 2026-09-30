@@ -104,8 +104,11 @@ export async function saveAnalyticsRoute(input: { reportKey: string; executionMo
   if (!["POSTGRES", "SOURCE", "HYBRID"].includes(mode)) throw new Error("executionMode must be POSTGRES, SOURCE or HYBRID.");
   const workloadClass = String(input.workloadClass || (mode === "POSTGRES" ? "POSTGRES_READ_MODEL" : mode === "SOURCE" ? "SOURCE_AGGREGATE" : "HYBRID")).toUpperCase();
   if (!["SOURCE_ONLY", "SOURCE_AGGREGATE", "POSTGRES_READ_MODEL", "HYBRID"].includes(workloadClass)) throw new Error("workloadClass must be SOURCE_ONLY, SOURCE_AGGREGATE, POSTGRES_READ_MODEL or HYBRID.");
-  if (mode === "SOURCE" && !input.sourceView) throw new Error("SOURCE routes require an approved source view.");
+  if ((mode === "SOURCE" || mode === "HYBRID") && !input.sourceView) throw new Error("SOURCE and HYBRID routes require an approved source view.");
   if (input.sourceView && !/^[A-Za-z_][A-Za-z0-9_.]*$/.test(input.sourceView)) throw new Error("sourceView contains unsafe characters.");
+  if (input.useReplica && mode === "POSTGRES") throw new Error("useReplica is only valid for SOURCE or HYBRID routes.");
+  if (mode === "POSTGRES" && ["SOURCE_ONLY", "SOURCE_AGGREGATE"].includes(workloadClass)) throw new Error("POSTGRES routes cannot use a source workload class.");
+  if (mode === "SOURCE" && workloadClass === "POSTGRES_READ_MODEL") throw new Error("SOURCE routes cannot use POSTGRES_READ_MODEL workload class.");
   return prisma.analyticsRoute.upsert({
     where: { reportKey: input.reportKey },
     create: { reportKey: input.reportKey, executionMode: mode, workloadClass, sourceView: input.sourceView || null, useReplica: input.useReplica === true, enabled: input.enabled !== false, rationale: input.rationale || null },
@@ -175,7 +178,7 @@ export async function runSync(trigger: "manual" | "scheduled" = "manual") {
         }
         const route = await prisma.analyticsRoute.findUnique({ where: { reportKey } });
         const useSourceRoute = route?.enabled && (route.executionMode === "SOURCE" || route.executionMode === "HYBRID") && route.sourceView;
-        const useReplica = Boolean(useSourceRoute && route?.useReplica);
+        const useReplica = Boolean(useSourceRoute && (route?.useReplica || config.sourceAnalyticsUseReplica));
         if (useSourceRoute && configuredSourceMode(config) !== "SQL") {
           throw new Error(`Analytics route for ${reportKey} requires SQL source mode.`);
         }
