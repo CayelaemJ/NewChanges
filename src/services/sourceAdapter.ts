@@ -48,7 +48,7 @@ export interface IntegrationSourceConfig {
 export interface SourceAdapter {
   mode: SourceMode;
   label: string;
-  fetchReport(reportKey: string, window?: SourceWindow): Promise<SourceFetchResult>;
+  fetchReport(reportKey: string, window?: SourceWindow, sourceViewOverride?: string | null): Promise<SourceFetchResult>;
   test(): Promise<{ ok: true; note: string; details?: unknown }>;
   describe?(reportKey: string): Promise<{ database: string | null; totalRows: number; newest: string | null; location: string }>;
   close(): Promise<void>;
@@ -266,9 +266,14 @@ function quoteSqlIdentifier(dialect: SqlDialect, identifier: string): string {
   return `"${identifier}"`;
 }
 
-function qualifiedView(dialect: SqlDialect, config: IntegrationSourceConfig, reportKey: string): string {
+function qualifiedView(dialect: SqlDialect, config: IntegrationSourceConfig, reportKey: string, sourceViewOverride?: string | null): string {
   const { schema, view } = canonicalViewParts(config, reportKey);
-  const qView = quoteSqlIdentifier(dialect, view);
+  const selected = String(sourceViewOverride || view).trim();
+  if (!/^[A-Za-z_][A-Za-z0-9_.]*$/.test(selected)) throw new Error("source analytics view contains unsafe characters.");
+  const parts = selected.split(".");
+  const qView = parts.length === 2
+    ? `${quoteSqlIdentifier(dialect, parts[0])}.${quoteSqlIdentifier(dialect, parts[1])}`
+    : quoteSqlIdentifier(dialect, selected);
   return schema ? `${quoteSqlIdentifier(dialect, schema)}.${qView}` : qView;
 }
 
