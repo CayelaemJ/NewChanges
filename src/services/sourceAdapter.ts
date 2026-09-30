@@ -43,12 +43,22 @@ export interface IntegrationSourceConfig {
   sqlViewPrefix?: string | null;
   sqlQueryTimeoutMs?: number | null;
   sqlMaxRowsPerReport?: number | null;
+  sqlReplicaEnabled?: boolean | null;
+  sqlReplicaHost?: string | null;
+  sqlReplicaPort?: number | null;
+  sqlReplicaDatabase?: string | null;
+  sqlReplicaSchema?: string | null;
+  sqlReplicaUsername?: string | null;
+  sqlReplicaPassword?: string | null;
+  sqlReplicaSsl?: boolean | null;
+  sqlReplicaTrustServerCertificate?: boolean | null;
+  sqlReplicaMaxLagSeconds?: number | null;
 }
 
 export interface SourceAdapter {
   mode: SourceMode;
   label: string;
-  fetchReport(reportKey: string, window?: SourceWindow, sourceViewOverride?: string | null): Promise<SourceFetchResult>;
+  fetchReport(reportKey: string, window?: SourceWindow, sourceViewOverride?: string | null, options?: { useReplica?: boolean }): Promise<SourceFetchResult>;
   test(): Promise<{ ok: true; note: string; details?: unknown }>;
   describe?(reportKey: string): Promise<{ database: string | null; totalRows: number; newest: string | null; location: string }>;
   close(): Promise<void>;
@@ -92,6 +102,16 @@ function withEnvironment(config: IntegrationSourceConfig): IntegrationSourceConf
     sqlViewPrefix: process.env.SOURCE_SQL_VIEW_PREFIX || config.sqlViewPrefix,
     sqlQueryTimeoutMs: numberEnv("SOURCE_SQL_QUERY_TIMEOUT_MS") ?? config.sqlQueryTimeoutMs,
     sqlMaxRowsPerReport: numberEnv("SOURCE_SQL_MAX_ROWS_PER_REPORT") ?? config.sqlMaxRowsPerReport,
+    sqlReplicaEnabled: boolEnv("SOURCE_SQL_REPLICA_ENABLED") ?? config.sqlReplicaEnabled,
+    sqlReplicaHost: process.env.SOURCE_SQL_REPLICA_HOST || config.sqlReplicaHost,
+    sqlReplicaPort: numberEnv("SOURCE_SQL_REPLICA_PORT") ?? config.sqlReplicaPort,
+    sqlReplicaDatabase: process.env.SOURCE_SQL_REPLICA_DATABASE || config.sqlReplicaDatabase,
+    sqlReplicaSchema: process.env.SOURCE_SQL_REPLICA_SCHEMA ?? config.sqlReplicaSchema,
+    sqlReplicaUsername: process.env.SOURCE_SQL_REPLICA_USERNAME || config.sqlReplicaUsername,
+    sqlReplicaPassword: process.env.SOURCE_SQL_REPLICA_PASSWORD || config.sqlReplicaPassword,
+    sqlReplicaSsl: boolEnv("SOURCE_SQL_REPLICA_SSL") ?? config.sqlReplicaSsl,
+    sqlReplicaTrustServerCertificate: boolEnv("SOURCE_SQL_REPLICA_TRUST_SERVER_CERTIFICATE") ?? config.sqlReplicaTrustServerCertificate,
+    sqlReplicaMaxLagSeconds: numberEnv("SOURCE_SQL_REPLICA_MAX_LAG_SECONDS") ?? config.sqlReplicaMaxLagSeconds,
   };
 }
 
@@ -428,6 +448,39 @@ async function openMssqlExecutor(config: IntegrationSourceConfig): Promise<SqlEx
   };
 }
 
+function effectiveReplicaEnabled(config: IntegrationSourceConfig): boolean {
+  return Boolean(config.sqlReplicaEnabled || process.env.SOURCE_SQL_REPLICA_ENABLED === "true");
+}
+
+export async function checkMysqlReadReplica(config: IntegrationSourceConfig): Promise<{ configured: boolean; reachable: boolean; readOnly: boolean | null; lagSeconds: number | null; lagWithinThreshold: boolean | null; host: string | null; database: string | null; note: string }> {
+  const effective = withEnvironment(config);
+  if (!effective.sqlReplicaHost || !effective.sqlReplicaUsername || !(process.env.SOURCE_SQL_REPLICA_PASSWORD || effective.sqlReplicaPassword)) {
+    return { configured: false, reachable: false, readOnly: null, lagSeconds: null, lagWithinThreshold: null, host: effective.sqlReplicaHost ?? null, database: effective.sqlReplicaDatabase ?? effective.sqlDatabase ?? null, note: "No read replica is configured." };
+  }
+  if (sqlDialect(effective) !== "MYSQL") return { configured: true, reachable: false, readOnly: null, lagSeconds: null, lagWithinThreshold: null, host: effective.sqlReplicaHost, database: effective.sqlReplicaDatabase ?? effective.sqlDatabase ?? null, note: "Replica health currently supports MySQL source replicas only." };
+  const mysql: any = await import("mysql2/promise");
+  const createConnection = mysql.createConnection ?? mysql.default?.createConnection;
+  const connection = await createConnection({ host: effective.sqlReplicaHost, port: intSetting(effective.sqlReplicaPort, 3306, 1, 65535), database: effective.sqlReplicaDatabase ?? effective.sqlDatabase, user: effective.sqlReplicaUsername, password: process.env.SOURCE_SQL_REPLICA_PASSWORD || effective.sqlReplicaPassword, connectTimeout: 15000, ssl: (effective.sqlReplicaSsl ?? true) ? { rejectUnauthorized: !(effective.sqlReplicaTrustServerCertificate ?? false) } : undefined });
+  try {
+    await connection.query("SELECT 1");
+    const [vars]: any = await connection.query("SHOW VARIABLES WHERE Variable_name IN ('read_only','super_read_only')");
+    const flags = Object.fromEntries((vars || []).map((x: any) => [String(x.Variable_name).toLowerCase(), String(x.Value).toLowerCase()]));
+    const readOnly = flags.read_only === "on" && (flags.super_read_only == null || flags.super_read_only === "on");
+    let lagSeconds: number | null = null;
+    try {
+      const [rows]: any = await connection.query("SHOW REPLICA STATUS");
+      const row = rows?.[0];
+      if (row) lagSeconds = row.Seconds_Behind_Source == null ? null : Number(row.Seconds_Behind_Source);
+    } catch {
+      try { const [rows]: any = await connection.query("SHOW SLAVE STATUS"); const row = rows?.[0]; if (row) lagSeconds = row.Seconds_Behind_Master == null ? null : Number(row.Seconds_Behind_Master); } catch {}
+    }
+    const threshold = intSetting(effective.sqlReplicaMaxLagSeconds, 60, 0, 86400);
+    const lagWithinThreshold = lagSeconds == null ? null : lagSeconds <= threshold;
+    const healthy = readOnly && (lagWithinThreshold !== false);
+    return { configured: true, reachable: true, readOnly, lagSeconds, lagWithinThreshold, host: effective.sqlReplicaHost, database: effective.sqlReplicaDatabase ?? effective.sqlDatabase ?? null, note: healthy ? "Replica is reachable, read-only, and within the configured lag threshold." : "Replica requires attention: verify read-only state and replication lag." };
+  } finally { await connection.end(); }
+}
+
 function sqlDialect(config: IntegrationSourceConfig): SqlDialect {
   const raw = String(config.sqlDialect ?? "POSTGRESQL").trim().toUpperCase();
   if (raw === "POSTGRES" || raw === "PG") return "POSTGRESQL";
@@ -447,10 +500,31 @@ async function createSqlAdapter(config: IntegrationSourceConfig): Promise<Source
   const dialect = sqlDialect(config);
   const maxRows = intSetting(config.sqlMaxRowsPerReport, 250_000, 1, 2_000_000);
   let executor: SqlExecutor;
+  let replicaExecutor: SqlExecutor | null = null;
   try {
     if (dialect === "POSTGRESQL") executor = await openPostgresExecutor(config);
     else if (dialect === "MYSQL") executor = await openMysqlExecutor(config);
     else executor = await openMssqlExecutor(config);
+
+    if (effectiveReplicaEnabled(config)) {
+      const replicaConfig: IntegrationSourceConfig = {
+        ...config,
+        sqlHost: config.sqlReplicaHost,
+        sqlPort: config.sqlReplicaPort ?? config.sqlPort,
+        sqlDatabase: config.sqlReplicaDatabase ?? config.sqlDatabase,
+        sqlSchema: config.sqlReplicaSchema ?? config.sqlSchema,
+        sqlUsername: config.sqlReplicaUsername,
+        sqlPassword: config.sqlReplicaPassword,
+        sqlSsl: config.sqlReplicaSsl,
+        sqlTrustServerCertificate: config.sqlReplicaTrustServerCertificate,
+      };
+      if (!replicaConfig.sqlHost || !replicaConfig.sqlUsername || !(process.env.SOURCE_SQL_REPLICA_PASSWORD || replicaConfig.sqlPassword)) {
+        throw new Error("Source analytics read replica is enabled but host, username or password is missing.");
+      }
+      if (dialect === "MYSQL") replicaExecutor = await openMysqlExecutor(replicaConfig);
+      else if (dialect === "POSTGRESQL") replicaExecutor = await openPostgresExecutor(replicaConfig);
+      else replicaExecutor = await openMssqlExecutor(replicaConfig);
+    }
   } catch (error: any) {
     // A raw driver/protocol error here (garbled bytes, "unexpected message
     // from backend", immediate connection reset, etc.) almost always means
@@ -462,14 +536,16 @@ async function createSqlAdapter(config: IntegrationSourceConfig): Promise<Source
     throw new Error(`Could not open a ${dialect} connection to ${config.sqlHost}:${config.sqlPort ?? "(default port)"} — ${note}. If this looks like a protocol/handshake error rather than an auth or network error, double-check that "SQL platform" in Admin is actually set to the database engine you're running (and that Save settings was clicked after changing it), then re-test.`);
   }
 
-  async function fetchReport(reportKey: string, window: SourceWindow = {}): Promise<SourceFetchResult> {
-    const result = await executor.queryReport(reportKey, window, maxRows);
+  async function fetchReport(reportKey: string, window: SourceWindow = {}, sourceViewOverride?: string | null, options?: { useReplica?: boolean }): Promise<SourceFetchResult> {
+    const selectedExecutor = options?.useReplica ? replicaExecutor : executor;
+    if (options?.useReplica && !selectedExecutor) throw new Error("Read replica is required for " + reportKey + ", but no approved replica is configured.");
+    const result = await (selectedExecutor ?? executor).queryReport(reportKey, window, maxRows, sourceViewOverride);
     if (result.rows.length > maxRows) {
       throw new Error(`${reportKey}: SQL extraction exceeded the configured ${maxRows.toLocaleString("en-ZA")} row safety limit for one sync window. Increase sync frequency or sqlMaxRowsPerReport.`);
     }
     return {
       records: normalizeSqlRows(reportKey, result.rows),
-      location: `${dialect}:${formatSqlLocation(config, reportKey)}`,
+      location: `${dialect}${options?.useReplica ? "-REPLICA" : ""}:${formatSqlLocation(options?.useReplica && replicaExecutor ? { ...config, sqlSchema: config.sqlReplicaSchema ?? config.sqlSchema } : config, reportKey)}`,
     };
   }
 
@@ -499,7 +575,7 @@ async function createSqlAdapter(config: IntegrationSourceConfig): Promise<Source
         details,
       };
     },
-    async close() { await executor.close(); },
+    async close() { await executor.close(); if (replicaExecutor) await replicaExecutor.close(); },
   };
 }
 
