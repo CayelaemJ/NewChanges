@@ -8,17 +8,18 @@
 import { randomUUID } from "node:crypto";
 import { uploadAndValidate, commitBatch } from "./importService.js";
 import { runSync } from "./syncService.js";
-import { prisma } from "./snapshotBuilder.js";
+import { publishAdminEvent } from "./adminEventStream.js";
 
 const uploadJobs = new Map<string, any>();
 const commitJobs = new Map<string, any>();
 const syncJobs = new Map<string, any>();
 
 // Jobs expire after 30 minutes so the maps don't grow forever.
-function startJob(map: Map<string, any>) {
+function startJob(map: Map<string, any>, type: string) {
   const id = randomUUID();
   const timer = setTimeout(() => map.delete(id), 30 * 60 * 1000);
-  map.set(id, { status: "PENDING", timer });
+  map.set(id, { status: "PENDING", phase: "QUEUED", progress: 0, message: "Queued", updatedAt: new Date().toISOString(), timer });
+  publishAdminEvent("job.progress", { status: "PENDING", phase: "QUEUED", progress: 0, message: "Queued", jobType: type }, id);
   return id;
 }
 
@@ -28,7 +29,7 @@ function currentPeriod(): string {
 }
 
 export function startUploadJob(opts: any) {
-  const jobId = startJob(uploadJobs);
+  const jobId = startJob(uploadJobs, "upload");
   const job = uploadJobs.get(jobId);
 
   (async () => {
@@ -57,7 +58,7 @@ export function startUploadJob(opts: any) {
       // Import means import: once validation succeeds, commit immediately in
       // the same background job. The HTTP request has already returned 202, so
       // this expensive DB work never blocks the admin UI.
-      const commit = await commitBatch(batch.id);
+      job.phase = "COMMITTING"; job.progress = 80; job.message = "Committing and recomputing scores"; job.updatedAt = new Date().toISOString();\n      publishAdminEvent("job.progress", { status: "PROCESSING", phase: job.phase, progress: job.progress, message: job.message, jobType: "upload" }, jobId);\n      const commit = await commitBatch(batch.id);
       job.result = {
         ...job.result,
         status: "COMMITTED",
@@ -81,7 +82,7 @@ export function startUploadJob(opts: any) {
         unknownColumns: [],
         preview: [],
       };
-      console.error("[upload-job] validation/commit failed:", e);
+      publishAdminEvent("job.progress", { status: "DONE", phase: job.phase, progress: job.progress, message: job.message, jobType: "upload", error: job.result.errorSummary }, jobId);\n      console.error("[upload-job] validation/commit failed:", e);
     }
   })();
 
@@ -93,7 +94,7 @@ export function getUploadJob(jobId: string) {
 }
 
 export function startCommitJob(batchId: string) {
-  const jobId = startJob(commitJobs);
+  const jobId = startJob(commitJobs, "commit");
   const job = commitJobs.get(jobId);
 
   (async () => {
@@ -104,7 +105,7 @@ export function startCommitJob(batchId: string) {
     } catch (e) {
       job.status = "FAILED";
       job.error = (e as any)?.message || String(e);
-      console.error("[commit-job] commit failed:", e);
+      publishAdminEvent("job.progress", { status: "FAILED", phase: job.phase, progress: job.progress, message: job.message, jobType: "commit", error: job.error }, jobId);\n      console.error("[commit-job] commit failed:", e);
     }
   })();
 
@@ -119,7 +120,7 @@ export function getCommitJob(jobId: string) {
 // Run them in the background and let the browser poll
 // /api/admin/sync-jobs/:jobId, same pattern as uploads/commits.
 export function startSyncJob(trigger: "manual" | "scheduled" = "manual") {
-  const jobId = startJob(syncJobs);
+  const jobId = startJob(syncJobs, "sync");
   const job = syncJobs.get(jobId);
 
   (async () => {
@@ -130,7 +131,7 @@ export function startSyncJob(trigger: "manual" | "scheduled" = "manual") {
     } catch (e) {
       job.status = "FAILED";
       job.error = (e as any)?.message || String(e);
-      console.error("[sync-job] sync failed:", e);
+      publishAdminEvent("job.progress", { status: "FAILED", phase: job.phase, progress: job.progress, message: job.message, jobType: "sync", error: job.error }, jobId);\n      console.error("[sync-job] sync failed:", e);
     }
   })();
 
