@@ -15,6 +15,7 @@ import { dirname, join } from "node:path";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { prisma, snapshotEmployer, getDashboardPayload, monthKey } from "./services/snapshotBuilder.js";
+import { checkMysqlReadReplica } from "./services/sourceAdapter.js";
 import { REPORT_FORMATS, LOAD_ORDER, getFormat } from "./services/reportFormats.js";
 import { csvTemplate, xlsxTemplate, formatManifest } from "./services/templateGenerator.js";
 import { uploadAndValidate, commitBatch, revertBatch, resetAllData } from "./services/importService.js";
@@ -1001,6 +1002,16 @@ app.post<{ Body: {
   sqlViewPrefix?: string | null;
   sqlQueryTimeoutMs?: number;
   sqlMaxRowsPerReport?: number;
+  sqlReplicaEnabled?: boolean;
+  sqlReplicaHost?: string | null;
+  sqlReplicaPort?: number | null;
+  sqlReplicaDatabase?: string | null;
+  sqlReplicaSchema?: string | null;
+  sqlReplicaUsername?: string | null;
+  sqlReplicaPassword?: string | null;
+  sqlReplicaSsl?: boolean;
+  sqlReplicaTrustServerCertificate?: boolean;
+  sqlReplicaMaxLagSeconds?: number;
   analyticsMode?: string;
   sourceAnalyticsEnabled?: boolean;
   sourceAnalyticsReadOnly?: boolean;
@@ -1090,10 +1101,15 @@ app.get("/api/admin/integration/routes", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
   return listAnalyticsRoutes();
 });
-app.post<{ Body: { reportKey?: string; executionMode?: string; sourceView?: string | null; enabled?: boolean; rationale?: string | null } }>("/api/admin/integration/routes", async (req, reply) => {
+app.get("/api/admin/integration/replica-health", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  const cfg = await getSyncConfig();
+  return checkMysqlReadReplica(cfg);
+});
+app.post<{ Body: { reportKey?: string; executionMode?: string; workloadClass?: string; sourceView?: string | null; useReplica?: boolean; enabled?: boolean; rationale?: string | null } }>("/api/admin/integration/routes", async (req, reply) => {
   const admin = await requireAdmin(req, reply); if (!admin) return;
   try {
-    const result = await saveAnalyticsRoute({ reportKey: String(req.body?.reportKey || ""), executionMode: String(req.body?.executionMode || "POSTGRES"), sourceView: req.body?.sourceView, enabled: req.body?.enabled, rationale: req.body?.rationale });
+    const result = await saveAnalyticsRoute({ reportKey: String(req.body?.reportKey || ""), executionMode: String(req.body?.executionMode || "POSTGRES"), workloadClass: req.body?.workloadClass, sourceView: req.body?.sourceView, useReplica: req.body?.useReplica, enabled: req.body?.enabled, rationale: req.body?.rationale });
     logAdminAction(admin, "integration.route_update", `Updated analytics route for ${result.reportKey} to ${result.executionMode}`, { targetType: "AnalyticsRoute", targetId: result.id });
     return result;
   } catch (e: any) { return reply.code(400).send({ error: e?.message || "Could not save analytics route." }); }
