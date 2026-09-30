@@ -29,7 +29,7 @@ import { recordEvent, engagementSummary } from "./services/analyticsService.js";
 import { notifyAdmins, notifyScoreChangeIfCurrentPeriod, runStaleAccountCheck, runWeeklyDigestIfDue } from "./services/automationService.js";
 import { logAdminAction, listAuditLog } from "./services/auditService.js";
 import { requestSecurityContext, enrichSecurityContext, recordLoginEvent, securityOverview, listSessions, listLoginEvents, listSecurityAlerts, resolveSecurityAlert, pruneSecurityHistory, listSecurityDevices, listDataAccessEvents, recordDataAccessEvent, databaseSecuritySnapshot } from "./services/securityService.js";
-import { exportAuditLogCsv, exportImportBatchCsv } from "./services/exportService.js";
+import { exportAuditLogCsv, exportSecurityAuditLogCsv, exportImportBatchCsv } from "./services/exportService.js";
 import { ensureSectionDefaults, listSections, updateSection, grantUserSection, revokeUserSection, sectionsForUser } from "./services/sectionService.js";
 import { publicEmailConfig, saveEmailConfig, testEmailConnection, createReportSchedule, listReportSchedules, updateReportSchedule, deleteReportSchedule, sendReportNow, recentReportDeliveries, runDueReports } from "./services/reportScheduler.js";
 import type { ScheduleInput } from "./services/reportScheduler.js";
@@ -475,6 +475,13 @@ app.get<{ Querystring: { limit?: string; userId?: string; route?: string } }>("/
     userId: req.query.userId,
     route: req.query.route,
   });
+});
+
+app.get("/api/admin/security/audit-log.csv", async (req, reply) => {
+  const admin = await requireAdmin(req, reply); if (!admin) return;
+  reply.header("Content-Type", "text/csv; charset=utf-8");
+  reply.header("Content-Disposition", `attachment; filename="security-audit-log-${new Date().toISOString().slice(0, 10)}.csv"`);
+  return reply.send(await exportSecurityAuditLogCsv());
 });
 
 app.get("/api/admin/security/overview", async (req, reply) => {
