@@ -176,7 +176,6 @@ export async function pruneSecurityHistory(days = 180) {
   const cutoff = new Date(Date.now() - days * 864e5);
   await Promise.all([
     prisma.loginEvent.deleteMany({ where: { createdAt: { lt: cutoff } } }),
-    prisma.adminAuditLog.deleteMany({ where: { createdAt: { lt: cutoff } } }),
     prisma.session.deleteMany({ where: { endedAt: { not: null, lt: cutoff } } }),
   ]);
 }
