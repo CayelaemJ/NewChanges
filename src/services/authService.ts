@@ -52,11 +52,30 @@ export function digestSetupToken(token: string): string {
 // does not hand out live sessions. The raw token exists only in the cookie.
 const digestSession = (token: string) => createHash("sha256").update(token, "utf8").digest("hex");
 
-export async function createSession(userId: string, days: number = SESSION_DAYS) {
+export interface SessionContext {
+  ipAddress?: string;
+  userAgent?: string;
+  deviceType?: string;
+  browser?: string;
+  operatingSystem?: string;
+  country?: string;
+  region?: string;
+  city?: string;
+}
+
+export async function createSession(userId: string, days: number = SESSION_DAYS, context: SessionContext = {}) {
   const token = randomBytes(32).toString("hex");
   const expiresAt = new Date(Date.now() + days * 864e5);
-  await prisma.session.create({ data: { userId, token: digestSession(token), expiresAt } });
-  return { token, expiresAt };
+  const session = await prisma.session.create({
+    data: {
+      userId,
+      token: digestSession(token),
+      expiresAt,
+      lastSeenAt: new Date(),
+      ...context,
+    },
+  });
+  return { token, expiresAt, sessionId: session.id };
 }
 
 export async function resolveSession(token?: string) {
@@ -67,23 +86,33 @@ export async function resolveSession(token?: string) {
     include: { user: { include: { links: true } } },
   });
   if (!session) return null;
-  if (session.expiresAt < new Date()) {
-    await prisma.session.deleteMany({ where: { token: digest } });
+  const now = new Date();
+  if (session.expiresAt < now || session.endedAt || session.revokedAt) {
+    if (!session.endedAt) await prisma.session.updateMany({ where: { id: session.id }, data: { endedAt: now } }).catch(() => {});
     return null;
   }
   if (!session.user.active) return null;
+  if (now.getTime() - session.lastSeenAt.getTime() > 60_000) {
+    await prisma.session.updateMany({ where: { id: session.id }, data: { lastSeenAt: now } }).catch(() => {});
+  }
   return session.user;
 }
 
 export async function destroySession(token?: string) {
   if (!token || typeof token !== "string") return;
-  await prisma.session.deleteMany({ where: { token: digestSession(token) } });
+  const digest = digestSession(token);
+  await prisma.session.updateMany({ where: { token: digest, endedAt: null }, data: { endedAt: new Date() } });
+}
+
+export async function destroySessionById(sessionId: string, revokedBy?: string) {
+  await prisma.session.updateMany({ where: { id: sessionId, endedAt: null }, data: { endedAt: new Date(), revokedAt: new Date(), revokedBy: revokedBy?.slice(0, 254) } });
 }
 
 // used when an account is deactivated (self or admin) so access ends immediately
 // rather than waiting for the existing session to expire
-export async function destroyAllSessionsForUser(userId: string) {
-  await prisma.session.deleteMany({ where: { userId } });
+export async function destroyAllSessionsForUser(userId: string, revokedBy?: string) {
+  const now = new Date();
+  await prisma.session.updateMany({ where: { userId, endedAt: null }, data: { endedAt: now, revokedAt: now, revokedBy: revokedBy?.slice(0, 254) } });
 }
 
 // ── login ──
@@ -92,20 +121,18 @@ export async function destroyAllSessionsForUser(userId: string) {
 // by the caller in server.ts, based on the same flag.
 const DUMMY_HASH = hashPassword("timing-equaliser-not-a-real-password");
 
-export async function login(email: string, password: string, remember: boolean = false) {
+export async function login(email: string, password: string, remember: boolean = false, context: SessionContext = {}) {
   const user = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
   if (!user || !user.active || !user.passwordHash) {
-    verifyPassword(password, DUMMY_HASH); // equalise timing so unknown accounts can't be enumerated
+    verifyPassword(password, DUMMY_HASH);
     return null;
   }
   if (!verifyPassword(password, user.passwordHash)) return null;
-  // Successful login upgrades legacy password hashes to the stronger v2 scrypt
-  // parameters without forcing a password reset for existing users.
   if (!user.passwordHash.startsWith("v2$")) {
     await prisma.user.update({ where: { id: user.id }, data: { passwordHash: hashPassword(password) } });
   }
-  const { token, expiresAt } = await createSession(user.id, remember ? SESSION_DAYS_REMEMBER : SESSION_DAYS);
-  return { user, token, expiresAt };
+  const { token, expiresAt, sessionId } = await createSession(user.id, remember ? SESSION_DAYS_REMEMBER : SESSION_DAYS, context);
+  return { user, token, expiresAt, sessionId };
 }
 
 // ── access helpers ──

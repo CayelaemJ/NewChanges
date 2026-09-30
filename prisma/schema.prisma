@@ -700,7 +700,9 @@ model User {
 
   partner  Partner?       @relation(fields: [partnerId], references: [id])
   links    UserEmployer[]
-  sessions Session[]
+  sessions        Session[]
+  loginEvents     LoginEvent[]
+  securityAlerts  SecurityAlert[]
   reportSchedules ReportSchedule[]
   sectionAccess UserSectionAccess[]
   analyticsEvents AnalyticsEvent[]
@@ -786,16 +788,30 @@ model UserSectionAccess {
 }
 
 model Session {
-  id        String   @id @default(cuid())
-  userId    String
-  token     String   @unique
-  expiresAt DateTime
-  createdAt DateTime @default(now())
+  id          String    @id @default(cuid())
+  userId      String
+  token       String    @unique
+  expiresAt   DateTime
+  createdAt   DateTime  @default(now())
+  lastSeenAt  DateTime  @default(now())
+  endedAt     DateTime?
+  revokedAt   DateTime?
+  revokedBy   String?
+  ipAddress   String?
+  userAgent   String?
+  deviceType  String?
+  browser     String?
+  operatingSystem String?
+  country     String?
+  region      String?
+  city        String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([token])
-  @@index([userId])
+  @@index([userId, createdAt])
+  @@index([userId, lastSeenAt])
+  @@index([expiresAt])
 }
 
 
@@ -991,19 +1007,83 @@ model ScoreWeight {
 // (where useful) a compact before/after. Append-only — nothing here is ever
 // updated or deleted through the app.
 model AdminAuditLog {
-  id          String   @id @default(cuid())
-  actorEmail  String
-  actorName   String
-  action      String   // short machine-readable key, e.g. "user.update", "partner.delete"
-  targetType  String?  // e.g. "User", "Partner", "DashboardSection"
-  targetId    String?
-  summary     String   // one-line human-readable description
-  detail      Json?    // optional structured before/after or extra context
-  createdAt   DateTime @default(now())
+  id            String   @id @default(cuid())
+  actorEmail    String
+  actorName     String
+  action        String
+  targetType    String?
+  targetId      String?
+  summary       String
+  detail        Json?
+  createdAt     DateTime @default(now())
+  ipAddress     String?
+  userAgent     String?
+  deviceType    String?
+  country       String?
+  region        String?
+  city          String?
+  riskLevel     String    @default("NORMAL")
+  impactCount   Int?
+  flagged       Boolean   @default(false)
 
   @@index([createdAt])
-  @@index([actorEmail])
+  @@index([actorEmail, createdAt])
   @@index([targetType, targetId])
+  @@index([riskLevel, flagged, createdAt])
+}
+
+enum SecuritySeverity {
+  INFO
+  WARNING
+  HIGH
+  CRITICAL
+}
+
+model LoginEvent {
+  id          String   @id @default(cuid())
+  userId      String?
+  email       String
+  success     Boolean
+  failureReason String?
+  ipAddress   String?
+  userAgent   String?
+  deviceType  String?
+  browser     String?
+  operatingSystem String?
+  country     String?
+  region      String?
+  city        String?
+  createdAt   DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([email, createdAt])
+  @@index([userId, createdAt])
+  @@index([success, createdAt])
+  @@index([ipAddress, createdAt])
+}
+
+model SecurityAlert {
+  id          String           @id @default(cuid())
+  userId      String?
+  actorEmail  String?
+  type        String
+  severity    SecuritySeverity @default(WARNING)
+  status      String           @default("OPEN")
+  title       String
+  summary     String
+  detail      Json?
+  impactCount Int?
+  createdAt   DateTime         @default(now())
+  resolvedAt  DateTime?
+  resolvedBy  String?
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([status, severity, createdAt])
+  @@index([userId, createdAt])
+  @@index([actorEmail, createdAt])
 }
 
 model AchievableTarget {

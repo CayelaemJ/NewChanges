@@ -37,7 +37,7 @@ must(score.includes('optimiseScore: number | null') && snap.includes('missingFee
 must(snap.includes('const CORE_FEEDS = [') && !snap.match(/CORE_FEEDS\s*=\s*\[[\s\S]*?chat_sessions/), 'chat must not be part of the 10 core source feeds');
 must(pages.dashboard.includes("const value=(v,fallback='Not available')") && pages.dashboard.includes("v===null || v===undefined"), 'month activity strip must not render null/undefined values');
 must(pages.users.includes('function renderEmpPick()') && pages.users.includes('renderEmpPick();'), 'Users page must define and invoke the employer picker renderer');
-must(pages.users.includes("await Promise.allSettled([loadPartnersDropdown(),loadUsers(),loadRevokedUsers()])"), 'Users page startup must continue loading user, partner and revoked-user data after employer rendering');
+must(pages.users.includes("await Promise.allSettled([loadPartnersDropdown(),loadUsers(),loadRevokedUsers(),loadSecurityCenter()])"), 'Users page startup must load user, partner, revoked-user and security telemetry data');
 must(pages.users.includes('showUsersLoadError') && pages.users.includes('Could not load users.'), 'Users page must replace indefinite loading states with a visible retryable error');
 must(pages.users.includes("const users=await getJson('/api/users')"), 'Users page must fetch the admin user list through the checked JSON helper');
 
