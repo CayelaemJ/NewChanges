@@ -1165,3 +1165,114 @@ table.ct th,table.ct td{vertical-align:middle;}
   .data-trust-pill{width:100%;justify-content:flex-start;}
   .data-trust-grid{grid-template-columns:1fr 1fr;}
 }
+
+
+/* ── Financial comparison charts: responsive enterprise layout ─────────── */
+.comparison-chart{
+  width:100%;
+  min-width:0;
+}
+.comparison-value-row{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+  width:100%;
+  min-width:0;
+  margin:10px 0 4px;
+}
+.comparison-value-card{
+  min-width:0;
+  padding:10px 12px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:var(--ice-2);
+}
+.comparison-value-card.current{
+  border-color:rgba(24,122,77,.22);
+  background:rgba(24,122,77,.05);
+}
+.comparison-value-period{
+  display:block;
+  margin-bottom:4px;
+  color:var(--grey-l);
+  font-size:9px;
+  font-weight:850;
+  letter-spacing:.055em;
+  text-transform:uppercase;
+  overflow-wrap:anywhere;
+}
+.comparison-value-card strong{
+  display:block;
+  min-width:0;
+  color:var(--brand-primary);
+  font-size:clamp(17px,2.1vw,24px);
+  line-height:1.08;
+  font-weight:850;
+  letter-spacing:-.025em;
+  font-variant-numeric:tabular-nums lining-nums;
+  white-space:nowrap;
+}
+.comparison-value-card.current strong{color:var(--green);}
+.comparison-chart .comparison-legend{
+  margin:8px 0 5px;
+}
+.comparison-chart svg{
+  display:block;
+  width:100%;
+  height:auto;
+  max-width:100%;
+  overflow:visible;
+}
+.comparison-empty{
+  min-height:190px;
+  display:grid;
+  place-items:center;
+  padding:24px;
+  text-align:center;
+}
+@media (max-width:1080px){
+  .comparison-value-card strong{font-size:clamp(16px,2vw,22px);}
+}
+@media (max-width:640px){
+  .comparison-value-row{
+    gap:8px;
+    margin:8px 0 3px;
+  }
+  .comparison-value-card{
+    padding:9px 10px;
+  }
+  .comparison-value-period{
+    font-size:8.5px;
+    line-height:1.25;
+  }
+  .comparison-value-card strong{
+    font-size:clamp(15px,5.2vw,21px);
+    letter-spacing:-.04em;
+  }
+  .comparison-chart .comparison-legend{
+    gap:9px;
+    font-size:9.5px;
+  }
+  .comparison-chart .comparison-legend span{
+    min-width:0;
+    max-width:48%;
+    overflow-wrap:anywhere;
+  }
+}
+@media (max-width:380px){
+  .comparison-value-card strong{
+    font-size:15px;
+    letter-spacing:-.045em;
+  }
+  .comparison-value-period{
+    font-size:8px;
+  }
+}
+@media (max-width:900px) and (orientation:landscape){
+  .comparison-value-card strong{
+    font-size:clamp(16px,2.4vw,21px);
+  }
+  .comparison-chart svg{
+    min-height:190px;
+  }
+}
