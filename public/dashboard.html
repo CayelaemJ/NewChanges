@@ -855,7 +855,7 @@
       <div class="card-hd">
         <div>
           <div class="card-title">Monthly cash freed up <button type="button" class="metric-info" data-metric="saving" aria-label="What is monthly cash freed up?">i</button></div>
-          <div class="card-note">Recurring savings unlocked, cumulative</div>
+          <div class="card-note">Recurring savings unlocked, cumulative run-rate</div>
         </div>
         <span class="card-tag">Run-rate</span>
       </div>
@@ -891,7 +891,7 @@
       <div class="card-hd">
         <div>
           <div class="card-title">Total advanced per month <button type="button" class="metric-info" data-metric="ewaTrend" aria-label="What is total advanced per month?">i</button></div>
-          <div class="card-note">Finalised advances only · total value drawn in each month</div>
+          <div class="card-note">Finalised advances only · monthly run-rate</div>
         </div>
         <span class="card-tag">Trend</span>
       </div>
@@ -1687,6 +1687,25 @@ function renderPeriodLineChart(current=[], previous=[], currentLabel='Selected p
   return `<div class="comparison-legend"><span><i class="comparison-dot current"></i>${esc(currentLabel)}</span><span><i class="comparison-dot previous"></i>${esc(previousLabel)}</span></div><svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;overflow:visible"><path d="${currentLine}" fill="none" stroke="${colour}" stroke-width="3" stroke-linecap="round"/><path d="${previousLine}" fill="none" stroke="var(--chart-engagement)" stroke-width="2.2" stroke-dasharray="6 5" stroke-linecap="round"/>${yaxis}${xlabels}</svg>`;
 }
 
+function getMonthFinancialComparison(kind){
+  const period = DATA.filterContext?.period;
+  if(!period) return null;
+  const pc = DATA.periodComparison;
+  if(!pc || !pc.current || !pc.previous) return null;
+  const currentLabel = pc.current.label || DATA.filterContext?.label || period;
+  const previousLabel = pc.previous.label || 'Previous month';
+  if(kind==='savings'){
+    const current=Number(pc.current.monthlyCashFreedUp);
+    const previous=Number(pc.previous.monthlyCashFreedUp);
+    if(Number.isFinite(current) && Number.isFinite(previous)) return {current,previous,currentLabel,previousLabel};
+  }
+  if(kind==='ewa'){
+    const current=Number(pc.current.totalAdvanced);
+    const previous=Number(pc.previous.totalAdvanced);
+    if(Number.isFinite(current) && Number.isFinite(previous)) return {current,previous,currentLabel,previousLabel};
+  }
+  return null;
+}
 function renderEwa(){
   const e=DATA.ewa, wrap=document.getElementById('ewa-chart'), kpiWrap=document.getElementById('ewa-kpis');
   if(kpiWrap){
@@ -1700,23 +1719,9 @@ function renderEwa(){
     ].forEach((x,i)=>kpiWrap.appendChild(el(`<div class="card kpi reveal" style="animation-delay:${i*.06}s"><div class="kpi-label"><span class="kpi-ico" style="background:${x.bg}"></span>${x.l}${employerInfoButton(x.k)}</div><div class="kpi-value">${x.v}</div><div class="kpi-sub">${x.s}</div></div>`)));
   }
   if(!wrap) return;
-  const month=getMonthFinancialComparison('ewa');
-  const pc=DATA.periodComparison;
-  const comparison=month || (pc ? {
-    current:Number(pc.current.totalAdvanced)||0,
-    previous:Number(pc.previous.totalAdvanced)||0,
-    currentLabel:comparison.currentLabel,
-    previousLabel:comparison.previousLabel
-  } : null);
+  const comparison=getMonthFinancialComparison('ewa');
   if(comparison){
-    wrap.innerHTML=renderPeriodLineChart(
-      [comparison.current],
-      [comparison.previous],
-      pc.current.label,
-      pc.previous.label,
-      formatRandThousands,
-      'var(--chart-cashflow)'
-    );
+    wrap.innerHTML=renderPeriodLineChart([comparison.current],[comparison.previous],comparison.currentLabel,comparison.previousLabel,formatRandThousands,'var(--chart-cashflow)');
     return;
   }
   const current=e?.trend||[], prior=DATA.comparison?.previous?.ewa||[];
@@ -1725,23 +1730,9 @@ function renderEwa(){
 
 function renderSavings(){
   const wrap=document.getElementById('savings-chart');
-  const month=getMonthFinancialComparison('savings');
-  const pc=DATA.periodComparison;
-  const comparison=month || (pc ? {
-    current:Number(pc.current.monthlyCashFreedUp)||0,
-    previous:Number(pc.previous.monthlyCashFreedUp)||0,
-    currentLabel:comparison.currentLabel,
-    previousLabel:comparison.previousLabel
-  } : null);
+  const comparison=getMonthFinancialComparison('savings');
   if(comparison){
-    wrap.innerHTML=renderPeriodLineChart(
-      [comparison.current],
-      [comparison.previous],
-      pc.current.label,
-      pc.previous.label,
-      formatRandThousands,
-      'var(--chart-cashflow)'
-    );
+    wrap.innerHTML=renderPeriodLineChart([comparison.current],[comparison.previous],comparison.currentLabel,comparison.previousLabel,formatRandThousands,'var(--chart-cashflow)');
     return;
   }
   const current=DATA.savings||[], prior=DATA.comparison?.previous?.savings||[];
