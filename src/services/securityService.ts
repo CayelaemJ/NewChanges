@@ -128,15 +128,77 @@ export async function recordLoginEvent(input: {
   context: RequestSecurityContext;
 }) {
   try {
+    const email = input.email.toLowerCase().slice(0, 254);
+    const previous = input.userId ? await prisma.loginEvent.findFirst({
+      where: { userId: input.userId, success: true },
+      orderBy: { createdAt: "desc" },
+    }) : null;
     await prisma.loginEvent.create({
       data: {
         userId: input.userId ?? undefined,
-        email: input.email.toLowerCase().slice(0, 254),
+        email,
         success: input.success,
         failureReason: input.failureReason?.slice(0, 200),
         ...input.context,
       },
     });
+    if (!input.success) {
+      const burst = await prisma.loginEvent.count({
+        where: {
+          email,
+          success: false,
+          createdAt: { gte: new Date(Date.now() - 15 * 60_000) },
+          ...(input.context.ipAddress ? { ipAddress: input.context.ipAddress } : {}),
+        },
+      });
+      if (burst >= 5) {
+        await prisma.securityAlert.create({
+          data: {
+            userId: input.userId ?? undefined,
+            actorEmail: email,
+            type: "LOGIN_BURST",
+            severity: burst >= 10 ? "CRITICAL" : "HIGH",
+            title: "Repeated failed sign-ins detected",
+            summary: email + " has " + burst + " failed sign-in attempts in the last 15 minutes.",
+            detail: { ipAddress: input.context.ipAddress, deviceType: input.context.deviceType, burstCount: burst },
+            impactCount: burst,
+          },
+        });
+      }
+    } else if (input.userId && previous) {
+      const deviceChanged = Boolean(input.context.deviceKey && previous.deviceKey && input.context.deviceKey !== previous.deviceKey);
+      const locationChanged = Boolean(
+        input.context.country && previous.country &&
+        [input.context.country, input.context.region, input.context.city].filter(Boolean).join("|") !==
+        [previous.country, previous.region, previous.city].filter(Boolean).join("|")
+      );
+      if (deviceChanged) {
+        await prisma.securityAlert.create({
+          data: {
+            userId: input.userId,
+            actorEmail: email,
+            type: "NEW_DEVICE",
+            severity: "WARNING",
+            title: "New device sign-in",
+            summary: email + " signed in from a device not previously seen for this account.",
+            detail: { deviceType: input.context.deviceType, browser: input.context.browser, operatingSystem: input.context.operatingSystem },
+          },
+        });
+      }
+      if (locationChanged) {
+        await prisma.securityAlert.create({
+          data: {
+            userId: input.userId,
+            actorEmail: email,
+            type: "NEW_LOCATION",
+            severity: "WARNING",
+            title: "New sign-in location",
+            summary: email + " signed in from a new IP-derived location.",
+            detail: { country: input.context.country, region: input.context.region, city: input.context.city, ipAddress: input.context.ipAddress },
+          },
+        });
+      }
+    }
   } catch {
     // Security telemetry must never block authentication.
   }
@@ -205,6 +267,7 @@ export async function listSessions(opts: { userId?: string; status?: string; lim
     durationSeconds: Math.max(0, Math.floor(((s.endedAt ?? now).getTime() - s.createdAt.getTime()) / 1000)),
     ipAddress: s.ipAddress,
     deviceType: s.deviceType ?? "Unknown",
+    deviceKey: s.deviceKey,
     browser: s.browser ?? "Unknown",
     operatingSystem: s.operatingSystem ?? "Unknown",
     location: [s.city, s.region, s.country].filter(Boolean).join(", ") || "Location unavailable",
@@ -221,6 +284,83 @@ export async function listLoginEvents(opts: { userId?: string; email?: string; l
     take: Math.min(500, Math.max(1, opts.limit ?? 200)),
   });
   return rows;
+}
+
+
+export async function listSecurityDevices(limit = 200) {
+  const rows = await prisma.session.findMany({
+    where: { deviceKey: { not: null } },
+    include: { user: { select: { id: true, name: true, email: true, role: true, active: true } } },
+    orderBy: { lastSeenAt: "desc" },
+    take: Math.min(500, Math.max(1, limit)),
+  });
+  const groups = new Map<string, any>();
+  for (const row of rows) {
+    const key = row.userId + ":" + row.deviceKey;
+    const current = groups.get(key);
+    const item = {
+      deviceKey: row.deviceKey,
+      user: row.user,
+      deviceType: row.deviceType ?? "Unknown",
+      browser: row.browser ?? "Unknown",
+      operatingSystem: row.operatingSystem ?? "Unknown",
+      country: row.country,
+      region: row.region,
+      city: row.city,
+      ipAddress: row.ipAddress,
+      lastSeenAt: row.lastSeenAt,
+      firstSeenAt: row.createdAt,
+      activeSessions: row.endedAt ? 0 : 1,
+    };
+    if (!current) groups.set(key, item);
+    else {
+      current.activeSessions += item.activeSessions;
+      if (new Date(item.lastSeenAt) > new Date(current.lastSeenAt)) Object.assign(current, { lastSeenAt: item.lastSeenAt, ipAddress: item.ipAddress, country: item.country, region: item.region, city: item.city });
+      if (new Date(item.firstSeenAt) < new Date(current.firstSeenAt)) current.firstSeenAt = item.firstSeenAt;
+    }
+  }
+  return [...groups.values()].sort((a,b) => new Date(b.lastSeenAt).getTime() - new Date(a.lastSeenAt).getTime());
+}
+
+export async function listDataAccessEvents(opts: { limit?: number; userId?: string; route?: string } = {}) {
+  return prisma.dataAccessEvent.findMany({
+    where: {
+      ...(opts.userId ? { userId: opts.userId } : {}),
+      ...(opts.route ? { route: { contains: opts.route } } : {}),
+    },
+    orderBy: { createdAt: "desc" },
+    take: Math.min(500, Math.max(1, opts.limit ?? 200)),
+  });
+}
+
+export async function recordDataAccessEvent(input: {
+  userId?: string | null;
+  actorEmail?: string | null;
+  method: string;
+  route: string;
+  resource?: string;
+  employerId?: string;
+  context?: RequestSecurityContext;
+  statusCode?: number;
+  durationMs?: number;
+}) {
+  try {
+    await prisma.dataAccessEvent.create({
+      data: {
+        userId: input.userId ?? undefined,
+        actorEmail: input.actorEmail ?? undefined,
+        method: input.method,
+        route: input.route.slice(0, 180),
+        resource: input.resource?.slice(0, 120),
+        employerId: input.employerId,
+        ipAddress: input.context?.ipAddress,
+        deviceKey: input.context?.deviceKey,
+        deviceType: input.context?.deviceType,
+        statusCode: input.statusCode,
+        durationMs: input.durationMs,
+      },
+    });
+  } catch {}
 }
 
 export async function listSecurityAlerts(opts: { status?: string; limit?: number } = {}) {
