@@ -181,6 +181,11 @@
   .ingestion-method-icon{width:42px;height:42px;border-radius:11px;background:#f3efff;color:var(--blue-d);display:flex;align-items:center;justify-content:center;flex:0 0 auto;font-size:10px;font-weight:850;letter-spacing:.03em;}
   .ingestion-method strong{display:block;font-size:13.5px;color:var(--brand-primary);}
   .ingestion-method small{display:block;margin-top:5px;color:var(--grey-l);font-size:11.5px;line-height:1.45;font-weight:600;}
+  .job-progress{margin-top:14px;padding:13px 14px;border:1px solid var(--line);border-radius:11px;background:#fff;}
+  .job-progress-track{height:8px;background:#eeeafa;border-radius:999px;overflow:hidden;margin-top:9px;}
+  .job-progress-fill{height:100%;width:0;background:linear-gradient(90deg,var(--blue),var(--brand-primary));border-radius:999px;transition:width .18s ease;}
+  .job-progress-meta{display:flex;justify-content:space-between;gap:12px;font-size:11px;color:var(--grey);margin-top:6px;}
+  .job-progress-meta strong{color:var(--brand-primary);}
   .ingestion-note{margin-top:14px;padding:12px 14px;border-radius:10px;background:#f8f5ff;border:1px solid var(--line);color:#5b6b7a;font-size:12px;line-height:1.55;max-width:1000px;}
   @media(max-width:820px){.ingestion-method-grid{grid-template-columns:1fr}.ingestion-method{width:100%}}
 </style>
@@ -1515,49 +1520,129 @@ function wireDrop(){
 
 async function pollJob(url, label){
   const started = Date.now();
-  let dots = 0;
+  const jobId = url.split('/').pop();
+  let settled = false;
+  let source = null;
+  let fallbackTimer = null;
 
-  while(Date.now() - started < 30 * 60 * 1000){
-    dots = (dots + 1) % 4;
-    $('#result').innerHTML = `<div class="banner ok">${label}${'.'.repeat(dots)} large files can take several minutes. Keep this tab open.</div>`;
+  const showProgress = (progress, phase, message) => {
+    const pct = Math.max(0, Math.min(100, Number(progress||0)));
+    $('#result').innerHTML = `<div class="job-progress">
+      <strong>${esc(message || label)}</strong>
+      <div class="job-progress-track"><div class="job-progress-fill" style="width:${pct}%"></div></div>
+      <div class="job-progress-meta"><span>${esc(phase || 'PROCESSING')}</span><strong>${pct}%</strong></div>
+    </div>`;
+  };
 
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
+  const getFinal = async () => {
     const r = await fetch(url, { cache: 'no-store' });
     const d = await r.json().catch(() => null);
-
     if(!r.ok || !d) throw new Error(d?.error || `${label} status check failed: HTTP ${r.status}`);
-    if(d.status === 'DONE') return d;
+    if(d.status === 'DONE') return d.result || d;
     if(d.status === 'FAILED') throw new Error(d.error || `${label} failed`);
+    return null;
+  };
+
+  const fallbackPoll = async () => {
+    while(Date.now() - started < 30 * 60 * 1000){
+      const done = await getFinal();
+      if(done) return done;
+      showProgress(0, 'PROCESSING', `${label} is still running`);
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+    throw new Error(`${label} is still running after 30 minutes. Check Import history before retrying.`);
+  };
+
+  if(window.EventSource && jobId){
+    try{
+      source = new EventSource(`${API}/api/admin/events?jobId=${encodeURIComponent(jobId)}`);
+      const result = await new Promise((resolve, reject) => {
+        const finish = (fn, value) => {
+          if(settled) return;
+          settled = true;
+          try{ source && source.close(); }catch(_){}
+          fn(value);
+        };
+        source.addEventListener('job.progress', async event => {
+          try{
+            const p = JSON.parse(event.data || '{}');
+            showProgress(p.progress, p.phase, p.message || label);
+            if(p.status === 'DONE' || p.status === 'FAILED'){
+              try{
+                const final = await getFinal();
+                if(final) finish(resolve, final);
+              }catch(e){ finish(reject, e); }
+            }
+          }catch(e){ finish(reject, e); }
+        });
+        source.onerror = () => {
+          if(settled) return;
+          try{ source.close(); }catch(_){}
+          finish(reject, new Error('live progress stream unavailable'));
+        };
+        fallbackTimer = setTimeout(() => finish(reject, new Error('live progress stream timed out')), 8000);
+      });
+      clearTimeout(fallbackTimer);
+      return result;
+    }catch(_){
+      clearTimeout(fallbackTimer);
+      if(!settled) try{ source && source.close(); }catch(_){}
+    }
   }
 
-  throw new Error(`${label} is still running after 30 minutes. Check Import history before retrying.`);
+  return fallbackPoll();
 }
-
 
 async function upload(file){
   if(!file) return;
-  $('#result').innerHTML = `<div class="banner ok">Uploading <strong>${esc(file.name)}</strong>…</div>`;
-  const fd = new FormData(); fd.append('file', file);
-  try{
-    const r = await fetch(`${API}/api/admin/reports/${CURRENT.key}/upload`, {method:'POST', body:fd});
-    let res = await r.json().catch(() => null);
-    if(!r.ok || !res) throw new Error(res?.error || `server error ${r.status}`);
+  $('#result').innerHTML = `<div class="job-progress">
+    <strong>Uploading <span>${esc(file.name)}</span></strong>
+    <div class="job-progress-track"><div id="upload-progress-fill" class="job-progress-fill"></div></div>
+    <div class="job-progress-meta"><span id="upload-progress-label">Preparing upload…</span><strong id="upload-progress-value">0%</strong></div>
+  </div>`;
 
-    // Upload is accepted immediately; validation + DB commit both happen in
-    // the background job. There is no second manual commit step.
-    if(r.status === 202 && res.jobId){
-      res = await pollJob(`${API}/api/admin/upload-jobs/${res.jobId}`, 'Importing');
+  const fd = new FormData();
+  fd.append('file', file);
+
+  try{
+    const res = await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `${API}/api/admin/reports/${CURRENT.key}/upload`, true);
+      xhr.withCredentials = true;
+      xhr.timeout = 5 * 60 * 1000;
+
+      xhr.upload.addEventListener('progress', event => {
+        const pct = event.lengthComputable ? Math.round((event.loaded / event.total) * 100) : 0;
+        const fill=$('#upload-progress-fill'), value=$('#upload-progress-value'), label=$('#upload-progress-label');
+        if(fill) fill.style.width=pct+'%';
+        if(value) value.textContent=pct+'%';
+        if(label) label.textContent=event.lengthComputable ? `Uploading ${Math.round(event.loaded/1024/1024*10)/10} MB of ${Math.round(event.total/1024/1024*10)/10} MB` : 'Uploading…';
+      });
+
+      xhr.addEventListener('load', () => {
+        let body=null;
+        try{ body=JSON.parse(xhr.responseText || '{}'); }catch(_){}
+        if(xhr.status >= 200 && xhr.status < 300) resolve({status:xhr.status, body});
+        else reject(new Error(body?.error || `server error ${xhr.status}`));
+      });
+      xhr.addEventListener('error', () => reject(new Error('network error while uploading the file')));
+      xhr.addEventListener('timeout', () => reject(new Error('upload timed out')));
+      xhr.addEventListener('abort', () => reject(new Error('upload cancelled')));
+      xhr.send(fd);
+    });
+
+    let result=res.body;
+    if(res.status === 202 && result?.jobId){
+      result = await pollJob(`${API}/api/admin/upload-jobs/${result.jobId}`, 'Importing');
     }
 
-    LAST_BATCH = res.batchId;
-    renderResult(res);
+    LAST_BATCH = result.batchId;
+    renderResult(result);
     loadHistory();
   }catch(e){
     $('#result').innerHTML = `<div class="banner err">✕ Upload could not complete: ${esc(e.message)}</div>`;
   }
 }
-
 
 function renderCommittedResult(validation, commit){
   $('#result').innerHTML = `
@@ -1657,7 +1742,7 @@ async function loadHistory(){
   }
 }
 
-boot();
+window.addEventListener("load", () => boot(), { once: true });
 </script>
 <script>
 /* Dark mode for admin pages: same engine, default portal brand. Light mode stays on the page's original palette. */
@@ -1676,7 +1761,7 @@ function compEsc(v){ return esc(v==null?'':String(v)); }
 async function loadComplianceSummary(){
   try{
     const r=await fetch('/api/admin/compliance/overview',{cache:'no-store'});
-    if(!r.ok) return;
+    if(!r.ok) throw new Error(`HTTP ${r.status}`);
     const d=await r.json();
     document.getElementById('comp-activities').textContent=String(d.processingActivities||0);
     document.getElementById('comp-crossborder').textContent=String(d.crossBorderActivities||0);
@@ -1688,7 +1773,10 @@ async function loadComplianceSummary(){
       ? 'Action required: review governance gaps, overdue data-subject requests and/or open security incidents.'
       : 'Governance controls are being monitored. Keep the processing register, vendor register and retention schedule current.';
     el.style.color=d.status==='ACTION_REQUIRED'?'#b5391f':'#617486';
-  }catch(_){}
+  }catch(e){
+    const el=document.getElementById('admin-sec-copy');
+    if(el) el.textContent=`Unable to load security posture: ${e.message}`;
+  }
 }
 async function loadComplianceDetail(){
   try{
@@ -1742,9 +1830,9 @@ async function loadEnterpriseOperations(){
 async function loadAdminSecuritySummary(){
   try{
     const r=await fetch('/api/admin/security/overview',{cache:'no-store'});
-    if(!r.ok) return;
+    if(!r.ok) throw new Error(`HTTP ${r.status}`);
     const d=await r.json();
-    document.getElementById('admin-sec-live').textContent=String(d.activeSessions||0);
+    document.getElementById('admin-sec-live').textContent=String(d.activeSessions??0);
     document.getElementById('admin-sec-failed').textContent=String(d.failedLogins24h||0);
     document.getElementById('admin-sec-alerts').textContent=String(d.openAlerts||0);
     document.getElementById('admin-sec-success').textContent=String(d.successfulLogins24h||0);
