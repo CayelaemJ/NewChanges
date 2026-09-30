@@ -23,11 +23,12 @@ import { startSyncJob, getSyncJob } from "./services/syncJobs.js";
 import { startDailyRefresh, triggerRefreshNow } from "./services/dailyRefresh.js";
 import { getConfig as getSyncConfig, saveConfig as saveSyncConfig, publicConfig as publicSyncConfig, testConnection as testSyncConnection, runSync, recentSyncLogs } from "./services/syncService.js";
 import { listPartners, createPartner, updatePartner, deletePartner, assignUserToPartner, assignEmployerToPartner, themeForUser, themeForSlug } from "./services/partnerService.js";
-import { login, resolveSession, destroySession, canViewEmployer, canAccessModule, allowedEmployerIds, AuthUser } from "./services/authService.js";
+import { login, resolveSession, destroySession, destroySessionById, destroyAllSessionsForUser, canViewEmployer, canAccessModule, allowedEmployerIds, AuthUser } from "./services/authService.js";
 import { createUser, listUsers, updateUser, resetPassword, completeSetup, deactivateSelf, listRevokedUsers, deleteUserPermanently, requestPasswordReset } from "./services/userService.js";
 import { recordEvent, engagementSummary } from "./services/analyticsService.js";
 import { notifyAdmins, notifyScoreChangeIfCurrentPeriod, runStaleAccountCheck, runWeeklyDigestIfDue } from "./services/automationService.js";
 import { logAdminAction, listAuditLog } from "./services/auditService.js";
+import { requestSecurityContext, recordLoginEvent, securityOverview, listSessions, listLoginEvents, listSecurityAlerts, resolveSecurityAlert, pruneSecurityHistory } from "./services/securityService.js";
 import { exportAuditLogCsv, exportImportBatchCsv } from "./services/exportService.js";
 import { ensureSectionDefaults, listSections, updateSection, grantUserSection, revokeUserSection, sectionsForUser } from "./services/sectionService.js";
 import { publicEmailConfig, saveEmailConfig, testEmailConnection, createReportSchedule, listReportSchedules, updateReportSchedule, deleteReportSchedule, sendReportNow, recentReportDeliveries, runDueReports } from "./services/reportScheduler.js";
@@ -355,12 +356,16 @@ app.post<{ Body: { email: string; password: string; remember?: boolean } }>("/ap
   }
   // Per-account throttle (in addition to per-IP) to blunt distributed guessing.
   if (!rateLimit(reply, `login:${email.toLowerCase().trim()}`, 10, AUTH_WINDOW_MS)) return;
-  const result = await login(email, password, !!remember);
+  const securityContext = requestSecurityContext(req);
+  const result = await login(email, password, !!remember, securityContext);
+  await recordLoginEvent({
+    userId: result?.user.id,
+    email,
+    success: !!result,
+    failureReason: result ? undefined : "INVALID_CREDENTIALS",
+    context: securityContext,
+  });
   if (!result) return reply.code(401).send({ error: "invalid email or password" });
-  // "Remember me": persistent cookie lasting as long as the session (30 days).
-  // Otherwise: a session-only cookie (no `expires`) that the browser clears on
-  // close, even though the underlying session itself stays valid for 7 days
-  // server-side in case the browser doesn't actually close it (e.g. mobile).
   reply.setCookie("session", result.token, remember ? { ...REMEMBER_COOKIE, expires: result.expiresAt } : COOKIE);
   return { ok: true, user: { name: result.user.name, role: result.user.role } };
 });
@@ -428,6 +433,56 @@ app.post<{ Body: { email: string } }>("/api/auth/forgot-password", async (req, r
   return { ok: true };
 });
 
+// ════════════════════ SECURITY & IDENTITY CENTER ════════════════════
+app.get("/api/admin/security/overview", async (req, reply) => {
+  const admin = await requireAdmin(req, reply); if (!admin) return;
+  await pruneSecurityHistory().catch(() => {});
+  return securityOverview();
+});
+
+app.get<{ Querystring: { userId?: string; status?: string; limit?: string } }>("/api/admin/security/sessions", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  return listSessions({ userId: req.query.userId, status: req.query.status, limit: Number(req.query.limit) || 100 });
+});
+
+app.post<{ Params: { id: string }; Body: { reason?: string } }>("/api/admin/security/sessions/:id/revoke", async (req, reply) => {
+  const admin = await requireAdmin(req, reply); if (!admin) return;
+  const existing = await prisma.session.findUnique({ where: { id: req.params.id }, select: { userId: true, endedAt: true } });
+  if (!existing) return reply.code(404).send({ error: "session not found" });
+  if (existing.userId === admin.id) return reply.code(400).send({ error: "you cannot revoke your own current admin session here" });
+  await destroySessionById(req.params.id, admin.email);
+  logAdminAction(admin, "session.revoke", `Revoked session ${req.params.id}${req.body?.reason ? ": " + String(req.body.reason).slice(0, 200) : ""}`, {
+    targetType: "Session", targetId: req.params.id, context: requestSecurityContext(req),
+  });
+  return { ok: true };
+});
+
+app.post<{ Params: { id: string }; Body: { reason?: string } }>("/api/admin/users/:id/revoke-sessions", async (req, reply) => {
+  const admin = await requireAdmin(req, reply); if (!admin) return;
+  if (req.params.id === admin.id) return reply.code(400).send({ error: "you cannot revoke your own admin sessions here" });
+  const count = await prisma.session.count({ where: { userId: req.params.id, endedAt: null } });
+  await destroyAllSessionsForUser(req.params.id, admin.email);
+  logAdminAction(admin, "user.revoke_sessions", `Revoked all active sessions for user ${req.params.id}`, {
+    targetType: "User", targetId: req.params.id, impactCount: count, context: requestSecurityContext(req),
+  });
+  return { ok: true, revokedCount: count };
+});
+
+app.get<{ Querystring: { userId?: string; email?: string; limit?: string } }>("/api/admin/security/logins", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  return listLoginEvents({ userId: req.query.userId, email: req.query.email, limit: Number(req.query.limit) || 200 });
+});
+
+app.get<{ Querystring: { status?: string; limit?: string } }>("/api/admin/security/alerts", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  return listSecurityAlerts({ status: req.query.status ?? "OPEN", limit: Number(req.query.limit) || 100 });
+});
+
+app.post<{ Params: { id: string } }>("/api/admin/security/alerts/:id/resolve", async (req, reply) => {
+  const admin = await requireAdmin(req, reply); if (!admin) return;
+  return resolveSecurityAlert(req.params.id, admin.email);
+});
+
 // ════════════════════ USER MANAGEMENT (admin only) ════════════════════
 app.get("/api/users", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
@@ -441,7 +496,7 @@ app.post<{ Body: { email: string; name: string; role: any; employerIds?: string[
       email: b.email, name: b.name, role: b.role, employerIds: b.employerIds ?? [],
       partnerId: b.partnerId, tempPassword: b.tempPassword, sendSetupLink: b.sendSetupLink, createdBy: admin.email,
     });
-    logAdminAction(admin, "user.create", `Created user ${b.name} (${b.email}), role ${b.role}`, { targetType: "User", targetId: (created as any)?.id });
+    logAdminAction(admin, "user.create", `Created user ${b.name} (${b.email}), role ${b.role}`, { targetType: "User", targetId: (created as any)?.id, impactCount: 1, context: requestSecurityContext(req) });
     return created;
   } catch (e: any) { return reply.code(400).send({ error: e.message }); }
 });
@@ -482,14 +537,14 @@ app.patch<{ Params: { id: string }; Body: any }>("/api/users/:id", async (req, r
   try { updated = await updateUser(req.params.id, body); }
   catch (e: any) { return reply.code(e?.code === "P2025" ? 404 : 400).send({ error: e?.code === "P2025" ? "user not found" : (e?.message || "could not update user") }); }
   const changedKeys = Object.keys(body).join(", ") || "no fields";
-  logAdminAction(admin, "user.update", `Updated user ${req.params.id} (${changedKeys})`, { targetType: "User", targetId: req.params.id, detail: redactAuditDetail(body) });
+  logAdminAction(admin, "user.update", `Updated user ${req.params.id} (${changedKeys})`, { targetType: "User", targetId: req.params.id, detail: redactAuditDetail(body), impactCount: body.employerIds?.length ?? 1, context: requestSecurityContext(req) });
   return updated;
 });
 app.post<{ Params: { id: string }; Body: { password: string } }>("/api/users/:id/reset-password", async (req, reply) => {
   const admin = await requireAdmin(req, reply); if (!admin) return;
   try {
     const result = await resetPassword(req.params.id, String(req.body?.password ?? ""));
-    logAdminAction(admin, "user.reset_password", `Reset password for user ${req.params.id}`, { targetType: "User", targetId: req.params.id });
+    logAdminAction(admin, "user.reset_password", `Reset password for user ${req.params.id}`, { targetType: "User", targetId: req.params.id, impactCount: 1, context: requestSecurityContext(req) });
     return result;
   } catch (e: any) { return reply.code(400).send({ error: e?.message || "could not reset password" }); }
 });
@@ -510,7 +565,7 @@ app.delete<{ Params: { id: string } }>("/api/users/:id", async (req, reply) => {
   const admin = await requireAdmin(req, reply); if (!admin) return;
   try {
     const result = await deleteUserPermanently(req.params.id);
-    logAdminAction(admin, "user.delete", `Permanently deleted user ${req.params.id}`, { targetType: "User", targetId: req.params.id });
+    logAdminAction(admin, "user.delete", `Permanently deleted user ${req.params.id}`, { targetType: "User", targetId: req.params.id, impactCount: 1, context: requestSecurityContext(req) });
     return result;
   }
   catch (e: any) { return reply.code(400).send({ error: e.message }); }
