@@ -50,6 +50,11 @@ export interface IntegrationConfigPatch {
   sqlViewPrefix?: string | null;
   sqlQueryTimeoutMs?: number;
   sqlMaxRowsPerReport?: number;
+  analyticsMode?: string;
+  sourceAnalyticsEnabled?: boolean;
+  sourceAnalyticsReadOnly?: boolean;
+  sourceAnalyticsUseReplica?: boolean;
+  sourceAnalyticsNote?: string | null;
 }
 
 export async function saveConfig(patch: IntegrationConfigPatch) {
@@ -58,6 +63,14 @@ export async function saveConfig(patch: IntegrationConfigPatch) {
   if (patch.sqlPassword === "" || patch.sqlPassword == null) delete data.sqlPassword;
   if (patch.sourceMode) data.sourceMode = patch.sourceMode.toUpperCase();
   if (patch.sqlDialect) data.sqlDialect = patch.sqlDialect.toUpperCase();
+  if (patch.analyticsMode) {
+    const mode = patch.analyticsMode.toUpperCase();
+    if (!["POSTGRES_READ_MODEL", "SOURCE_AGGREGATES", "HYBRID"].includes(mode)) throw new Error("analyticsMode must be POSTGRES_READ_MODEL, SOURCE_AGGREGATES or HYBRID.");
+    data.analyticsMode = mode;
+  }
+  if (patch.sourceAnalyticsEnabled && patch.sourceAnalyticsReadOnly === false) throw new Error("Source analytics must remain read-only.");
+  if (patch.sourceAnalyticsReadOnly === false) throw new Error("Source analytics must remain read-only.");
+  data.sourceAnalyticsReadOnly = true;
 
   return prisma.integrationConfig.upsert({
     where: { id: "default" },
@@ -66,7 +79,7 @@ export async function saveConfig(patch: IntegrationConfigPatch) {
   });
 }
 
-export function publicConfig(config: Awaited<ReturnType<typeof getConfig>>) {
+export async function listAnalyticsRoutes() {\n  return prisma.analyticsRoute.findMany({ orderBy: { reportKey: "asc" } });\n}\n\nexport async function saveAnalyticsRoute(input: { reportKey: string; executionMode: string; sourceView?: string | null; enabled?: boolean; rationale?: string | null }) {\n  const mode = String(input.executionMode || "POSTGRES").toUpperCase();\n  if (!["POSTGRES", "SOURCE", "HYBRID"].includes(mode)) throw new Error("executionMode must be POSTGRES, SOURCE or HYBRID.");\n  if (mode === "SOURCE" && !input.sourceView) throw new Error("SOURCE routes require an approved source view.");\n  if (input.sourceView && !/^[A-Za-z_][A-Za-z0-9_.]*$/.test(input.sourceView)) throw new Error("sourceView contains unsafe characters.");\n  return prisma.analyticsRoute.upsert({\n    where: { reportKey: input.reportKey },\n    create: { reportKey: input.reportKey, executionMode: mode, sourceView: input.sourceView || null, enabled: input.enabled !== false, rationale: input.rationale || null },\n    update: { executionMode: mode, sourceView: input.sourceView || null, enabled: input.enabled !== false, rationale: input.rationale || null, lastVerifiedAt: new Date() },\n  });\n}\n\nexport function publicConfig(config: Awaited<ReturnType<typeof getConfig>>) {
   const { authToken, sqlPassword, ...safe } = config as any;
   let effectiveSourceMode = "API";
   let configured = false;
