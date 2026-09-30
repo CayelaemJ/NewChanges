@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { getConfig, listAnalyticsRoutes } from "./syncService.js";
+import { checkMysqlReadReplica } from "./sourceAdapter.js";
 
 const prisma = new PrismaClient();
 
@@ -17,6 +18,8 @@ export async function enterpriseOperationsOverview() {
     prisma.user.count({ where: { deletedAt: null } }),
     prisma.importBatch.count({ where: { status: { in: ["UPLOADED", "VALIDATED"] } } }),
   ]);
+
+  const replica = sourceMode === "SQL" ? await checkMysqlReadReplica(config) : { configured: false, reachable: false, readOnly: null, lagSeconds: null, lagWithinThreshold: null, host: null, database: null, note: "Replica health is only applicable to SQL sources." };
 
   const now = Date.now();
   const lastSync = config.lastSuccessfulSyncAt ? new Date(config.lastSuccessfulSyncAt).getTime() : null;
@@ -44,11 +47,14 @@ export async function enterpriseOperationsOverview() {
       lastSyncStatus: config.lastSyncStatus,
       freshnessMinutes,
       freshnessState: freshnessMinutes == null ? "UNKNOWN" : freshnessMinutes <= Math.max(60, config.scheduleHours * 60 * 2) ? "FRESH" : "STALE",
+      replica,
     },
     routing: routes.map(route => ({
       reportKey: route.reportKey,
       executionMode: route.executionMode,
+      workloadClass: route.workloadClass,
       sourceView: route.sourceView,
+      useReplica: route.useReplica,
       enabled: route.enabled,
       rationale: route.rationale,
       lastVerifiedAt: route.lastVerifiedAt,
