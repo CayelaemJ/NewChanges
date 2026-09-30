@@ -49,6 +49,8 @@ model Employer {
   userLinks          UserEmployer[]
   salaryAdvances     SalaryAdvance[]
   reportSchedules    ReportSchedule[]
+  dataSubjectRequestsEnabled Boolean @default(true)
+  dataSubjectRequests DataSubjectRequest[]
 
   @@index([name])
   @@index([sourceUpdatedAt])
@@ -1134,6 +1136,136 @@ model DataAccessEvent {
   @@index([userId, createdAt])
   @@index([route, createdAt])
   @@index([actorEmail, createdAt])
+}
+
+// ──────────────────────── POPIA / data governance ────────────────────────
+// These records make the legal and operational basis for processing explicit.
+// They are governance controls, not a legal conclusion about any particular client.
+
+model ProcessingActivity {
+  id                    String   @id @default(cuid())
+  name                  String
+  description           String?
+  purpose               String
+  lawfulBasis           String
+  partyRole             String
+  dataSubjects          String
+  dataCategories        String
+  specialPersonalInfo  Boolean  @default(false)
+  childrenData          Boolean  @default(false)
+  automatedDecision     Boolean  @default(false)
+  profiling             Boolean  @default(false)
+  recipients            String?
+  source                String?
+  retentionPolicy       String?
+  crossBorder           Boolean  @default(false)
+  crossBorderBasis      String?
+  operatorAgreementRef  String?
+  piaStatus             String   @default("REQUIRED")
+  owner                 String?
+  active                Boolean  @default(true)
+  reviewedAt            DateTime?
+  nextReviewAt          DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([active])
+  @@index([partyRole])
+  @@index([crossBorder])
+  @@index([nextReviewAt])
+}
+
+model DataSubjectRequest {
+  id                String                 @id @default(cuid())
+  requestType       String
+  status            String                 @default("RECEIVED")
+  requesterEmail    String
+  requesterName     String?
+  employerId        String?
+  description       String?
+  identityVerified  Boolean                @default(false)
+  identityVerifiedAt DateTime?
+  receivedAt        DateTime               @default(now())
+  dueAt             DateTime?
+  resolvedAt        DateTime?
+  resolutionNotes   String?
+  assignedTo        String?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+
+  employer Employer? @relation(fields: [employerId], references: [id], onDelete: SetNull)
+
+  @@index([status, dueAt])
+  @@index([requesterEmail, createdAt])
+  @@index([employerId, createdAt])
+}
+
+model ComplianceVendor {
+  id                  String   @id @default(cuid())
+  name                String
+  service             String
+  processingPurpose   String
+  dataCategories      String
+  country             String
+  crossBorder         Boolean  @default(false)
+  transferBasis       String?
+  operatorAgreement   Boolean  @default(false)
+  securityReview      Boolean  @default(false)
+  subprocessorsKnown  Boolean  @default(false)
+  approved            Boolean  @default(false)
+  reviewNotes         String?
+  lastReviewedAt      DateTime?
+  nextReviewAt        DateTime?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([approved, crossBorder])
+  @@index([nextReviewAt])
+}
+
+model RetentionPolicy {
+  id             String   @id @default(cuid())
+  dataClass      String   @unique
+  purpose        String
+  retentionDays  Int?
+  retentionRule  String
+  deletionMethod String
+  legalBasis     String?
+  legalHold      Boolean  @default(false)
+  active         Boolean  @default(true)
+  reviewedAt     DateTime?
+  nextReviewAt   DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([active, nextReviewAt])
+}
+
+model SecurityIncident {
+  id                    String               @id @default(cuid())
+  title                 String
+  description           String
+  status                String               @default("DETECTED")
+  severity              String               @default("HIGH")
+  discoveredAt          DateTime             @default(now())
+  containedAt           DateTime?
+  regulatorNotifiedAt   DateTime?
+  dataSubjectsNotifiedAt DateTime?
+  responsibleParty     String?
+  informationOfficer   String?
+  regulatorReference   String?
+  affectedDataClasses  String?
+  affectedSubjectsCount Int?
+  rootCause            String?
+  mitigation           String?
+  evidenceLocation     String?
+  assignedTo           String?
+  resolvedAt           DateTime?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+
+  @@index([status, severity, discoveredAt])
+  @@index([regulatorNotifiedAt])
 }
 
 model AchievableTarget {
