@@ -253,7 +253,7 @@ interface SqlQueryResult {
 
 interface SqlExecutor {
   dialect: SqlDialect;
-  queryReport(reportKey: string, window: SourceWindow, maxRows: number): Promise<SqlQueryResult>;
+  queryReport(reportKey: string, window: SourceWindow, maxRows: number, sourceViewOverride?: string | null): Promise<SqlQueryResult>;
   probe(reportKey: string): Promise<string[]>;
   describe(reportKey: string): Promise<{ database: string | null; totalRows: number; newest: string | null }>;
   close(): Promise<void>;
