@@ -1,0 +1,25 @@
+import fs from "node:fs";
+import path from "node:path";
+const root=process.cwd();
+const schema=fs.readFileSync(path.join(root,"prisma/schema.prisma"),"utf8");
+const server=fs.readFileSync(path.join(root,"src/server.ts"),"utf8");
+const auth=fs.readFileSync(path.join(root,"src/services/authService.ts"),"utf8");
+const security=fs.readFileSync(path.join(root,"src/services/securityService.ts"),"utf8");
+const audit=fs.readFileSync(path.join(root,"src/services/auditService.ts"),"utf8");
+const users=fs.readFileSync(path.join(root,"public/users.html"),"utf8");
+const usersSecurity=fs.readFileSync(path.join(root,"public/user-security.js"),"utf8");
+const migration=fs.readFileSync(path.join(root,"prisma/migrations/20260930120000_security_identity_center/migration.sql"),"utf8");
+const failures=[]; const must=(ok,msg)=>{if(!ok)failures.push(msg);};
+must(schema.includes('model LoginEvent'), 'schema must store login events');
+must(schema.includes('model SecurityAlert'), 'schema must store security alerts');
+must(schema.includes('lastSeenAt') && schema.includes('revokedAt') && schema.includes('deviceType') && schema.includes('country'), 'sessions must retain security context and lifecycle state');
+must(server.includes('/api/admin/security/sessions') && server.includes('/api/admin/security/logins') && server.includes('/api/admin/security/alerts'), 'admin security API routes must exist');
+must(server.includes('/api/admin/security/sessions/:id/revoke') && server.includes('/api/admin/users/:id/revoke-sessions'), 'session revocation controls must exist');
+must(auth.includes('updateMany({ where: { id: session.id') && auth.includes('destroySessionById'), 'session access must be ended rather than silently deleted');
+must(security.includes('requestSecurityContext') && security.includes('parseUserAgent') && security.includes('recordLoginEvent'), 'security telemetry must parse device and record authentication events');
+must(audit.includes('classifyAdminRisk') && audit.includes('securityAlert.create'), 'high-impact admin actions must be risk scored and alerted');
+must(users.includes('security-center-title') && users.includes('security-state-title'), 'Users page must expose the Security and identity centre');
+must(usersSecurity.includes('renderSecuritySessions') && usersSecurity.includes('viewUserSecurity') && usersSecurity.includes('revokeSession'), 'Users page must provide session monitoring and revocation controls');
+must(migration.includes('CREATE TYPE "SecuritySeverity"') && migration.includes('CREATE TABLE "LoginEvent"') && migration.includes('CREATE TABLE "SecurityAlert"'), 'security migration must create all required database objects');
+if(failures.length){console.error('SECURITY IDENTITY REGRESSION CHECK FAILED:'); failures.forEach(x=>console.error(' - '+x)); process.exit(1);}
+console.log('Security identity regression checks passed.');
