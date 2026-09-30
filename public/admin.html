@@ -201,6 +201,18 @@
     <p>Upload raw exports from the journey systems. Each report is validated against a fixed format, staged for review, then committed — which recomputes the Financial Wellness Score and refreshes every employer dashboard. Load reports top-to-bottom; later reports reference earlier ones.</p>
   </div>
 
+  <section id="admin-security-strip" class="card" style="margin:18px 0;border-color:#d7cde9;">
+    <div class="card-hd"><div><h2>Security centre</h2><div class="note">Live access activity and high-impact admin changes</div></div><a class="btn btn-sm" href="/users">Open Users &amp; Security</a></div>
+    <div class="card-bd">
+      <div id="admin-security-summary" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;">
+        <div class="security-stat"><div class="k">Live sessions</div><div class="v" id="admin-sec-live">-</div></div>
+        <div class="security-stat"><div class="k">Failed logins 24h</div><div class="v" id="admin-sec-failed">-</div></div>
+        <div class="security-stat"><div class="k">Open alerts</div><div class="v" id="admin-sec-alerts">-</div></div>
+        <div class="security-stat"><div class="k">Successful logins 24h</div><div class="v" id="admin-sec-success">-</div></div>
+      </div>
+      <div id="admin-sec-copy" style="margin-top:10px;font-size:12px;color:#617486;">Loading security posture...</div>
+    </div>
+  </section>
   <div class="grid">
     <!-- left: report picker -->
     <div class="card">
@@ -1269,6 +1281,7 @@ async function boot(){
     loadEngagement();
     renderPresets();
     loadAuditLog();
+    loadAdminSecuritySummary();
   }catch(e){
     $('#rep-list').innerHTML = `<p class="muted">Could not reach the API. Start the server and reload.</p>`;
   }
@@ -1474,5 +1487,20 @@ boot();
 if(window.BrandEngine){ BrandEngine.themeController().set({ brand:{ accentColor:'7D2FA3', primaryColor:'B15BE8', navyColor:'2B1B68' }, light:null }); }
 </script>
 <script src="/static/shell.js?v=1"></script>
+<script>
+async function loadAdminSecuritySummary(){
+  try{
+    const r=await fetch('/api/admin/security/overview',{cache:'no-store'});
+    if(!r.ok) return;
+    const d=await r.json();
+    document.getElementById('admin-sec-live').textContent=String(d.activeSessions||0);
+    document.getElementById('admin-sec-failed').textContent=String(d.failedLogins24h||0);
+    document.getElementById('admin-sec-alerts').textContent=String(d.openAlerts||0);
+    document.getElementById('admin-sec-success').textContent=String(d.successfulLogins24h||0);
+    const el=document.getElementById('admin-sec-copy');
+    el.textContent=d.riskState==='Good' ? 'Security posture is clear. Open the Security & identity centre for active sessions and recent sign-ins.' : 'Attention is required. Review open alerts and recent sign-ins before making further access changes.';
+  }catch(_){}
+}
+</script>
 </body>
 </html>
