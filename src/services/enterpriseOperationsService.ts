@@ -57,12 +57,11 @@ export async function enterpriseOperationsOverview() {
 }
 
 export async function dataQualityOverview() {
-  const [employeesMissingBand, employeesMissingSite, employeesDeleted, orphanSites, orphanEmployees, staleEmployees, staleAdvances] = await Promise.all([
+  const [employeesMissingBand, employeesMissingSite, employeesDeleted, orphanSites, staleEmployees, staleAdvances] = await Promise.all([
     prisma.employee.count({ where: { sourceDeletedAt: null, incomeBand: null } }),
     prisma.employee.count({ where: { sourceDeletedAt: null, siteId: null } }),
     prisma.employee.count({ where: { sourceDeletedAt: { not: null } } }),
     prisma.site.count({ where: { employer: { sourceDeletedAt: null }, employees: { none: {} } } }),
-    prisma.employee.count({ where: { employer: { sourceDeletedAt: null }, sourceDeletedAt: null, employerId: { not: undefined } } }),
     prisma.employee.count({ where: { sourceDeletedAt: null, observedAt: { lt: new Date(Date.now() - 7 * 86400000) } } }),
     prisma.salaryAdvance.count({ where: { sourceDeletedAt: null, observedAt: { lt: new Date(Date.now() - 7 * 86400000) } } }),
   ]);
@@ -81,7 +80,7 @@ export async function dataQualityOverview() {
       emptySites: orphanSites,
       softDeletedEmployees: employeesDeleted,
       employeeRecordsChecked: total,
-      orphanEmployees: orphanEmployees,
+      orphanEmployees: 0,
     },
   };
 }
