@@ -606,6 +606,16 @@ model IntegrationConfig {
   sqlQueryTimeoutMs         Int       @default(60000)
   sqlMaxRowsPerReport       Int       @default(250000)
 
+  // Analytics placement. PostgreSQL remains the application read model by default.
+  // SOURCE_AGGREGATES means approved heavy aggregations are pushed into source-side
+  // reporting views or a read replica, with only the required result retained here.
+  // HYBRID permits per-report routing through AnalyticsRoute.
+  analyticsMode             String    @default("POSTGRES_READ_MODEL")
+  sourceAnalyticsEnabled    Boolean   @default(false)
+  sourceAnalyticsReadOnly   Boolean   @default(true)
+  sourceAnalyticsUseReplica Boolean   @default(false)
+  sourceAnalyticsNote       String?
+
   // Incremental source pulls are cheap after the initial cursor-based load.
   scheduleHours             Int       @default(1)
   lastSyncAt                DateTime?
@@ -613,6 +623,20 @@ model IntegrationConfig {
   lastSyncStatus            String?
   lastSyncNote              String?
   updatedAt                 DateTime @default(now()) @updatedAt
+}
+
+model AnalyticsRoute {
+  id             String   @id @default(cuid())
+  reportKey      String   @unique
+  executionMode  String   @default("POSTGRES")
+  sourceView     String?
+  enabled        Boolean  @default(true)
+  rationale      String?
+  lastVerifiedAt DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @default(now()) @updatedAt
+
+  @@index([executionMode, enabled])
 }
 
 model SyncLog {

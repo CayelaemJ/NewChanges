@@ -33,7 +33,8 @@
     "check:security-operations": "node scripts/security-operations-regression-check.mjs",
     "check:security-full": "npm run build && npm run check:security && npm run check:security-identity && npm run check:security-operations && npm audit --audit-level=high",
     "check:security-governance": "node scripts/security-governance-regression-check.mjs",
-    "check:south-africa-compliance": "node scripts/south-africa-compliance-regression-check.mjs"
+    "check:south-africa-compliance": "node scripts/south-africa-compliance-regression-check.mjs",
+    "check:enterprise-operations": "node scripts/enterprise-operations-regression-check.mjs"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.2",

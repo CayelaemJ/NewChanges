@@ -266,6 +266,24 @@
         </div>
       </div>
 
+      <div class="card section-gap" id="enterprise-operations-card">
+        <div class="card-hd"><div><h2>Enterprise Operations &amp; Data Architecture</h2><div class="note">See where data is processed, how fresh it is, and which analytics are allowed to run against the source database</div></div><button class="btn btn-sm" type="button" onclick="loadEnterpriseOperations()">Refresh</button></div>
+        <div class="card-bd">
+          <div id="enterprise-ops-summary" class="compliance-summary">
+            <div class="security-stat"><div class="k">Data quality</div><div class="v" id="ops-quality">-</div></div>
+            <div class="security-stat"><div class="k">Source</div><div class="v" id="ops-source" style="font-size:16px;">-</div></div>
+            <div class="security-stat"><div class="k">Analytics store</div><div class="v" id="ops-store" style="font-size:16px;">-</div></div>
+            <div class="security-stat"><div class="k">Data freshness</div><div class="v" id="ops-freshness" style="font-size:16px;">-</div></div>
+            <div class="security-stat"><div class="k">Open imports</div><div class="v" id="ops-imports">-</div></div>
+          </div>
+          <div id="ops-architecture" style="margin-top:14px;padding:14px;border:1px solid var(--line);border-radius:12px;background:#fff;font-size:12px;color:#617486;line-height:1.55;"></div>
+          <div style="margin-top:14px;overflow:auto;">
+            <table><thead><tr><th>Feed</th><th>Execution</th><th>Source view</th><th>Enabled</th><th>Reason</th></tr></thead><tbody id="ops-routes"><tr><td colspan="5" class="muted">Loading routes...</td></tr></tbody></table>
+          </div>
+          <div id="ops-quality-detail" style="margin-top:14px;"></div>
+        </div>
+      </div>
+
       <!-- import history -->
       <div class="card section-gap">
         <div class="card-hd"><h2>Import history</h2><div class="note">Most recent first · Revert is shown only when a batch can be safely rolled back</div></div>
@@ -352,6 +370,27 @@
               <input id="integ-sql-trust" type="checkbox" style="width:17px;height:17px;"> Trust server certificate (only when approved)
             </label>
             <div style="grid-column:span 2;font-size:12px;color:#8497a7;line-height:1.5;">SQL mode expects 10 read-only canonical views named <b>v_employers</b>, <b>v_workforce_snapshots</b>, … <b>v_salary_advances</b> (or the configured prefix). The connection test checks every view and its contracted columns.</div>
+          </div>
+
+          <div style="margin-top:16px;padding:14px;border:1px solid var(--line);border-radius:12px;background:#fbfaff;max-width:820px;">
+            <div style="font-size:13px;font-weight:800;color:var(--brand-primary);">Analytics query placement</div>
+            <div style="font-size:11.5px;color:#617486;line-height:1.5;margin-top:4px;">Do not run heavy dashboard workloads on a production MySQL primary. Use source-side reporting views or a read replica for approved aggregations, then keep the portal's governed read model in PostgreSQL.</div>
+            <div class="integration-two-col" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px;">
+              <label style="font-size:12px;font-weight:700;color:#5b6b7a;">Default analytics mode
+                <select id="integ-analytics-mode" style="display:block;width:100%;margin-top:5px;font:inherit;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;background:#fff;">
+                  <option value="POSTGRES_READ_MODEL">PostgreSQL read model</option>
+                  <option value="SOURCE_AGGREGATES">Source-side aggregates</option>
+                  <option value="HYBRID">Hybrid, per feed</option>
+                </select>
+              </label>
+              <label style="display:flex;align-items:center;gap:9px;font-size:12px;font-weight:700;color:#32217c;cursor:pointer;padding-top:20px;">
+                <input id="integ-source-analytics" type="checkbox" style="width:17px;height:17px;"> Allow approved source analytics
+              </label>
+            </div>
+            <label style="display:flex;align-items:center;gap:9px;font-size:12px;font-weight:700;color:#32217c;cursor:pointer;margin-top:10px;">
+              <input id="integ-source-replica" type="checkbox" style="width:17px;height:17px;"> Source analytics must use a read replica
+            </label>
+            <div id="integ-analytics-note" style="font-size:11px;color:#8497a7;margin-top:8px;">Read-only is enforced by the server. Arbitrary SQL is never accepted from the browser.</div>
           </div>
 
           <label style="margin-top:16px;display:flex;align-items:center;gap:9px;font-size:13px;font-weight:700;color:#32217c;cursor:pointer;">
@@ -631,6 +670,9 @@ async function loadInteg(){
     $('#integ-sql-maxrows').value = c.sqlMaxRowsPerReport || 250000;
     $('#integ-sql-ssl').checked = c.sqlSsl !== false;
     $('#integ-sql-trust').checked = !!c.sqlTrustServerCertificate;
+    $('#integ-analytics-mode').value = c.analyticsMode || 'POSTGRES_READ_MODEL';
+    $('#integ-source-analytics').checked = !!c.sourceAnalyticsEnabled;
+    $('#integ-source-replica').checked = !!c.sourceAnalyticsUseReplica;
     if(c.hasSqlPassword) $('#integ-sql-password').placeholder = c.sqlPasswordFromEnvironment ? '•••••• (provided by SOURCE_SQL_PASSWORD)' : '•••••• (saved — leave blank to keep)';
 
     const envBox = $('#integ-env-override');
@@ -678,6 +720,10 @@ function integrationDraft(){
     sqlMaxRowsPerReport: parseInt($('#integ-sql-maxrows').value)||250000,
     sqlSsl: $('#integ-sql-ssl').checked,
     sqlTrustServerCertificate: $('#integ-sql-trust').checked,
+    analyticsMode: $('#integ-analytics-mode').value,
+    sourceAnalyticsEnabled: $('#integ-source-analytics').checked,
+    sourceAnalyticsReadOnly: true,
+    sourceAnalyticsUseReplica: $('#integ-source-replica').checked,
   };
   const tok = $('#integ-token').value.trim(); if(tok) body.authToken = tok;
   const sqlPassword = $('#integ-sql-password').value.trim(); if(sqlPassword) body.sqlPassword = sqlPassword;
@@ -1309,6 +1355,7 @@ async function boot(){
     loadAuditLog();
     loadAdminSecuritySummary();
     loadComplianceSummary();
+    loadEnterpriseOperations();
   }catch(e){
     $('#rep-list').innerHTML = `<p class="muted">Could not reach the API. Start the server and reload.</p>`;
   }
@@ -1555,6 +1602,35 @@ async function loadComplianceDetail(){
     document.getElementById('comp-retention-list').innerHTML=(p||[]).slice(0,8).map(x=>`<div class="compliance-item"><strong>${compEsc(x.dataClass)}</strong><small>${x.retentionDays?compEsc(x.retentionDays+' days'):'event/purpose based'} · ${compEsc(x.deletionMethod)} · legal hold: ${x.legalHold?'yes':'no'}</small></div>`).join('')||'<div class="compliance-item">No retention policies recorded.</div>';
     document.getElementById('comp-incidents-list').innerHTML=(i||[]).slice(0,8).map(x=>`<div class="compliance-item"><strong>${compEsc(x.title)}</strong><small>${compEsc(x.severity)} · ${compEsc(x.status)} · discovered: ${compEsc(fmtDate(x.discoveredAt))}</small></div>`).join('')||'<div class="compliance-item">No open security incidents.</div>';
   }catch(_){}
+}
+
+async function loadEnterpriseOperations(){
+  try{
+    const [o,q,r]=await Promise.all([
+      fetch('/api/admin/enterprise/overview',{cache:'no-store'}).then(x=>x.json()),
+      fetch('/api/admin/enterprise/data-quality',{cache:'no-store'}).then(x=>x.json()),
+      fetch('/api/admin/integration/routes',{cache:'no-store'}).then(x=>x.json())
+    ]);
+    document.getElementById('ops-quality').textContent=(q.score??0).toFixed(1)+'%';
+    document.getElementById('ops-source').textContent=o.integration.sourceMode;
+    document.getElementById('ops-store').textContent=o.integration.analyticsMode==='POSTGRES_READ_MODEL'?'PostgreSQL':o.integration.analyticsMode;
+    const freshness=o.integration.freshnessState==='FRESH'?'Fresh':o.integration.freshnessState==='STALE'?'Stale':'Unknown';
+    document.getElementById('ops-freshness').textContent=freshness;
+    document.getElementById('ops-imports').textContent=String(o.imports.open||0);
+    const replica=o.integration.sourceAnalyticsUseReplica?'read replica':'source database';
+    document.getElementById('ops-architecture').innerHTML=
+      '<strong style="color:var(--brand-primary);">Recommended placement:</strong> '+esc(o.integration.sourceMode)+' remains the source of truth. PostgreSQL serves the application read model and governed audit/history. Heavy analytics should run against approved source-side reporting views'+
+      (o.integration.sourceAnalyticsUseReplica?' on a read replica':'')+' rather than the production source database. '+(o.integration.sourceAnalyticsEnabled?'Source-side analytics is enabled.':'Source-side analytics is currently disabled.')+
+      ' No raw SQL is exposed to administrators.';
+    document.getElementById('ops-routes').innerHTML=(r||[]).map(x=>'<tr><td><code>'+esc(x.reportKey)+'</code></td><td>'+esc(x.executionMode)+'</td><td>'+esc(x.sourceView||'not configured')+'</td><td>'+ (x.enabled?'Yes':'No') +'</td><td class="muted">'+esc(x.rationale||'No rationale recorded')+'</td></tr>').join('')||'<tr><td colspan="5" class="muted">No per-feed routes configured. PostgreSQL is used by default.</td></tr>';
+    const c=q.checks||{};
+    document.getElementById('ops-quality-detail').innerHTML='<div class="compliance-grid">'+
+      '<div class="compliance-box"><h3>Completeness</h3><p>'+esc(c.employeeRecordsChecked||0)+' employee records checked. Missing income band: '+esc(c.employeesMissingIncomeBand||0)+'. Missing site: '+esc(c.employeesMissingSite||0)+'.</p></div>'+
+      '<div class="compliance-box"><h3>Freshness</h3><p>Employees older than 7 days: '+esc(c.staleEmployeesOver7Days||0)+'. Salary advances older than 7 days: '+esc(c.staleSalaryAdvancesOver7Days||0)+'.</p></div>'+
+    '</div>';
+  }catch(e){
+    const el=document.getElementById('ops-architecture'); if(el) el.textContent='Could not load enterprise operations: '+e.message;
+  }
 }
 
 async function loadAdminSecuritySummary(){

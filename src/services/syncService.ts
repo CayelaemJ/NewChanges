@@ -50,6 +50,11 @@ export interface IntegrationConfigPatch {
   sqlViewPrefix?: string | null;
   sqlQueryTimeoutMs?: number;
   sqlMaxRowsPerReport?: number;
+  analyticsMode?: string;
+  sourceAnalyticsEnabled?: boolean;
+  sourceAnalyticsReadOnly?: boolean;
+  sourceAnalyticsUseReplica?: boolean;
+  sourceAnalyticsNote?: string | null;
 }
 
 export async function saveConfig(patch: IntegrationConfigPatch) {
@@ -58,11 +63,35 @@ export async function saveConfig(patch: IntegrationConfigPatch) {
   if (patch.sqlPassword === "" || patch.sqlPassword == null) delete data.sqlPassword;
   if (patch.sourceMode) data.sourceMode = patch.sourceMode.toUpperCase();
   if (patch.sqlDialect) data.sqlDialect = patch.sqlDialect.toUpperCase();
+  if (patch.analyticsMode) {
+    const mode = patch.analyticsMode.toUpperCase();
+    if (!["POSTGRES_READ_MODEL", "SOURCE_AGGREGATES", "HYBRID"].includes(mode)) throw new Error("analyticsMode must be POSTGRES_READ_MODEL, SOURCE_AGGREGATES or HYBRID.");
+    data.analyticsMode = mode;
+  }
+  if (patch.sourceAnalyticsEnabled && patch.sourceAnalyticsReadOnly === false) throw new Error("Source analytics must remain read-only.");
+  if (patch.sourceAnalyticsReadOnly === false) throw new Error("Source analytics must remain read-only.");
+  data.sourceAnalyticsReadOnly = true;
 
   return prisma.integrationConfig.upsert({
     where: { id: "default" },
     create: { id: "default", ...data },
     update: data,
+  });
+}
+
+export async function listAnalyticsRoutes() {
+  return prisma.analyticsRoute.findMany({ orderBy: { reportKey: "asc" } });
+}
+
+export async function saveAnalyticsRoute(input: { reportKey: string; executionMode: string; sourceView?: string | null; enabled?: boolean; rationale?: string | null }) {
+  const mode = String(input.executionMode || "POSTGRES").toUpperCase();
+  if (!["POSTGRES", "SOURCE", "HYBRID"].includes(mode)) throw new Error("executionMode must be POSTGRES, SOURCE or HYBRID.");
+  if (mode === "SOURCE" && !input.sourceView) throw new Error("SOURCE routes require an approved source view.");
+  if (input.sourceView && !/^[A-Za-z_][A-Za-z0-9_.]*$/.test(input.sourceView)) throw new Error("sourceView contains unsafe characters.");
+  return prisma.analyticsRoute.upsert({
+    where: { reportKey: input.reportKey },
+    create: { reportKey: input.reportKey, executionMode: mode, sourceView: input.sourceView || null, enabled: input.enabled !== false, rationale: input.rationale || null },
+    update: { executionMode: mode, sourceView: input.sourceView || null, enabled: input.enabled !== false, rationale: input.rationale || null, lastVerifiedAt: new Date() },
   });
 }
 
@@ -124,10 +153,15 @@ export async function runSync(trigger: "manual" | "scheduled" = "manual") {
         if (isFirstSync) {
           console.log(`[sync] ${reportKey}: first sync detected, loading all records without date filtering.`);
         }
+        const route = await prisma.analyticsRoute.findUnique({ where: { reportKey } });
+        const useSourceRoute = route?.enabled && (route.executionMode === "SOURCE" || route.executionMode === "HYBRID") && route.sourceView;
+        if (useSourceRoute && configuredSourceMode(config) !== "SQL") {
+          throw new Error(`Analytics route for ${reportKey} requires SQL source mode.`);
+        }
         const pulled = await adapter.fetchReport(reportKey, {
           since: requestSince,
           through: throughAt,
-        });
+        }, useSourceRoute ? route.sourceView : null);
         const result = validate(format, pulled.records);
 
         const skewCeiling = new Date(throughAt.getTime() + CLOCK_SKEW_TOLERANCE_MS);
