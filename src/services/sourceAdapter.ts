@@ -43,12 +43,22 @@ export interface IntegrationSourceConfig {
   sqlViewPrefix?: string | null;
   sqlQueryTimeoutMs?: number | null;
   sqlMaxRowsPerReport?: number | null;
+  sqlReplicaEnabled?: boolean | null;
+  sqlReplicaHost?: string | null;
+  sqlReplicaPort?: number | null;
+  sqlReplicaDatabase?: string | null;
+  sqlReplicaSchema?: string | null;
+  sqlReplicaUsername?: string | null;
+  sqlReplicaPassword?: string | null;
+  sqlReplicaSsl?: boolean | null;
+  sqlReplicaTrustServerCertificate?: boolean | null;
+  sqlReplicaMaxLagSeconds?: number | null;
 }
 
 export interface SourceAdapter {
   mode: SourceMode;
   label: string;
-  fetchReport(reportKey: string, window?: SourceWindow, sourceViewOverride?: string | null): Promise<SourceFetchResult>;
+  fetchReport(reportKey: string, window?: SourceWindow, sourceViewOverride?: string | null, options?: { useReplica?: boolean }): Promise<SourceFetchResult>;
   test(): Promise<{ ok: true; note: string; details?: unknown }>;
   describe?(reportKey: string): Promise<{ database: string | null; totalRows: number; newest: string | null; location: string }>;
   close(): Promise<void>;
@@ -92,6 +102,16 @@ function withEnvironment(config: IntegrationSourceConfig): IntegrationSourceConf
     sqlViewPrefix: process.env.SOURCE_SQL_VIEW_PREFIX || config.sqlViewPrefix,
     sqlQueryTimeoutMs: numberEnv("SOURCE_SQL_QUERY_TIMEOUT_MS") ?? config.sqlQueryTimeoutMs,
     sqlMaxRowsPerReport: numberEnv("SOURCE_SQL_MAX_ROWS_PER_REPORT") ?? config.sqlMaxRowsPerReport,
+    sqlReplicaEnabled: boolEnv("SOURCE_SQL_REPLICA_ENABLED") ?? config.sqlReplicaEnabled,
+    sqlReplicaHost: process.env.SOURCE_SQL_REPLICA_HOST || config.sqlReplicaHost,
+    sqlReplicaPort: numberEnv("SOURCE_SQL_REPLICA_PORT") ?? config.sqlReplicaPort,
+    sqlReplicaDatabase: process.env.SOURCE_SQL_REPLICA_DATABASE || config.sqlReplicaDatabase,
+    sqlReplicaSchema: process.env.SOURCE_SQL_REPLICA_SCHEMA ?? config.sqlReplicaSchema,
+    sqlReplicaUsername: process.env.SOURCE_SQL_REPLICA_USERNAME || config.sqlReplicaUsername,
+    sqlReplicaPassword: process.env.SOURCE_SQL_REPLICA_PASSWORD || config.sqlReplicaPassword,
+    sqlReplicaSsl: boolEnv("SOURCE_SQL_REPLICA_SSL") ?? config.sqlReplicaSsl,
+    sqlReplicaTrustServerCertificate: boolEnv("SOURCE_SQL_REPLICA_TRUST_SERVER_CERTIFICATE") ?? config.sqlReplicaTrustServerCertificate,
+    sqlReplicaMaxLagSeconds: numberEnv("SOURCE_SQL_REPLICA_MAX_LAG_SECONDS") ?? config.sqlReplicaMaxLagSeconds,
   };
 }
 
@@ -213,7 +233,7 @@ async function createApiAdapter(config: IntegrationSourceConfig): Promise<Source
   const baseUrl = await assertSafeApiBaseUrl(rawBaseUrl);
   const token = process.env.SOURCE_API_TOKEN || config.authToken || null;
 
-  async function fetchReport(reportKey: string, window?: SourceWindow): Promise<SourceFetchResult> {
+  async function fetchReport(reportKey: string, window?: SourceWindow, _sourceViewOverride?: string | null, _options?: { useReplica?: boolean }): Promise<SourceFetchResult> {
     const root = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
     const url = new URL(`api/empower-fin/${reportKey}`, root);
     if (window?.since) url.searchParams.set("since", window.since.toISOString());
@@ -300,8 +320,8 @@ async function openPostgresExecutor(config: IntegrationSourceConfig): Promise<Sq
 
   return {
     dialect: "POSTGRESQL",
-    async queryReport(reportKey, window, maxRows) {
-      const view = qualifiedView("POSTGRESQL", config, reportKey);
+    async queryReport(reportKey, window, maxRows, sourceViewOverride) {
+      const view = qualifiedView("POSTGRESQL", config, reportKey, sourceViewOverride);
       const params: unknown[] = [];
       const where: string[] = [];
       if (window.since) { params.push(window.since); where.push(`source_updated_at > $${params.length}`); }
@@ -348,8 +368,8 @@ async function openMysqlExecutor(config: IntegrationSourceConfig): Promise<SqlEx
 
   return {
     dialect: "MYSQL",
-    async queryReport(reportKey, window, maxRows) {
-      const view = qualifiedView("MYSQL", config, reportKey);
+    async queryReport(reportKey, window, maxRows, sourceViewOverride) {
+      const view = qualifiedView("MYSQL", config, reportKey, sourceViewOverride);
       const params: unknown[] = [];
       const where: string[] = [];
       if (window.since) { params.push(window.since); where.push("source_updated_at > ?"); }
@@ -399,8 +419,8 @@ async function openMssqlExecutor(config: IntegrationSourceConfig): Promise<SqlEx
 
   return {
     dialect: "MSSQL",
-    async queryReport(reportKey, window, maxRows) {
-      const view = qualifiedView("MSSQL", config, reportKey);
+    async queryReport(reportKey, window, maxRows, sourceViewOverride) {
+      const view = qualifiedView("MSSQL", config, reportKey, sourceViewOverride);
       const request = pool.request();
       request.input("limit", mssql.Int, maxRows + 1);
       const where: string[] = [];
@@ -462,8 +482,36 @@ async function createSqlAdapter(config: IntegrationSourceConfig): Promise<Source
     throw new Error(`Could not open a ${dialect} connection to ${config.sqlHost}:${config.sqlPort ?? "(default port)"} — ${note}. If this looks like a protocol/handshake error rather than an auth or network error, double-check that "SQL platform" in Admin is actually set to the database engine you're running (and that Save settings was clicked after changing it), then re-test.`);
   }
 
-  async function fetchReport(reportKey: string, window: SourceWindow = {}): Promise<SourceFetchResult> {
-    const result = await executor.queryReport(reportKey, window, maxRows);
+  const replicaConfig: IntegrationSourceConfig = {
+    ...config,
+    sqlHost: config.sqlReplicaHost,
+    sqlPort: config.sqlReplicaPort ?? config.sqlPort,
+    sqlDatabase: config.sqlReplicaDatabase ?? config.sqlDatabase,
+    sqlSchema: config.sqlReplicaSchema ?? config.sqlSchema,
+    sqlUsername: config.sqlReplicaUsername,
+    sqlPassword: config.sqlReplicaPassword,
+    sqlSsl: config.sqlReplicaSsl ?? config.sqlSsl,
+    sqlTrustServerCertificate: config.sqlReplicaTrustServerCertificate ?? config.sqlTrustServerCertificate,
+  };
+  const replicaConfigured = Boolean(config.sqlReplicaEnabled && config.sqlReplicaHost && config.sqlReplicaUsername && (process.env.SOURCE_SQL_REPLICA_PASSWORD || config.sqlReplicaPassword));
+  let replicaExecutor: SqlExecutor | null = null;
+  if (replicaConfigured) {
+    try {
+      if (dialect === "POSTGRESQL") replicaExecutor = await openPostgresExecutor(replicaConfig);
+      else if (dialect === "MYSQL") replicaExecutor = await openMysqlExecutor(replicaConfig);
+      else replicaExecutor = await openMssqlExecutor(replicaConfig);
+    } catch (error: any) {
+      await executor.close().catch(() => {});
+      throw new Error(`Configured SQL read replica could not be opened: ${error?.message ?? String(error)}`);
+    }
+  }
+
+  async function fetchReport(reportKey: string, window: SourceWindow = {}, sourceViewOverride?: string | null, options?: { useReplica?: boolean }): Promise<SourceFetchResult> {
+    if (options?.useReplica && !replicaExecutor) {
+      throw new Error("This analytics route requires a configured SQL read replica. Set SOURCE_SQL_REPLICA_HOST, SOURCE_SQL_REPLICA_USERNAME and SOURCE_SQL_REPLICA_PASSWORD, or configure the replica credentials in Admin.");
+    }
+    const selectedExecutor = options?.useReplica ? replicaExecutor! : executor;
+    const result = await selectedExecutor.queryReport(reportKey, window, maxRows, sourceViewOverride);
     if (result.rows.length > maxRows) {
       throw new Error(`${reportKey}: SQL extraction exceeded the configured ${maxRows.toLocaleString("en-ZA")} row safety limit for one sync window. Increase sync frequency or sqlMaxRowsPerReport.`);
     }
@@ -499,7 +547,10 @@ async function createSqlAdapter(config: IntegrationSourceConfig): Promise<Source
         details,
       };
     },
-    async close() { await executor.close(); },
+    async close() {
+      await replicaExecutor?.close().catch(() => {});
+      await executor.close();
+    },
   };
 }
 
