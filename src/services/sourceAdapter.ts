@@ -294,7 +294,7 @@ function qualifiedView(dialect: SqlDialect, config: IntegrationSourceConfig, rep
   const qView = parts.length === 2
     ? `${quoteSqlIdentifier(dialect, parts[0])}.${quoteSqlIdentifier(dialect, parts[1])}`
     : quoteSqlIdentifier(dialect, selected);
-  return schema ? `${quoteSqlIdentifier(dialect, schema)}.${qView}` : qView;
+  return parts.length === 2 ? qView : (schema ? `${quoteSqlIdentifier(dialect, schema)}.${qView}` : qView);
 }
 
 async function openPostgresExecutor(config: IntegrationSourceConfig): Promise<SqlExecutor> {
