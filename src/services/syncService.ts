@@ -50,6 +50,16 @@ export interface IntegrationConfigPatch {
   sqlViewPrefix?: string | null;
   sqlQueryTimeoutMs?: number;
   sqlMaxRowsPerReport?: number;
+  sqlReplicaEnabled?: boolean;
+  sqlReplicaHost?: string | null;
+  sqlReplicaPort?: number | null;
+  sqlReplicaDatabase?: string | null;
+  sqlReplicaSchema?: string | null;
+  sqlReplicaUsername?: string | null;
+  sqlReplicaPassword?: string | null;
+  sqlReplicaSsl?: boolean;
+  sqlReplicaTrustServerCertificate?: boolean;
+  sqlReplicaMaxLagSeconds?: number;
   analyticsMode?: string;
   sourceAnalyticsEnabled?: boolean;
   sourceAnalyticsReadOnly?: boolean;
@@ -61,6 +71,7 @@ export async function saveConfig(patch: IntegrationConfigPatch) {
   const data: any = { ...patch };
   if (patch.authToken === "" || patch.authToken == null) delete data.authToken;
   if (patch.sqlPassword === "" || patch.sqlPassword == null) delete data.sqlPassword;
+  if (patch.sqlReplicaPassword === "" || patch.sqlReplicaPassword == null) delete data.sqlReplicaPassword;
   if (patch.sourceMode) data.sourceMode = patch.sourceMode.toUpperCase();
   if (patch.sqlDialect) data.sqlDialect = patch.sqlDialect.toUpperCase();
   if (patch.analyticsMode) {
@@ -71,6 +82,11 @@ export async function saveConfig(patch: IntegrationConfigPatch) {
   if (patch.sourceAnalyticsEnabled && patch.sourceAnalyticsReadOnly === false) throw new Error("Source analytics must remain read-only.");
   if (patch.sourceAnalyticsReadOnly === false) throw new Error("Source analytics must remain read-only.");
   data.sourceAnalyticsReadOnly = true;
+  if (patch.sqlReplicaMaxLagSeconds !== undefined) {
+    const lag = Number(patch.sqlReplicaMaxLagSeconds);
+    if (!Number.isInteger(lag) || lag < 1 || lag > 86400) throw new Error("sqlReplicaMaxLagSeconds must be between 1 and 86400 seconds.");
+    data.sqlReplicaMaxLagSeconds = lag;
+  }
 
   return prisma.integrationConfig.upsert({
     where: { id: "default" },
@@ -83,20 +99,22 @@ export async function listAnalyticsRoutes() {
   return prisma.analyticsRoute.findMany({ orderBy: { reportKey: "asc" } });
 }
 
-export async function saveAnalyticsRoute(input: { reportKey: string; executionMode: string; sourceView?: string | null; enabled?: boolean; rationale?: string | null }) {
+export async function saveAnalyticsRoute(input: { reportKey: string; executionMode: string; workloadClass?: string; sourceView?: string | null; useReplica?: boolean; enabled?: boolean; rationale?: string | null }) {
   const mode = String(input.executionMode || "POSTGRES").toUpperCase();
   if (!["POSTGRES", "SOURCE", "HYBRID"].includes(mode)) throw new Error("executionMode must be POSTGRES, SOURCE or HYBRID.");
+  const workloadClass = String(input.workloadClass || (mode === "POSTGRES" ? "POSTGRES_READ_MODEL" : mode === "SOURCE" ? "SOURCE_AGGREGATE" : "HYBRID")).toUpperCase();
+  if (!["SOURCE_ONLY", "SOURCE_AGGREGATE", "POSTGRES_READ_MODEL", "HYBRID"].includes(workloadClass)) throw new Error("workloadClass must be SOURCE_ONLY, SOURCE_AGGREGATE, POSTGRES_READ_MODEL or HYBRID.");
   if (mode === "SOURCE" && !input.sourceView) throw new Error("SOURCE routes require an approved source view.");
   if (input.sourceView && !/^[A-Za-z_][A-Za-z0-9_.]*$/.test(input.sourceView)) throw new Error("sourceView contains unsafe characters.");
   return prisma.analyticsRoute.upsert({
     where: { reportKey: input.reportKey },
-    create: { reportKey: input.reportKey, executionMode: mode, sourceView: input.sourceView || null, enabled: input.enabled !== false, rationale: input.rationale || null },
-    update: { executionMode: mode, sourceView: input.sourceView || null, enabled: input.enabled !== false, rationale: input.rationale || null, lastVerifiedAt: new Date() },
+    create: { reportKey: input.reportKey, executionMode: mode, workloadClass, sourceView: input.sourceView || null, useReplica: input.useReplica === true, enabled: input.enabled !== false, rationale: input.rationale || null },
+    update: { executionMode: mode, workloadClass, sourceView: input.sourceView || null, useReplica: input.useReplica === true, enabled: input.enabled !== false, rationale: input.rationale || null, lastVerifiedAt: new Date() },
   });
 }
 
 export function publicConfig(config: Awaited<ReturnType<typeof getConfig>>) {
-  const { authToken, sqlPassword, ...safe } = config as any;
+  const { authToken, sqlPassword, sqlReplicaPassword, ...safe } = config as any;
   let effectiveSourceMode = "API";
   let configured = false;
   try {
@@ -112,6 +130,8 @@ export function publicConfig(config: Awaited<ReturnType<typeof getConfig>>) {
     hasToken: Boolean(process.env.SOURCE_API_TOKEN || authToken),
     hasSqlPassword: Boolean(process.env.SOURCE_SQL_PASSWORD || sqlPassword),
     sqlPasswordFromEnvironment: Boolean(process.env.SOURCE_SQL_PASSWORD),
+    hasSqlReplicaPassword: Boolean(process.env.SOURCE_SQL_REPLICA_PASSWORD || sqlReplicaPassword),
+    sqlReplicaPasswordFromEnvironment: Boolean(process.env.SOURCE_SQL_REPLICA_PASSWORD),
     apiTokenFromEnvironment: Boolean(process.env.SOURCE_API_TOKEN),
   };
 }
@@ -155,13 +175,14 @@ export async function runSync(trigger: "manual" | "scheduled" = "manual") {
         }
         const route = await prisma.analyticsRoute.findUnique({ where: { reportKey } });
         const useSourceRoute = route?.enabled && (route.executionMode === "SOURCE" || route.executionMode === "HYBRID") && route.sourceView;
+        const useReplica = Boolean(useSourceRoute && route?.useReplica);
         if (useSourceRoute && configuredSourceMode(config) !== "SQL") {
           throw new Error(`Analytics route for ${reportKey} requires SQL source mode.`);
         }
         const pulled = await adapter.fetchReport(reportKey, {
           since: requestSince,
           through: throughAt,
-        }, useSourceRoute ? route.sourceView : null);
+        }, useSourceRoute ? route.sourceView : null, { useReplica });
         const result = validate(format, pulled.records);
 
         const skewCeiling = new Date(throughAt.getTime() + CLOCK_SKEW_TOLERANCE_MS);
