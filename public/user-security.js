@@ -167,6 +167,15 @@
     }).join("")||'<tr><td colspan="6" class="security-empty">No sign-in history yet.</td></tr>';
   }
 
+  window.revokeAllUserSessions=async function(id,name){
+    if(!confirm("Log out "+name+" from every active session?"))return;
+    const r=await fetch("/api/admin/users/"+encodeURIComponent(id)+"/revoke-sessions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({reason:"Revoked by admin from Security and Identity Centre"})});
+    const d=await r.json().catch(function(){return {};});
+    if(!r.ok){alert(d.error||"Could not revoke the user sessions.");return;}
+    await loadSecurityCenter();
+    alert((d.revokedCount||0)+" active session(s) logged out.");
+  };
+
   window.revokeSession=async function(id,name){
     if(!confirm("Log out "+name+" from this session?"))return;
     const r=await fetch("/api/admin/security/sessions/"+encodeURIComponent(id)+"/revoke",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({reason:"Revoked by admin from Security and Identity Centre"})});
@@ -212,7 +221,7 @@
       back.innerHTML=`<div class="security-drawer" role="dialog" aria-modal="true">
         <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:18px">
           <div><div class="muted">Security profile</div><h2 style="font:600 24px Fraunces,serif;color:var(--brand-primary);margin:2px 0 4px">${esc(user.name)}</h2><div class="muted">${esc(user.email)}</div></div>
-          <button class="btn btn-sm" type="button" data-close-security>Close</button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end"><button class="btn btn-sm" type="button" data-revoke-all>Log out all sessions</button><button class="btn btn-sm" type="button" data-close-security>Close</button></div>
         </div>
         <div class="security-detail-grid">
           <div class="security-detail"><div class="k">Role</div><div class="v">${esc(String(user.role||"").replace("_"," "))}</div></div>
@@ -227,6 +236,7 @@
       </div>`;
       document.body.appendChild(back);
       back.querySelector("[data-close-security]").addEventListener("click",function(){back.remove();});
+      back.querySelector("[data-revoke-all]").addEventListener("click",async function(){await window.revokeAllUserSessions(user.id,user.name);back.remove();});
       back.addEventListener("click",function(e){if(e.target===back)back.remove();});
       back.querySelectorAll("[data-drawer-revoke]").forEach(function(btn){
         btn.addEventListener("click",async function(){await window.revokeSession(btn.getAttribute("data-drawer-revoke"),user.name);back.remove();});
@@ -239,6 +249,9 @@
 
   window.loadSecurityCenter=loadSecurityCenter;
   window.renderSecuritySessions=renderSecuritySessions;
+  const sessionFilter=$("#sec-status");
+  if(sessionFilter)sessionFilter.addEventListener("change",function(){loadSecurityCenter();});
+
   document.addEventListener("DOMContentLoaded",function(){
     setTimeout(function(){installUserTools();decorateUserRows();},300);
   });
