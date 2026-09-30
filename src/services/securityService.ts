@@ -287,6 +287,35 @@ export async function listLoginEvents(opts: { userId?: string; email?: string; l
 }
 
 
+export async function databaseSecuritySnapshot() {
+  try {
+    const [db, activity, size] = await Promise.all([
+      prisma.$queryRaw<Array<{ database: string; username: string; version: string }>>(Prisma.sql`SELECT current_database() AS database, current_user AS username, version() AS version`),
+      prisma.$queryRaw<Array<{ total: bigint; active: bigint }>>(Prisma.sql`SELECT count(*) AS total, count(*) FILTER (WHERE state = 'active') AS active FROM pg_stat_activity`),
+      prisma.$queryRaw<Array<{ bytes: bigint }>>(Prisma.sql`SELECT pg_database_size(current_database()) AS bytes`),
+    ]);
+    return {
+      status: "healthy",
+      database: db[0]?.database ?? "unknown",
+      username: db[0]?.username ?? "unknown",
+      version: db[0]?.version ?? "unknown",
+      connections: Number(activity[0]?.total ?? 0),
+      activeConnections: Number(activity[0]?.active ?? 0),
+      sizeBytes: Number(size[0]?.bytes ?? 0),
+      controls: {
+        rawSqlFromAdminUi: false,
+        destructiveDbActions: false,
+        accessAudit: true,
+        sessionRevocation: true,
+        securityAlerts: true,
+      },
+      checkedAt: new Date().toISOString(),
+    };
+  } catch (error) {
+    return { status: "attention", error: "Database security telemetry unavailable.", checkedAt: new Date().toISOString() };
+  }
+}
+
 export async function listSecurityDevices(limit = 200) {
   const rows = await prisma.session.findMany({
     where: { deviceKey: { not: null } },
