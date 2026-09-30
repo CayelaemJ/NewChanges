@@ -554,6 +554,72 @@ async function createSqlAdapter(config: IntegrationSourceConfig): Promise<Source
   };
 }
 
+
+export async function checkMysqlReadReplica(config: IntegrationSourceConfig) {
+  const effective = withEnvironment(config);
+  if (sqlDialect(effective) !== "MYSQL") {
+    return { configured: false, healthy: false, note: "Read-replica health checks currently support MySQL/MariaDB sources." };
+  }
+  const configured = Boolean(effective.sqlReplicaEnabled && effective.sqlReplicaHost && effective.sqlReplicaUsername && (process.env.SOURCE_SQL_REPLICA_PASSWORD || effective.sqlReplicaPassword));
+  if (!configured) {
+    return { configured: false, healthy: false, note: "No MySQL read replica is configured." };
+  }
+  const mysql: any = await import("mysql2/promise");
+  const createConnection = mysql.createConnection ?? mysql.default?.createConnection;
+  if (!createConnection) throw new Error("The mysql2 driver could not be loaded.");
+  const connection = await createConnection({
+    host: effective.sqlReplicaHost,
+    port: intSetting(effective.sqlReplicaPort, 3306, 1, 65535),
+    database: effective.sqlReplicaDatabase ?? effective.sqlDatabase,
+    user: effective.sqlReplicaUsername,
+    password: process.env.SOURCE_SQL_REPLICA_PASSWORD || effective.sqlReplicaPassword,
+    connectTimeout: 10_000,
+    ssl: (boolEnv("SOURCE_SQL_REPLICA_SSL") ?? effective.sqlReplicaSsl ?? true)
+      ? { rejectUnauthorized: !(boolEnv("SOURCE_SQL_REPLICA_TRUST_SERVER_CERTIFICATE") ?? effective.sqlReplicaTrustServerCertificate ?? false) }
+      : undefined,
+    dateStrings: false,
+  });
+  try {
+    await connection.query("SELECT 1");
+    const [vars]: any = await connection.query("SHOW VARIABLES WHERE Variable_name IN ('read_only','super_read_only')");
+    const readOnly = Array.isArray(vars) && vars.every((v: any) => String(v.Value ?? "OFF").toUpperCase() === "ON");
+    let lagSeconds: number | null = null;
+    let replicationState = "UNKNOWN";
+    try {
+      const [rows]: any = await connection.query("SHOW REPLICA STATUS");
+      const row = Array.isArray(rows) ? rows[0] : null;
+      if (row) {
+        lagSeconds = row.Seconds_Behind_Source == null ? null : Number(row.Seconds_Behind_Source);
+        replicationState = String(row.Replica_IO_Running ?? row.Replica_SQL_Running ?? "UNKNOWN");
+      }
+    } catch {
+      try {
+        const [rows]: any = await connection.query("SHOW SLAVE STATUS");
+        const row = Array.isArray(rows) ? rows[0] : null;
+        if (row) {
+          lagSeconds = row.Seconds_Behind_Master == null ? null : Number(row.Seconds_Behind_Master);
+          replicationState = String(row.Slave_IO_Running ?? row.Slave_SQL_Running ?? "UNKNOWN");
+        }
+      } catch {}
+    }
+    const maxLag = Number(effective.sqlReplicaMaxLagSeconds ?? 120);
+    const lagHealthy = lagSeconds == null || (Number.isFinite(lagSeconds) && lagSeconds <= maxLag);
+    return {
+      configured: true,
+      healthy: readOnly && lagHealthy,
+      readOnly,
+      lagSeconds,
+      maxLagSeconds: maxLag,
+      replicationState,
+      host: effective.sqlReplicaHost,
+      database: effective.sqlReplicaDatabase ?? effective.sqlDatabase,
+      note: !readOnly ? "Replica connection is reachable but the target is not reporting read_only=ON." : lagSeconds != null && lagSeconds > maxLag ? `Replica lag is ${lagSeconds}s, above the configured ${maxLag}s threshold.` : lagSeconds == null ? "Replica is reachable. Replication lag could not be read with the configured database privileges." : "Replica is reachable and within the configured lag threshold.",
+    };
+  } finally {
+    await connection.end();
+  }
+}
+
 export async function createSourceAdapter(config: IntegrationSourceConfig): Promise<SourceAdapter> {
   const mode = configuredSourceMode(config);
   const effective = withEnvironment(config);
