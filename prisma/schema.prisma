@@ -1142,46 +1142,13 @@ model DataAccessEvent {
 // These records make the legal and operational basis for processing explicit.
 // They are governance controls, not a legal conclusion about any particular client.
 
-enum ComplianceRequestType {
-  ACCESS
-  CORRECTION
-  DELETION
-  OBJECTION
-  CONSENT_WITHDRAWAL
-  OTHER
-}
-
-enum ComplianceRequestStatus {
-  RECEIVED
-  IDENTITY_PENDING
-  IN_REVIEW
-  FULFILLED
-  PARTIALLY_FULFILLED
-  REFUSED
-  CLOSED
-}
-
-enum CompliancePartyRole {
-  RESPONSIBLE_PARTY
-  CO_RESPONSIBLE_PARTY
-  OPERATOR
-}
-
-enum SecurityIncidentStatus {
-  DETECTED
-  CONTAINED
-  INVESTIGATING
-  NOTIFIED
-  RESOLVED
-}
-
 model ProcessingActivity {
   id                    String   @id @default(cuid())
   name                  String
   description           String?
   purpose               String
   lawfulBasis           String
-  partyRole             CompliancePartyRole
+  partyRole             String
   dataSubjects          String
   dataCategories        String
   specialPersonalInfo  Boolean  @default(false)
@@ -1210,8 +1177,8 @@ model ProcessingActivity {
 
 model DataSubjectRequest {
   id                String                 @id @default(cuid())
-  requestType       ComplianceRequestType
-  status            ComplianceRequestStatus @default(RECEIVED)
+  requestType       String
+  status            String                 @default("RECEIVED")
   requesterEmail    String
   requesterName     String?
   employerId        String?
@@ -1278,8 +1245,8 @@ model SecurityIncident {
   id                    String               @id @default(cuid())
   title                 String
   description           String
-  status                SecurityIncidentStatus @default(DETECTED)
-  severity              SecuritySeverity     @default(HIGH)
+  status                String               @default("DETECTED")
+  severity              String               @default("HIGH")
   discoveredAt          DateTime             @default(now())
   containedAt           DateTime?
   regulatorNotifiedAt   DateTime?
