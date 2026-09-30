@@ -31,6 +31,48 @@
     return Math.floor(seconds/86400)+"d ago";
   };
 
+  function installUserTools(){
+    const rows=document.querySelector("#user-rows");
+    if(!rows || document.querySelector("#user-admin-search")) return;
+    const table=rows.closest("table");
+    if(!table) return;
+    const bar=document.createElement("div");
+    bar.className="security-tools";
+    bar.style.margin="8px 0";
+    bar.innerHTML='<input id="user-admin-search" placeholder="Search users by name, email or role"><select id="user-admin-status"><option value="">All status</option><option value="active">Active</option><option value="pending">Pending setup</option><option value="disabled">Disabled</option></select>';
+    table.parentElement.insertBefore(bar,table);
+    const filter=function(){
+      const q=(document.querySelector("#user-admin-search")?.value||"").toLowerCase().trim();
+      const status=document.querySelector("#user-admin-status")?.value||"";
+      Array.from(rows.querySelectorAll("tr")).forEach(function(tr){
+        const text=tr.textContent.toLowerCase();
+        let state="";
+        const tag=tr.querySelector(".tag");
+        if(tag) state=tag.textContent.toLowerCase().includes("pending")?"pending":tag.textContent.toLowerCase().includes("disabled")?"disabled":"active";
+        tr.style.display=(!q||text.includes(q))&&(!status||status===state)?"":"none";
+      });
+    };
+    bar.querySelector("#user-admin-search").addEventListener("input",filter);
+    bar.querySelector("#user-admin-status").addEventListener("change",filter);
+  }
+
+  function decorateUserRows(){
+    const users=window.USERS||[];
+    users.forEach(function(u){
+      const row=document.querySelector("#row-"+CSS.escape(u.id));
+      if(!row) return;
+      const actionCell=row.lastElementChild;
+      if(!actionCell || actionCell.querySelector("[data-security-user]")) return;
+      const btn=document.createElement("button");
+      btn.className="btn btn-sm";
+      btn.type="button";
+      btn.textContent="Security";
+      btn.setAttribute("data-security-user",u.id);
+      btn.addEventListener("click",function(){window.viewUserSecurity(u.id);});
+      actionCell.insertBefore(btn,actionCell.firstChild);
+    });
+  }
+
   async function loadSecurityCenter(){
     try{
       const status=($("#sec-status")&&$("#sec-status").value)||"active";
@@ -66,6 +108,8 @@
       renderSecurityAlerts();
       renderSecurityLogins();
       if(window.renderUsersTable) window.renderUsersTable();
+      installUserTools();
+      decorateUserRows();
     }catch(error){console.error("[users] security load failed",error);}
   }
 
@@ -161,4 +205,7 @@
 
   window.loadSecurityCenter=loadSecurityCenter;
   window.renderSecuritySessions=renderSecuritySessions;
+  document.addEventListener("DOMContentLoaded",function(){
+    setTimeout(function(){installUserTools();decorateUserRows();},300);
+  });
 })();
