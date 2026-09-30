@@ -1720,7 +1720,7 @@ function renderEwa(){
   if(!wrap) return;
   const comparison=getMonthFinancialComparison('ewa');
   if(comparison){
-    wrap.innerHTML=renderPeriodLineChart([comparison.current],[comparison.previous],comparison.currentLabel,comparison.previousLabel,formatRandThousands,'var(--chart-cashflow)');
+    wrap.innerHTML=renderPeriodLineChart([comparison.current],[comparison.previous],comparison.currentLabel,comparison.previousLabel,formatRand,'var(--chart-cashflow)');
     return;
   }
   const current=e?.trend||[], prior=DATA.comparison?.previous?.ewa||[];
@@ -1731,7 +1731,7 @@ function renderSavings(){
   const wrap=document.getElementById('savings-chart');
   const comparison=getMonthFinancialComparison('savings');
   if(comparison){
-    wrap.innerHTML=renderPeriodLineChart([comparison.current],[comparison.previous],comparison.currentLabel,comparison.previousLabel,formatRandThousands,'var(--chart-cashflow)');
+    wrap.innerHTML=renderPeriodLineChart([comparison.current],[comparison.previous],comparison.currentLabel,comparison.previousLabel,formatRand,'var(--chart-cashflow)');
     return;
   }
   const current=DATA.savings||[], prior=DATA.comparison?.previous?.savings||[];

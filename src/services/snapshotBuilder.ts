@@ -151,7 +151,8 @@ export function monthKey(date: Date): string {
 }
 function monthLabel(key: string): string {
   const [year, month] = key.split("-");
-  return `${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][Number(month) - 1]} ${year.slice(2)}`;
+  const names = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  return names[Number(month) - 1] + " " + year;
 }
 export function currentPeriod(): string {
   return monthKey(new Date());

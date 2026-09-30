@@ -13,6 +13,7 @@ must(snap.includes("totalAdvanced: Number(comparisonPayload?.ewa?.totalRaw ?? 0)
 must(dash.includes("DATA.periodComparison") && dash.includes("renderPeriodLineChart"),"financial charts must consume period comparison points");
 must(dash.includes('comparison-value-row') && dash.includes('comparison-value-card'),"financial values must render in a dedicated responsive value row outside the SVG plot");
 must(css.includes('.comparison-value-row') && css.includes('@media (max-width:640px)') && css.includes('@media (max-width:900px) and (orientation:landscape)'),"financial chart value cards must have phone and landscape responsive rules");
+must(dash.includes("comparison.current],[comparison.previous],comparison.currentLabel,comparison.previousLabel,formatRand,'var(--chart-cashflow)'") || (dash.match(/getMonthFinancialComparison\('(?:savings|ewa)'\)/g)||[]).length===2,"month comparison charts must render full-rand comparison values without the thousands multiplier");
 must(dash.includes("function getMonthFinancialComparison(kind)") && dash.includes("pc.current.monthlyCashFreedUp") && dash.includes("pc.previous.monthlyCashFreedUp"),"monthly cash freed up must use current and previous run-rate points when a month/latest period is active");
 must(dash.includes("pc.current.totalAdvanced") && dash.includes("pc.previous.totalAdvanced"),"total advanced per month must use current and previous monthly run-rate points");
 must(dash.includes("Recurring savings unlocked, cumulative run-rate"),"monthly cash freed up must identify the cumulative run-rate semantics");
