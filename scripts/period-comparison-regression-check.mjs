@@ -4,7 +4,7 @@ const snap=fs.readFileSync(path.join(process.cwd(),"src/services/snapshotBuilder
 const dash=fs.readFileSync(path.join(process.cwd(),"public/dashboard.html"),"utf8");
 const failures=[];
 const must=(ok,msg)=>{if(!ok)failures.push(msg);};
-must(snap.includes("const periodComparison = comparisonPayload ?"),"server must expose explicit current/previous period financial comparison points");
+must(snap.includes("const periodComparison = selectedMonthKey") && snap.includes("previous: {"),"server must expose explicit current/previous period financial comparison points");
 must(snap.includes("monthlyCashFreedUp: Number(rand(cumulativeMonthlySaving))"),"monthly cash freed up current point must be explicit");
 must(snap.includes("monthlyCashFreedUp: Number(comparisonPayload?.kpis?.monthlySaving?.rand ?? 0)"),"monthly cash freed up previous point must be explicit, including zero");
 must(snap.includes("totalAdvanced: Number(rand(ewaTotal))"),"total advanced current point must be explicit");
