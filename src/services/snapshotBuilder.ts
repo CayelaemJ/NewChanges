@@ -200,7 +200,8 @@ function resolveFilter(query: DashboardQuery = {}): ResolvedFilter {
   const quarter = query.quarter ? parseQuarter(query.quarter) : null;
   if (query.quarter && !quarter) throw new Error("quarter must be YYYY-Q1..YYYY-Q4");
 
-  const period = query.period ?? null;
+  const isLatest = !query.period && !query.quarter && query.range === "latest";
+  const period = query.period ?? (isLatest ? currentPeriod() : null);
   const range = period ? "month" : quarter ? "quarter" : normalizeRange(query.range);
   if (!period && range === "month") {
     throw new Error("range=month requires period=YYYY-MM");
