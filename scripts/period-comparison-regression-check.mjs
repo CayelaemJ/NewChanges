@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 const snap=fs.readFileSync(path.join(process.cwd(),"src/services/snapshotBuilder.ts"),"utf8");
 const dash=fs.readFileSync(path.join(process.cwd(),"public/dashboard.html"),"utf8");
+const css=fs.readFileSync(path.join(process.cwd(),"public/dashboard.css"),"utf8");
 const failures=[];
 const must=(ok,msg)=>{if(!ok)failures.push(msg);};
 must(snap.includes("const periodComparison = selectedMonthKey") && snap.includes("previous: {"),"server must expose explicit current/previous period financial comparison points");
