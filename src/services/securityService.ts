@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { createHash } from "node:crypto";
 import { prisma } from "./authService.js";
 
 export interface RequestSecurityContext {
@@ -10,11 +11,12 @@ export interface RequestSecurityContext {
   country?: string;
   region?: string;
   city?: string;
+  deviceKey?: string;
 }
 
 const trim = (value: unknown, max: number) => typeof value === "string" ? value.trim().slice(0, max) || undefined : undefined;
 
-export function requestSecurityContext(input: any): RequestSecurityContext {
+export async function requestSecurityContext(input: any): Promise<RequestSecurityContext> {
   const headers = input?.headers ?? {};
   const userAgent = trim(headers["user-agent"], 600);
   const deviceType = trim(headers["x-device-type"], 32);
@@ -38,16 +40,68 @@ export function requestSecurityContext(input: any): RequestSecurityContext {
   const region = trim(headers["x-vercel-ip-country-region"] ?? headers["x-geo-region"], 120);
   const city = trim(headers["x-vercel-ip-city"] ?? headers["x-geo-city"], 120);
   const ua = parseUserAgent(userAgent);
+  const resolvedDeviceType = deviceType ?? ua.deviceType;
+  const resolvedBrowser = browser ?? ua.browser;
+  const resolvedOperatingSystem = operatingSystem ?? ua.operatingSystem;
+  const deviceKey = ipSafeDeviceKey(resolvedDeviceType, resolvedBrowser, resolvedOperatingSystem, userAgent);
+  const geo = (!country && !region && !city) ? await resolveIpGeography(ipAddress) : {};
   return {
     ipAddress,
     userAgent,
-    deviceType: deviceType ?? ua.deviceType,
-    browser: browser ?? ua.browser,
-    operatingSystem: operatingSystem ?? ua.operatingSystem,
-    country,
-    region,
-    city,
+    deviceType: resolvedDeviceType,
+    browser: resolvedBrowser,
+    operatingSystem: resolvedOperatingSystem,
+    country: country ?? geo.country,
+    region: region ?? geo.region,
+    city: city ?? geo.city,
+    deviceKey,
   };
+}
+
+function ipSafeDeviceKey(deviceType?: string, browser?: string, operatingSystem?: string, userAgent?: string) {
+  return createHash("sha256")
+    .update([deviceType, browser, operatingSystem, userAgent].map(v => v ?? "").join("|"))
+    .digest("hex")
+    .slice(0, 32);
+}
+
+function isPublicIp(ip?: string) {
+  if (!ip) return false;
+  const value = ip.replace(/^::ffff:/i, "");
+  if (value === "::1" || value === "127.0.0.1" || value === "0.0.0.0") return false;
+  if (/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[0-1])\.)/.test(value)) return false;
+  return true;
+}
+
+async function resolveIpGeography(ip?: string) {
+  if (!isPublicIp(ip)) return {};
+  const ipHash = createHash("sha256").update(ip!).digest("hex");
+  const cached = await prisma.ipGeolocationCache.findUnique({ where: { ipHash } }).catch(() => null);
+  if (cached && cached.expiresAt.getTime() > Date.now()) {
+    return { country: cached.country ?? undefined, region: cached.region ?? undefined, city: cached.city ?? undefined };
+  }
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 2000);
+    const response = await fetch("https://ipwho.is/" + encodeURIComponent(ip!), { signal: controller.signal, headers: { accept: "application/json" } });
+    clearTimeout(timeout);
+    if (!response.ok) return {};
+    const payload: any = await response.json();
+    if (payload?.success === false) return {};
+    const result = {
+      country: typeof payload?.country === "string" ? payload.country.slice(0, 80) : undefined,
+      region: typeof payload?.region === "string" ? payload.region.slice(0, 120) : undefined,
+      city: typeof payload?.city === "string" ? payload.city.slice(0, 120) : undefined,
+    };
+    await prisma.ipGeolocationCache.upsert({
+      where: { ipHash },
+      create: { ipHash, ...result, latitude: Number.isFinite(payload?.latitude) ? payload.latitude : undefined, longitude: Number.isFinite(payload?.longitude) ? payload.longitude : undefined, provider: "ipwho.is", expiresAt: new Date(Date.now() + 7 * 864e5) },
+      update: { ...result, latitude: Number.isFinite(payload?.latitude) ? payload.latitude : undefined, longitude: Number.isFinite(payload?.longitude) ? payload.longitude : undefined, provider: "ipwho.is", fetchedAt: new Date(), expiresAt: new Date(Date.now() + 7 * 864e5) },
+    }).catch(() => {});
+    return result;
+  } catch {
+    return {};
+  }
 }
 
 function parseUserAgent(ua?: string) {
