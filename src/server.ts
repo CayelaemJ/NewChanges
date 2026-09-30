@@ -1388,8 +1388,14 @@ for (const sig of ["SIGTERM", "SIGINT"] as const) {
     app.close().then(() => prisma.$disconnect()).finally(() => process.exit(0));
   });
 }
-// purge expired sessions hourly so the table cannot grow without bound
-setInterval(() => { prisma.session.deleteMany({ where: { expiresAt: { lt: new Date() } } }).catch(() => {}); }, 60 * 60_000).unref();
+// Close expired sessions for history, then prune only old ended records.
+setInterval(() => {
+  const now = new Date();
+  const cutoff = new Date(Date.now() - 180 * 864e5);
+  prisma.session.updateMany({ where: { expiresAt: { lt: now }, endedAt: null }, data: { endedAt: now } })
+    .then(() => prisma.session.deleteMany({ where: { endedAt: { lt: cutoff } } }))
+    .catch(() => {});
+}, 60 * 60_000).unref();
 
 // Register all routes before opening the listener.
   if (!CONTACT_EMAIL) app.log.warn("CONTACT_EMAIL is not set: the contact form is disabled and legal pages show a placeholder contact.");
