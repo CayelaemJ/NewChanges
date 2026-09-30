@@ -10,6 +10,10 @@ must(snap.includes("monthlyCashFreedUp: Number(comparisonPayload?.kpis?.monthlyS
 must(snap.includes("totalAdvanced: Number(rand(ewaTotal))"),"total advanced current point must be explicit");
 must(snap.includes("totalAdvanced: Number(comparisonPayload?.ewa?.totalRaw ?? 0)"),"total advanced previous point must be explicit, including zero");
 must(dash.includes("DATA.periodComparison") && dash.includes("renderPeriodLineChart"),"financial charts must consume period comparison points");
+must(dash.includes("function getMonthFinancialComparison(kind)") && dash.includes("DATA.kpis?.monthlySaving?.rand") && dash.includes("comparison.monthlySavingRand"),"monthly cash chart must have a direct month fallback using current and previous KPI totals");
+must(dash.includes("DATA.ewa?.totalRaw") && dash.includes("comparison.totalAdvancedRaw"),"total advanced chart must have a direct month fallback using current and previous raw totals");
+must(snap.includes("monthlySavingRand: Number(comparisonPayload?.kpis?.monthlySaving?.rand ?? 0)") && snap.includes("totalAdvancedRaw: Number(comparisonPayload?.ewa?.totalRaw ?? 0)"),"server comparison payload must expose exact previous-period financial totals");
+
 must(snap.includes("const isLatest = !query.period && !query.quarter && query.range === " + '"latest"'),"latest available must resolve to the current reporting month");
 must(snap.includes("const period = query.period ?? (isLatest ? currentPeriod() : null)"),"latest available must use month semantics and therefore receive previous-month comparison");
 must(dash.includes("axisLeft=122,plotLeft=170") && dash.includes("overflow:visible"),"financial chart must reserve a dedicated Y-axis gutter and protect labels from clipping");
