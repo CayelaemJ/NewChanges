@@ -119,7 +119,7 @@ export async function saveAnalyticsRoute(input: { reportKey: string; executionMo
 }
 
 export function publicConfig(config: Awaited<ReturnType<typeof getConfig>>) {
-  const { authToken, sqlPassword, ...safe } = config as any;
+  const { authToken, sqlPassword, sourceAnalyticsReplicaPassword, ...safe } = config as any;
   let effectiveSourceMode = "API";
   let configured = false;
   try {
