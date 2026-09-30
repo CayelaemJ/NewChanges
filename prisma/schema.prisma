@@ -606,6 +606,19 @@ model IntegrationConfig {
   sqlQueryTimeoutMs         Int       @default(60000)
   sqlMaxRowsPerReport       Int       @default(250000)
 
+  // Optional dedicated read replica for heavy source analytics. Credentials may
+  // instead be supplied through SOURCE_SQL_REPLICA_* environment variables.
+  sqlReplicaEnabled         Boolean   @default(false)
+  sqlReplicaHost            String?
+  sqlReplicaPort            Int?
+  sqlReplicaDatabase        String?
+  sqlReplicaSchema          String?
+  sqlReplicaUsername        String?
+  sqlReplicaPassword        String?
+  sqlReplicaSsl             Boolean   @default(true)
+  sqlReplicaTrustServerCertificate Boolean @default(false)
+  sqlReplicaMaxLagSeconds   Int       @default(120)
+
   // Analytics placement. PostgreSQL remains the application read model by default.
   // SOURCE_AGGREGATES means approved heavy aggregations are pushed into source-side
   // reporting views or a read replica, with only the required result retained here.
@@ -629,7 +642,9 @@ model AnalyticsRoute {
   id             String   @id @default(cuid())
   reportKey      String   @unique
   executionMode  String   @default("POSTGRES")
+  workloadClass String   @default("POSTGRES_READ_MODEL")
   sourceView     String?
+  useReplica     Boolean  @default(false)
   enabled        Boolean  @default(true)
   rationale      String?
   lastVerifiedAt DateTime?
@@ -637,6 +652,7 @@ model AnalyticsRoute {
   updatedAt      DateTime @default(now()) @updatedAt
 
   @@index([executionMode, enabled])
+  @@index([workloadClass, enabled])
 }
 
 model SyncLog {
