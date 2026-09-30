@@ -173,6 +173,16 @@
   .welcome-splash-greeting{font-family:'Fraunces',serif;font-weight:600;font-size:26px;color:var(--brand-primary);}
   .welcome-splash-sub{margin-top:6px;font-size:13.5px;color:var(--grey);font-weight:600;}
 .security-stat{padding:14px;border:1px solid #d7cde9;border-radius:13px;background:#fff}.security-stat .k{font-size:9px;font-weight:850;letter-spacing:.08em;text-transform:uppercase;color:#617486}.security-stat .v{font-size:24px;font-weight:850;color:#2b1b68;margin-top:4px;font-variant-numeric:tabular-nums}@media(max-width:900px){#admin-security-summary{grid-template-columns:1fr 1fr!important}}@media(max-width:600px){#admin-security-summary{grid-template-columns:1fr!important}}.compliance-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}.compliance-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.compliance-box{border:1px solid var(--line);border-radius:12px;padding:14px;background:#fff}.compliance-box-wide{grid-column:1/-1}.compliance-box h3{font-size:12px;color:var(--brand-primary);margin-bottom:5px}.compliance-box p{font-size:11.5px;color:var(--grey);line-height:1.5}.compliance-list{margin-top:10px;display:grid;gap:6px}.compliance-item{border:1px solid var(--line-soft);border-radius:8px;padding:9px;font-size:11px}.compliance-item strong{color:var(--brand-primary)}.compliance-item small{display:block;color:var(--grey);margin-top:3px}@media(max-width:900px){.compliance-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.compliance-grid{grid-template-columns:1fr}}@media(max-width:600px){.compliance-summary{grid-template-columns:1fr}}
+
+  .ingestion-method-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;max-width:1000px;}
+  .ingestion-method{display:flex;align-items:flex-start;gap:12px;text-align:left;border:1px solid var(--line);background:#fff;border-radius:13px;padding:16px;cursor:pointer;font-family:inherit;color:var(--ink);transition:.16s;min-width:0;}
+  .ingestion-method:hover{border-color:#cdb8f3;background:#fcfbff;transform:translateY(-1px);}
+  .ingestion-method.on{border-color:var(--blue);background:var(--ice);box-shadow:0 0 0 2px rgba(177,91,232,.08);}
+  .ingestion-method-icon{width:42px;height:42px;border-radius:11px;background:#f3efff;color:var(--blue-d);display:flex;align-items:center;justify-content:center;flex:0 0 auto;font-size:10px;font-weight:850;letter-spacing:.03em;}
+  .ingestion-method strong{display:block;font-size:13.5px;color:var(--brand-primary);}
+  .ingestion-method small{display:block;margin-top:5px;color:var(--grey-l);font-size:11.5px;line-height:1.45;font-weight:600;}
+  .ingestion-note{margin-top:14px;padding:12px 14px;border-radius:10px;background:#f8f5ff;border:1px solid var(--line);color:#5b6b7a;font-size:12px;line-height:1.55;max-width:1000px;}
+  @media(max-width:820px){.ingestion-method-grid{grid-template-columns:1fr}.ingestion-method{width:100%}}
 </style>
 <link rel="stylesheet" href="/static/enterprise.css?v=2">
   <link rel="stylesheet" href="/static/enterprise-v3.css?v=3">
@@ -198,8 +208,8 @@
 <div class="wrap">
   <div class="head">
     <div class="eyebrow">Feed the system</div>
-    <h1>Import reports</h1>
-    <p>Upload raw exports from the journey systems. Each report is validated against a fixed format, staged for review, then committed — which recomputes the Financial Wellness Score and refreshes every employer dashboard. Load reports top-to-bottom; later reports reference earlier ones.</p>
+    <h1>Data Centre</h1>
+    <p>Bring approved data into NewChanges from files, APIs or SQL. File uploads support CSV, Excel and JSON. Every import is validated against a governed feed contract before it reaches the live reporting model.</p>
   </div>
 
   <section id="admin-security-strip" class="card" style="margin:18px 0;border-color:#d7cde9;">
@@ -239,6 +249,29 @@
       </div>
     </div>
   </section>
+  <section id="data-centre" class="card section-gap">
+    <div class="card-hd">
+      <div><h2>Data ingestion</h2><div class="note">Choose how you want to bring data into NewChanges. These are complementary options, not fallbacks.</div></div>
+    </div>
+    <div class="card-bd">
+      <div class="ingestion-method-grid">
+        <button class="ingestion-method on" type="button" onclick="document.getElementById('file-ingestion').scrollIntoView({behavior:'smooth',block:'start'})">
+          <span class="ingestion-method-icon">FILE</span>
+          <span><strong>Upload a file</strong><small>CSV, Excel (.xlsx/.xls) or JSON, up to 50 MB. Preview, validate and import.</small></span>
+        </button>
+        <button class="ingestion-method" type="button" onclick="document.getElementById('live-integration').scrollIntoView({behavior:'smooth',block:'start'});setIntegMode('API')">
+          <span class="ingestion-method-icon">API</span>
+          <span><strong>Connect an API</strong><small>Pull the governed feeds from HTTPS endpoints using private bearer-token authentication.</small></span>
+        </button>
+        <button class="ingestion-method" type="button" onclick="document.getElementById('live-integration').scrollIntoView({behavior:'smooth',block:'start'});setIntegMode('SQL')">
+          <span class="ingestion-method-icon">SQL</span>
+          <span><strong>Connect a database</strong><small>Use approved read-only PostgreSQL, SQL Server, MySQL or MariaDB views.</small></span>
+        </button>
+      </div>
+      <div class="ingestion-note"><strong>Governed by design:</strong> files, API records and SQL feeds enter the same validation and import pipeline. Heavy analytics can remain on an approved read replica without moving arbitrary source data into PostgreSQL.</div>
+    </div>
+  </section>
+
   <div class="grid">
     <!-- left: report picker -->
     <div class="card">
@@ -247,7 +280,7 @@
     </div>
 
     <!-- right: working area -->
-    <div>
+    <div id="file-ingestion">
 
     <div id="client-preview-overlay" class="client-preview-overlay" role="dialog" aria-modal="true" aria-labelledby="client-preview-title" onclick="closeClientPreview(event)">
       <div class="client-preview-dialog" onclick="event.stopPropagation()">
@@ -294,8 +327,8 @@
       </div>
 
       <!-- live integration (API or direct SQL) -->
-      <div class="card section-gap">
-        <div class="card-hd"><h2>Live Data Integration</h2><div class="note">Pull the same 10 core feeds from either an API or approved read-only SQL views · file import remains available as fallback</div></div>
+      <div class="card section-gap" id="live-integration">
+        <div class="card-hd"><h2>Live Data Integration</h2><div class="note">Connect the same governed feeds through an API or approved read-only SQL views</div></div>
         <div class="card-bd">
           <div id="integ-status" class="banner ok" style="display:none;margin-bottom:14px;"></div>
 
@@ -1431,7 +1464,7 @@ function selectReport(key){
     </div>
     <div class="drop" id="drop" onclick="$('#file').click()">
       <div class="big">Drop a file here or click to browse</div>
-      <div class="sm">CSV, Excel (.xlsx) or JSON · up to 50 MB</div>
+      <div class="sm">CSV, Excel (.xlsx or .xls) or JSON · up to 50 MB</div>
       <input id="file" type="file" class="hidden" accept=".csv,.xlsx,.xls,.json" onchange="upload(this.files[0])">
     </div>
     <div id="result"></div>
