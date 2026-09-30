@@ -16,10 +16,11 @@ const prisma = new PrismaClient();
 // cohort is commonly requested repeatedly while users move between tabs.
 // Keep this deliberately small so slicer changes remain effectively real-time.
 const DASHBOARD_CACHE_TTL_MS = 60_000;
+const DASHBOARD_CACHE_SCHEMA = "financial-comparison-v2";
 const dashboardCache = new Map<string, { expiresAt: number; payload: any }>();
 
 function dashboardCacheKey(employerId: string, query: DashboardQuery): string {
-  return JSON.stringify([employerId, query.period ?? null, query.quarter ?? null, query.range ?? null, query.site ?? null, query.income ?? null, query.asAt ?? null]);
+  return JSON.stringify([DASHBOARD_CACHE_SCHEMA, employerId, query.period ?? null, query.quarter ?? null, query.range ?? null, query.site ?? null, query.income ?? null, query.asAt ?? null]);
 }
 
 const DAY_MS = 86_400_000;
@@ -1258,6 +1259,8 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
         savingsLabels: comparisonPayload.savingsLabels ?? [],
         ewa: comparisonPayload.ewa?.trend ?? [],
         ewaLabels: comparisonPayload.ewa?.trendLabels ?? [],
+        monthlySavingRand: Number(comparisonPayload?.kpis?.monthlySaving?.rand ?? 0),
+        totalAdvancedRaw: Number(comparisonPayload?.ewa?.totalRaw ?? 0),
         outcomes: Object.fromEntries((Array.isArray(comparisonPayload.outcomes) ? comparisonPayload.outcomes : []).map((row: any) => [row.key, row.trend || []])),
       },
     } : null,

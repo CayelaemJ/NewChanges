@@ -20,3 +20,5 @@ must(dash.includes("currentLabel") && dash.includes("previousLabel") && dash.inc
 must(!dash.includes("period-bar-chart"),"selected-period financial comparisons must not regress to bar fallback charts");
 if(failures.length){console.error("PERIOD COMPARISON REGRESSION CHECK FAILED:"); failures.forEach(x=>console.error(" - "+x)); process.exit(1);}
 console.log("Period comparison regression checks passed.");
+
+must(snap.includes('DASHBOARD_CACHE_SCHEMA') && snap.includes('financial-comparison-v2'),"dashboard cache must be versioned when the financial comparison payload shape changes");
