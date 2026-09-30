@@ -51,7 +51,9 @@ export async function enterpriseOperationsOverview() {
     routing: routes.map(route => ({
       reportKey: route.reportKey,
       executionMode: route.executionMode,
+      workloadClass: route.workloadClass,
       sourceView: route.sourceView,
+      useReplica: route.useReplica,
       enabled: route.enabled,
       rationale: route.rationale,
       lastVerifiedAt: route.lastVerifiedAt,
