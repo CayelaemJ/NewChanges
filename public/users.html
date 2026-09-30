@@ -136,6 +136,23 @@
         <h3 style="font-size:12px;color:var(--brand-primary);margin:4px 0 8px;">Recent sign-ins</h3>
         <div class="security-table-wrap"><table class="security-table"><thead><tr><th>Time</th><th>User</th><th>Result</th><th>Device</th><th>Location</th><th>IP</th></tr></thead><tbody id="sec-login-rows"><tr><td colspan="6" class="security-empty">Loading...</td></tr></tbody></table></div>
       </div>
+      <div class="security-grid" style="margin-top:18px;">
+        <div>
+          <h3 style="font-size:12px;color:var(--brand-primary);margin:4px 0 8px;">Device intelligence</h3>
+          <div class="security-table-wrap"><table class="security-table"><thead><tr><th>User</th><th>Device</th><th>Approx. location</th><th>IP</th><th>First seen</th><th>Last seen</th></tr></thead><tbody id="sec-device-rows"><tr><td colspan="6" class="security-empty">Loading...</td></tr></tbody></table></div>
+        </div>
+        <div>
+          <h3 style="font-size:12px;color:var(--brand-primary);margin:4px 0 8px;">Sensitive data access</h3>
+          <div class="security-table-wrap"><table class="security-table"><thead><tr><th>Time</th><th>Actor</th><th>Resource</th><th>Route</th><th>Status</th></tr></thead><tbody id="sec-access-rows"><tr><td colspan="5" class="security-empty">Loading...</td></tr></tbody></table></div>
+        </div>
+      </div>
+      <div style="margin-top:18px;padding:14px;border:1px solid #e8e1f7;border-radius:10px;background:linear-gradient(135deg,#fbf9ff,#fff);">
+        <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
+          <div><h3 style="font-size:12px;color:var(--brand-primary);margin:0 0 5px;">Database security controls</h3><div id="sec-db-copy" class="muted">Checking application database controls...</div></div>
+          <div id="sec-db-status" class="tag pend">Checking</div>
+        </div>
+        <div id="sec-db-controls" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;"></div>
+      </div>
     </div>
   </section>
 
