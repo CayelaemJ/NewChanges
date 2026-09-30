@@ -1,25 +1,52 @@
 // ════════════════════════════════════════════════════════════════════
-//  ASYNC JOB RUNNER
-//  Upload validation and batch commit run in the background so the
-//  HTTP response can return immediately (202 Accepted). The browser
-//  polls /api/admin/upload-jobs/:id or /api/admin/commit-jobs/:id.
+// ASYNC JOB RUNNER
+// Background work for uploads, commits and source synchronisation.
+// Job progress is exposed through authenticated SSE with polling fallback.
 // ════════════════════════════════════════════════════════════════════
 
 import { randomUUID } from "node:crypto";
 import { uploadAndValidate, commitBatch } from "./importService.js";
 import { runSync } from "./syncService.js";
-import { prisma } from "./snapshotBuilder.js";
+import { publishAdminEvent } from "./adminEventStream.js";
 
 const uploadJobs = new Map<string, any>();
 const commitJobs = new Map<string, any>();
 const syncJobs = new Map<string, any>();
 
-// Jobs expire after 30 minutes so the maps don't grow forever.
-function startJob(map: Map<string, any>) {
+const JOB_TTL_MS = 30 * 60 * 1000;
+
+function startJob(map: Map<string, any>, type: string) {
   const id = randomUUID();
-  const timer = setTimeout(() => map.delete(id), 30 * 60 * 1000);
-  map.set(id, { status: "PENDING", timer });
+  const timer = setTimeout(() => map.delete(id), JOB_TTL_MS);
+  map.set(id, {
+    status: "PENDING",
+    phase: "QUEUED",
+    progress: 0,
+    message: "Queued",
+    updatedAt: new Date().toISOString(),
+    timer,
+  });
+  publishAdminEvent("job.progress", {
+    status: "PENDING",
+    phase: "QUEUED",
+    progress: 0,
+    message: "Queued",
+    jobType: type,
+  }, id);
   return id;
+}
+
+function updateJob(job: any, jobId: string, jobType: string, patch: Record<string, unknown>) {
+  Object.assign(job, patch, { updatedAt: new Date().toISOString() });
+  publishAdminEvent("job.progress", {
+    status: job.status,
+    phase: job.phase,
+    progress: job.progress,
+    message: job.message,
+    jobType,
+    ...(job.result !== undefined ? { result: job.result } : {}),
+    ...(job.error ? { error: job.error } : {}),
+  }, jobId);
 }
 
 function currentPeriod(): string {
@@ -28,15 +55,20 @@ function currentPeriod(): string {
 }
 
 export function startUploadJob(opts: any) {
-  const jobId = startJob(uploadJobs);
-  const job = uploadJobs.get(jobId);
+  const jobId = startJob(uploadJobs, "upload");
+  const job = uploadJobs.get(jobId)!;
 
   (async () => {
     try {
+      updateJob(job, jobId, "upload", {
+        status: "PROCESSING",
+        phase: "VALIDATING",
+        progress: 35,
+        message: "Validating file",
+      });
+
       const { batch, result } = await uploadAndValidate(opts);
 
-      // Always mark DONE — let frontend decide if it's an error or success based on status/errorCount
-      job.status = "DONE";
       job.result = {
         batchId: batch?.id,
         status: batch?.status,
@@ -49,14 +81,23 @@ export function startUploadJob(opts: any) {
         preview: result.rows.slice(0, 3),
       };
 
-      // If validation failed, don't auto-commit
       if (!result.ok || batch?.status !== "VALIDATED") {
+        job.status = "DONE";
+        updateJob(job, jobId, "upload", {
+          phase: "VALIDATED",
+          progress: 100,
+          message: result.ok ? "Validation complete" : "Validation found problems",
+        });
         return;
       }
 
-      // Import means import: once validation succeeds, commit immediately in
-      // the same background job. The HTTP request has already returned 202, so
-      // this expensive DB work never blocks the admin UI.
+      updateJob(job, jobId, "upload", {
+        status: "PROCESSING",
+        phase: "COMMITTING",
+        progress: 80,
+        message: "Committing and recomputing scores",
+      });
+
       const commit = await commitBatch(batch.id);
       job.result = {
         ...job.result,
@@ -67,8 +108,13 @@ export function startUploadJob(opts: any) {
         ...commit,
         period: currentPeriod(),
       };
-    } catch (e) {
-      // Even on exception, mark DONE with error status so frontend can display it
+      job.status = "DONE";
+      updateJob(job, jobId, "upload", {
+        phase: "COMPLETE",
+        progress: 100,
+        message: "Import complete",
+      });
+    } catch (e: any) {
       job.status = "DONE";
       job.result = {
         batchId: opts.batchId || "unknown",
@@ -76,11 +122,16 @@ export function startUploadJob(opts: any) {
         rowCount: 0,
         errors: [],
         errorCount: 0,
-        errorSummary: `Upload failed: ${(e as any)?.message || String(e)}`,
+        errorSummary: `Upload failed: ${e?.message || String(e)}`,
         missingColumns: [],
         unknownColumns: [],
         preview: [],
       };
+      updateJob(job, jobId, "upload", {
+        phase: "FAILED",
+        progress: 100,
+        message: "Import failed",
+      });
       console.error("[upload-job] validation/commit failed:", e);
     }
   })();
@@ -93,17 +144,34 @@ export function getUploadJob(jobId: string) {
 }
 
 export function startCommitJob(batchId: string) {
-  const jobId = startJob(commitJobs);
-  const job = commitJobs.get(jobId);
+  const jobId = startJob(commitJobs, "commit");
+  const job = commitJobs.get(jobId)!;
 
   (async () => {
     try {
+      updateJob(job, jobId, "commit", {
+        status: "PROCESSING",
+        phase: "COMMITTING",
+        progress: 20,
+        message: "Committing and recomputing scores",
+      });
+
       const result = await commitBatch(batchId);
       job.status = "DONE";
       job.result = { ...result, period: currentPeriod() };
-    } catch (e) {
+      updateJob(job, jobId, "commit", {
+        phase: "COMPLETE",
+        progress: 100,
+        message: "Commit complete",
+      });
+    } catch (e: any) {
       job.status = "FAILED";
-      job.error = (e as any)?.message || String(e);
+      job.error = e?.message || String(e);
+      updateJob(job, jobId, "commit", {
+        phase: "FAILED",
+        progress: 100,
+        message: "Commit failed",
+      });
       console.error("[commit-job] commit failed:", e);
     }
   })();
@@ -115,21 +183,35 @@ export function getCommitJob(jobId: string) {
   return commitJobs.get(jobId);
 }
 
-// Integration syncs (API or SQL) can take minutes for large datasets.
-// Run them in the background and let the browser poll
-// /api/admin/sync-jobs/:jobId, same pattern as uploads/commits.
 export function startSyncJob(trigger: "manual" | "scheduled" = "manual") {
-  const jobId = startJob(syncJobs);
-  const job = syncJobs.get(jobId);
+  const jobId = startJob(syncJobs, "sync");
+  const job = syncJobs.get(jobId)!;
 
   (async () => {
     try {
+      updateJob(job, jobId, "sync", {
+        status: "PROCESSING",
+        phase: "SYNCING",
+        progress: 10,
+        message: "Synchronising source data",
+      });
+
       const result = await runSync(trigger);
       job.status = "DONE";
       job.result = result;
-    } catch (e) {
+      updateJob(job, jobId, "sync", {
+        phase: "COMPLETE",
+        progress: 100,
+        message: "Synchronisation complete",
+      });
+    } catch (e: any) {
       job.status = "FAILED";
-      job.error = (e as any)?.message || String(e);
+      job.error = e?.message || String(e);
+      updateJob(job, jobId, "sync", {
+        phase: "FAILED",
+        progress: 100,
+        message: "Synchronisation failed",
+      });
       console.error("[sync-job] sync failed:", e);
     }
   })();
@@ -140,4 +222,3 @@ export function startSyncJob(trigger: "manual" | "scheduled" = "manual") {
 export function getSyncJob(jobId: string) {
   return syncJobs.get(jobId);
 }
-

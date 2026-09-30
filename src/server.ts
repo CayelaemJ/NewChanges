@@ -34,6 +34,7 @@ import { exportAuditLogCsv, exportSecurityAuditLogCsv, exportImportBatchCsv } fr
 import { listAnalyticsRoutes, saveAnalyticsRoute } from "./services/syncService.js";
 import { enterpriseOperationsOverview, dataQualityOverview } from "./services/enterpriseOperationsService.js";
 import { checkMysqlReadReplica } from "./services/sourceAdapter.js";
+import { subscribeAdminEvents } from "./services/adminEventStream.js";
 import { ensureSectionDefaults, listSections, updateSection, grantUserSection, revokeUserSection, sectionsForUser } from "./services/sectionService.js";
 import { publicEmailConfig, saveEmailConfig, testEmailConnection, createReportSchedule, listReportSchedules, updateReportSchedule, deleteReportSchedule, sendReportNow, recentReportDeliveries, runDueReports } from "./services/reportScheduler.js";
 import type { ScheduleInput } from "./services/reportScheduler.js";
@@ -459,6 +460,44 @@ app.post<{ Body: { email: string } }>("/api/auth/forgot-password", async (req, r
   forgotPasswordThrottle.set(email, Date.now());
   try { await requestPasswordReset(email); } catch { /* never leak errors here */ }
   return { ok: true };
+});
+
+// Live one-way admin events. SSE is used for job progress; all normal API traffic stays on fetch().
+app.get("/api/admin/events", async (req, reply) => {
+  const admin = await requireAdmin(req, reply);
+  if (!admin) return;
+
+  const query = (req.query ?? {}) as { jobId?: string };
+  const jobId = typeof query.jobId === "string" ? query.jobId.trim().slice(0, 120) : "";
+  if (!jobId) return reply.code(400).send({ error: "jobId is required" });
+
+  reply.hijack();
+  const res = reply.raw;
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream; charset=utf-8",
+    "Cache-Control": "no-cache, no-transform",
+    "Connection": "keep-alive",
+    "X-Accel-Buffering": "no",
+  });
+
+  const send = (event: { id: string; type: string; jobId?: string; payload: Record<string, unknown> }) => {
+    res.write(`id: ${event.id}\nevent: ${event.type}\ndata: ${JSON.stringify(event.payload)}\n\n`);
+  };
+
+  res.write("retry: 3000\n\n");
+  res.write(": connected\n\n");
+
+  const unsubscribe = subscribeAdminEvents(jobId, send);
+  const heartbeat = setInterval(() => {
+    try { res.write(`: heartbeat ${Date.now()}\n\n`); } catch {}
+  }, 15000);
+
+  const close = () => {
+    clearInterval(heartbeat);
+    unsubscribe();
+  };
+  req.raw.once("close", close);
+  req.raw.once("aborted", close);
 });
 
 // ════════════════════ SECURITY & IDENTITY CENTER ════════════════════
