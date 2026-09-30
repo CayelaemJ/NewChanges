@@ -667,6 +667,13 @@ const API = ""; // same origin
 let MANIFEST = null, CURRENT = null, LAST_BATCH = null;
 
 const $ = s => document.querySelector(s);
+const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({
+  '&':'&amp;',
+  '<':'&lt;',
+  '>':'&gt;',
+  '"':'&quot;',
+  "'":'&#39;'
+}[ch]));
 const fmtDate = d => d ? new Date(d).toLocaleString('en-ZA',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '—';
 
 // brief "Hi <name>" splash right after sign-in — once per browser tab session
@@ -1407,33 +1414,56 @@ async function doReset(){
 
 
 async function boot(){
-  // require admin
+  // Require an authenticated admin, then load the report contract independently
+  // from the rest of the optional administration panels. A failure elsewhere
+  // must never remove the report selector or its upload controls.
   let me=null;
-  try{ const r=await fetch('/api/auth/me'); if(!r.ok){ location.href='/login'; return; } me=await r.json(); }
-  catch(e){ location.href='/login'; return; }
+  try{
+    const r=await fetch('/api/auth/me',{cache:'no-store'});
+    if(!r.ok){ location.href='/login'; return; }
+    me=await r.json();
+  }catch(e){
+    location.href='/login';
+    return;
+  }
   if(!me.modules.admin){ location.href='/dashboard'; return; }
+
   handleWelcomeSplash(me);
   addNav(me);
-  try{
-    const r = await fetch(`${API}/api/admin/reports`);
-    MANIFEST = await r.json();
-    renderRepList();
-    loadHistory();
-    loadInteg();
-    loadEmailSettings();
-    loadPartners();
-    loadSections();
-    loadEngagement();
-    renderPresets();
-    loadAuditLog();
-    loadAdminSecuritySummary();
-    loadComplianceSummary();
-    loadEnterpriseOperations();
-  }catch(e){
-    $('#rep-list').innerHTML = `<p class="muted">Could not reach the API. Start the server and reload.</p>`;
-  }
-}
 
+  try{
+    const r=await fetch(`${API}/api/admin/reports`,{cache:'no-store'});
+    let data={};
+    try{ data=await r.json(); }catch(_){}
+    if(!r.ok) throw new Error(data.error || `Reports API returned HTTP ${r.status}`);
+    if(!Array.isArray(data.loadOrder) || !Array.isArray(data.reports)){
+      throw new Error('Reports API returned an invalid report manifest');
+    }
+    MANIFEST=data;
+    renderRepList();
+  }catch(e){
+    console.error('Could not load report manifest:',e);
+    $('#rep-list').innerHTML = `<p class="muted">Could not load the report list: ${esc(e.message)}. Please refresh the page.</p>`;
+    return;
+  }
+
+  const optionalLoads=[
+    ['history',loadHistory],
+    ['integration',loadInteg],
+    ['email',loadEmailSettings],
+    ['partners',loadPartners],
+    ['sections',loadSections],
+    ['engagement',loadEngagement],
+    ['presets',renderPresets],
+    ['audit',loadAuditLog],
+    ['security',loadAdminSecuritySummary],
+    ['compliance',loadComplianceSummary],
+    ['enterprise',loadEnterpriseOperations]
+  ];
+  await Promise.allSettled(optionalLoads.map(async ([name,fn])=>{
+    try{ await fn(); }catch(e){ console.error(`Admin panel ${name} failed:`,e); }
+  }));
+}
 function renderRepList(){
   const order = MANIFEST.loadOrder;
   $('#rep-list').innerHTML = order.map((key,i)=>{
