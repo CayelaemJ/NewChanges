@@ -1,3 +1,4 @@
+import { compareMetric, comparisonForSelection, previousMonthKey, previousQuarterKey } from "../src/services/analyticsEngineService.js";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -32,3 +33,14 @@ const failed = checks.filter(([, ok]) => !ok);
 for (const [name, ok] of checks) console.log(`${ok ? "✓" : "✕"} ${name}`);
 if (failed.length) process.exit(1);
 console.log("Enterprise operations regression checks passed.");
+
+const analyticsChecks = [
+  ["previous month engine", previousMonthKey("2026-09") === "2026-08"],
+  ["previous quarter engine", previousQuarterKey("2026-Q1") === "2025-Q4"],
+  ["month comparison engine", comparisonForSelection({ period: "2026-09" })?.comparisonKey === "2026-08"],
+  ["metric percentage delta", compareMetric(120, 100).deltaPct === 20],
+  ["zero baseline is explicit", compareMetric(100, 0).deltaPct === null],
+];
+for (const [label, ok] of analyticsChecks) {
+  if (!ok) throw new Error(`Analytics regression failed: ${label}`);
+}
