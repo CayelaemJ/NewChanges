@@ -31,5 +31,6 @@ jobs:
       - run: npm run check:security-identity
       - run: npm run check:security-operations
       - run: npm run check:security-governance
+      - run: npm run check:south-africa-compliance
       - run: npm run check:period-comparison
       - run: npm audit --audit-level=high
