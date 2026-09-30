@@ -1743,6 +1743,10 @@ async function loadHistory(){
 }
 
 window.addEventListener("load", () => boot(), { once: true });
+window.setInterval(() => {
+  if(document.visibilityState !== 'visible') return;
+  Promise.allSettled([loadAdminSecuritySummary(), loadComplianceSummary()]);
+}, 30000);
 </script>
 <script>
 /* Dark mode for admin pages: same engine, default portal brand. Light mode stays on the page's original palette. */
