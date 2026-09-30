@@ -28,7 +28,7 @@ import { createUser, listUsers, updateUser, resetPassword, completeSetup, deacti
 import { recordEvent, engagementSummary } from "./services/analyticsService.js";
 import { notifyAdmins, notifyScoreChangeIfCurrentPeriod, runStaleAccountCheck, runWeeklyDigestIfDue } from "./services/automationService.js";
 import { logAdminAction, listAuditLog } from "./services/auditService.js";
-import { requestSecurityContext, recordLoginEvent, securityOverview, listSessions, listLoginEvents, listSecurityAlerts, resolveSecurityAlert, pruneSecurityHistory, listSecurityDevices, listDataAccessEvents, recordDataAccessEvent } from "./services/securityService.js";
+import { requestSecurityContext, recordLoginEvent, securityOverview, listSessions, listLoginEvents, listSecurityAlerts, resolveSecurityAlert, pruneSecurityHistory, listSecurityDevices, listDataAccessEvents, recordDataAccessEvent, databaseSecuritySnapshot } from "./services/securityService.js";
 import { exportAuditLogCsv, exportImportBatchCsv } from "./services/exportService.js";
 import { ensureSectionDefaults, listSections, updateSection, grantUserSection, revokeUserSection, sectionsForUser } from "./services/sectionService.js";
 import { publicEmailConfig, saveEmailConfig, testEmailConnection, createReportSchedule, listReportSchedules, updateReportSchedule, deleteReportSchedule, sendReportNow, recentReportDeliveries, runDueReports } from "./services/reportScheduler.js";
@@ -458,6 +458,11 @@ app.post<{ Body: { email: string } }>("/api/auth/forgot-password", async (req, r
 });
 
 // ════════════════════ SECURITY & IDENTITY CENTER ════════════════════
+app.get("/api/admin/security/database", async (req, reply) => {
+  const admin = await requireAdmin(req, reply); if (!admin) return;
+  return databaseSecuritySnapshot();
+});
+
 app.get("/api/admin/security/devices", async (req, reply) => {
   const admin = await requireAdmin(req, reply); if (!admin) return;
   return listSecurityDevices(300);
