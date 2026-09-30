@@ -130,10 +130,9 @@ function zar(cents: number): string {
   return "R " + Math.round(rand(cents)).toLocaleString("en-ZA");
 }
 function zarM(cents: number): string {
-  const value = rand(cents);
-  if (Math.abs(value) >= 1_000_000) return `R ${(value / 1_000_000).toFixed(2)}m`;
-  if (Math.abs(value) >= 1_000) return `R ${Math.round(value / 1_000)}k`;
-  return `R ${Math.round(value)}`;
+  // Financial dashboard values are intentionally never abbreviated.
+  // R 1 222 000 is clearer and auditable than R 1.222m or R 1 222k.
+  return "R " + Math.round(rand(cents)).toLocaleString("en-ZA");
 }
 function startOfUtcDay(date: Date): Date {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
@@ -201,7 +200,8 @@ function resolveFilter(query: DashboardQuery = {}): ResolvedFilter {
   const quarter = query.quarter ? parseQuarter(query.quarter) : null;
   if (query.quarter && !quarter) throw new Error("quarter must be YYYY-Q1..YYYY-Q4");
 
-  const period = query.period ?? null;
+  const isLatest = !query.period && !query.quarter && query.range === "latest";
+  const period = query.period ?? (isLatest ? currentPeriod() : null);
   const range = period ? "month" : quarter ? "quarter" : normalizeRange(query.range);
   if (!period && range === "month") {
     throw new Error("range=month requires period=YYYY-MM");
@@ -240,6 +240,9 @@ function resolveFilter(query: DashboardQuery = {}): ResolvedFilter {
     const quarterMonth = Math.floor(asAt.getUTCMonth() / 3) * 3;
     rangeStart = new Date(Date.UTC(asAt.getUTCFullYear(), quarterMonth, 1));
     label = "Quarter to date";
+  } else if (range === "all") {
+    rangeStart = new Date(Date.UTC(asAt.getUTCFullYear(), 0, 1));
+    label = "Programme to date";
   }
 
   const income = query.income && INCOME_VALUES.includes(query.income as IncomeBand)
@@ -811,10 +814,10 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
     if (!employee?.incomeBand) continue;
     incomeCounts.set(employee.incomeBand, (incomeCounts.get(employee.incomeBand) ?? 0) + 1);
   }
-  const income = [...incomeCounts.entries()].map(([band, count], index) => ({
+  const income = INCOME_VALUES.map((band, index) => ({
     value: band,
     name: INCOME_LABEL[band] ?? band,
-    count,
+    count: incomeCounts.get(band) ?? 0,
     color: incomeColors[index % incomeColors.length],
   }));
 
@@ -1037,67 +1040,73 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
   };
 
   let priorScore: number | null = null;
-  if (!skipPrior && score.complete) {
-    // Always compare against the most recent *real, comparable* scored period.
-    // This is deliberately calculated from source data rather than relying on
-    // a snapshot row existing, because historical snapshots can be missing or
-    // pre-date the corrected score engine. Site/income slicers are carried into
-    // the comparison so the two scores represent the same cohort.
+  let comparisonPayload: any = null;
+  let comparisonLabel = "previous period";
+  let comparisonMode = "none";
+  if (!skipPrior) {
     const cohort = { site: filter.site ?? undefined, income: filter.income ?? undefined };
-    let seed: string;
+    let priorQuery: DashboardQuery | null = null;
     if (filter.period) {
-      seed = previousPeriod(filter.period);
+      priorQuery = { period: previousPeriod(filter.period), ...cohort };
+      comparisonLabel = "previous month";
+      comparisonMode = "month";
     } else if (filter.quarter) {
-      seed = previousQuarterClosePeriod(filter.quarter);
+      const prevQ = filter.quarter.q === 1 ? 4 : filter.quarter.q - 1;
+      const prevYear = filter.quarter.q === 1 ? filter.quarter.year - 1 : filter.quarter.year;
+      priorQuery = { quarter: String(prevYear) + "-Q" + String(prevQ), ...cohort };
+      comparisonLabel = "previous quarter";
+      comparisonMode = "quarter";
     } else if (filter.range === "quarter") {
-      seed = previousQuarterClosePeriod(quarterOf(filter.asAt));
+      const currentStart = filter.rangeStart!;
+      const elapsed = Math.max(0, filter.asAt.getTime() - currentStart.getTime());
+      const previousQuarterEnd = new Date(currentStart.getTime() - 1);
+      const previousQuarterStartMonth = Math.floor(previousQuarterEnd.getUTCMonth() / 3) * 3;
+      const previousQuarterStart = new Date(Date.UTC(previousQuarterEnd.getUTCFullYear(), previousQuarterStartMonth, 1));
+      const priorEnd = new Date(previousQuarterStart.getTime() + elapsed);
+      priorQuery = { range: "quarter", asAt: priorEnd.toISOString(), ...cohort };
+      comparisonLabel = "previous quarter to date";
+      comparisonMode = "quarter";
     } else if (filter.range === "30d" && filter.rangeStart) {
-      // A 30-day selection must compare against the immediately preceding
-      // 30-day window, not against an arbitrary calendar month. Anchor the
-      // score engine at the day before the selected window begins.
       const priorEnd = new Date(filter.rangeStart.getTime() - DAY_MS);
-      const priorPayload: any = await buildDashboardPayload(
-        employerId,
-        { range: "30d", asAt: priorEnd.toISOString(), ...cohort },
-        true,
-      );
-      if (priorPayload?.wellness?.complete && priorPayload?.wellness?.score != null) {
-        priorScore = Number(priorPayload.wellness.score);
-      }
-      seed = monthKey(priorEnd);
-    } else {
-      seed = previousPeriod(monthKey(filter.asAt));
+      priorQuery = { range: "30d", asAt: priorEnd.toISOString(), ...cohort };
+      comparisonLabel = "previous 30 days";
+      comparisonMode = "30d";
+    } else if (filter.range === "all") {
+      const priorYearEnd = new Date(filter.asAt);
+      priorYearEnd.setUTCFullYear(priorYearEnd.getUTCFullYear() - 1);
+      priorQuery = { range: "all", asAt: priorYearEnd.toISOString(), ...cohort };
+      comparisonLabel = "same period last year";
+      comparisonMode = "year";
     }
-
-    // Walk backwards until we find a complete score. This prevents a false
-    // "No prior period" when the immediately preceding month/quarter has a
-    // gap in one source feed but an earlier valid period is available.
-    const [sy, sm] = seed.split("-").map(Number);
-    for (let offset = 0; offset < 25 && priorScore == null; offset++) {
-      const d = new Date(Date.UTC(sy, sm - 1 - offset, 1));
-      const candidate = monthKey(d);
-      // Prefer a corrected snapshot when one exists, but never require a
-      // snapshot row. A missing snapshot is not evidence that the prior
-      // period did not exist. If no usable snapshot exists, calculate the
-      // score from the dated source records using the same slicers.
-      const priorSnap = await prisma.scoreSnapshot.findFirst({
-        where: { employerId, period: candidate, payloadVersion: { gte: 4 } },
-        select: { optimiseScore: true },
-      });
-      if (priorSnap?.optimiseScore != null && !filter.site && !filter.income) {
-        priorScore = Number(priorSnap.optimiseScore);
-        break;
-      }
-      const priorPayload: any = await buildDashboardPayload(
-        employerId,
-        { period: candidate, ...cohort },
-        true,
-      );
-      if (priorPayload?.wellness?.complete && priorPayload?.wellness?.score != null) {
-        priorScore = Number(priorPayload.wellness.score);
-      }
+    if (priorQuery) {
+      comparisonPayload = await buildDashboardPayload(employerId, priorQuery, true);
+      if (comparisonPayload?.wellness?.complete && comparisonPayload?.wellness?.score != null) priorScore = Number(comparisonPayload.wellness.score);
     }
   }
+  if (comparisonPayload?.outcomes && Array.isArray(outcomes)) {
+    const previousByKey = new Map((comparisonPayload.outcomes as any[]).map((row: any) => [row.key, Number(row.count) || 0]));
+    for (const outcome of outcomes as any[]) {
+      const previousCount = previousByKey.get(outcome.key);
+      outcome.delta = previousCount == null ? null : Number(outcome.count || 0) - previousCount;
+    }
+  }
+
+  const periodComparison = comparisonPayload ? {
+    mode: comparisonMode,
+    label: comparisonLabel,
+    current: {
+      period: filter.period,
+      label: filter.label,
+      monthlyCashFreedUp: Number(rand(cumulativeMonthlySaving)),
+      totalAdvanced: Number(rand(ewaTotal)),
+    },
+    previous: {
+      period: comparisonPayload.filterContext?.period ?? null,
+      label: comparisonPayload.filterContext?.label ?? comparisonLabel,
+      monthlyCashFreedUp: Number(comparisonPayload?.kpis?.monthlySaving?.rand ?? 0),
+      totalAdvanced: Number(comparisonPayload?.ewa?.totalRaw ?? 0),
+    },
+  } : null;
 
   const sectionAvailability = {
     workforce: headcountDataAvailable,
@@ -1173,6 +1182,16 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
     sourceDataUpdatedAt: sourceDataUpdatedAt?.toISOString() ?? null,
     filterContext: {
       period: filter.period,
+      comparison: {
+        mode: comparisonMode,
+        label: comparisonLabel,
+        current: filter.range === "all" ? `Programme to date ${filter.asAt.getUTCFullYear()}` : filter.range === "quarter" ? `Q${quarterOf(filter.asAt).q} ${filter.asAt.getUTCFullYear()}` : filter.label,
+        previous: comparisonPayload ? (
+          filter.range === "all" ? `Programme to date ${filter.asAt.getUTCFullYear() - 1}` :
+          filter.range === "quarter" ? `Q${((quarterOf(filter.asAt).q + 2) % 4) + 1} ${quarterOf(filter.asAt).q === 1 ? filter.asAt.getUTCFullYear() - 1 : filter.asAt.getUTCFullYear()}` :
+          comparisonPayload.filterContext?.label ?? comparisonLabel
+        ) : null,
+      },
       range: filter.range,
       label: filter.label,
       rangeStart: filter.rangeStart?.toISOString() ?? null,
@@ -1186,6 +1205,27 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
         flow: "Outcomes, ratings, chat, referrals and wage advances are measured inside the selected range.",
       },
     },
+    periodComparison, 
+    comparison: comparisonPayload ? {
+      mode: comparisonMode,
+      label: comparisonLabel,
+      current: {
+        label: filter.label,
+        savings: savings,
+        savingsLabels: savingsLabels,
+        ewa: ewa.trend,
+        ewaLabels: ewa.trendLabels,
+        outcomes: Object.fromEntries((Array.isArray(outcomes) ? outcomes : []).map((row: any) => [row.key, row.trend || []])),
+      },
+      previous: {
+        label: comparisonPayload.filterContext?.label ?? comparisonLabel,
+        savings: comparisonPayload.savings ?? [],
+        savingsLabels: comparisonPayload.savingsLabels ?? [],
+        ewa: comparisonPayload.ewa?.trend ?? [],
+        ewaLabels: comparisonPayload.ewa?.trendLabels ?? [],
+        outcomes: Object.fromEntries((Array.isArray(comparisonPayload.outcomes) ? comparisonPayload.outcomes : []).map((row: any) => [row.key, row.trend || []])),
+      },
+    } : null,
     filterOptions: {
       // Filter choices must describe the employer's full available dimension,
       // not only the currently eligible/as-at cohort. Otherwise a historical
@@ -1250,10 +1290,10 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
       guided: { rand: rand(guided.rand), employees: guided.employees, label: "Self-managed via guidance", note: "educated on prescription where no arrangement was affordable" },
     },
     kpis: {
-      takeUp: { pct: kpiAvailability.takeUp ? pct(enrolled) : null, enrolled: kpiAvailability.takeUp ? enrolled : null, available: kpiAvailability.takeUp, trend: kpiAvailability.takeUp ? takeUpTrend : [], delta: kpiAvailability.takeUp ? trendDelta(takeUpTrend) : null },
-      activated: { pct: kpiAvailability.activated ? pct(activated) : null, count: kpiAvailability.activated ? activated : null, available: kpiAvailability.activated, trend: kpiAvailability.activated ? activatedTrend : [], delta: kpiAvailability.activated ? trendDelta(activatedTrend) : null },
-      monthlySaving: { rand: kpiAvailability.monthlySaving ? rand(cumulativeMonthlySaving) : null, perHead: kpiAvailability.monthlySaving ? rand(averagePerActive) : null, available: kpiAvailability.monthlySaving, trend: kpiAvailability.monthlySaving ? monthlySavingTrend : [], delta: kpiAvailability.monthlySaving ? trendDelta(monthlySavingTrend) : null },
-      avgRating: { val: kpiAvailability.avgRating ? Number(avgRating.toFixed(1)) : null, responses: kpiAvailability.avgRating ? ratingResponses : null, available: kpiAvailability.avgRating, trend: kpiAvailability.avgRating ? avgRatingTrend : [], delta: kpiAvailability.avgRating ? trendDelta(avgRatingTrend) : null },
+      takeUp: { pct: kpiAvailability.takeUp ? pct(enrolled) : null, enrolled: kpiAvailability.takeUp ? enrolled : null, available: kpiAvailability.takeUp, trend: kpiAvailability.takeUp ? takeUpTrend : [], delta: kpiAvailability.takeUp && comparisonPayload?.kpis?.takeUp?.pct != null ? pct(enrolled) - Number(comparisonPayload.kpis.takeUp.pct) : null },
+      activated: { pct: kpiAvailability.activated ? pct(activated) : null, count: kpiAvailability.activated ? activated : null, available: kpiAvailability.activated, trend: kpiAvailability.activated ? activatedTrend : [], delta: kpiAvailability.activated && comparisonPayload?.kpis?.activated?.pct != null ? pct(activated) - Number(comparisonPayload.kpis.activated.pct) : null },
+      monthlySaving: { rand: kpiAvailability.monthlySaving ? rand(cumulativeMonthlySaving) : null, perHead: kpiAvailability.monthlySaving ? rand(averagePerActive) : null, available: kpiAvailability.monthlySaving, trend: kpiAvailability.monthlySaving ? monthlySavingTrend : [], delta: kpiAvailability.monthlySaving && comparisonPayload?.kpis?.monthlySaving?.rand != null ? rand(cumulativeMonthlySaving) - Number(comparisonPayload.kpis.monthlySaving.rand) : null },
+      avgRating: { val: kpiAvailability.avgRating ? Number(avgRating.toFixed(1)) : null, responses: kpiAvailability.avgRating ? ratingResponses : null, available: kpiAvailability.avgRating, trend: kpiAvailability.avgRating ? avgRatingTrend : [], delta: kpiAvailability.avgRating && comparisonPayload?.kpis?.avgRating?.val != null ? Number(avgRating.toFixed(1)) - Number(comparisonPayload.kpis.avgRating.val) : null },
     },
     funnel: [
       { label: "Eligible workforce", sub: "as at range end", n: headcountDataAvailable ? headcount : null, pct: headcountDataAvailable ? 100 : null, available: headcountDataAvailable },

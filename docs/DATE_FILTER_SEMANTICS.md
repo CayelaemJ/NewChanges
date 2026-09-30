@@ -38,7 +38,7 @@ These answer **“What state was true as at the selected date?”** and drive st
 | Current-month `period=YYYY-MM` | current timestamp, never future month-end | first day of the current UTC month | current timestamp |
 | `range=30d` | current timestamp | start of the UTC date 29 days before today | current timestamp |
 | `range=quarter` | current timestamp | current UTC quarter start | current timestamp |
-| `range=all` | current timestamp | no lower bound | current timestamp |
+| `range=all` | current timestamp | 1 January of the as-at year | current timestamp |
 
 Future periods are rejected. `period` and `range` are mutually exclusive, and `range=month` is invalid without a `period`.
 

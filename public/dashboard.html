@@ -477,7 +477,7 @@
 
     /* Remove all interactive chrome. Whichever of #employer-view /
        #portfolio-view is currently on screen (per the audience switch)
-       stays as-is here — forcing #employer-view on and #portfolio-view off
+       stays as-is here Not available forcing #employer-view on and #portfolio-view off
        is what made "Export book" always print the employer dashboard even
        when the portfolio report was the one open. */
     .topbar,.filters,.head-actions,.row-chevron,
@@ -487,7 +487,7 @@
        "forwards" holds the *end* keyframe (opacity:1). Cancelling the
        animation for print without also pinning opacity/transform back to
        that end state drops every card back to its opacity:0 starting
-       point — which is what was making exported/printed reports come out
+       point Not available which is what was making exported/printed reports come out
        blank. Force the settled, fully-visible state instead. */
     .reveal{animation:none!important;opacity:1!important;transform:none!important;}
 
@@ -744,7 +744,7 @@
     <div class="pdf-meta">
       <div id="pdf-report-period">Reporting period</div>
       <div id="pdf-report-generated"></div>
-      <span class="pdf-score" id="pdf-report-score">Workforce Financial Wellness Score —</span>
+      <span class="pdf-score" id="pdf-report-score">Workforce Financial Wellness Score Not available</span>
     </div>
   </div>
 
@@ -755,7 +755,7 @@
     <div>
       <div class="head-eyebrow">Employer Insights · Financial Wellbeing Programme</div>
       <h1>Your workforce <span class="emp"></span></h1>
-      <div class="head-sub">How the financial wellbeing programme is landing across your workforce — who is using it, the outcomes achieved, and how employees rate the service.</div>
+      <div class="head-sub">How the financial wellbeing programme is landing across your workforce Not available who is using it, the outcomes achieved, and how employees rate the service.</div>
       <div id="ctx-sub" style="font-size:12px;font-weight:700;color:var(--blue-d);margin-top:10px;letter-spacing:.01em;">Programme to date</div>
     </div>
     <div class="head-actions">
@@ -786,10 +786,18 @@
     </span>
     <span class="filter-tag" id="emp-tag">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2"/><path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-      — enrolled
+      Not available enrolled
     </span>
   </div>
 
+  <div class="enterprise-toolbar" aria-label="Dashboard tools">
+    <div id="executive-insight"></div>
+    <div class="enterprise-toolbar-actions">
+      <button class="btn" id="btn-save-view" type="button">Save view</button>
+      <button class="btn" id="btn-command" type="button">Quick actions <span class="kbd">Ctrl K</span></button>
+    </div>
+    <div id="data-trust"></div>
+  </div>
   <!-- ════════════════════════ EXECUTIVE SUMMARY ════════════════════════ -->
   <div id="exec-summary"></div>
 
@@ -798,7 +806,7 @@
     <div class="card-hd">
       <div>
         <div class="card-title">Workforce Financial Wellness Score <button type="button" class="metric-info" data-metric="wellness" aria-label="What is the Workforce Financial Wellness Score?">i</button></div>
-        <div class="card-note">The single number that tracks your people's financial health — and its trajectory</div>
+        <div class="card-note">The single number that tracks your people's financial health Not available and its trajectory</div>
       </div>
       <span class="card-tag">Index · modelled</span>
     </div>
@@ -814,7 +822,7 @@
       <div class="card-hd">
         <div>
           <div class="card-title">From enrolled to better off <button type="button" class="metric-info" data-metric="funnel" aria-label="What is the engagement funnel?">i</button></div>
-          <div class="card-note">The journey every employee can take — and where they are on it</div>
+          <div class="card-note">The journey every employee can take Not available and where they are on it</div>
         </div>
         <span class="card-tag">Engagement funnel</span>
       </div>
@@ -824,7 +832,7 @@
       <div class="card-hd">
         <div>
           <div class="card-title">Financial problems resolved <button type="button" class="metric-info" data-metric="outcomes" aria-label="What are financial problems resolved?">i</button></div>
-          <div class="card-note" id="outcomes-note">Financial problems resolved — and the value created</div>
+          <div class="card-note" id="outcomes-note">Financial problems resolved Not available and the value created</div>
         </div>
         <span class="card-tag">Outcomes</span>
       </div>
@@ -858,7 +866,7 @@
       <div class="card-hd">
         <div>
           <div class="card-title">Debt Pressure Profile <button type="button" class="metric-info" data-metric="debtProfile" aria-label="What is the Debt Pressure Profile?">i</button></div>
-          <div class="card-note">Where your people's arrears sit — by credit type, then by creditor</div>
+          <div class="card-note">Where your people's arrears sit Not available by credit type, then by creditor</div>
         </div>
         <span class="card-tag">Arrears journey</span>
       </div>
@@ -874,7 +882,7 @@
     <div>
       <div class="eyebrow">ON-DEMAND PAY</div>
       <h1 style="font-size:27px;">Early Wage Access</h1>
-      <div class="head-sub">How many employees are drawing earned wages early, and how much — a live read on cashflow pressure between paydays.</div>
+      <div class="head-sub">How many employees are drawing earned wages early, and how much Not available a live read on cashflow pressure between paydays.</div>
     </div>
   </div>
   <div id="ewa-kpis" class="grid g-4"></div>
@@ -883,7 +891,7 @@
       <div class="card-hd">
         <div>
           <div class="card-title">Total advanced per month <button type="button" class="metric-info" data-metric="ewaTrend" aria-label="What is total advanced per month?">i</button></div>
-          <div class="card-note">Finalised advances only · cumulative value drawn</div>
+          <div class="card-note">Finalised advances only · total value drawn in each month</div>
         </div>
         <span class="card-tag">Trend</span>
       </div>
@@ -897,7 +905,7 @@
     <div>
       <div class="head-eyebrow">Where the pressure sits</div>
       <h1 style="font-size:27px;">Workforce Financial Stress Map</h1>
-      <div class="head-sub">Financial pressure is not evenly spread. This is where it concentrates — so you and your broker can direct the programme to the people and sites that need it most.</div>
+      <div class="head-sub">Financial pressure is not evenly spread. This is where it concentrates Not available so you and your broker can direct the programme to the people and sites that need it most.</div>
     </div>
   </div>
 
@@ -935,14 +943,14 @@
     <div>
       <div class="head-eyebrow">Tackling problem debt</div>
       <h1 style="font-size:27px;">How problem debt is being handled</h1>
-      <div class="head-sub">Not all distressed debt is dealt with the same way. Here is exactly what is happening to each rand — and we are precise about which debt is under active arrangement versus self-managed with our guidance.</div>
+      <div class="head-sub">Not all distressed debt is dealt with the same way. Here is exactly what is happening to each rand Not available and we are precise about which debt is under active arrangement versus self-managed with our guidance.</div>
     </div>
   </div>
   <div class="card reveal section-gap" style="margin-top:0;animation-delay:.04s">
     <div class="card-hd">
       <div>
         <div class="card-title">Problem debt by how it's being handled <button type="button" class="metric-info" data-metric="debtStates" aria-label="How is problem debt being handled?">i</button></div>
-        <div class="card-note">Three honest states — only the first is an active arrangement</div>
+        <div class="card-note">Three honest states Not available only the first is an active arrangement</div>
       </div>
       <span class="card-tag">Debt intervention</span>
     </div>
@@ -954,7 +962,7 @@
       <div class="card-hd">
         <div>
           <div class="card-title">Potentially prescribed debt challenged <button type="button" class="metric-info" data-metric="prescription" aria-label="What is prescribed debt recovery?">i</button></div>
-          <div class="card-note">Old debt employees may no longer legally owe — identified and contested</div>
+          <div class="card-note">Old debt employees may no longer legally owe Not available identified and contested</div>
         </div>
         <span class="card-tag">Recovery</span>
       </div>
@@ -965,7 +973,7 @@
       <div class="card-hd">
         <div>
           <div class="card-title">Financial Risk Signals <button type="button" class="metric-info" data-metric="riskSignals" aria-label="What are Financial Risk Signals?">i</button></div>
-          <div class="card-note">Exposure detected across your workforce — your early-warning list</div>
+          <div class="card-note">Exposure detected across your workforce Not available your early-warning list</div>
         </div>
         <span class="card-tag">Diagnostic</span>
       </div>
@@ -980,7 +988,7 @@
     <div>
       <div class="head-eyebrow">What to do next</div>
       <h1 style="font-size:27px;">Opportunities identified</h1>
-      <div class="head-sub">The programme has already mapped the next wave of value sitting in your workforce — eligible employees who haven't yet been helped.</div>
+      <div class="head-sub">The programme has already mapped the next wave of value sitting in your workforce Not available eligible employees who haven't yet been helped.</div>
     </div>
   </div>
   <div id="opportunities"></div>
@@ -1003,7 +1011,7 @@
       <div class="card-hd">
         <div>
           <div class="card-title">Conversations by journey <button type="button" class="metric-info" data-metric="chatByJourney" aria-label="What are conversations by journey?">i</button></div>
-          <div class="card-note">Where the questions are coming from — click a journey for its top themes</div>
+          <div class="card-note">Where the questions are coming from Not available click a journey for its top themes</div>
         </div>
         <span class="card-tag" id="chat-count-tag">Chat data</span>
       </div>
@@ -1047,14 +1055,14 @@
 
     <div class="pf-banner">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 3l7 3v5c0 4.4-3 7.5-7 9-4-1.5-7-4.6-7-9V6l7-3z" stroke="#fff" stroke-width="1.8"/></svg>
-      Internal portfolio view — authorised empower-fin and channel partner users only. Not shared with employers.
+      Internal portfolio view Not available authorised empower-fin and channel partner users only. Not shared with employers.
     </div>
 
     <div class="head" style="padding:26px 0 18px;">
       <div>
         <div class="head-eyebrow">Across all employer clients</div>
         <h1 style="font-size:34px;">Portfolio insights</h1>
-        <div class="head-sub">Every reportable metric, across your whole book of employers. Spot where opportunity is highest, where satisfaction is slipping, and where financial stress is concentrated — at a glance.</div>
+        <div class="head-sub">Every reportable metric, across your whole book of employers. Spot where opportunity is highest, where satisfaction is slipping, and where financial stress is concentrated Not available at a glance.</div>
       </div>
       <div class="head-actions">
         <button class="btn" id="btn-pf-export">Export book</button>
@@ -1075,7 +1083,7 @@
         <div class="pf-scope-note" id="pf-scope-note">All authorised employers are included.</div>
       </div>
       <div class="pf-toolbar-right">
-        <span class="pf-window-pill" id="pf-window-pill">Reporting window: —</span>
+        <span class="pf-window-pill" id="pf-window-pill">Reporting window: Not available</span>
         <span class="pf-window-pill">Hover <span class="metric-info" data-metric="measureGuide" tabindex="0" aria-label="What do these measures mean?">i</span> for measure definitions</span>
       </div>
     </div>
@@ -1088,7 +1096,7 @@
           <div class="card-title">Portfolio heatmap</div>
           <div class="card-note">Every employer, every metric. Greener = stronger, redder = needs attention. Click a column header to rank by it below.</div>
         </div>
-        <span class="card-tag" id="pf-employer-count">— employers</span>
+        <span class="card-tag" id="pf-employer-count">Not available employers</span>
       </div>
       <div id="pf-heatmap" style="overflow-x:auto"></div>
     </div>
@@ -1114,7 +1122,7 @@
 <script src="/static/portal-nav-v080.js?v=0.10.0"></script>
 <script>
 /* ════════════════════════════════════════════════════════════════════
-   EMPOWER-FIN DASHBOARD PORTAL — EMPLOYER DASHBOARD
+   EMPOWER-FIN DASHBOARD PORTAL Not available EMPLOYER DASHBOARD
    The static DATA object below is an explicit visual-demonstration fixture.
    Production mode replaces it with the complete API payload and never merges
    missing live fields into these values. Open with ?demo=1 to use the fixture.
@@ -1141,7 +1149,7 @@ let DATA = {
   debtStates: {
     active:    { rand: 6_390_000, employees: 214, label:"Under active intervention", note:"settlement or reduced-instalment arrangements sent" },
     challenged:{ rand: 2_740_000, employees: 274, label:"Being challenged",          note:"potentially prescribed debt contested" },
-    guided:    { rand: 2_790_000, employees: 133, label:"Self-managed via guidance",  note:"couldn't afford an arrangement — educated on prescription to manage it themselves" },
+    guided:    { rand: 2_790_000, employees: 133, label:"Self-managed via guidance",  note:"couldn't afford an arrangement Not available educated on prescription to manage it themselves" },
   },
 
   // ── Workforce Financial Wellness Score (pass 6) ──
@@ -1285,8 +1293,8 @@ let DATA = {
       { name:"Credit life replacement", eligible:412, saving:"R 122,800", icon:"shield" },
       { name:"Funeral consolidation",   eligible:278, saving:"R 40,900",  icon:"umbrella" },
       { name:"Short-term insurance audit", eligible:236, saving:"R 31,400", icon:"car" },
-      { name:"Prescription review",     eligible:183, saving:"—", extra:"R 1.6m challengeable", icon:"scroll" },
-      { name:"Emergency cash access",   eligible:341, saving:"—", extra:"alternative to costly credit", icon:"wallet" },
+      { name:"Prescription review",     eligible:183, saving:"Not available", extra:"R 1.6m challengeable", icon:"scroll" },
+      { name:"Emergency cash access",   eligible:341, saving:"Not available", extra:"alternative to costly credit", icon:"wallet" },
     ],
     estMonthly: "R 241,000",
     estAnnual: "R 2.89m",
@@ -1331,7 +1339,7 @@ let DATA = {
 };
 
 /* ════════════════════════════════════════════════════════════════════
-   PORTFOLIO (internal) — every employer across the key reportable metrics.
+   PORTFOLIO (internal) Not available every employer across the key reportable metrics.
    Static rows below are used only when the page is opened with ?demo=1.
    Metric directions: higher-is-better for most; for stress & arrears,
    higher-is-worse (handled in the heatmap colouring).
@@ -1469,7 +1477,7 @@ const KPI_ICONS = {
 
 function el(html){ const d=document.createElement('div'); d.innerHTML=html.trim(); return d.firstElementChild; }
 const hasValue=v=>v!==null&&v!==undefined&&v!==''&&!(typeof v==='number'&&Number.isNaN(v));
-function fmtCount(v){ return hasValue(v)?Number(v).toLocaleString('en-ZA'):'—'; }
+function fmtCount(v){ return hasValue(v)?Number(v).toLocaleString('en-ZA'):'Not available'; }
 function employerMetricKey(label){
   const k=String(label||'').trim().toLowerCase();
   const map={
@@ -1539,7 +1547,7 @@ function renderExec(){
 
 /* ─────────────────── Workforce Financial Wellness Score ─────────────────── */
 // Shared with the driver bars below so a driver's colour always means the same
-// thing as the score band's colour — improving/strong shines dark green, at
+// thing as the score band's colour Not available improving/strong shines dark green, at
 // risk is amber, critical is red. Thresholds match wellnessBand() server-side.
 function brandSeries(i=0){
   const vars=['--chart-engagement','--chart-cashflow','--chart-debt','--chart-insurance','--chart-workforce','--chart-low','--chart-mid','--chart-high'];
@@ -1564,9 +1572,9 @@ function renderWellness(){
       const available=d.available!==false && hasValue(d.score);
       const score=available?Number(d.score):null;
       const col=available?bandTone(score).c:'var(--chart-mid)';
-      const mk=employerMetricKey(d.name); return `<div class="wd-row"><div class="wd-name">${esc(d.name)} ${employerInfoButton(mk)}<small>${d.note||''}</small></div><div class="wd-track"><div class="wd-fill" style="width:${available?score:0}%;background:${available?col:'var(--brand-soft)'}"></div></div><div class="wd-val">${available?score:'—'}</div></div>`;
+      const mk=employerMetricKey(d.name); return `<div class="wd-row"><div class="wd-name">${esc(d.name)} ${employerInfoButton(mk)}<small>${d.note||''}</small></div><div class="wd-track"><div class="wd-fill" style="width:${available?score:0}%;background:${available?col:'var(--brand-soft)'}"></div></div><div class="wd-val">${available?score:'Not available'}</div></div>`;
     }).join('');
-    wrap.appendChild(el(`<div class="wellness-inner"><div class="wellness-left"><div style="font-family:'Fraunces',serif;font-size:46px;color:var(--brand-primary);line-height:1">—</div><div style="font-size:11px;color:#8497a7;font-weight:800;margin-top:4px">/ 100</div><div class="wellness-band" style="color:#8a6610;background:#fff8e8;border-color:#efd49b">${ragLights('amber')}Data incomplete</div><div class="wellness-note">The score is calculated only when all required driver feeds are available. Missing data is never treated as zero.</div></div><div class="wellness-right">${drivers||'<div class="muted">Required score drivers have not been loaded.</div>'}</div></div>`));
+    wrap.appendChild(el(`<div class="wellness-inner"><div class="wellness-left"><div style="font-family:'Fraunces',serif;font-size:46px;color:var(--brand-primary);line-height:1">Not available</div><div style="font-size:11px;color:#8497a7;font-weight:800;margin-top:4px">/ 100</div><div class="wellness-band" style="color:#8a6610;background:#fff8e8;border-color:#efd49b">${ragLights('amber')}Data incomplete</div><div class="wellness-note">The score is calculated only when all required driver feeds are available. Missing data is never treated as zero.</div></div><div class="wellness-right">${drivers||'<div class="muted">Required score drivers have not been loaded.</div>'}</div></div>`));
     return;
   }
   const delta=hasValue(w.prior)?w.score-w.prior:null;
@@ -1576,9 +1584,9 @@ function renderWellness(){
     <path d="M16 88 A64 64 0 0 1 144 88" fill="none" stroke="url(#wg)" stroke-width="13" stroke-linecap="round" stroke-dasharray="${(C*frac).toFixed(1)} ${C.toFixed(1)}"/>
     <defs><linearGradient id="wg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="var(--brand-grad-1)"/><stop offset=".5" stop-color="var(--brand-grad-3)"/><stop offset="1" stop-color="var(--brand-grad-5)"/></linearGradient></defs>
     <text x="80" y="74" text-anchor="middle" font-family="Fraunces,serif" font-size="34" font-weight="600" fill="var(--brand-primary)">${w.score}</text><text x="80" y="90" text-anchor="middle" font-size="9.5" font-weight="700" fill="#8497a7">/ 100</text></svg>`;
-  const drivers=(w.drivers||[]).map(d=>{ const available=d.available!==false&&hasValue(d.score); const score=available?Number(d.score):0; const col=available?bandTone(score).c:'var(--chart-mid)'; const mk=employerMetricKey(d.name); return `<div class="wd-row"><div class="wd-name">${esc(d.name)} ${employerInfoButton(mk)}<small>${d.note||''}</small></div><div class="wd-track"><div class="wd-fill" style="width:0;background:${available?col:'var(--brand-soft)'}" data-w="${available?score:0}"></div></div><div class="wd-val">${available?score:'—'}</div></div>`; }).join('');
+  const drivers=(w.drivers||[]).map(d=>{ const available=d.available!==false&&hasValue(d.score); const score=available?Number(d.score):0; const col=available?bandTone(score).c:'var(--chart-mid)'; const mk=employerMetricKey(d.name); return `<div class="wd-row"><div class="wd-name">${esc(d.name)} ${employerInfoButton(mk)}<small>${d.note||''}</small></div><div class="wd-track"><div class="wd-fill" style="width:0;background:${available?col:'var(--brand-soft)'}" data-w="${available?score:0}"></div></div><div class="wd-val">${available?score:'Not available'}</div></div>`; }).join('');
   const bt=bandTone(Number(w.score)||0);
-  wrap.appendChild(el(`<div class="wellness-inner"><div class="wellness-left">${gauge}<div class="wellness-band" style="color:${bt.c};background:${bt.bg};border-color:${bt.border}">${ragLights(bt.rag)}${w.band||'Index'}</div><div class="wellness-delta">${delta===null?'No prior period':(delta>=0?'▲ +'+delta:'▼ '+delta)+' pts vs. last period'}</div><div class="wellness-note">A composite of four weighted drivers. Use it to track workforce financial health over time.</div></div><div class="wellness-right">${drivers}</div></div>`));
+  wrap.appendChild(el(`<div class="wellness-inner"><div class="wellness-left">${gauge}<div class="wellness-band" style="color:${bt.c};background:${bt.bg};border-color:${bt.border}">${ragLights(bt.rag)}${w.band||'Index'}</div><div class="wellness-delta">${delta===null?'No prior period':(delta>0?'▲ +'+delta:'▼ '+delta)+' pts vs. '+(DATA.filterContext?.comparison?.label||'previous period')}</div><div class="wellness-note">A composite of four weighted drivers. Use it to track workforce financial health over time.</div></div><div class="wellness-right">${drivers}</div></div>`));
   setTimeout(()=>wrap.querySelectorAll('.wd-fill').forEach(f=>f.style.width=f.dataset.w+'%'),150);
 }
 
@@ -1594,8 +1602,8 @@ function renderKPIs(){
   const wrap=document.getElementById('kpis');
   cards.forEach((c,i)=>{
     const available=c.data?.available!==false && hasValue(c.num);
-    const delta=hasValue(c.data?.delta)?`${Number(c.data.delta)>=0?'▲':'▼'} ${c.data.delta} vs. last period`:'No prior period';
-    const card=el(`<div class="card kpi reveal" style="animation-delay:${i*.06}s"><div class="kpi-label"><span class="kpi-ico" style="background:${c.ico.bg}"><svg width="18" height="18" viewBox="0 0 24 24">${c.ico.path}</svg></span>${c.label}${employerInfoButton(c.infoKey)}</div><div class="kpi-value">${available&&c.prefix?'<span class="cur">'+c.prefix+'</span>':''}<span class="kpi-num">${available?'0':'—'}</span>${available&&c.suffix?'<span style="font-size:18px">'+c.suffix+'</span>':''}</div><div class="kpi-sub">${available?`<span class="delta">${delta}</span>`:'<span style="color:#8497a7">Data not loaded</span>'}</div>${available?c.spark:''}</div>`);
+    const delta=hasValue(c.data?.delta)?(()=>{const n=Number(c.data.delta);if(!Number.isFinite(n))return String(c.data.delta)+' vs. '+(DATA.filterContext?.comparison?.label||'previous period');const sign=n>0?'▲':n<0?'▼':'•';const abs=Math.abs(n);const value=c.money?formatRand(abs):(c.decimals?abs.toFixed(c.decimals)+' pts':Math.round(abs)+' pts');return sign+' '+(n>0?'+':n<0?'-':'')+value+' vs. '+(DATA.filterContext?.comparison?.label||'previous period');})():'No comparison available';
+    const card=el(`<div class="card kpi reveal" style="animation-delay:${i*.06}s"><div class="kpi-label"><span class="kpi-ico" style="background:${c.ico.bg}"><svg width="18" height="18" viewBox="0 0 24 24">${c.ico.path}</svg></span>${c.label}${employerInfoButton(c.infoKey)}</div><div class="kpi-value">${available&&c.prefix?'<span class="cur">'+c.prefix+'</span>':''}<span class="kpi-num">${available?'0':'Not available'}</span>${available&&c.suffix?'<span style="font-size:18px">'+c.suffix+'</span>':''}</div><div class="kpi-sub">${available?`<span class="delta">${delta}</span>`:'<span style="color:#8497a7">Data not loaded</span>'}</div>${available?c.spark:''}</div>`);
     wrap.appendChild(card); if(available) countUp(card.querySelector('.kpi-num'),Number(c.num),{money:c.money,decimals:c.decimals||0,delay:120+i*60});
   });
 }
@@ -1621,7 +1629,7 @@ function renderFunnel(){
   const colors=[brandSeries(0),brandSeries(1),brandSeries(2),brandSeries(3),brandSeries(4)];
   (DATA.funnel||[]).forEach((f,i)=>{
     const available=f.available!==false && hasValue(f.n) && hasValue(f.pct);
-    const mk=employerMetricKey(f.label); const row=el(`<div class="funnel-row"><div class="funnel-lbl">${f.label} ${employerInfoButton(mk)}<small>${available?f.sub:'Data not loaded'}</small></div><div class="funnel-bar-bg"><div class="funnel-bar" style="width:0;background:${available?colors[i]:'var(--brand-soft)'}">${available?f.pct+'%':'—'}</div></div><div class="funnel-val">${available?fmtCount(f.n):'—'}</div></div>`);
+    const mk=employerMetricKey(f.label); const row=el(`<div class="funnel-row"><div class="funnel-lbl">${f.label} ${employerInfoButton(mk)}<small>${available?f.sub:'Data not loaded'}</small></div><div class="funnel-bar-bg"><div class="funnel-bar" style="width:0;background:${available?colors[i]:'var(--brand-soft)'}">${available?f.pct+'%':'Not available'}</div></div><div class="funnel-val">${available?fmtCount(f.n):'Not available'}</div></div>`);
     wrap.appendChild(row); if(available) setTimeout(()=>{row.querySelector('.funnel-bar').style.width=f.pct+'%';},120+i*90);
   });
 }
@@ -1632,7 +1640,7 @@ function renderOutcomes(){
   const available=DATA.availability?.journeys!==false;
   const rows=Array.isArray(DATA.outcomes)?DATA.outcomes:[];
   const total=rows.reduce((sum,o)=>sum+(Number(o.count)||0),0);
-  if(note) note.textContent=available?`${total.toLocaleString('en-ZA')} financial ${total===1?'problem':'problems'} resolved — and the value created`:'Journey data not loaded.';
+  if(note) note.textContent=available?`${total.toLocaleString('en-ZA')} financial ${total===1?'problem':'problems'} resolved Not available and the value created`:'Journey data not loaded.';
   if(!available){wrap.innerHTML='<div class="muted" style="padding:22px 8px">Journey data has not been loaded for this employer.</div>';return;}
   if(!rows.length){wrap.innerHTML='<div class="muted" style="padding:22px 8px">No completed outcomes in the selected reporting window.</div>';return;}
   rows.forEach(o=>{ const row=el(`<div class="outcome clickable"><div class="outcome-ico">${svgIco(o.ico)}</div><div><div class="outcome-name">${esc(o.name)}</div><div class="outcome-meta">${fmtCount(o.count)} completed · ${o.meta}</div></div><div class="outcome-stat"><div class="v">${displayMoney(o.stat)}</div><div class="l">${esc(o.statL)}</div></div><div class="row-chevron">›</div></div>`); row.addEventListener('click',()=>outcomeDrill(o)); wrap.appendChild(row); });
@@ -1649,82 +1657,81 @@ function renderValueStrip(){
 }
 
 /* ─────────────────── ACT 3: savings area chart ─────────────────── */
+function renderPeriodLineChart(current=[], previous=[], currentLabel='Selected period', previousLabel='Previous period', valueFormatter=formatRandThousands, colour='var(--chart-cashflow)'){
+  const a=Array.isArray(current)?current.map(Number).filter(Number.isFinite):[];
+  const b=Array.isArray(previous)?previous.map(Number).filter(Number.isFinite):[];
+  if(!a.length&&!b.length) return '<div class="muted" style="padding:28px 8px;text-align:center;">No data is available for this period.</div>';
+  if(a.length===1 && b.length===1){
+    const vals=[b[0],a[0]], labels=[previousLabel,currentLabel];
+    const w=760,h=270,axisLeft=122,plotLeft=170,right=28,top=34,bottom=62,plotRight=w-right;
+    const ticks=niceTicks(vals,5),max=ticks[ticks.length-1]||1;
+    const px=i=>plotLeft+i*(plotRight-plotLeft), py=v=>h-bottom-(v/max)*(h-bottom-top);
+    const line=`M${px(0).toFixed(1)} ${py(vals[0]).toFixed(1)} L${px(1).toFixed(1)} ${py(vals[1]).toFixed(1)}`;
+    const yaxis=ticks.map(v=>{const y=py(v);return `<line x1="${plotLeft}" x2="${plotRight}" y1="${y}" y2="${y}" stroke="var(--line-soft)"/><text x="${axisLeft}" y="${y+3}" text-anchor="end" font-size="9.5" font-weight="700" fill="#8497a7">${valueFormatter(v)}</text>`}).join('');
+    const points=vals.map((v,i)=>`<circle cx="${px(i)}" cy="${py(v)}" r="${i===1?5:4}" fill="${i===1?colour:'var(--chart-engagement)'}" stroke="#fff" stroke-width="2"><title>${esc(labels[i])}: ${valueFormatter(v)}</title></circle>`).join('');
+    const values=vals.map((v,i)=>{const y=Math.max(top+17,py(v)-17);return `<g><rect x="${px(i)-72}" y="${y-14}" width="144" height="20" rx="7" fill="var(--white)" opacity=".94"/><text x="${px(i)}" y="${y}" text-anchor="middle" font-size="11" font-weight="850" fill="${i===1?colour:'var(--brand-primary)'}">${valueFormatter(v)}</text></g>`}).join('');
+    const xlabels=labels.map((label,i)=>`<text x="${px(i)}" y="${h-16}" text-anchor="middle" font-size="10" font-weight="800" fill="${i===1?'var(--brand-primary)':'#8497a7'}">${esc(label)}</text>`).join('');
+    return `<div class="comparison-legend"><span><i class="comparison-dot current"></i>Selected period</span><span><i class="comparison-dot previous"></i>Previous period</span></div><svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;overflow:visible" role="img" aria-label="${esc(currentLabel)} compared with ${esc(previousLabel)}"><line x1="${plotLeft}" x2="${plotRight}" y1="${h-bottom}" y2="${h-bottom}" stroke="var(--line)"/>${yaxis}<path d="${line}" fill="none" stroke="${colour}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>${points}${values}${xlabels}</svg>`;
+  }
+  const n=Math.max(a.length,b.length);
+  const currentAligned=Array.from({length:n},(_,i)=>a[i-(n-a.length)]??null);
+  const previousAligned=Array.from({length:n},(_,i)=>b[i-(n-b.length)]??null);
+  const values=[...a,...b];
+  const w=760,h=270,axisLeft=122,plotLeft=150,right=28,top=34,bottom=62,plotRight=w-right;
+  const ticks=niceTicks(values,5),max=ticks[ticks.length-1]||1;
+  const px=i=>plotLeft+i*(plotRight-plotLeft)/Math.max(1,n-1), py=v=>h-bottom-(v/max)*(h-bottom-top);
+  const lineOf=(series)=>series.map((v,i)=>v==null?'':(i?'L':'M')+px(i).toFixed(1)+' '+py(v).toFixed(1)).filter(Boolean).join(' ');
+  const currentLine=lineOf(currentAligned), previousLine=lineOf(previousAligned);
+  const yaxis=ticks.map(v=>{const y=py(v);return `<line x1="${plotLeft}" x2="${plotRight}" y1="${y}" y2="${y}" stroke="var(--line-soft)"/><text x="${axisLeft}" y="${y+3}" text-anchor="end" font-size="9.5" font-weight="700" fill="#8497a7">${valueFormatter(v)}</text>`}).join('');
+  const xlabels=Array.from({length:n},(_,i)=>`<text x="${px(i)}" y="${h-16}" text-anchor="middle" font-size="9.5" font-weight="600" fill="#8497a7">${i+1}</text>`).join('');
+  return `<div class="comparison-legend"><span><i class="comparison-dot current"></i>${esc(currentLabel)}</span><span><i class="comparison-dot previous"></i>${esc(previousLabel)}</span></div><svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;overflow:visible"><path d="${currentLine}" fill="none" stroke="${colour}" stroke-width="3" stroke-linecap="round"/><path d="${previousLine}" fill="none" stroke="var(--chart-engagement)" stroke-width="2.2" stroke-dasharray="6 5" stroke-linecap="round"/>${yaxis}${xlabels}</svg>`;
+}
+
 function renderEwa(){
-  const e = DATA.ewa;
-  const kpiWrap = document.getElementById('ewa-kpis');
+  const e=DATA.ewa, wrap=document.getElementById('ewa-chart'), kpiWrap=document.getElementById('ewa-kpis');
   if(kpiWrap){
     kpiWrap.innerHTML='';
-    if(!e || !e.advances){
-      kpiWrap.appendChild(el('<div class="muted" style="padding:8px 2px;color:#8497a7;font-size:13.5px;grid-column:span 4;">No early wage access activity recorded yet.</div>'));
-    } else {
-      const cards=[
-        {v:e.clients.toLocaleString(), l:'Employees took up', infoKey:'ewaEmployees', sub:e.advances.toLocaleString()+' advances total', bg:'var(--brand-soft)'},
-        {v:e.total, l:'Total advanced', infoKey:'ewaTotal', sub:'all finalised advances', bg:'#e7f7ef'},
-        {v:e.avg, l:'Average advance', infoKey:'ewaAverage', sub:'per drawdown', bg:'var(--brand-soft)'},
-        {v:e.perClient.toFixed(1), l:'Advances per employee', infoKey:'ewaFrequency', sub:'average frequency', bg:'#fdf3e2'},
-      ];
-      cards.forEach((c,i)=>{
-        kpiWrap.appendChild(el(`<div class="card kpi reveal" style="animation-delay:${i*.06}s">
-          <div class="kpi-label"><span class="kpi-ico" style="background:${c.bg}"></span>${c.l}${employerInfoButton(c.infoKey)}</div>
-          <div class="kpi-value">${c.v}</div>
-          <div class="kpi-sub">${c.sub}</div>
-        </div>`));
-      });
-    }
+    if(!e||!e.advances) kpiWrap.appendChild(el('<div class="muted" style="padding:8px 2px;font-size:13.5px;">No early wage access activity recorded yet.</div>'));
+    else [
+      {v:e.clients.toLocaleString('en-ZA'),l:'Employees took up',k:'ewaEmployees',s:e.advances.toLocaleString('en-ZA')+' advances total',bg:'var(--brand-soft)'},
+      {v:e.total,l:'Total advanced',k:'ewaTotal',s:'All finalised advances',bg:'#e7f7ef'},
+      {v:e.avg,l:'Average advance',k:'ewaAverage',s:'Per drawdown',bg:'var(--brand-soft)'},
+      {v:e.perClient.toFixed(1),l:'Advances per employee',k:'ewaFrequency',s:'Average frequency',bg:'#fdf3e2'}
+    ].forEach((x,i)=>kpiWrap.appendChild(el(`<div class="card kpi reveal" style="animation-delay:${i*.06}s"><div class="kpi-label"><span class="kpi-ico" style="background:${x.bg}"></span>${x.l}${employerInfoButton(x.k)}</div><div class="kpi-value">${x.v}</div><div class="kpi-sub">${x.s}</div></div>`)));
   }
-  // monthly trend chart (reuses the savings line style)
-  const wrap=document.getElementById('ewa-chart'); if(!wrap) return;
-  const pts=(e&&e.trend)||[], labels=(e&&e.trendLabels)||[];
-  if(pts.length<2){
-    wrap.appendChild(el(`<div style="padding:28px 8px;text-align:center;">
-      <div style="font-family:'Fraunces',serif;font-size:30px;font-weight:600;color:var(--brand-primary);">${e?e.total:'R 0'}</div>
-      <div style="font-size:12.5px;color:#8497a7;margin-top:6px;">${pts.length?'Total advanced so far.':'No advances yet.'}<br>The monthly trend appears with two or more months of data.</div></div>`));
+  if(!wrap) return;
+  const pc=DATA.periodComparison;
+  if(pc){
+    wrap.innerHTML=renderPeriodLineChart(
+      [Number(pc.current.totalAdvanced)||0],
+      [Number(pc.previous.totalAdvanced)||0],
+      pc.current.label,
+      pc.previous.label,
+      formatRandThousands,
+      'var(--chart-cashflow)'
+    );
     return;
   }
-  const w=860,h=210,pad=44,max=Math.max(...pts)*1.12;
-  const px=i=>pad+(i*(w-pad*2)/(pts.length-1));
-  const py=v=>h-pad-(v/max)*(h-pad*1.4);
-  const line=pts.map((p,i)=>(i?'L':'M')+px(i).toFixed(1)+' '+py(p).toFixed(1)).join(' ');
-  const area=line+` L${px(pts.length-1)} ${h-pad} L${px(0)} ${h-pad} Z`;
-  const dots=pts.map((p,i)=>`<circle cx="${px(i)}" cy="${py(p)}" r="${i===pts.length-1?4.5:2.5}" fill="var(--chart-engagement)" stroke="#fff" stroke-width="2"/>`).join('');
-  const xlabels=labels.map((l,i)=>`<text x="${px(i)}" y="${h-8}" font-size="9.5" fill="#8497a7" text-anchor="middle" font-weight="600">${l}</text>`).join('');
-  wrap.appendChild(el(`<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;">
-    <defs><linearGradient id="ewag" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--blue)" stop-opacity=".16"/><stop offset="1" stop-color="var(--blue)" stop-opacity="0"/></linearGradient></defs>
-    ${[0,.5,1].map(f=>`<line x1="${pad}" x2="${w-pad}" y1="${h-pad-f*(h-pad*1.4)}" y2="${h-pad-f*(h-pad*1.4)}" stroke="#f7f4ff" stroke-width="1"/><text x="${pad-6}" y="${(h-pad-f*(h-pad*1.4)+3).toFixed(1)}" text-anchor="end" font-size="9.5" font-weight="700" fill="#8497a7">R${Math.round(max*f)}k</text>`).join('')}
-    <path d="${area}" fill="url(#ewag)"/>
-    <path d="${line}" fill="none" stroke="var(--chart-cashflow)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-    ${dots}${xlabels}
-    <text x="${px(pts.length-1)}" y="${py(pts[pts.length-1])-12}" font-size="12" font-weight="800" fill="var(--chart-cashflow)" text-anchor="end">R${pts[pts.length-1]}k</text>
-  </svg>`));
+  const current=e?.trend||[], prior=DATA.comparison?.previous?.ewa||[];
+  wrap.innerHTML=renderPeriodLineChart(current,prior,DATA.filterContext?.label||'Selected period',DATA.comparison?.label||'Previous period',formatRandThousands,'var(--chart-cashflow)');
 }
 
 function renderSavings(){
   const wrap=document.getElementById('savings-chart');
-  const pts=DATA.savings||[], labels=DATA.savingsLabels||[];
-  // need at least 2 points to draw a trend line; otherwise show a friendly state
-  if(pts.length<2){
-    const val = pts.length ? pts[pts.length-1] : 0;
-    wrap.appendChild(el(`<div style="padding:28px 8px;text-align:center;">
-      <div style="font-family:'Fraunces',serif;font-size:30px;font-weight:600;color:var(--chart-cashflow);">R${val}k<span style="font-size:15px;">/mo</span></div>
-      <div style="font-size:12.5px;color:#8497a7;margin-top:6px;">${pts.length? 'Cumulative savings unlocked so far.' : 'No savings recorded yet.'}<br>The trend line appears once there are two or more months of data.</div>
-    </div>`));
+  const pc=DATA.periodComparison;
+  if(pc){
+    wrap.innerHTML=renderPeriodLineChart(
+      [Number(pc.current.monthlyCashFreedUp)||0],
+      [Number(pc.previous.monthlyCashFreedUp)||0],
+      pc.current.label,
+      pc.previous.label,
+      formatRandThousands,
+      'var(--chart-cashflow)'
+    );
     return;
   }
-  const w=420,h=200,pad=40,max=Math.max(...pts)*1.12;
-  const px=i=>pad+(i*(w-pad*2)/(pts.length-1));
-  const py=v=>h-pad-(v/max)*(h-pad*1.4);
-  let line=pts.map((p,i)=>(i?'L':'M')+px(i).toFixed(1)+' '+py(p).toFixed(1)).join(' ');
-  let area=line+` L${px(pts.length-1)} ${h-pad} L${px(0)} ${h-pad} Z`;
-  let dots=pts.map((p,i)=>`<circle cx="${px(i)}" cy="${py(p)}" r="${i===pts.length-1?4.5:0}" fill="var(--chart-engagement)" stroke="#fff" stroke-width="2"/>`).join('');
-  let xlabels=labels.map((l,i)=> i%2===0||i===labels.length-1 ? `<text x="${px(i)}" y="${h-8}" font-size="9.5" fill="#8497a7" text-anchor="middle" font-weight="600">${l}</text>`:'').join('');
-  wrap.appendChild(el(`<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;">
-    <defs><linearGradient id="savg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--chart-cashflow)" stop-opacity=".18"/><stop offset="1" stop-color="var(--chart-cashflow)" stop-opacity="0"/></linearGradient></defs>
-    ${[0,.5,1].map(f=>`<line x1="${pad}" x2="${w-pad}" y1="${h-pad-f*(h-pad*1.4)}" y2="${h-pad-f*(h-pad*1.4)}" stroke="#f7f4ff" stroke-width="1"/><text x="${pad-6}" y="${(h-pad-f*(h-pad*1.4)+3).toFixed(1)}" text-anchor="end" font-size="9.5" font-weight="700" fill="#8497a7">R${Math.round(max*f)}k</text>`).join('')}
-    <path d="${area}" fill="url(#savg)"/>
-    <path d="${line}" fill="none" stroke="var(--chart-cashflow)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-    ${dots}${xlabels}
-    <text x="${px(pts.length-1)}" y="${py(pts[pts.length-1])-12}" font-size="12" font-weight="800" fill="var(--chart-cashflow)" text-anchor="end">R${pts[pts.length-1]}k/mo</text>
-  </svg>`));
+  const current=DATA.savings||[], prior=DATA.comparison?.previous?.savings||[];
+  wrap.innerHTML=renderPeriodLineChart(current,prior,DATA.filterContext?.label||'Selected period',DATA.comparison?.label||'Previous period',formatRandThousands,'var(--chart-cashflow)');
 }
 
 /* ─────────────────── ACT 3: debt pressure profile ─────────────────── */
@@ -1752,19 +1759,19 @@ function initials(n){ return n.split(/\s|\//)[0].slice(0,2).toUpperCase(); }
 function renderCreditors(){
   const wrap=document.getElementById('creditor-table');
   let rows=DATA.creditors.map((c,i)=>`<tr class="ct-row" data-i="${i}">
-    <td><div class="cred-name"><span class="cred-logo" style="background:${c.color}">${initials(c.name)}</span>${esc(c.name)}</div></td>
-    <td class="r num">${esc(c.accounts)}</td>
-    <td class="r num">${displayMoney(c.balance)}</td>
-    <td class="r muted">${displayMoney(c.avg)}</td>
-    <td class="r"><span class="chip-mini ${c.status==='elig'?'chip-elig':'chip-prog'}">${esc(c.statusL)}</span></td>
+    <td data-label="Creditor"><div class="cred-name"><span class="cred-logo" style="background:${c.color}">${initials(c.name)}</span><span class="cred-name-text">${esc(c.name)}</span></div></td>
+    <td data-label="Accounts" class="r num">${esc(c.accounts)}</td>
+    <td data-label="Balance" class="r num">${displayMoney(c.balance)}</td>
+    <td data-label="Average per account" class="r muted">${displayMoney(c.avg)}</td>
+    <td data-label="Status" class="r"><span class="chip-mini ${c.status==='elig'?'chip-elig':'chip-prog'}">${esc(c.statusL)}</span></td>
   </tr>`).join('');
   const tbl=el(`<table class="ct">
-    <thead><tr><th>Creditor</th><th class="r">Accounts</th><th class="r">Balance</th><th class="r">Avg / acct</th><th class="r">Status</th></tr></thead>
+    <thead><tr><th>Creditor</th><th class="r">Accounts</th><th class="r">Balance</th><th class="r">Average per account</th><th class="r">Status</th></tr></thead>
     <tbody>${rows}
-      <tr style="border-top:2px solid var(--brand-soft)"><td style="font-weight:800;color:var(--brand-primary)">Total in arrears journey</td>
-      <td class="r num">${esc(DATA.creditorsTotal.accounts)}</td><td class="r num">${displayMoney(DATA.creditorsTotal.balance)}</td><td class="r"></td><td class="r"></td></tr>
-    </tbody></table>`);
-  tbl.querySelectorAll('.ct-row').forEach(r=>r.addEventListener('click',()=>creditorDrill(DATA.creditors[+r.dataset.i])));
+      <tr class="ct-total"><td data-label="Total"><strong>Total in arrears journey</strong></td><td data-label="Accounts" class="r num">${esc(DATA.creditorsTotal.accounts)}</td><td data-label="Balance" class="r num">${displayMoney(DATA.creditorsTotal.balance)}</td><td data-label="Average per account" class="r"></td><td data-label="Status" class="r"></td></tr>
+    </tbody>
+  </table>`);
+  tbl.querySelectorAll('.ct-row').forEach(row=>row.addEventListener('click',()=>creditorDrill(DATA.creditors[+row.dataset.i])));
   wrap.appendChild(tbl);
 }
 
@@ -1797,33 +1804,59 @@ function renderStressMap(){
 /* ─────────────────── ACT 4: income donut ─────────────────── */
 function renderIncome(){
   const wrap=document.getElementById('income-donut');
-  const total=DATA.income.reduce((s,x)=>s+x.count,0);
-  const r=52,c=2*Math.PI*r; let off=0;
-  const incomePalette=['var(--chart-engagement)','var(--chart-cashflow)','var(--chart-debt)','var(--chart-insurance)','var(--chart-workforce)','var(--chart-mid)','var(--chart-high)','var(--chart-low)'];
-  let segs=DATA.income.map((b,i)=>{
-    const frac=b.count/total, len=frac*c;
-    const s=`<circle cx="70" cy="70" r="${r}" fill="none" stroke="${incomePalette[i%incomePalette.length]}" stroke-width="20" stroke-dasharray="${len} ${c-len}" stroke-dashoffset="${-off}" transform="rotate(-90 70 70)" />`;
-    off+=len; return s;
+  if(!wrap) return;
+  const rows=Array.isArray(DATA.income)?DATA.income:[];
+  if(!rows.length){
+    wrap.innerHTML='<div class="muted" style="padding:28px 8px;text-align:center;">Income-band data is not available for this period.</div>';
+    return;
+  }
+  const total=rows.reduce((sum,row)=>sum+(Number(row.count)||0),0);
+  if(total<=0){
+    wrap.innerHTML='<div class="muted" style="padding:28px 8px;text-align:center;">No activated employees with an income band are available in this view.</div>';
+    return;
+  }
+  const r=52,c=2*Math.PI*r;
+  let off=0;
+  const segs=rows.map((b,i)=>{
+    const count=Number(b.count)||0;
+    const frac=count/total,len=frac*c;
+    const s=`<circle cx="70" cy="70" r="${r}" fill="none" stroke="${brandSeries(i)}" stroke-width="20" stroke-dasharray="${len} ${c-len}" stroke-dashoffset="${-off}" transform="rotate(-90 70 70)" />`;
+    off+=len;
+    return s;
   }).join('');
-  let legend=DATA.income.map(b=>`<div class="legend-row"><span class="legend-dot" style="background:${incomePalette[i%incomePalette.length]}"></span><span class="legend-name">${esc(b.name)}</span><span class="legend-val">${b.count}</span></div>`).join('');
-  wrap.appendChild(el(`<div class="donut-wrap">
-    <svg width="140" height="140" viewBox="0 0 140 140">${segs}
-      <text x="70" y="65" text-anchor="middle" font-size="22" font-weight="800" fill="var(--brand-primary)" font-family="Fraunces,serif">${total}</text>
+  const legend=rows.map((b,i)=>`<div class="legend-row"><span class="legend-dot" style="background:${brandSeries(i)}"></span><span class="legend-name">${esc(b.name)}</span><span class="legend-val">${Number(b.count||0).toLocaleString('en-ZA')}</span></div>`).join('');
+  wrap.innerHTML=`<div class="donut-wrap">
+    <svg width="140" height="140" viewBox="0 0 140 140" role="img" aria-label="Activated employees by income band">${segs}
+      <text x="70" y="65" text-anchor="middle" font-size="22" font-weight="800" fill="var(--brand-primary)" font-family="Fraunces,serif">${total.toLocaleString('en-ZA')}</text>
       <text x="70" y="84" text-anchor="middle" font-size="9.5" font-weight="700" fill="#8497a7">ACTIVATED</text>
     </svg>
     <div class="legend">${legend}<div class="legend-sub" style="margin-top:4px">Income-band reach among activated employees in the selected view.</div></div>
-  </div>`));
+  </div>`;
 }
+
 
 /* ─────────────────── ACT 4: ratings ─────────────────── */
 function renderRatings(){
   const wrap=document.getElementById('ratings'); const rt=DATA.ratings;
+  const avg=Math.max(0,Math.min(5,Number(rt.avg)||0));
+  const rounded=Math.round(avg*2)/2;
+  const stars=Array.from({length:5},(_,i)=>{
+    const fill=rounded-i;
+    const state=fill>=1?'full':fill>=0.5?'half':'empty';
+    return `<span class="rating-star ${state}" aria-hidden="true">★</span>`;
+  }).join('');
   let bars=[5,4,3,2,1].map(s=>`<div class="rb-row"><div class="rb-lbl">${s} ★</div><div class="rb-track"><div class="rb-fill" style="width:${rt.dist[s]}%;${s<=2?'background:var(--chart-high)':s===3?'background:var(--chart-mid)':''}"></div></div><div class="rb-val">${rt.dist[s]}%</div></div>`).join('');
   wrap.appendChild(el(`<div>
-    <div class="rating-hero"><div class="rating-big">${rt.avg.toFixed(1)}</div><div><div class="rating-stars">★★★★★</div><div style="font-size:11.5px;color:#8497a7;font-weight:700;margin-top:2px">${rt.responses.toLocaleString()} ratings</div></div></div>
+    <div class="rating-hero">
+      <div class="rating-big">${avg.toFixed(1)}</div>
+      <div class="rating-summary">
+        <div class="rating-stars" role="img" aria-label="${avg.toFixed(1)} out of 5 stars">${stars}</div>
+        <div class="rating-response-count">${rt.responses.toLocaleString()} ratings</div>
+      </div>
+    </div>
     <div class="rating-bars">${bars}</div>
     <div class="rating-share-pill"><div><div class="l">5-star ratings ${employerInfoButton('fiveStarPct')}</div></div><div class="v">${rt.fiveStarPct}%</div></div>
-    <div class="rating-share-pill"><div><div class="l">Net Promoter Score ${employerInfoButton('nps')}</div></div><div class="v">${rt.nps == null ? '—' : rt.nps}</div></div>
+    <div class="rating-share-pill"><div><div class="l">Net Promoter Score ${employerInfoButton('nps')}</div></div><div class="v">${rt.nps == null ? 'Not available' : rt.nps}</div></div>
   </div>`));
 }
 
@@ -1831,7 +1864,7 @@ function renderRatings(){
 function renderDebtStates(){
   const wrap=document.getElementById('debt-states'); if(!wrap) return;
   const d=DATA.debtStates;
-  // Full number, not abbreviated — these three cards are the actual audited
+  // Full number, not abbreviated Not available these three cards are the actual audited
   // rand amounts an employer/broker checks line by line, so "R 384k" vs
   // "R 384,231" is the difference between a rough vibe and a real figure.
   const fmtM=v=> 'R '+Math.round(v).toLocaleString('en-ZA');
@@ -1854,7 +1887,7 @@ function renderDebtStates(){
   wrap.appendChild(el(`<div>
     <div class="ds-bar">${seg}</div>
     <div class="ds-grid">${cards}</div>
-    <div class="ds-foot">Only <strong>${fmtM(d.active.rand)}</strong> is counted as <strong>debt under active intervention</strong> in the summary above. The guidance-only amount is shown separately and honestly — we educated these employees on prescription so they can manage accounts they couldn't afford to arrange; we don't claim it as active intervention.</div>
+    <div class="ds-foot">Only <strong>${fmtM(d.active.rand)}</strong> is counted as <strong>debt under active intervention</strong> in the summary above. The guidance-only amount is shown separately and honestly Not available we educated these employees on prescription so they can manage accounts they couldn't afford to arrange; we don't claim it as active intervention.</div>
   </div>`));
 }
 
@@ -1896,7 +1929,7 @@ function renderOpportunities(){
     <div class="opp-ico">${svgIco(c.icon)}</div>
     <div class="opp-name">${esc(c.name)} ${employerInfoButton('opportunities')}</div>
     <div class="opp-elig"><span class="opp-n">${c.eligible}</span> employees eligible</div>
-    <div class="opp-save">${c.saving!=='—'?'+ '+c.saving+'/mo potential':(c.extra||'')}</div>
+    <div class="opp-save">${c.saving!=='Not available'?'+ '+c.saving+'/mo potential':(c.extra||'')}</div>
   </div>`).join('');
   const r=DATA.referral;
   wrap.appendChild(el(`<div class="opp-wrap reveal">
@@ -1905,7 +1938,7 @@ function renderOpportunities(){
       <div class="opp-foot-main">
         <div class="opp-foot-l">Estimated additional value in the next wave ${employerInfoButton('opportunityValue')}</div>
         <div class="opp-foot-v">${o.estMonthly}<span>/month</span> &nbsp;·&nbsp; ${o.estAnnual}<span>/year</span></div>
-        <div class="opp-foot-note">Direct your broker to activate these segments — the diagnosis is already done.</div>
+        <div class="opp-foot-note">Direct your broker to activate these segments Not available the diagnosis is already done.</div>
       </div>
       <div class="opp-foot-ref">
         <div class="opp-ref-v">${r.shareRate}%</div>
@@ -1950,7 +1983,7 @@ function renderChatKPIs(){
   const cards=[
     { label:'Total conversations', infoKey:'chatTotal', ico:KPI_ICONS.activated, num:Number(c.conversations||0), sub:'selected period', spark:Array.isArray(c.volume)&&c.volume.length?sparkline(c.volume,'var(--blue)'):'' },
     { label:'Resolved in chat', infoKey:'chatResolved',    ico:KPI_ICONS.takeUp, num:Number(c.resolvedInChat||0), suffix:'%', sub:Number.isFinite(Number(c.escalated))?Number(c.escalated)+'% handed to an agent':'handoff rate unavailable' },
-    { label:'Avg first reply', infoKey:'chatFirstReply',     ico:{bg:'var(--brand-soft)',path:'<circle cx="12" cy="12" r="9" stroke="var(--chart-cashflow)" stroke-width="1.8" fill="none"/><path d="M12 7v5l3 2" stroke="var(--chart-cashflow)" stroke-width="1.8" stroke-linecap="round"/>'}, raw:c.avgFirstReply||'—', sub:'median response time' },
+    { label:'Avg first reply', infoKey:'chatFirstReply',     ico:{bg:'var(--brand-soft)',path:'<circle cx="12" cy="12" r="9" stroke="var(--chart-cashflow)" stroke-width="1.8" fill="none"/><path d="M12 7v5l3 2" stroke="var(--chart-cashflow)" stroke-width="1.8" stroke-linecap="round"/>'}, raw:c.avgFirstReply||'Not available', sub:'median response time' },
     { label:'Chat satisfaction', infoKey:'chatSatisfaction',   ico:KPI_ICONS.rating, num:Number(c.csat||0), suffix:'/5', decimals:1, sub:'rated after chat' },
   ];
   const wrap=document.getElementById('chat-kpis');
@@ -1995,7 +2028,7 @@ function renderChatTrending(){
     wrap.appendChild(el(`<div class="trend-row">
       <div class="trend-rank">${i+1}</div>
       <div class="trend-body"><div class="trend-q">"${t.q}"</div><div class="trend-meta">${t.journey}</div></div>
-      <div class="trend-stat"><div class="trend-n">${t.n}</div><div class="trend-up" style="color:${tc}">${t.trend==='flat'?'—':'▲ '+t.trend}</div></div>
+      <div class="trend-stat"><div class="trend-n">${t.n}</div><div class="trend-up" style="color:${tc}">${t.trend==='flat'?'Not available':'▲ '+t.trend}</div></div>
     </div>`));
   });
 }
@@ -2010,7 +2043,7 @@ function renderChatThemes(){
     wrap.innerHTML='<div class="muted" style="padding:28px 12px;text-align:center;color:#8497a7;font-size:13px;">No themes tagged in the selected period.</div>';
     return;
   }
-  document.getElementById('chat-theme-title').textContent='Top themes — '+j.name;
+  document.getElementById('chat-theme-title').textContent='Top themes Not available '+j.name;
   document.getElementById('chat-theme-note').textContent=window.__LIVE__
     ? 'Most frequent themes tagged for this journey in the selected period.'
     : 'Illustrative demonstration themes for this journey.';
@@ -2060,7 +2093,7 @@ const STATE = {
   audience: 'employer',
 };
 
-/* period scaling — figures shrink for shorter windows so the demo feels live */
+/* period scaling Not available figures shrink for shorter windows so the demo feels live */
 const PERIOD = {
   '30':  { f:0.12, label:'Last 30 days',      ratings:142,  shares:118 },
   'q':   { f:0.34, label:'This quarter',      ratings:486,  shares:402 },
@@ -2081,6 +2114,30 @@ function safeRender(fn){
   try{ fn(); }catch(err){ console.warn('Dashboard visual failed:', err); }
 }
 
+function formatRand(v){
+  const n=Number(v);
+  if(!Number.isFinite(n)) return 'Not available';
+  return 'R '+Math.round(n).toLocaleString('en-ZA');
+}
+function formatRandThousands(v){
+  const n=Number(v);
+  if(!Number.isFinite(n)) return 'Not available';
+  return 'R '+Math.round(n*1000).toLocaleString('en-ZA');
+}
+function niceTicks(values,count=5){
+  const nums=values.map(Number).filter(Number.isFinite);
+  if(!nums.length) return [0];
+  const min=Math.min(0,...nums), max=Math.max(...nums);
+  if(max<=min) return [min];
+  const raw=(max-min)/Math.max(1,count-1);
+  const mag=Math.pow(10,Math.floor(Math.log10(raw)));
+  const unit=raw/mag;
+  const step=(unit>=5?5:unit>=2?2:1)*mag;
+  const start=Math.floor(min/step)*step, end=Math.ceil(max/step)*step;
+  const ticks=[];
+  for(let v=start;v<=end+step*.001&&ticks.length<12;v+=step) ticks.push(Math.round(v*1e6)/1e6);
+  return ticks.length>=2?ticks:[min,max];
+}
 function displayMoney(v){
   const s=String(v??'');
   return s.replace(/R\s*([0-9][0-9,]*(?:\.[0-9]+)?)\s*([kKmM])\b/g,(_,num,unit)=>{
@@ -2101,17 +2158,70 @@ function installMoneyFormatter(){
 
 /* helpers to scale numbers/strings */
 function scaleNum(n,f){ return Math.round(n*f); }
-function randMoney(v,f){ // scale a "R 2.41m"/"R 222k" style string
+function randMoney(v,f){
   const m=String(v).match(/R?\s*([\d.,]+)\s*([mk]?)/i);
   if(!m) return v;
-  let num=parseFloat(m[1].replace(/,/g,'')); let unit=m[2].toLowerCase();
-  let abs = unit==='m'?num*1e6 : unit==='k'?num*1e3 : num;
+  const num=parseFloat(m[1].replace(/,/g,''));
+  const unit=m[2].toLowerCase();
+  let abs=unit==='m'?num*1e6:unit==='k'?num*1e3:num;
   abs*=f;
-  if(abs>=1e6) return 'R '+(abs/1e6).toFixed(2).replace(/\.00$/,'')+'m';
-  if(abs>=1e3) return 'R '+Math.round(abs/1e3)+'k';
-  return 'R '+Math.round(abs);
+  return 'R '+Math.round(abs).toLocaleString('en-ZA');
 }
 
+function renderExecutiveInsight(){
+  const host=document.getElementById('executive-insight'); if(!host) return;
+  const w=DATA.wellness||{}, pc=DATA.periodComparison;
+  const score=Number(w.score), prior=Number(w.prior);
+  const delta=Number.isFinite(score)&&Number.isFinite(prior)?score-prior:null;
+  const statements=[];
+  if(Number.isFinite(score)) statements.push('Financial wellbeing score is '+score+'/100'+(delta===null?'':', '+(delta>0?'up ':delta<0?'down ':'unchanged ')+Math.abs(delta)+' points versus '+(pc?.previous?.label||'the comparison period'))+'.');
+  if(Number.isFinite(Number(pc?.current?.monthlyCashFreedUp))) statements.push('Monthly cash freed up is '+formatRandThousands(pc.current.monthlyCashFreedUp)+'.');
+  if(Number.isFinite(Number(pc?.current?.totalAdvanced))) statements.push('Total advanced through early wage access is '+formatRandThousands(pc.current.totalAdvanced)+' in this period.');
+  const box=el('<div class="enterprise-insight"><div class="enterprise-insight-eyebrow">Executive insight</div><div class="enterprise-insight-copy"></div></div>');
+  box.querySelector('.enterprise-insight-copy').textContent=statements.join(' ')||'More data is required to produce an executive insight for this view.';
+  host.innerHTML=''; host.appendChild(box);
+}
+function renderDataTrust(){
+  const host=document.getElementById('data-trust'); if(!host) return;
+  const q=DATA.dataQuality||{}, warnings=Array.isArray(q.warnings)?q.warnings:[];
+  const state=warnings.length===0?'Good':warnings.length<=2?'Attention':'Incomplete';
+  const btn=el('<button class="data-trust-pill '+state.toLowerCase()+'" type="button"><span class="data-trust-dot"></span><span>Data quality: <strong>'+state+'</strong></span></button>');
+  host.innerHTML=''; host.appendChild(btn);
+  btn.addEventListener('click',()=>{
+    const rows=warnings.length?'<ul class="data-trust-list">'+warnings.map(w=>'<li>'+esc(typeof w==='string'?w:(w.message||JSON.stringify(w)))+'</li>').join('')+'</ul>':'<p>No data-quality warnings were returned for this view.</p>';
+    const body='<div class="data-trust-grid"><div><strong>'+((q.loadedFeedCount??0))+'</strong><span>feeds loaded</span></div><div><strong>'+((q.coreFeedCount??0))+'</strong><span>core feeds</span></div><div><strong>'+((q.workforceObservationRows??0))+'</strong><span>workforce observations</span></div><div><strong>'+((q.debtObservationRows??0))+'</strong><span>debt observations</span></div></div>'+rows;
+    openDrawer('Data quality',DATA.filterContext?.label||'Selected view',body,'outcome');
+  });
+}
+function saveCurrentView(){
+  const key='empower-fin.savedViews';
+  const views=JSON.parse(localStorage.getItem(key)||'[]');
+  const name=window.prompt('Name this saved view',DATA.filterContext?.label||'Saved view');
+  if(!name) return;
+  const item={id:Date.now().toString(36),name:name.trim().slice(0,80),url:location.pathname+location.search};
+  localStorage.setItem(key,JSON.stringify([item,...views].slice(0,20)));
+  showToast('Saved view','This view is saved on this browser.');
+}
+function openQuickActions(){
+  if(document.getElementById('quick-actions')) return;
+  const commands=[
+    ['Executive summary','#exec-summary'],['Wellness score','#wellness'],['Financial problems resolved','#outcomes'],['Value delivered to your people','#value-strip'],['Monthly cash freed up','#savings-chart'],['Total advanced per month','#ewa-chart'],['Debt pressure profile','#debt-profile'],['Who the programme is reaching','#income-donut'],['Employee ratings','#ratings']
+  ];
+  const back=el('<div class="command-backdrop" id="quick-actions"></div>');
+  const box=el('<div class="command-palette" role="dialog" aria-label="Quick actions"><input class="command-search" type="search" placeholder="Search dashboard sections" autocomplete="off"><div class="command-results"></div></div>');
+  const results=box.querySelector('.command-results');
+  function draw(term){
+    const q=String(term||'').toLowerCase();
+    const rows=commands.filter(x=>x[0].toLowerCase().includes(q));
+    results.innerHTML=rows.map(x=>'<button type="button" class="command-item" data-target="'+x[1]+'">'+esc(x[0])+'<span>Open</span></button>').join('')||'<div class="command-empty">No matching section</div>';
+    results.querySelectorAll('[data-target]').forEach(b=>b.addEventListener('click',()=>{back.remove();document.querySelector(b.dataset.target)?.scrollIntoView({behavior:'smooth',block:'start'});}));
+  }
+  box.querySelector('.command-search').addEventListener('input',e=>draw(e.target.value));
+  back.appendChild(box); document.body.appendChild(back);
+  back.addEventListener('click',e=>{if(e.target===back) back.remove();});
+  draw(''); box.querySelector('.command-search').focus();
+}
+document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();openQuickActions();}});
 /* rebuild DATA from BASE according to STATE, then re-render everything */
 function applyState(){
   // When real data is loaded from the API, render it directly. The period /
@@ -2119,7 +2229,7 @@ function applyState(){
   // illustrative ratios); applying it to real snapshots would distort them.
   if (window.__LIVE__) {
     clearAll();
-    [renderExec,renderWellness,renderKPIs,renderFunnel,renderOutcomes,renderValueStrip,
+    [renderExec,renderExecutiveInsight,renderDataTrust,renderWellness,renderKPIs,renderFunnel,renderOutcomes,renderValueStrip,
      renderSavings,renderEwa,renderDebtProfile,renderCreditors,renderRegions,renderIncome,
      renderRatings,renderDebtStates,renderPrescription,renderRiskSignals,renderOpportunities,
      renderChat,renderStressMap].forEach(safeRender);
@@ -2134,7 +2244,7 @@ function applyState(){
     return;
   }
   const p=PERIOD[STATE.period], f=p.f;
-  // region filter factor (relative share of that site) — illustrative
+  // region filter factor (relative share of that site) Not available illustrative
   const regionShare = { 'all':1, 'Vaalwater Plant':0.34, 'Secunda Site':0.22, 'Sasolburg':0.18, 'Head Office':0.14, 'Field / Remote':0.12 };
   const incomeShare = { 'all':1, 'Under R8k/mo':0.30, 'R8k–R15k/mo':0.42, 'R15k–R25k/mo':0.19, 'Over R25k/mo':0.09 };
   const segF = (regionShare[STATE.region]||1) * (incomeShare[STATE.income]||1);
@@ -2211,11 +2321,41 @@ function applyState(){
   renderSavings(); renderEwa(); renderDebtProfile(); renderCreditors(); renderRegions(); renderIncome();
   renderRatings(); renderDebtStates(); renderPrescription(); renderRiskSignals(); renderOpportunities(); renderChat();
   renderStressMap();
+  requestAnimationFrame(()=>fitResponsiveDataValues());
   wireMetricTips(document.getElementById('employer-view'));
   updateContextLine();
   const ep=document.getElementById('exec-period'); if(ep) ep.textContent=PERIOD[STATE.period].label+' · at a glance';
 }
 
+function fitResponsiveDataValues(root=document){
+  const nodes=root.querySelectorAll?.('.kpi-value,.stat-value,.metric-value,.stat-cell .v,.rating-big,.stress-v,.hbar-val,.rb-val,.dp-pct')||[];
+  nodes.forEach(node=>{
+    node.style.whiteSpace='nowrap';
+    node.style.overflow='visible';
+    const cs=getComputedStyle(node);
+    const original=parseFloat(cs.fontSize);
+    const min=node.matches('.rating-big')?28:14;
+    const parent=node.parentElement;
+    if(!parent || !Number.isFinite(original)) return;
+    node.style.fontSize=original+'px';
+    let size=original;
+    const maxWidth=Math.max(40,parent.clientWidth);
+    while(size>min && node.scrollWidth>maxWidth+1){
+      size=Math.max(min,size-0.5);
+      node.style.fontSize=size+'px';
+    }
+    // If even the minimum would not fit, the parent must reflow; never clip
+    // the financial value to make a grid appear narrower than its content.
+    if(node.scrollWidth>maxWidth+1){
+      // The containing layout must reflow rather than breaking a financial
+      // number into individual characters. Keep the value atomic.
+      node.style.fontSize=min+'px';
+    }
+  });
+}
+window.addEventListener('resize',()=>requestAnimationFrame(()=>fitResponsiveDataValues()),{passive:true});
+
+document.addEventListener('DOMContentLoaded',()=>{ document.getElementById('btn-save-view')?.addEventListener('click',saveCurrentView); document.getElementById('btn-command')?.addEventListener('click',openQuickActions); });
 function updateContextLine(){
   const parts=[];
   if(window.__LIVE__ && DATA.filterContext){
@@ -2245,7 +2385,7 @@ function syncPeriodControl(){
     else if(rangeParam==='30d') sel.value='30d';
     else if(rangeParam==='quarter') sel.value='qtd';
     else if(rangeParam==='all') sel.value='all';
-    else sel.value=''; // no params, or range=latest — both mean "Latest period"
+    else sel.value=''; // no params, or range=latest Not available both mean "Latest period"
   } else {
     sel.value = STATE.period==='30'?'30d' : STATE.period==='q'?'qtd' : 'all';
   }
@@ -2347,14 +2487,11 @@ function pfVisibleEmployers(){
   return PORTFOLIO.employers.filter((e,i)=>PF_SELECTED_IDS.has(pfEmployerKey(e,i)));
 }
 function pfMoney(v){
-  const n=pfFinite(v); if(n===null) return '—';
-  const a=Math.abs(n);
-  if(a>=1e6) return 'R '+(n/1e6).toFixed(a>=10e6?1:2).replace(/\.00$/,'').replace(/(\.\d)0$/,'$1')+'m';
-  if(a>=1e3) return 'R '+(n/1e3).toFixed(a>=100e3?0:1).replace(/\.0$/,'')+'k';
+  const n=pfFinite(v); if(n===null) return 'Not available';
   return 'R '+Math.round(n).toLocaleString('en-ZA');
 }
 function pfFmt(m, v){
-  const n=pfFinite(v); if(n===null) return '—';
+  const n=pfFinite(v); if(n===null) return 'Not available';
   if(m.unit==='R') return pfMoney(n);
   if(m.unit==='%') return Math.round(n)+'%';
   if(m.unit==='/5') return n.toFixed(1);
@@ -2478,7 +2615,7 @@ function renderPortfolioBody(){
   const periodNote=PORTFOLIO.filterContext?.label?` Reporting window: ${PORTFOLIO.filterContext.label}.`:'';
   document.getElementById('pf-footnote').innerHTML=(PORTFOLIO.live
     ? `Internal portfolio view calculated from the same dated source records and score rules as each employer dashboard.${periodNote}`
-    : (PORTFOLIO.explicitDemo?'Internal portfolio view — explicit demonstration mode.':'Internal portfolio view is unavailable because the live portfolio feed could not be loaded. No demonstration values are shown.'))
+    : (PORTFOLIO.explicitDemo?'Internal portfolio view Not available explicit demonstration mode.':'Internal portfolio view is unavailable because the live portfolio feed could not be loaded. No demonstration values are shown.'))
     + ` Currently showing ${count} of ${PORTFOLIO.employers.length} authorised employer${PORTFOLIO.employers.length===1?'':'s'}. Heatmap colouring is relative within each metric column; with only one employer the cell is intentionally neutral. Missing measures are shown as unavailable and are not ranked as zero. For stress index and arrears, higher values indicate greater risk. Not shared with employer clients.`;
   wireMetricTips(document.getElementById('portfolio-view'));
 }
@@ -2490,9 +2627,9 @@ function renderPfKpis(E){
   const avgScore=scores.length?Math.round(scores.reduce((s,v)=>s+v,0)/scores.length):null;
   const cards=[
     { key:'employerClients', label:'Employer clients', ico:KPI_ICONS.takeUp, raw:E.length, sub:heads.total.toLocaleString('en-ZA')+' employees covered' },
-    { key:'saving', label:'Cashflow restored / mo', ico:KPI_ICONS.saving, raw:saving.count?pfMoney(saving.total):'—', sub:saving.count===E.length?'across selected employers':`${saving.count} of ${E.length} employers have cashflow data` },
-    { key:'oppValue', label:'Open opportunity / mo', ico:KPI_ICONS.activated, raw:opp.count?pfMoney(opp.total):'—', sub:opp.count===E.length?'identified across selected employers':`${opp.count} of ${E.length} employers have opportunity data` },
-    { key:'wellness', label:'Avg Financial Wellness Score', ico:KPI_ICONS.rating, raw:avgScore===null?'—':avgScore, sub:scores.length===E.length?'selected-employer average':`${scores.length} of ${E.length} employers have a complete score` },
+    { key:'saving', label:'Cashflow restored / mo', ico:KPI_ICONS.saving, raw:saving.count?pfMoney(saving.total):'Not available', sub:saving.count===E.length?'across selected employers':`${saving.count} of ${E.length} employers have cashflow data` },
+    { key:'oppValue', label:'Open opportunity / mo', ico:KPI_ICONS.activated, raw:opp.count?pfMoney(opp.total):'Not available', sub:opp.count===E.length?'identified across selected employers':`${opp.count} of ${E.length} employers have opportunity data` },
+    { key:'wellness', label:'Avg Financial Wellness Score', ico:KPI_ICONS.rating, raw:avgScore===null?'Not available':avgScore, sub:scores.length===E.length?'selected-employer average':`${scores.length} of ${E.length} employers have a complete score` },
   ];
   const wrap=document.getElementById('pf-kpis'); wrap.innerHTML='';
   cards.forEach((c,i)=>wrap.appendChild(el(`<div class="card kpi reveal" style="animation-delay:${i*.05}s">
@@ -2537,12 +2674,12 @@ function preparePdfPrint(){
   const footer=document.getElementById('pdf-footer-date');
   // The header markup is shared between employer-view and portfolio-view's
   // print output, so it has to be filled in differently depending on which
-  // one is actually on screen — otherwise "Export book" prints a portfolio
+  // one is actually on screen Not available otherwise "Export book" prints a portfolio
   // report headed with a single employer's name and score.
   const portfolioActive=document.getElementById('portfolio-view')?.style.display!=='none';
   if(portfolioActive){
     const employerCount=document.getElementById('pf-employer-count')?.textContent?.trim() || '';
-    const windowLabel=document.getElementById('pf-window-pill')?.textContent?.trim() || 'Reporting window: —';
+    const windowLabel=document.getElementById('pf-window-pill')?.textContent?.trim() || 'Reporting window: Not available';
     if(title) title.textContent='Portfolio Insights' + (employerCount ? ' · ' + employerCount : '');
     if(period) period.textContent=windowLabel;
     if(score) score.textContent='Across your whole book of employers';
@@ -2552,7 +2689,7 @@ function preparePdfPrint(){
     const scoreValue=Number(DATA?.wellness?.score);
     if(title) title.textContent=employer + ' · Employer Insights';
     if(period) period.textContent=periodLabel;
-    if(score) score.textContent='Workforce Financial Wellness Score ' + (Number.isFinite(scoreValue)?scoreValue:'—') + ' / 100';
+    if(score) score.textContent='Workforce Financial Wellness Score ' + (Number.isFinite(scoreValue)?scoreValue:'Not available') + ' / 100';
   }
   if(generated) generated.textContent='Generated ' + new Date().toLocaleDateString('en-ZA',{year:'numeric',month:'long',day:'numeric'});
   if(footer) footer.textContent=new Date().toLocaleDateString('en-ZA',{year:'numeric',month:'long',day:'numeric'});
@@ -2598,7 +2735,7 @@ function scheduleFrequencyLabel(s){
   return s.frequency||'';
 }
 function scheduleLocalWhen(v){
-  if(!v) return '—';
+  if(!v) return 'Not available';
   try{return new Date(v).toLocaleString('en-ZA',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});}catch(_){return v;}
 }
 async function openScheduleReport(){
@@ -2712,30 +2849,50 @@ function closeDrawer(){
 document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeDrawer(); });
 
 function outcomeDrill(o){
+  const prior = DATA.comparison?.previous?.outcomes?.[o.key] || [];
+  const currentLabels = DATA.comparison?.current?.savingsLabels || [];
+  const previousLabels = DATA.comparison?.previous?.savingsLabels || [];
   const body=`
-    <div class="drawer-stats">
-      <div class="ds"><div class="dsl">Fixes completed</div><div class="dsv">${o.count.toLocaleString()}</div></div>
+    <div class="drawer-stat-grid">
+      <div class="ds"><div class="dsl">Fixes completed</div><div class="dsv">${o.count.toLocaleString('en-ZA')}</div></div>
       <div class="ds"><div class="dsl">${esc(o.statL)}</div><div class="dsv">${displayMoney(o.stat)}</div></div>
-      <div class="ds"><div class="dsl">Avg per employee</div><div class="dsv">${o.avgPerEmployee ?? '—'}</div></div>
+      <div class="ds"><div class="dsl">Average per employee</div><div class="dsv">${o.avgPerEmployee || 'Not available'}</div></div>
+      <div class="ds"><div class="dsl">Period change</div><div class="dsv">${hasValue(o.delta)?(Number(o.delta)>0?'+':'')+Number(o.delta).toLocaleString('en-ZA'):'Not available'}</div></div>
     </div>
     <div class="drawer-section-title">Completion trend</div>
-    ${miniTrend(o.trend)}
-    <div class="drawer-note">Employee-level detail is de-identified. The employer sees aggregated outcomes only — never an individual's financial information. ${o.key==='credit'?'Credit life replacement leverages NCA s106(4)(a) substitution rights.':''}</div>`;
-  openDrawer(o.name, o.meta, body);
+    ${miniTrend(o.trend, prior, currentLabels, previousLabels, DATA.comparison?.label)}
+    <div class="drawer-note">Employee-level detail is de-identified. The employer sees aggregated outcomes only. ${o.key==='credit'?'Credit life replacement uses the applicable NCA substitution rules.':''}</div>`;
+  openDrawer(o.name, o.meta, body, 'outcome');
 }
-function miniTrend(trend){
-  const seed=Array.isArray(trend)&&trend.length?trend.map(Number).filter(Number.isFinite):null;
-  if(!seed || !seed.length) return '<div class="muted" style="padding:10px 0;font-size:12.5px;">No monthly trend data for the selected window.</div>';
-  const w=520,h=190,left=58,right=18,top=16,bottom=34,max=Math.max(1,...seed),min=Math.min(0,...seed);
-  const span=Math.max(1,max-min), px=i=>left+i*(w-left-right)/Math.max(1,seed.length-1), py=v=>top+(max-v)/span*(h-top-bottom);
-  const ticks=[0,.25,.5,.75,1].map(f=>max-(max-min)*f);
-  const line=seed.map((v,i)=>(i?'L':'M')+px(i).toFixed(1)+' '+py(v).toFixed(1)).join(' ');
-  const dots=seed.map((v,i)=>`<circle cx="${px(i)}" cy="${py(v)}" r="3.8" fill="var(--chart-engagement)" stroke="var(--white)" stroke-width="2"><title>${v.toLocaleString('en-ZA')}</title></circle>`).join('');
-  const yaxis=ticks.map(v=>`<line x1="${left}" x2="${w-right}" y1="${py(v)}" y2="${py(v)}" stroke="var(--line-soft)" stroke-width="1"/><text x="${left-9}" y="${py(v)+3}" text-anchor="end" font-size="10" font-weight="700" fill="var(--grey-l)">${Math.round(v).toLocaleString('en-ZA')}</text>`).join('');
-  const labels=seed.map((v,i)=>`<text x="${px(i)}" y="${h-10}" text-anchor="middle" font-size="9.5" font-weight="600" fill="var(--grey-l)">${i+1}</text>`).join('');
-  const values=seed.map((v,i)=>`<text x="${px(i)}" y="${Math.max(top+10,py(v)-9)}" text-anchor="middle" font-size="9.5" font-weight="800" fill="var(--chart-cashflow)">${v.toLocaleString('en-ZA')}</text>`).join('');
-  return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:190px;margin:8px 0 4px" role="img" aria-label="Completion trend with actual values"><line x1="${left}" x2="${left}" y1="${top}" y2="${h-bottom}" stroke="var(--line)"/><path d="${line}" fill="none" stroke="var(--chart-cashflow)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>${yaxis}${dots}${values}${labels}</svg>`;
+function alignSeries(current, previous){
+  const a=Array.isArray(current)?current.map(Number):[];
+  const b=Array.isArray(previous)?previous.map(Number):[];
+  const n=Math.max(a.length,b.length);
+  return {
+    current:Array.from({length:n},(_,i)=>a[i-(n-a.length)] ?? null),
+    previous:Array.from({length:n},(_,i)=>b[i-(n-b.length)] ?? null),
+    count:n,
+  };
 }
+function miniTrend(trend, prior=[], labels=[], priorLabels=[], comparisonLabel='previous period'){
+  const aligned=alignSeries(trend,prior);
+  const values=[...aligned.current,...aligned.previous].filter(v=>Number.isFinite(v));
+  if(!values.length) return '<div class="muted" style="padding:10px 0;font-size:12.5px;">No trend data is available for this period.</div>';
+  const w=620,h=250,left=74,right=22,top=24,bottom=46,max=Math.max(1,...values),ticks=niceTicks(values,5).filter(v=>v>=0);
+  const py=v=>h-bottom-(v/max)*(h-bottom-top), px=i=>left+i*(w-left-right)/Math.max(1,aligned.count-1);
+  const lineOf=(series)=>series.map((v,i)=>v==null?'':(i?'L':'M')+px(i).toFixed(1)+' '+py(v).toFixed(1)).filter(Boolean).join(' ');
+  const line=lineOf(aligned.current), priorLine=lineOf(aligned.previous);
+  const dots=aligned.current.map((v,i)=>v==null?'':`<circle cx="${px(i)}" cy="${py(v)}" r="3.8" fill="var(--chart-cashflow)" stroke="var(--white)" stroke-width="2"><title>${v.toLocaleString('en-ZA')}</title></circle>`).join('');
+  const priorDots=aligned.previous.map((v,i)=>v==null?'':`<circle cx="${px(i)}" cy="${py(v)}" r="3.2" fill="var(--chart-engagement)" stroke="var(--white)" stroke-width="2"><title>${v.toLocaleString('en-ZA')}</title></circle>`).join('');
+  const yaxis=ticks.map(v=>`<line x1="${left}" x2="${w-right}" y1="${py(v)}" y2="${py(v)}" stroke="var(--line-soft)" stroke-width="1"/><text x="${left-10}" y="${py(v)+3}" text-anchor="end" font-size="10" font-weight="700" fill="var(--grey-l)">${Math.round(v).toLocaleString('en-ZA')}</text>`).join('');
+  const xlabels=Array.from({length:aligned.count},(_,i)=>{
+    const idx=labels.length?i-(aligned.count-labels.length):i;
+    return idx>=0&&labels[idx]?`<text x="${px(i)}" y="${h-14}" text-anchor="middle" font-size="9.5" font-weight="600" fill="var(--grey-l)">${labels[idx]}</text>`:'';
+  }).join('');
+  return `<div class="comparison-legend"><span><i class="comparison-dot current"></i>${esc(DATA.filterContext?.label||'Selected period')}</span><span><i class="comparison-dot previous"></i>${esc(comparisonLabel||'Previous period')}</span></div>
+  <svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto" role="img" aria-label="Completion trend comparison"><line x1="${left}" x2="${left}" y1="${top}" y2="${h-bottom}" stroke="var(--line)"/>${yaxis}<path d="${line}" fill="none" stroke="var(--chart-cashflow)" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/><path d="${priorLine}" fill="none" stroke="var(--chart-engagement)" stroke-width="2.2" stroke-dasharray="6 5" stroke-linecap="round" stroke-linejoin="round"/>${dots}${priorDots}${xlabels}</svg>`;
+}
+
 function creditorDrill(c){
   const stages=Array.isArray(c.stateBreakdown)?c.stateBreakdown:[];
   const body=`
@@ -2750,8 +2907,8 @@ function creditorDrill(c){
         `<div class="hbar-row" style="grid-template-columns:190px 1fr 68px"><div class="hbar-lbl">${s.label}</div><div class="hbar-track"><div class="hbar-fill" style="width:${s.pct}%"></div></div><div class="hbar-val">${s.count} · ${s.pct}%</div></div>`).join('')
         :'<div class="muted" style="padding:10px 0;font-size:12.5px;">No status breakdown available for this creditor.</div>'}
     </div>
-    <div class="drawer-note">Employees deal with ${esc(c.name)} directly through a guided, do-it-yourself settlement — no debt-review flag, no third party taking over their money. Figures aggregated across ${esc(c.accounts)} employees.</div>`;
-  openDrawer(c.name, 'Unsecured arrears · settlement journey', body);
+    <div class="drawer-note">Employees deal with ${esc(c.name)} directly through a guided, do-it-yourself settlement Not available no debt-review flag, no third party taking over their money. Figures aggregated across ${esc(c.accounts)} employees.</div>`;
+  openDrawer(c.name, 'Unsecured arrears, settlement journey', body, 'creditor');
 }
 
 /* ─────── toast ─────── */
@@ -2872,7 +3029,7 @@ async function fetchPortfolioInBackground(requestSeq){
   }catch(_){ PORTFOLIO.live=false; PORTFOLIO.error=true; if(!PORTFOLIO.explicitDemo) PORTFOLIO.employers=[]; PF_RENDERED=false; }
 }
 
-// month picker — populated from the snapshots that actually exist
+// month picker Not available populated from the snapshots that actually exist
 const PERIOD_SCORE_TONE = {
   strong: { c: '#137a47', bg: '#e3f6ec', border: '#b8e6cc' },
   risk: { c: '#8a5a10', bg: '#fff2df', border: '#f3cf98' },
@@ -2961,7 +3118,7 @@ function switchPeriod(value){
   else if(value==='all') params.set('range','all');
   else if(value.startsWith('q:')) params.set('quarter',value.slice(2));
   else if(value) params.set('period',value);
-  // else "" (Latest period): leave every filter param cleared — that's
+  // else "" (Latest period): leave every filter param cleared Not available that's
   // exactly the state apiFilterQuery() resolves to range=latest itself, so
   // it always matches whatever the server considers the newest period.
   if(id) params.set('employer',id);
@@ -2975,15 +3132,15 @@ function renderMonthActivity(a, context){
   document.getElementById('month-activity')?.remove();
   if(!a) return;
   const label = (a&&a.label)||(context&&context.label)||'selected period';
-  const value=(v,fallback='—') => (v===null || v===undefined || v==='') ? fallback : v;
+  const value=(v,fallback='Not available') => (v===null || v===undefined || v==='') ? fallback : v;
   const enrolled=value(a.enrolled), completed=value(a.completed), savings=value(a.savingUnlocked);
   const advances=value(a.advancesCount), advanceTotal=value(a.advancesTotal);
   const strip=el(`<div id="month-activity" style="margin-top:14px;display:flex;flex-wrap:wrap;gap:22px;padding:13px 18px;background:#f7f4ff;border:1px solid var(--brand-soft);border-radius:12px;font:600 13px Manrope,sans-serif;color:var(--brand-primary);">
     <span style="color:#5b6b7a;font-weight:700;">${label}:</span>
     <span><b>${enrolled}</b> newly enrolled</span>
     <span><b>${completed}</b> fixes completed</span>
-    <span><b>${savings}</b>${savings==='—'?'':'/mo'} new savings</span>
-    <span><b>${advances}</b> wage advances${advanceTotal==='—'?'':' · <b>'+advanceTotal+'</b>'}</span>
+    <span><b>${savings}</b>${savings==='Not available'?'':'/mo'} new savings</span>
+    <span><b>${advances}</b> wage advances${advanceTotal==='Not available'?'':' · <b>'+advanceTotal+'</b>'}</span>
   </div>`);
   host.appendChild(strip);
 }
@@ -3015,7 +3172,7 @@ function setLiveFootnote(context){
 
 // apply the channel partner's white-label theme (colours, logo, name)
 // hide dashboard sections the signed-in user isn't permitted to see (server
-// also redacts the underlying data for gated sections — this just matches
+// also redacts the underlying data for gated sections Not available this just matches
 // the UI to it, and skips wasted rendering work for hidden sections).
 function applySectionVisibility(me){
   const sections = me.sections || {};
@@ -3100,7 +3257,7 @@ function applyTheme(theme, user){
   }else if(brandName){
     brandName.textContent=theme.name && theme.name!==baseName ? theme.name : '';
   }
-  document.title=(theme.name||baseName)+' — Employer Insights';
+  document.title=(theme.name||baseName)+' Not available Employer Insights';
   if(theme.tagline){
     const sub=document.querySelector('.head-sub');
     if(sub) sub.textContent=theme.tagline;
@@ -3109,6 +3266,37 @@ function applyTheme(theme, user){
 // Create a full, repeatable chart palette from any valid employer brand hex.
 // Hue rotation makes the charts complementary to (not copies of) the logo hues.
 function complementaryPalette(accent, primary){
+  // Build a restrained, perceptually balanced enterprise chart system from the
+  // extracted brand hues. OKLCH keeps perceived brightness more consistent than
+  // the old HSL offsets, while contrast guards keep labels/marks readable.
+  const BE=window.BrandEngine;
+  if(BE && BE.deriveChartPalette) return BE.deriveChartPalette({accentColor:accent,primaryColor:primary});
+  if(BE && BE.hexToLch && BE.lch && BE.ensureContrast){
+    const a=BE.hexToLch(accent), p=BE.hexToLch(primary||accent);
+    const hue=(a.C>.035?a.h:p.h);
+    const chroma=Math.min(Math.max(a.C,.055),.16);
+    const make=(offset,L,C=chroma)=>BE.lch(clamp01(L),Math.min(C,.18),(hue+offset+360)%360);
+    const safe=(hex,bg='#ffffff')=>BE.ensureContrast(hex,bg,3.4);
+    const colors={
+      engagement:safe(make(150,.50,chroma*.78)),
+      cashflow:safe(make(175,.58,chroma*.70)),
+      debt:safe(make(25,.50,chroma*.62)),
+      insurance:safe(make(285,.48,chroma*.78)),
+      workforce:safe(make(205,.54,chroma*.72)),
+      low:safe(make(150,.58,chroma*.68)),
+      mid:safe(make(65,.58,Math.max(.07,chroma*.62))),
+      high:safe(make(5,.55,Math.max(.07,chroma*.62)))
+    };
+    // Guarantee a visually useful separation even when the source logo is
+    // nearly monochromatic.
+    const seen=new Set();
+    for(const k of Object.keys(colors)){
+      if(seen.has(colors[k])) colors[k]=safe(make((Object.keys(colors).indexOf(k)+1)*43,.54,.075));
+      seen.add(colors[k]);
+    }
+    return Object.fromEntries(Object.entries(colors).map(([k,v])=>[k,'#'+v.replace(/^#/,'')]));
+  }
+  // Legacy fallback for an unavailable brand engine.
   const toHsl = hex => {
     const h=String(hex||'#777777').replace('#','');
     const r=parseInt(h.slice(0,2),16)/255,g=parseInt(h.slice(2,4),16)/255,b=parseInt(h.slice(4,6),16)/255;
@@ -3124,12 +3312,9 @@ function complementaryPalette(accent, primary){
   };
   const [h,s]=toHsl(accent), [ph]=toHsl(primary);
   const make=(offset,light=.43,sat=Math.max(.42,s))=>fromHsl((h+offset+360)%360,sat,light);
-  return {
-    engagement:make(145,.43), cashflow:make(205,.43), debt:make(32,.48),
-    insurance:make(265,.48), workforce:fromHsl((ph+180)%360,.42,.39),
-    low:make(165,.43), mid:make(35,.49), high:make(0,.43,.66)
-  };
+  return {engagement:make(145,.43),cashflow:make(205,.43),debt:make(32,.48),insurance:make(265,.48),workforce:fromHsl((ph+180)%360,.42,.39),low:make(165,.43),mid:make(35,.49),high:make(0,.43,.66)};
 }
+function clamp01(v){ return Math.max(0.05,Math.min(0.95,v)); }
 // darken a hex colour by pct (negative) for the hover/darker accent
 function shade(hex,pct){
   hex=String(hex).replace(/^#/,''); const n=parseInt(hex,16);
@@ -3152,7 +3337,7 @@ function tint(hex,pct){
   return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('');
 }
 
-// brief "Hi <name>" splash right after sign-in — shown once per browser tab
+// brief "Hi <name>" splash right after sign-in Not available shown once per browser tab
 // session so repeat navigation within the dashboard doesn't keep re-showing it
 function handleWelcomeSplash(me){
   var el=document.getElementById('welcome-splash');
@@ -3213,7 +3398,7 @@ function showDemoBanner(){
   const b = document.createElement('div');
   b.id = 'demo-banner';
   b.style.cssText = 'position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#fdf3e2;color:#8a5a00;border:1px solid #f0d8a8;padding:10px 18px;border-radius:12px;font:600 13px Manrope,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:999;';
-  b.textContent = 'Explicit demonstration mode — these figures are not live source data.';
+  b.textContent = 'Explicit demonstration mode Not available these figures are not live source data.';
   document.body.appendChild(b);
 }
 

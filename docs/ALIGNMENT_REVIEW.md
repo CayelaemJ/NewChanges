@@ -42,7 +42,7 @@ The corrected implementation now separates these concepts and applies one calcul
 - **`period=YYYY-MM`:** stock at month-end; flow from the first through last calendar day of that month.
 - **`range=30d`:** stock now; flow across the latest 30 inclusive UTC calendar dates.
 - **`range=quarter`:** stock now; flow from the current quarter start through now.
-- **`range=all`:** stock now; flow from programme inception through now.
+- **`range=all`:** stock as at the selected end date; flow from 1 January through the selected end date (programme-to-date for the current year).
 - **Site/income filtering:** cohort membership is selected from the latest valid workforce observation at or before the as-at date, not from today's employee row.
 
 ## Portal structure after the update
