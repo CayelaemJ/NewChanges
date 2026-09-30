@@ -4,7 +4,7 @@ const snap=fs.readFileSync(path.join(process.cwd(),"src/services/snapshotBuilder
 const dash=fs.readFileSync(path.join(process.cwd(),"public/dashboard.html"),"utf8");
 const failures=[];
 const must=(ok,msg)=>{if(!ok)failures.push(msg);};
-must(snap.includes("const periodComparison = comparisonPayload ?"),"server must expose explicit current/previous period financial comparison points");
+must(snap.includes("const periodComparison = selectedMonthKey") && snap.includes("previous: {"),"server must expose explicit current/previous period financial comparison points");
 must(snap.includes("monthlyCashFreedUp: Number(rand(cumulativeMonthlySaving))"),"monthly cash freed up current point must be explicit");
 must(snap.includes("monthlyCashFreedUp: Number(comparisonPayload?.kpis?.monthlySaving?.rand ?? 0)"),"monthly cash freed up previous point must be explicit, including zero");
 must(snap.includes("totalAdvanced: Number(rand(ewaTotal))"),"total advanced current point must be explicit");
@@ -14,6 +14,9 @@ must(snap.includes("const isLatest = !query.period && !query.quarter && query.ra
 must(snap.includes("const period = query.period ?? (isLatest ? currentPeriod() : null)"),"latest available must use month semantics and therefore receive previous-month comparison");
 must(dash.includes("axisLeft=122,plotLeft=170") && dash.includes("overflow:visible"),"financial chart must reserve a dedicated Y-axis gutter and protect labels from clipping");
 must(dash.includes("const vals=[b[0],a[0]]") && dash.includes("previousLabel"),"month-level financial comparison must render as an explicit two-point line");
+must(snap.includes("const previousMonthCumulativeSavingCents") && snap.includes("const previousMonthAdvancedCents"),"month comparison must calculate the previous month directly from historical rows");
+must(snap.includes('mode: "month"') && snap.includes("period: previousMonthKey"),"month period comparison must explicitly identify the previous month");
+must(dash.includes("currentLabel") && dash.includes("previousLabel") && dash.includes("esc(currentLabel)"),"financial chart legends must use exact period labels");
 must(!dash.includes("period-bar-chart"),"selected-period financial comparisons must not regress to bar fallback charts");
 if(failures.length){console.error("PERIOD COMPARISON REGRESSION CHECK FAILED:"); failures.forEach(x=>console.error(" - "+x)); process.exit(1);}
 console.log("Period comparison regression checks passed.");

@@ -1091,22 +1091,57 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
     }
   }
 
-  const periodComparison = comparisonPayload ? {
-    mode: comparisonMode,
-    label: comparisonLabel,
-    current: {
-      period: filter.period,
-      label: filter.label,
-      monthlyCashFreedUp: Number(rand(cumulativeMonthlySaving)),
-      totalAdvanced: Number(rand(ewaTotal)),
-    },
-    previous: {
-      period: comparisonPayload.filterContext?.period ?? null,
-      label: comparisonPayload.filterContext?.label ?? comparisonLabel,
-      monthlyCashFreedUp: Number(comparisonPayload?.kpis?.monthlySaving?.rand ?? 0),
-      totalAdvanced: Number(comparisonPayload?.ewa?.totalRaw ?? 0),
-    },
-  } : null;
+  const selectedMonthKey = filter.period ?? null;
+  const previousMonthKey = selectedMonthKey ? previousPeriod(selectedMonthKey) : null;
+  const currentMonthSavingCents = selectedMonthKey ? (savingByMonth.get(selectedMonthKey) ?? 0) : 0;
+  const previousMonthCumulativeSavingCents = selectedMonthKey
+    ? Math.max(0, cumulativeMonthlySaving - currentMonthSavingCents)
+    : null;
+  const previousMonthAdvancedCents = selectedMonthKey && previousMonthKey
+    ? (advancesAll as any[])
+      .filter((advance) =>
+        advance.status === "FINALISED"
+        && existsAt(advance.sourceDeletedAt, endOfMonth(previousMonthKey))
+        && monthKey(advance.advancedAt) === previousMonthKey,
+      )
+      .reduce((sum: number, advance: any) => sum + advance.amountCents, 0)
+    : null;
+
+  const periodComparison = selectedMonthKey
+    ? {
+        mode: "month",
+        label: "previous month",
+        current: {
+          period: selectedMonthKey,
+          label: filter.label,
+          monthlyCashFreedUp: Number(rand(cumulativeMonthlySaving)),
+          totalAdvanced: Number(rand(ewaTotal)),
+        },
+        previous: {
+          period: previousMonthKey,
+          label: previousMonthKey ? monthLabel(previousMonthKey) : "previous month",
+          monthlyCashFreedUp: Number(rand(previousMonthCumulativeSavingCents ?? 0)),
+          totalAdvanced: Number(rand(previousMonthAdvancedCents ?? 0)),
+        },
+      }
+    : comparisonPayload
+      ? {
+          mode: comparisonMode,
+          label: comparisonLabel,
+          current: {
+            period: filter.period,
+            label: filter.label,
+            monthlyCashFreedUp: Number(rand(cumulativeMonthlySaving)),
+            totalAdvanced: Number(rand(ewaTotal)),
+          },
+          previous: {
+            period: comparisonPayload.filterContext?.period ?? null,
+            label: comparisonPayload.filterContext?.label ?? comparisonLabel,
+            monthlyCashFreedUp: Number(comparisonPayload?.kpis?.monthlySaving?.rand ?? 0),
+            totalAdvanced: Number(comparisonPayload?.ewa?.totalRaw ?? 0),
+          },
+        }
+      : null;
 
   const sectionAvailability = {
     workforce: headcountDataAvailable,
