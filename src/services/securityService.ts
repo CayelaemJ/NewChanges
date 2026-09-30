@@ -80,7 +80,7 @@ function isPublicIp(ip?: string) {
   return true;
 }
 
-async function resolveIpGeography(ip?: string) {
+async function resolveIpGeography(ip?: string): Promise<{ country?: string; region?: string; city?: string }> {
   if (!isPublicIp(ip)) return {};
   const ipHash = createHash("sha256").update(ip!).digest("hex");
   const cached = await prisma.ipGeolocationCache.findUnique({ where: { ipHash } }).catch(() => null);
