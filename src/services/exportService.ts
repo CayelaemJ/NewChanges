@@ -23,6 +23,48 @@ export async function exportAuditLogCsv() {
   return toCsv(rows as any, ["createdAt", "actorName", "actorEmail", "action", "targetType", "targetId", "summary", "detail"]);
 }
 
+export async function exportSecurityAuditLogCsv() {
+  const [adminRows, accessRows, loginRows, alertRows] = await Promise.all([
+    prisma.adminAuditLog.findMany({ orderBy: { createdAt: "desc" } }),
+    prisma.dataAccessEvent.findMany({ orderBy: { createdAt: "desc" } }),
+    prisma.loginEvent.findMany({ orderBy: { createdAt: "desc" } }),
+    prisma.securityAlert.findMany({ orderBy: { createdAt: "desc" } }),
+  ]);
+
+  const columns = [
+    "createdAt", "eventType", "actorEmail", "actorName", "userId",
+    "action", "targetType", "targetId", "resource", "method", "route",
+    "statusCode", "success", "severity", "alertType", "ipAddress",
+    "deviceType", "country", "region", "city", "summary",
+  ];
+
+  const rows = [
+    ...adminRows.map((r) => ({
+      createdAt: r.createdAt, eventType: "ADMIN_ACTION", actorEmail: r.actorEmail, actorName: r.actorName,
+      action: r.action, targetType: r.targetType, targetId: r.targetId, summary: r.summary,
+      ipAddress: r.ipAddress, deviceType: r.deviceType, country: r.country, region: r.region, city: r.city,
+    })),
+    ...accessRows.map((r) => ({
+      createdAt: r.createdAt, eventType: "DATA_ACCESS", actorEmail: r.actorEmail, userId: r.userId,
+      resource: r.resource, method: r.method, route: r.route, statusCode: r.statusCode,
+      ipAddress: r.ipAddress, deviceType: r.deviceType,
+    })),
+    ...loginRows.map((r) => ({
+      createdAt: r.createdAt, eventType: "LOGIN", actorEmail: r.email, userId: r.userId,
+      success: r.success, action: r.success ? "login_success" : "login_failed",
+      ipAddress: r.ipAddress, deviceType: r.deviceType, country: r.country, region: r.region, city: r.city,
+      summary: r.failureReason,
+    })),
+    ...alertRows.map((r) => ({
+      createdAt: r.createdAt, eventType: "SECURITY_ALERT", actorEmail: r.actorEmail, userId: r.userId,
+      action: r.status === "RESOLVED" ? "alert_resolved" : "alert_open",
+      severity: r.severity, alertType: r.type, summary: r.title + (r.summary ? ": " + r.summary : ""),
+    })),
+  ].sort((a, b) => new Date(b.createdAt as Date).getTime() - new Date(a.createdAt as Date).getTime());
+
+  return toCsv(rows, columns);
+}
+
 export async function exportEmployeesCsv(employerId?: string) {
   const rows = await prisma.employee.findMany({
     where: employerId ? { employerId } : {},
