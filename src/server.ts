@@ -33,6 +33,7 @@ import { requestSecurityContext, enrichSecurityContext, recordLoginEvent, securi
 import { exportAuditLogCsv, exportSecurityAuditLogCsv, exportImportBatchCsv } from "./services/exportService.js";
 import { listAnalyticsRoutes, saveAnalyticsRoute } from "./services/syncService.js";
 import { enterpriseOperationsOverview, dataQualityOverview } from "./services/enterpriseOperationsService.js";
+import { checkMysqlReadReplica } from "./services/sourceAdapter.js";
 import { ensureSectionDefaults, listSections, updateSection, grantUserSection, revokeUserSection, sectionsForUser } from "./services/sectionService.js";
 import { publicEmailConfig, saveEmailConfig, testEmailConnection, createReportSchedule, listReportSchedules, updateReportSchedule, deleteReportSchedule, sendReportNow, recentReportDeliveries, runDueReports } from "./services/reportScheduler.js";
 import type { ScheduleInput } from "./services/reportScheduler.js";
@@ -1006,6 +1007,16 @@ app.post<{ Body: {
   sourceAnalyticsReadOnly?: boolean;
   sourceAnalyticsUseReplica?: boolean;
   sourceAnalyticsNote?: string | null;
+  sourceAnalyticsReplicaEnabled?: boolean;
+  sourceAnalyticsReplicaHost?: string | null;
+  sourceAnalyticsReplicaPort?: number | null;
+  sourceAnalyticsReplicaDatabase?: string | null;
+  sourceAnalyticsReplicaSchema?: string | null;
+  sourceAnalyticsReplicaUsername?: string | null;
+  sourceAnalyticsReplicaPassword?: string | null;
+  sourceAnalyticsReplicaSsl?: boolean;
+  sourceAnalyticsReplicaTrustServerCertificate?: boolean;
+  sourceAnalyticsReplicaMaxLagSeconds?: number;
 } }>(
   "/api/admin/integration",
   async (req, reply) => {
@@ -1072,6 +1083,16 @@ app.post<{ Body: { confirm?: string } }>("/api/admin/integration/full-resync", a
   }
 });
 
+app.get("/api/admin/integration/replica-health", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  try {
+    const cfg = await getSyncConfig();
+    return await checkMysqlReadReplica(cfg);
+  } catch (e: any) {
+    return reply.code(400).send({ configured: false, reachable: false, error: e?.message || "Could not check source replica." });
+  }
+});
+
 app.get("/api/admin/integration/logs", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
   return recentSyncLogs(10);
@@ -1090,7 +1111,7 @@ app.get("/api/admin/integration/routes", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
   return listAnalyticsRoutes();
 });
-app.post<{ Body: { reportKey?: string; executionMode?: string; sourceView?: string | null; enabled?: boolean; rationale?: string | null } }>("/api/admin/integration/routes", async (req, reply) => {
+app.post<{ Body: { reportKey?: string; executionMode?: string; workloadClass?: string; sourceView?: string | null; useReplica?: boolean; enabled?: boolean; rationale?: string | null } }>("/api/admin/integration/routes", async (req, reply) => {
   const admin = await requireAdmin(req, reply); if (!admin) return;
   try {
     const result = await saveAnalyticsRoute({ reportKey: String(req.body?.reportKey || ""), executionMode: String(req.body?.executionMode || "POSTGRES"), sourceView: req.body?.sourceView, enabled: req.body?.enabled, rationale: req.body?.rationale });
