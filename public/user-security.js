@@ -14,6 +14,8 @@
   window.SECURITY_ALERTS=[];
   window.SECURITY_LOGINS=[];
   window.SESSION_SUMMARY=new Map();
+  window.SECURITY_DEVICES=[];
+  window.SECURITY_ACCESS=[];
 
   window.formatAge=function(seconds){
     seconds=Math.max(0,Number(seconds)||0);
@@ -80,12 +82,17 @@
         getJson("/api/admin/security/overview"),
         getJson("/api/admin/security/sessions?status="+encodeURIComponent(status)+"&limit=100"),
         getJson("/api/admin/security/alerts?status=OPEN&limit=50"),
-        getJson("/api/admin/security/logins?limit=80")
+        getJson("/api/admin/security/logins?limit=80"),
+        getJson("/api/admin/security/devices?limit=300"),
+        getJson("/api/admin/security/data-access?limit=120"),
+        getJson("/api/admin/security/database")
       ]);
       const overview=data[0]||{};
       window.SECURITY_SESSIONS=Array.isArray(data[1])?data[1]:[];
       window.SECURITY_ALERTS=Array.isArray(data[2])?data[2]:[];
       window.SECURITY_LOGINS=Array.isArray(data[3])?data[3]:[];
+      window.SECURITY_DEVICES=Array.isArray(data[4])?data[4]:[];
+      window.SECURITY_ACCESS=Array.isArray(data[5])?data[5]:[];
       window.SESSION_SUMMARY=new Map();
       window.SECURITY_SESSIONS.forEach(function(s){
         const prev=window.SESSION_SUMMARY.get(s.user.id)||{count:0,lastSeenAt:null};
@@ -107,6 +114,9 @@
       renderSecuritySessions();
       renderSecurityAlerts();
       renderSecurityLogins();
+      renderSecurityDevices();
+      renderSecurityAccess();
+      renderDatabaseSecurity(data[6]||{});
       installUserTools();
       decorateUserRows();
     }catch(error){
@@ -151,6 +161,49 @@
     rows.querySelectorAll("[data-resolve-alert]").forEach(function(btn){
       btn.addEventListener("click",function(){window.resolveAlert(btn.getAttribute("data-resolve-alert"));});
     });
+  }
+
+  function renderSecurityDevices(){
+    const rows=$("#sec-device-rows"); if(!rows)return;
+    if(!window.SECURITY_DEVICES.length){rows.innerHTML='<tr><td colspan="6" class="security-empty">No grouped device history yet.</td></tr>';return;}
+    rows.innerHTML=window.SECURITY_DEVICES.slice(0,100).map(function(d){
+      const loc=[d.city,d.region,d.country].filter(Boolean).join(", ")||"Location unavailable";
+      return '<tr><td><b>'+esc(d.user?.name)+'</b><div class="meta">'+esc(d.user?.email)+'</div></td>'+
+        '<td>'+esc(d.deviceType)+'<div class="meta">'+esc(d.browser)+' · '+esc(d.operatingSystem)+'</div></td>'+
+        '<td>'+esc(loc)+'</td><td class="muted">'+esc(d.ipAddress||"Unavailable")+'</td>'+
+        '<td class="muted">'+esc(new Date(d.firstSeenAt).toLocaleString())+'</td><td class="muted">'+esc(window.timeAgo(d.lastSeenAt))+'</td></tr>';
+    }).join("");
+  }
+
+  function renderSecurityAccess(){
+    const rows=$("#sec-access-rows"); if(!rows)return;
+    if(!window.SECURITY_ACCESS.length){rows.innerHTML='<tr><td colspan="5" class="security-empty">No sensitive data access events recorded yet.</td></tr>';return;}
+    rows.innerHTML=window.SECURITY_ACCESS.slice(0,120).map(function(a){
+      return '<tr><td class="muted">'+esc(new Date(a.createdAt).toLocaleString())+'</td>'+
+        '<td><b>'+esc(a.actorEmail||"Unknown")+'</b></td><td>'+esc(a.resource||"Protected data")+'</td>'+
+        '<td class="muted">'+esc(a.method+" "+a.route)+'</td><td>'+esc(String(a.statusCode||""))+'</td></tr>';
+    }).join("");
+  }
+
+  function renderDatabaseSecurity(d){
+    const copy=$("#sec-db-copy"), status=$("#sec-db-status"), controls=$("#sec-db-controls");
+    if(!copy||!status||!controls)return;
+    if(d.status!=="healthy"){
+      status.textContent="Attention"; status.className="tag off";
+      copy.textContent=d.error||"Database security telemetry is unavailable.";
+      controls.innerHTML="";
+      return;
+    }
+    status.textContent="Healthy"; status.className="tag live";
+    const mb=Math.round((Number(d.sizeBytes)||0)/1048576);
+    copy.textContent="PostgreSQL is responding. "+(Number(d.connections)||0)+" total connection(s), "+(Number(d.activeConnections)||0)+" active. Database size: "+mb+" MB.";
+    controls.innerHTML=[
+      ["✓","Raw SQL from admin UI disabled"],
+      ["✓","Destructive database actions disabled"],
+      ["✓","Sensitive API access audited"],
+      ["✓","Session revocation enabled"],
+      ["✓","Security alerts enabled"]
+    ].map(function(x){return '<span class="chip">'+x[0]+" "+x[1]+'</span>';}).join("");
   }
 
   function renderSecurityLogins(){
@@ -249,6 +302,8 @@
 
   window.loadSecurityCenter=loadSecurityCenter;
   window.renderSecuritySessions=renderSecuritySessions;
+  window.renderSecurityDevices=renderSecurityDevices;
+  window.renderSecurityAccess=renderSecurityAccess;
   const sessionFilter=$("#sec-status");
   if(sessionFilter)sessionFilter.addEventListener("change",function(){loadSecurityCenter();});
 
