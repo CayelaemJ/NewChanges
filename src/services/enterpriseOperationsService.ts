@@ -19,13 +19,12 @@ export async function enterpriseOperationsOverview() {
     prisma.importBatch.count({ where: { status: { in: ["UPLOADED", "VALIDATED"] } } }),
   ]);
 
-  const replica = sourceMode === "SQL" ? await checkMysqlReadReplica(config) : { configured: false, reachable: false, readOnly: null, lagSeconds: null, lagWithinThreshold: null, host: null, database: null, note: "Replica health is only applicable to SQL sources." };
-
   const now = Date.now();
   const lastSync = config.lastSuccessfulSyncAt ? new Date(config.lastSuccessfulSyncAt).getTime() : null;
   const freshnessMinutes = lastSync == null ? null : Math.max(0, Math.round((now - lastSync) / 60000));
 
   const sourceMode = String(config.sourceMode || "API").toUpperCase();
+  const replica = sourceMode === "SQL" ? await checkMysqlReadReplica(config) : { configured: false, reachable: false, readOnly: null, lagSeconds: null, lagWithinThreshold: null, host: null, database: null, note: "Replica health is only applicable to SQL sources." };
   const sourceConfigured = sourceMode === "SQL"
     ? Boolean(config.sqlHost && config.sqlDatabase && config.sqlUsername && (process.env.SOURCE_SQL_PASSWORD || config.sqlPassword))
     : Boolean(process.env.SOURCE_API_BASE_URL || config.baseUrl);
