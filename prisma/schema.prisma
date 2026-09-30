@@ -805,6 +805,9 @@ model Session {
   country     String?
   region      String?
   city        String?
+  // Stable, privacy-conscious grouping key derived from the user-agent/device context.
+  // It does not use the raw IP, so a device can be recognised when its network changes.
+  deviceKey   String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -1053,6 +1056,7 @@ model LoginEvent {
   country     String?
   region      String?
   city        String?
+  deviceKey   String?
   createdAt   DateTime @default(now())
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
@@ -1062,6 +1066,7 @@ model LoginEvent {
   @@index([userId, createdAt])
   @@index([success, createdAt])
   @@index([ipAddress, createdAt])
+  @@index([deviceKey, createdAt])
 }
 
 model SecurityAlert {
@@ -1083,6 +1088,50 @@ model SecurityAlert {
 
   @@index([status, severity, createdAt])
   @@index([userId, createdAt])
+  @@index([actorEmail, createdAt])
+}
+
+// Cached IP-derived geography. Raw IPs are retained only as long as the security
+// retention policy permits; the cache avoids repeatedly sending the same address
+// to an external geolocation provider.
+model IpGeolocationCache {
+  id          String   @id @default(cuid())
+  ipHash      String   @unique
+  country     String?
+  region      String?
+  city        String?
+  latitude    Float?
+  longitude   Float?
+  provider    String?
+  fetchedAt   DateTime @default(now())
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  @@index([expiresAt])
+}
+
+// Records access to sensitive application API surfaces. This is an application
+// audit trail, not a substitute for PostgreSQL/Railway infrastructure auditing.
+model DataAccessEvent {
+  id             String   @id @default(cuid())
+  userId         String?
+  actorEmail     String?
+  method         String
+  route          String
+  resource       String?
+  employerId     String?
+  ipAddress      String?
+  deviceKey      String?
+  deviceType     String?
+  statusCode     Int?
+  durationMs     Int?
+  createdAt      DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([userId, createdAt])
+  @@index([route, createdAt])
   @@index([actorEmail, createdAt])
 }
 
