@@ -23,6 +23,7 @@ must(snap.includes("const isLatest = !query.period && !query.quarter && query.ra
 must(snap.includes("const period = query.period ?? (isLatest ? currentPeriod() : null)"),"latest available must use month semantics and therefore receive previous-month comparison");
 must(dash.includes("axisLeft=112,plotLeft=132") && dash.includes("comparison-value-row") && css.includes(".comparison-value-card"),"financial chart must reserve a dedicated Y-axis gutter and keep full values outside the plot");
 must(dash.includes("const vals=[b[0],a[0]]") && dash.includes("previousLabel"),"month-level financial comparison must render as an explicit two-point line");
+must(dash.includes("const anchor=i===0?'start':'end'") && dash.includes("const x=i===0?plotLeft:plotRight"),"long financial period labels must anchor inward at the chart edges instead of overflowing the card");
 must(snap.includes("const previousMonthCumulativeSavingCents") && snap.includes("const previousMonthAdvancedCents"),"month comparison must calculate the previous month directly from historical rows");
 must(snap.includes('mode: "month"') && snap.includes("period: previousMonthKey"),"month period comparison must explicitly identify the previous month");
 must(dash.includes("currentLabel") && dash.includes("previousLabel") && dash.includes("esc(currentLabel)"),"financial chart legends must use exact period labels");
