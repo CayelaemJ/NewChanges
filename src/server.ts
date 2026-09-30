@@ -28,6 +28,7 @@ import { createUser, listUsers, updateUser, resetPassword, completeSetup, deacti
 import { recordEvent, engagementSummary } from "./services/analyticsService.js";
 import { notifyAdmins, notifyScoreChangeIfCurrentPeriod, runStaleAccountCheck, runWeeklyDigestIfDue } from "./services/automationService.js";
 import { logAdminAction, listAuditLog } from "./services/auditService.js";
+import { complianceOverview, listProcessingActivities, createProcessingActivity, listDataSubjectRequests, createDataSubjectRequest, updateDataSubjectRequest, listComplianceVendors, createComplianceVendor, listRetentionPolicies, createRetentionPolicy, listSecurityIncidents, createSecurityIncident } from "./services/complianceService.js";
 import { requestSecurityContext, enrichSecurityContext, recordLoginEvent, securityOverview, listSessions, listLoginEvents, listSecurityAlerts, resolveSecurityAlert, pruneSecurityHistory, listSecurityDevices, listDataAccessEvents, recordDataAccessEvent, databaseSecuritySnapshot } from "./services/securityService.js";
 import { exportAuditLogCsv, exportSecurityAuditLogCsv, exportImportBatchCsv } from "./services/exportService.js";
 import { ensureSectionDefaults, listSections, updateSection, grantUserSection, revokeUserSection, sectionsForUser } from "./services/sectionService.js";
@@ -458,6 +459,79 @@ app.post<{ Body: { email: string } }>("/api/auth/forgot-password", async (req, r
 });
 
 // ════════════════════ SECURITY & IDENTITY CENTER ════════════════════
+app.get("/api/admin/compliance/overview", async (req, reply) => {
+  const admin = await requireAdmin(req, reply); if (!admin) return;
+  return complianceOverview();
+});
+app.get("/api/admin/compliance/processing-activities", async (req, reply) => {
+  const admin = await requireAdmin(req, reply); if (!admin) return;
+  return listProcessingActivities(100);
+});
+app.post<{ Body: Record<string, unknown> }>("/api/admin/compliance/processing-activities", async (req, reply) => {
+  const admin = await requireAdmin(req, reply); if (!admin) return;
+  try {
+    const created = await createProcessingActivity(req.body ?? {});
+    logAdminAction(admin, "compliance.processing_activity.create", `Created processing activity ${created.name}`, { targetType: "ProcessingActivity", targetId: created.id, context: requestSecurityContext(req) });
+    return created;
+  } catch (err) { return reply.code(400).send({ error: err instanceof Error ? err.message : "invalid processing activity" }); }
+});
+app.get("/api/admin/compliance/requests", async (req, reply) => {
+  const admin = await requireAdmin(req, reply); if (!admin) return;
+  return listDataSubjectRequests(100);
+});
+app.post<{ Body: Record<string, unknown> }>("/api/admin/compliance/requests", async (req, reply) => {
+  const admin = await requireAdmin(req, reply); if (!admin) return;
+  try {
+    const created = await createDataSubjectRequest(req.body ?? {});
+    logAdminAction(admin, "compliance.data_subject_request.create", `Created ${created.requestType} data subject request`, { targetType: "DataSubjectRequest", targetId: created.id, context: requestSecurityContext(req) });
+    return created;
+  } catch (err) { return reply.code(400).send({ error: err instanceof Error ? err.message : "invalid data subject request" }); }
+});
+app.patch<{ Params: { id: string }; Body: Record<string, unknown> }>("/api/admin/compliance/requests/:id", async (req, reply) => {
+  const admin = await requireAdmin(req, reply); if (!admin) return;
+  try {
+    const updated = await updateDataSubjectRequest(req.params.id, req.body ?? {});
+    logAdminAction(admin, "compliance.data_subject_request.update", `Updated data subject request ${req.params.id}`, { targetType: "DataSubjectRequest", targetId: req.params.id, context: requestSecurityContext(req) });
+    return updated;
+  } catch (err) { return reply.code(400).send({ error: err instanceof Error ? err.message : "could not update request" }); }
+});
+app.get("/api/admin/compliance/vendors", async (req, reply) => {
+  const admin = await requireAdmin(req, reply); if (!admin) return;
+  return listComplianceVendors(100);
+});
+app.post<{ Body: Record<string, unknown> }>("/api/admin/compliance/vendors", async (req, reply) => {
+  const admin = await requireAdmin(req, reply); if (!admin) return;
+  try {
+    const created = await createComplianceVendor(req.body ?? {});
+    logAdminAction(admin, "compliance.vendor.create", `Created compliance vendor ${created.name}`, { targetType: "ComplianceVendor", targetId: created.id, context: requestSecurityContext(req) });
+    return created;
+  } catch (err) { return reply.code(400).send({ error: err instanceof Error ? err.message : "invalid compliance vendor" }); }
+});
+app.get("/api/admin/compliance/retention", async (req, reply) => {
+  const admin = await requireAdmin(req, reply); if (!admin) return;
+  return listRetentionPolicies(100);
+});
+app.post<{ Body: Record<string, unknown> }>("/api/admin/compliance/retention", async (req, reply) => {
+  const admin = await requireAdmin(req, reply); if (!admin) return;
+  try {
+    const created = await createRetentionPolicy(req.body ?? {});
+    logAdminAction(admin, "compliance.retention.upsert", `Updated retention policy ${created.dataClass}`, { targetType: "RetentionPolicy", targetId: created.id, context: requestSecurityContext(req) });
+    return created;
+  } catch (err) { return reply.code(400).send({ error: err instanceof Error ? err.message : "invalid retention policy" }); }
+});
+app.get("/api/admin/compliance/incidents", async (req, reply) => {
+  const admin = await requireAdmin(req, reply); if (!admin) return;
+  return listSecurityIncidents(100);
+});
+app.post<{ Body: Record<string, unknown> }>("/api/admin/compliance/incidents", async (req, reply) => {
+  const admin = await requireAdmin(req, reply); if (!admin) return;
+  try {
+    const created = await createSecurityIncident(req.body ?? {});
+    logAdminAction(admin, "compliance.security_incident.create", `Created security incident ${created.id}`, { targetType: "SecurityIncident", targetId: created.id, context: requestSecurityContext(req) });
+    return created;
+  } catch (err) { return reply.code(400).send({ error: err instanceof Error ? err.message : "invalid security incident" }); }
+});
+
 app.get("/api/admin/security/database", async (req, reply) => {
   const admin = await requireAdmin(req, reply); if (!admin) return;
   return databaseSecuritySnapshot();
