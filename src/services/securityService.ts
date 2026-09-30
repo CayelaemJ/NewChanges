@@ -21,7 +21,19 @@ export function requestSecurityContext(input: any): RequestSecurityContext {
   const browser = trim(headers["x-browser"], 64);
   const operatingSystem = trim(headers["x-operating-system"], 64);
   const first = (v: unknown) => typeof v === "string" ? v.split(",")[0]?.trim() : undefined;
-  const ipAddress = trim(input?.ip ?? first(headers["x-forwarded-for"]) ?? first(headers["x-real-ip"]), 64);
+  // Railway supplies the originating client address at the proxy boundary.
+  // Prefer that trusted edge header before Fastify's resolved socket value so
+  // telemetry does not fall back to the Railway proxy address.
+  const ipAddress = trim(
+    first(headers["x-real-ip"]) ??
+    input?.ip ??
+    first(headers["x-forwarded-for"]) ??
+    input?.raw?.socket?.remoteAddress,
+    64,
+  );
+  // Location is deliberately only accepted from an upstream provider. Railway
+  // edge region is infrastructure location, not the user's location, so it is
+  // never presented as user geography here.
   const country = trim(headers["cf-ipcountry"] ?? headers["x-vercel-ip-country"] ?? headers["x-country-code"] ?? headers["x-geo-country"], 80);
   const region = trim(headers["x-vercel-ip-country-region"] ?? headers["x-geo-region"], 120);
   const city = trim(headers["x-vercel-ip-city"] ?? headers["x-geo-city"], 120);
