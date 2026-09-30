@@ -10,6 +10,10 @@ must(snap.includes("monthlyCashFreedUp: Number(comparisonPayload?.kpis?.monthlyS
 must(snap.includes("totalAdvanced: Number(rand(ewaTotal))"),"total advanced current point must be explicit");
 must(snap.includes("totalAdvanced: Number(comparisonPayload?.ewa?.totalRaw ?? 0)"),"total advanced previous point must be explicit, including zero");
 must(dash.includes("DATA.periodComparison") && dash.includes("renderPeriodLineChart"),"financial charts must consume period comparison points");
+must(snap.includes("const isLatest = !query.period && !query.quarter && query.range === " + '"latest"'),"latest available must resolve to the current reporting month");
+must(snap.includes("const period = query.period ?? (isLatest ? currentPeriod() : null)"),"latest available must use month semantics and therefore receive previous-month comparison");
+must(dash.includes("axisLeft=122,plotLeft=170") && dash.includes("overflow:visible"),"financial chart must reserve a dedicated Y-axis gutter and protect labels from clipping");
+must(dash.includes("const vals=[b[0],a[0]]") && dash.includes("previousLabel"),"month-level financial comparison must render as an explicit two-point line");
 must(!dash.includes("period-bar-chart"),"selected-period financial comparisons must not regress to bar fallback charts");
 if(failures.length){console.error("PERIOD COMPARISON REGRESSION CHECK FAILED:"); failures.forEach(x=>console.error(" - "+x)); process.exit(1);}
 console.log("Period comparison regression checks passed.");
