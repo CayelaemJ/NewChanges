@@ -29,7 +29,9 @@
     "check:performance": "node scripts/performance-regression-check.mjs",
     "check:enterprise": "npm run check:period-comparison && npm run check:accessibility && npm run check:performance && npm run check:brand",
     "check:period-comparison": "node scripts/period-comparison-regression-check.mjs",
-    "check:security-identity": "node scripts/security-identity-regression-check.mjs"
+    "check:security-identity": "node scripts/security-identity-regression-check.mjs",
+    "check:security-operations": "node scripts/security-operations-regression-check.mjs",
+    "check:security-full": "npm run build && npm run check:security && npm run check:security-identity && npm run check:security-operations && npm audit --audit-level=high"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.2",
