@@ -79,7 +79,23 @@ export async function saveConfig(patch: IntegrationConfigPatch) {
   });
 }
 
-export async function listAnalyticsRoutes() {\n  return prisma.analyticsRoute.findMany({ orderBy: { reportKey: "asc" } });\n}\n\nexport async function saveAnalyticsRoute(input: { reportKey: string; executionMode: string; sourceView?: string | null; enabled?: boolean; rationale?: string | null }) {\n  const mode = String(input.executionMode || "POSTGRES").toUpperCase();\n  if (!["POSTGRES", "SOURCE", "HYBRID"].includes(mode)) throw new Error("executionMode must be POSTGRES, SOURCE or HYBRID.");\n  if (mode === "SOURCE" && !input.sourceView) throw new Error("SOURCE routes require an approved source view.");\n  if (input.sourceView && !/^[A-Za-z_][A-Za-z0-9_.]*$/.test(input.sourceView)) throw new Error("sourceView contains unsafe characters.");\n  return prisma.analyticsRoute.upsert({\n    where: { reportKey: input.reportKey },\n    create: { reportKey: input.reportKey, executionMode: mode, sourceView: input.sourceView || null, enabled: input.enabled !== false, rationale: input.rationale || null },\n    update: { executionMode: mode, sourceView: input.sourceView || null, enabled: input.enabled !== false, rationale: input.rationale || null, lastVerifiedAt: new Date() },\n  });\n}\n\nexport function publicConfig(config: Awaited<ReturnType<typeof getConfig>>) {
+export async function listAnalyticsRoutes() {
+  return prisma.analyticsRoute.findMany({ orderBy: { reportKey: "asc" } });
+}
+
+export async function saveAnalyticsRoute(input: { reportKey: string; executionMode: string; sourceView?: string | null; enabled?: boolean; rationale?: string | null }) {
+  const mode = String(input.executionMode || "POSTGRES").toUpperCase();
+  if (!["POSTGRES", "SOURCE", "HYBRID"].includes(mode)) throw new Error("executionMode must be POSTGRES, SOURCE or HYBRID.");
+  if (mode === "SOURCE" && !input.sourceView) throw new Error("SOURCE routes require an approved source view.");
+  if (input.sourceView && !/^[A-Za-z_][A-Za-z0-9_.]*$/.test(input.sourceView)) throw new Error("sourceView contains unsafe characters.");
+  return prisma.analyticsRoute.upsert({
+    where: { reportKey: input.reportKey },
+    create: { reportKey: input.reportKey, executionMode: mode, sourceView: input.sourceView || null, enabled: input.enabled !== false, rationale: input.rationale || null },
+    update: { executionMode: mode, sourceView: input.sourceView || null, enabled: input.enabled !== false, rationale: input.rationale || null, lastVerifiedAt: new Date() },
+  });
+}
+
+export function publicConfig(config: Awaited<ReturnType<typeof getConfig>>) {
   const { authToken, sqlPassword, ...safe } = config as any;
   let effectiveSourceMode = "API";
   let configured = false;
