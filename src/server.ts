@@ -356,7 +356,7 @@ app.post<{ Body: { email: string; password: string; remember?: boolean } }>("/ap
   }
   // Per-account throttle (in addition to per-IP) to blunt distributed guessing.
   if (!rateLimit(reply, `login:${email.toLowerCase().trim()}`, 10, AUTH_WINDOW_MS)) return;
-  const securityContext = requestSecurityContext(req);
+  const securityContext = await requestSecurityContext(req);
   const result = await login(email, password, !!remember, securityContext);
   await recordLoginEvent({
     userId: result?.user.id,
@@ -452,7 +452,7 @@ app.post<{ Params: { id: string }; Body: { reason?: string } }>("/api/admin/secu
   if (existing.userId === admin.id) return reply.code(400).send({ error: "you cannot revoke your own current admin session here" });
   await destroySessionById(req.params.id, admin.email);
   logAdminAction(admin, "session.revoke", `Revoked session ${req.params.id}${req.body?.reason ? ": " + String(req.body.reason).slice(0, 200) : ""}`, {
-    targetType: "Session", targetId: req.params.id, context: requestSecurityContext(req),
+    targetType: "Session", targetId: req.params.id, context: await requestSecurityContext(req),
   });
   return { ok: true };
 });
