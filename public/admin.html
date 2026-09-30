@@ -372,6 +372,27 @@
             <div style="grid-column:span 2;font-size:12px;color:#8497a7;line-height:1.5;">SQL mode expects 10 read-only canonical views named <b>v_employers</b>, <b>v_workforce_snapshots</b>, … <b>v_salary_advances</b> (or the configured prefix). The connection test checks every view and its contracted columns.</div>
           </div>
 
+          <div style="margin-top:16px;padding:14px;border:1px solid var(--line);border-radius:12px;background:#fbfaff;max-width:820px;">
+            <div style="font-size:13px;font-weight:800;color:var(--brand-primary);">Analytics query placement</div>
+            <div style="font-size:11.5px;color:#617486;line-height:1.5;margin-top:4px;">Do not run heavy dashboard workloads on a production MySQL primary. Use source-side reporting views or a read replica for approved aggregations, then keep the portal's governed read model in PostgreSQL.</div>
+            <div class="integration-two-col" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px;">
+              <label style="font-size:12px;font-weight:700;color:#5b6b7a;">Default analytics mode
+                <select id="integ-analytics-mode" style="display:block;width:100%;margin-top:5px;font:inherit;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;background:#fff;">
+                  <option value="POSTGRES_READ_MODEL">PostgreSQL read model</option>
+                  <option value="SOURCE_AGGREGATES">Source-side aggregates</option>
+                  <option value="HYBRID">Hybrid, per feed</option>
+                </select>
+              </label>
+              <label style="display:flex;align-items:center;gap:9px;font-size:12px;font-weight:700;color:#32217c;cursor:pointer;padding-top:20px;">
+                <input id="integ-source-analytics" type="checkbox" style="width:17px;height:17px;"> Allow approved source analytics
+              </label>
+            </div>
+            <label style="display:flex;align-items:center;gap:9px;font-size:12px;font-weight:700;color:#32217c;cursor:pointer;margin-top:10px;">
+              <input id="integ-source-replica" type="checkbox" style="width:17px;height:17px;"> Source analytics must use a read replica
+            </label>
+            <div id="integ-analytics-note" style="font-size:11px;color:#8497a7;margin-top:8px;">Read-only is enforced by the server. Arbitrary SQL is never accepted from the browser.</div>
+          </div>
+
           <label style="margin-top:16px;display:flex;align-items:center;gap:9px;font-size:13px;font-weight:700;color:#32217c;cursor:pointer;">
             <input id="integ-enabled" type="checkbox" style="width:17px;height:17px;"> Enable automatic scheduled sync
           </label>
@@ -649,6 +670,9 @@ async function loadInteg(){
     $('#integ-sql-maxrows').value = c.sqlMaxRowsPerReport || 250000;
     $('#integ-sql-ssl').checked = c.sqlSsl !== false;
     $('#integ-sql-trust').checked = !!c.sqlTrustServerCertificate;
+    $('#integ-analytics-mode').value = c.analyticsMode || 'POSTGRES_READ_MODEL';
+    $('#integ-source-analytics').checked = !!c.sourceAnalyticsEnabled;
+    $('#integ-source-replica').checked = !!c.sourceAnalyticsUseReplica;
     if(c.hasSqlPassword) $('#integ-sql-password').placeholder = c.sqlPasswordFromEnvironment ? '•••••• (provided by SOURCE_SQL_PASSWORD)' : '•••••• (saved — leave blank to keep)';
 
     const envBox = $('#integ-env-override');
@@ -696,6 +720,10 @@ function integrationDraft(){
     sqlMaxRowsPerReport: parseInt($('#integ-sql-maxrows').value)||250000,
     sqlSsl: $('#integ-sql-ssl').checked,
     sqlTrustServerCertificate: $('#integ-sql-trust').checked,
+    analyticsMode: $('#integ-analytics-mode').value,
+    sourceAnalyticsEnabled: $('#integ-source-analytics').checked,
+    sourceAnalyticsReadOnly: true,
+    sourceAnalyticsUseReplica: $('#integ-source-replica').checked,
   };
   const tok = $('#integ-token').value.trim(); if(tok) body.authToken = tok;
   const sqlPassword = $('#integ-sql-password').value.trim(); if(sqlPassword) body.sqlPassword = sqlPassword;
