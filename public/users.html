@@ -94,7 +94,7 @@
   .portal-menu-action{width:100%;border:0;background:transparent;border-radius:9px;padding:9px 10px;display:flex;align-items:center;gap:9px;font:700 12.5px 'Manrope',system-ui,sans-serif;color:var(--grey);cursor:pointer;text-align:left;}
   .portal-menu-action svg{width:16px;height:16px;}
   @media(max-width:860px){.portal-primary-nav{display:none;}.portal-mobile-links{display:block;}}
-</style>
+.security-hero{display:grid;grid-template-columns:minmax(0,1.5fr) repeat(4,minmax(110px,1fr));gap:10px;margin-bottom:20px}.security-summary{padding:16px;border:1px solid var(--line);border-radius:13px;background:linear-gradient(135deg,#fff,#f7f4fd)}.security-summary h2{font-size:14px;color:var(--brand-primary);margin-bottom:6px}.security-summary p{font-size:11px;line-height:1.45;color:var(--grey)}.security-stat{padding:14px;border:1px solid var(--line);border-radius:13px;background:#fff}.security-stat .k{font-size:9px;font-weight:850;letter-spacing:.08em;text-transform:uppercase;color:var(--grey-l)}.security-stat .v{font-size:24px;font-weight:850;color:var(--brand-primary);margin-top:4px;font-variant-numeric:tabular-nums}.security-tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}.security-tools input,.security-tools select{max-width:230px}.security-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:16px}.security-table-wrap{overflow:auto}.security-table{min-width:760px}.security-table .device{font-weight:800;color:var(--brand-primary)}.security-table .meta{font-size:10.5px;color:var(--grey-l);margin-top:2px}.security-location{max-width:180px;white-space:normal;overflow-wrap:anywhere}.security-empty{padding:18px;text-align:center;color:var(--grey-l);font-size:12px}.security-drawer-back{position:fixed;inset:0;background:rgba(15,36,56,.32);backdrop-filter:blur(4px);z-index:200;display:flex;justify-content:flex-end}.security-drawer{width:min(720px,94vw);height:100%;background:#fff;box-shadow:-20px 0 60px rgba(15,36,56,.18);padding:22px;overflow:auto}.security-detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.security-detail{padding:12px;border:1px solid var(--line);border-radius:10px;background:#fafcfe}.security-detail .k{font-size:9px;font-weight:850;text-transform:uppercase;letter-spacing:.05em;color:var(--grey-l)}.security-detail .v{margin-top:4px;font-size:13px;font-weight:750;color:var(--ink);overflow-wrap:anywhere}@media(max-width:900px){.security-hero{grid-template-columns:1fr 1fr}.security-summary{grid-column:1/-1}.security-grid{grid-template-columns:1fr}}@media(max-width:640px){.security-tools input,.security-tools select{max-width:none;flex:1 1 100%}.security-drawer{width:100%;padding:16px}.security-detail-grid{grid-template-columns:1fr}}</style>
 <link rel="stylesheet" href="/static/enterprise.css?v=2">
   <link rel="stylesheet" href="/static/enterprise-v3.css?v=3">
 <link rel="stylesheet" href="/static/dark-theme-v2.css?v=1">
@@ -109,6 +109,36 @@
 
 <div class="wrap">
   <div class="head"><h1>Users</h1><p>Create users, set their role, and link them to the employers they may see.</p></div>
+  <section class="card" aria-labelledby="security-center-title">
+    <div class="card-hd"><div><h2 id="security-center-title">Security &amp; identity centre</h2><div class="muted" style="margin-top:4px;">Live sessions, sign-ins, device context and high-impact admin activity.</div></div><button class="btn btn-sm" type="button" onclick="loadSecurityCenter()">Refresh</button></div>
+    <div class="card-bd">
+      <div class="security-hero">
+        <div class="security-summary"><h2 id="security-state-title">Security posture</h2><p id="security-state-copy">Loading security telemetry...</p></div>
+        <div class="security-stat"><div class="k">Live sessions</div><div class="v" id="sec-live">-</div></div>
+        <div class="security-stat"><div class="k">Failed logins 24h</div><div class="v" id="sec-failed">-</div></div>
+        <div class="security-stat"><div class="k">Open alerts</div><div class="v" id="sec-alerts">-</div></div>
+        <div class="security-stat"><div class="k">Successful logins 24h</div><div class="v" id="sec-success">-</div></div>
+      </div>
+      <div class="security-tools">
+        <input id="sec-search" placeholder="Search users, email, IP or location" oninput="renderSecuritySessions()">
+        <select id="sec-status"><option value="active">Live sessions</option><option value="">All sessions</option><option value="ended">Ended sessions</option></select>
+      </div>
+      <div class="security-grid">
+        <div>
+          <h3 style="font-size:12px;color:var(--brand-primary);margin:4px 0 8px;">Live session monitor</h3>
+          <div class="security-table-wrap"><table class="security-table"><thead><tr><th>User</th><th>Device</th><th>Location</th><th>Last seen</th><th>Session age</th><th></th></tr></thead><tbody id="sec-session-rows"><tr><td colspan="6" class="security-empty">Loading...</td></tr></tbody></table></div>
+        </div>
+        <div>
+          <h3 style="font-size:12px;color:var(--brand-primary);margin:4px 0 8px;">Security alerts</h3>
+          <div class="security-table-wrap"><table><thead><tr><th>Severity</th><th>Alert</th><th>When</th><th></th></tr></thead><tbody id="sec-alert-rows"><tr><td colspan="4" class="security-empty">Loading...</td></tr></tbody></table></div>
+        </div>
+      </div>
+      <div style="margin-top:16px;">
+        <h3 style="font-size:12px;color:var(--brand-primary);margin:4px 0 8px;">Recent sign-ins</h3>
+        <div class="security-table-wrap"><table class="security-table"><thead><tr><th>Time</th><th>User</th><th>Result</th><th>Device</th><th>Location</th><th>IP</th></tr></thead><tbody id="sec-login-rows"><tr><td colspan="6" class="security-empty">Loading...</td></tr></tbody></table></div>
+      </div>
+    </div>
+  </section>
 
   <div class="card">
     <div class="card-hd"><h2>Add a user</h2></div>
