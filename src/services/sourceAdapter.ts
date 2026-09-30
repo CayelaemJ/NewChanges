@@ -320,8 +320,8 @@ async function openPostgresExecutor(config: IntegrationSourceConfig): Promise<Sq
 
   return {
     dialect: "POSTGRESQL",
-    async queryReport(reportKey, window, maxRows) {
-      const view = qualifiedView("POSTGRESQL", config, reportKey);
+    async queryReport(reportKey, window, maxRows, sourceViewOverride) {
+      const view = qualifiedView("POSTGRESQL", config, reportKey, sourceViewOverride);
       const params: unknown[] = [];
       const where: string[] = [];
       if (window.since) { params.push(window.since); where.push(`source_updated_at > $${params.length}`); }
@@ -368,8 +368,8 @@ async function openMysqlExecutor(config: IntegrationSourceConfig): Promise<SqlEx
 
   return {
     dialect: "MYSQL",
-    async queryReport(reportKey, window, maxRows) {
-      const view = qualifiedView("MYSQL", config, reportKey);
+    async queryReport(reportKey, window, maxRows, sourceViewOverride) {
+      const view = qualifiedView("MYSQL", config, reportKey, sourceViewOverride);
       const params: unknown[] = [];
       const where: string[] = [];
       if (window.since) { params.push(window.since); where.push("source_updated_at > ?"); }
@@ -419,8 +419,8 @@ async function openMssqlExecutor(config: IntegrationSourceConfig): Promise<SqlEx
 
   return {
     dialect: "MSSQL",
-    async queryReport(reportKey, window, maxRows) {
-      const view = qualifiedView("MSSQL", config, reportKey);
+    async queryReport(reportKey, window, maxRows, sourceViewOverride) {
+      const view = qualifiedView("MSSQL", config, reportKey, sourceViewOverride);
       const request = pool.request();
       request.input("limit", mssql.Int, maxRows + 1);
       const where: string[] = [];
