@@ -28,7 +28,7 @@ import { createUser, listUsers, updateUser, resetPassword, completeSetup, deacti
 import { recordEvent, engagementSummary } from "./services/analyticsService.js";
 import { notifyAdmins, notifyScoreChangeIfCurrentPeriod, runStaleAccountCheck, runWeeklyDigestIfDue } from "./services/automationService.js";
 import { logAdminAction, listAuditLog } from "./services/auditService.js";
-import { requestSecurityContext, recordLoginEvent, securityOverview, listSessions, listLoginEvents, listSecurityAlerts, resolveSecurityAlert, pruneSecurityHistory, listSecurityDevices, listDataAccessEvents, recordDataAccessEvent, databaseSecuritySnapshot } from "./services/securityService.js";
+import { requestSecurityContext, enrichSecurityContext, recordLoginEvent, securityOverview, listSessions, listLoginEvents, listSecurityAlerts, resolveSecurityAlert, pruneSecurityHistory, listSecurityDevices, listDataAccessEvents, recordDataAccessEvent, databaseSecuritySnapshot } from "./services/securityService.js";
 import { exportAuditLogCsv, exportImportBatchCsv } from "./services/exportService.js";
 import { ensureSectionDefaults, listSections, updateSection, grantUserSection, revokeUserSection, sectionsForUser } from "./services/sectionService.js";
 import { publicEmailConfig, saveEmailConfig, testEmailConnection, createReportSchedule, listReportSchedules, updateReportSchedule, deleteReportSchedule, sendReportNow, recentReportDeliveries, runDueReports } from "./services/reportScheduler.js";
@@ -158,7 +158,7 @@ app.addHook("onResponse", async (req, reply) => {
     const token = req.cookies?.session;
     const user = token ? await resolveSession(token) : null;
     if (!user) return;
-    const context = await requestSecurityContext(req);
+    const context = requestSecurityContext(req);
     await recordDataAccessEvent({
       userId: user.id,
       actorEmail: user.email,
@@ -167,7 +167,7 @@ app.addHook("onResponse", async (req, reply) => {
       resource: path.split("/").filter(Boolean).slice(1, 3).join("/"),
       context,
       statusCode: reply.statusCode,
-      durationMs: Math.max(0, Math.round(Number(reply.getResponseTime?.() ?? 0))),
+      durationMs: undefined,
     });
   } catch {}
 });
@@ -380,7 +380,7 @@ app.post<{ Body: { email: string; password: string; remember?: boolean } }>("/ap
   }
   // Per-account throttle (in addition to per-IP) to blunt distributed guessing.
   if (!rateLimit(reply, `login:${email.toLowerCase().trim()}`, 10, AUTH_WINDOW_MS)) return;
-  const securityContext = await requestSecurityContext(req);
+  const securityContext = await enrichSecurityContext(req);
   const result = await login(email, password, !!remember, securityContext);
   await recordLoginEvent({
     userId: result?.user.id,
@@ -495,7 +495,7 @@ app.post<{ Params: { id: string }; Body: { reason?: string } }>("/api/admin/secu
   if (existing.userId === admin.id) return reply.code(400).send({ error: "you cannot revoke your own current admin session here" });
   await destroySessionById(req.params.id, admin.email);
   logAdminAction(admin, "session.revoke", `Revoked session ${req.params.id}${req.body?.reason ? ": " + String(req.body.reason).slice(0, 200) : ""}`, {
-    targetType: "Session", targetId: req.params.id, context: await requestSecurityContext(req),
+    targetType: "Session", targetId: req.params.id, context: requestSecurityContext(req),
   });
   return { ok: true };
 });
