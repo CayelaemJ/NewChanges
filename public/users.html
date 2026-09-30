@@ -292,14 +292,7 @@ async function boot(){
     renderEmpPick();
     onRoleChange();
     onAccessChange();
-    await Promise.allSettled([loadPartnersDropdown(),loadUsers(),loadRevokedUsers()]);
-    if(typeof window.loadSecurityCenter==='function') {
-      await window.loadSecurityCenter();
-    } else {
-      console.error('[users] security telemetry client failed to initialise');
-      const copy=document.querySelector('#security-state-copy');
-      if(copy) copy.textContent='Security telemetry client did not load. Refresh the page.';
-    }
+    await Promise.allSettled([loadPartnersDropdown(),loadUsers(),loadRevokedUsers(),loadSecurityCenter()]);
   }catch(error){
     console.error('[users] startup failed',error);
     const host=$('#emp-pick');
