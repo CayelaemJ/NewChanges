@@ -61,6 +61,7 @@ export interface SessionContext {
   country?: string;
   region?: string;
   city?: string;
+  deviceKey?: string;
 }
 
 export async function createSession(userId: string, days: number = SESSION_DAYS, context: SessionContext = {}) {
