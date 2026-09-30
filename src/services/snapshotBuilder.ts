@@ -1259,6 +1259,8 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
         savingsLabels: comparisonPayload.savingsLabels ?? [],
         ewa: comparisonPayload.ewa?.trend ?? [],
         ewaLabels: comparisonPayload.ewa?.trendLabels ?? [],
+        monthlySavingRand: Number(comparisonPayload?.kpis?.monthlySaving?.rand ?? 0),
+        totalAdvancedRaw: Number(comparisonPayload?.ewa?.totalRaw ?? 0),
         outcomes: Object.fromEntries((Array.isArray(comparisonPayload.outcomes) ? comparisonPayload.outcomes : []).map((row: any) => [row.key, row.trend || []])),
       },
     } : null,
