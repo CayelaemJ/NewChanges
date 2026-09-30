@@ -24,7 +24,7 @@
     "check:production": "node scripts/production-readiness-check.mjs",
     "check:brand": "node tests/brand-engine.test.mjs",
     "test:score": "node scripts/run-score-test.mjs",
-    "check:all": "npm run build && npm run check:production && npm run check:security && npm run check:ui && npm run check:imports && npm run check:scheduling && npm run check:security-identity && npm run check:security-operations && npm run check:security-governance && npm run check:enterprise && npm run test:score && npm audit --audit-level=high",
+    "check:all": "npm run build && npm run check:production && npm run check:security && npm run check:ui && npm run check:imports && npm run check:scheduling && npm run check:security-identity && npm run check:security-operations && npm run check:security-governance && npm run check:south-africa-compliance && npm run check:enterprise && npm run test:score && npm audit --audit-level=high",
     "check:accessibility": "node scripts/accessibility-regression-check.mjs",
     "check:performance": "node scripts/performance-regression-check.mjs",
     "check:enterprise": "npm run check:period-comparison && npm run check:accessibility && npm run check:performance && npm run check:brand",
@@ -32,7 +32,8 @@
     "check:security-identity": "node scripts/security-identity-regression-check.mjs",
     "check:security-operations": "node scripts/security-operations-regression-check.mjs",
     "check:security-full": "npm run build && npm run check:security && npm run check:security-identity && npm run check:security-operations && npm audit --audit-level=high",
-    "check:security-governance": "node scripts/security-governance-regression-check.mjs"
+    "check:security-governance": "node scripts/security-governance-regression-check.mjs",
+    "check:south-africa-compliance": "node scripts/south-africa-compliance-regression-check.mjs"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.2",
