@@ -55,6 +55,16 @@ export interface IntegrationConfigPatch {
   sourceAnalyticsReadOnly?: boolean;
   sourceAnalyticsUseReplica?: boolean;
   sourceAnalyticsNote?: string | null;
+  sourceAnalyticsReplicaEnabled?: boolean;
+  sourceAnalyticsReplicaHost?: string | null;
+  sourceAnalyticsReplicaPort?: number | null;
+  sourceAnalyticsReplicaDatabase?: string | null;
+  sourceAnalyticsReplicaSchema?: string | null;
+  sourceAnalyticsReplicaUsername?: string | null;
+  sourceAnalyticsReplicaPassword?: string | null;
+  sourceAnalyticsReplicaSsl?: boolean;
+  sourceAnalyticsReplicaTrustServerCertificate?: boolean;
+  sourceAnalyticsReplicaMaxLagSeconds?: number;
 }
 
 export async function saveConfig(patch: IntegrationConfigPatch) {
@@ -83,15 +93,20 @@ export async function listAnalyticsRoutes() {
   return prisma.analyticsRoute.findMany({ orderBy: { reportKey: "asc" } });
 }
 
-export async function saveAnalyticsRoute(input: { reportKey: string; executionMode: string; sourceView?: string | null; enabled?: boolean; rationale?: string | null }) {
+export async function saveAnalyticsRoute(input: { reportKey: string; executionMode: string; workloadClass?: string; sourceView?: string | null; useReplica?: boolean; enabled?: boolean; rationale?: string | null }) {
   const mode = String(input.executionMode || "POSTGRES").toUpperCase();
+  const workloadClass = String(input.workloadClass || (mode === "POSTGRES" ? "POSTGRES_READ_MODEL" : "SOURCE_AGGREGATE")).toUpperCase();
   if (!["POSTGRES", "SOURCE", "HYBRID"].includes(mode)) throw new Error("executionMode must be POSTGRES, SOURCE or HYBRID.");
+  if (!["SOURCE_ONLY", "SOURCE_AGGREGATE", "POSTGRES_READ_MODEL", "HYBRID"].includes(workloadClass)) throw new Error("Invalid workloadClass.");
   if (mode === "SOURCE" && !input.sourceView) throw new Error("SOURCE routes require an approved source view.");
   if (input.sourceView && !/^[A-Za-z_][A-Za-z0-9_.]*$/.test(input.sourceView)) throw new Error("sourceView contains unsafe characters.");
+  if (workloadClass === "POSTGRES_READ_MODEL" && mode !== "POSTGRES") throw new Error("POSTGRES_READ_MODEL workloads must execute in PostgreSQL.");
+  if (mode === "POSTGRES" && input.useReplica) throw new Error("PostgreSQL routes cannot use a source replica.");
+  if (input.useReplica && mode === "POSTGRES") throw new Error("Replica routing requires SOURCE or HYBRID execution.");
   return prisma.analyticsRoute.upsert({
     where: { reportKey: input.reportKey },
-    create: { reportKey: input.reportKey, executionMode: mode, sourceView: input.sourceView || null, enabled: input.enabled !== false, rationale: input.rationale || null },
-    update: { executionMode: mode, sourceView: input.sourceView || null, enabled: input.enabled !== false, rationale: input.rationale || null, lastVerifiedAt: new Date() },
+    create: { reportKey: input.reportKey, executionMode: mode, workloadClass, sourceView: input.sourceView || null, useReplica: Boolean(input.useReplica), enabled: input.enabled !== false, rationale: input.rationale || null },
+    update: { executionMode: mode, workloadClass, sourceView: input.sourceView || null, useReplica: Boolean(input.useReplica), enabled: input.enabled !== false, rationale: input.rationale || null, lastVerifiedAt: new Date() },
   });
 }
 
@@ -161,7 +176,9 @@ export async function runSync(trigger: "manual" | "scheduled" = "manual") {
         const pulled = await adapter.fetchReport(reportKey, {
           since: requestSince,
           through: throughAt,
-        }, useSourceRoute ? route.sourceView : null);
+        }, useSourceRoute ? route.sourceView : null, {
+          useReplica: Boolean(useSourceRoute && (route.useReplica || config.sourceAnalyticsUseReplica)),
+        });
         const result = validate(format, pulled.records);
 
         const skewCeiling = new Date(throughAt.getTime() + CLOCK_SKEW_TOLERANCE_MS);
