@@ -42,6 +42,8 @@ CREATE TABLE "LoginEvent" (
   CONSTRAINT "LoginEvent_pkey" PRIMARY KEY ("id")
 );
 
+CREATE TYPE "SecuritySeverity" AS ENUM ('INFO', 'WARNING', 'HIGH', 'CRITICAL');
+
 CREATE TABLE "SecurityAlert" (
   "id" TEXT NOT NULL,
   "userId" TEXT,
