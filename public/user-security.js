@@ -64,7 +64,13 @@
       const row=document.querySelector("#row-"+CSS.escape(u.id));
       if(!row)return;
       const actionCell=row.lastElementChild;
-      if(!actionCell||actionCell.querySelector("[data-security-user]"))return;
+      if(!actionCell)return;
+      // The main users renderer already owns the Security action. Do not
+      // inject a second button when the security telemetry refreshes.
+      const existing=Array.from(actionCell.querySelectorAll("button")).find(function(btn){
+        return (btn.textContent||"").trim().toLowerCase()==="security";
+      });
+      if(existing)return;
       const btn=document.createElement("button");
       btn.className="btn btn-sm";
       btn.type="button";
@@ -84,7 +90,7 @@
         getJson("/api/admin/security/alerts?status=OPEN&limit=50"),
         getJson("/api/admin/security/logins?limit=80"),
         getJson("/api/admin/security/devices?limit=300"),
-        getJson("/api/admin/security/data-access?limit=120"),
+        getJson("/api/admin/security/data-access?limit=20"),
         getJson("/api/admin/security/database")
       ]);
       const overview=data[0]||{};
@@ -178,7 +184,7 @@
   function renderSecurityAccess(){
     const rows=$("#sec-access-rows"); if(!rows)return;
     if(!window.SECURITY_ACCESS.length){rows.innerHTML='<tr><td colspan="5" class="security-empty">No sensitive data access events recorded yet.</td></tr>';return;}
-    rows.innerHTML=window.SECURITY_ACCESS.slice(0,120).map(function(a){
+    rows.innerHTML=window.SECURITY_ACCESS.slice(0,20).map(function(a){
       return '<tr><td class="muted">'+esc(new Date(a.createdAt).toLocaleString())+'</td>'+
         '<td><b>'+esc(a.actorEmail||"Unknown")+'</b></td><td>'+esc(a.resource||"Protected data")+'</td>'+
         '<td class="muted">'+esc(a.method+" "+a.route)+'</td><td>'+esc(String(a.statusCode||""))+'</td></tr>';
@@ -219,6 +225,12 @@
       </tr>`;
     }).join("")||'<tr><td colspan="6" class="security-empty">No sign-in history yet.</td></tr>';
   }
+
+  window.downloadSecurityAuditLog=function(){
+    // The server performs the admin authorization check and creates the CSV
+    // without exposing request bodies or authentication secrets.
+    window.location.href="/api/admin/security/audit-log.csv";
+  };
 
   window.revokeAllUserSessions=async function(id,name){
     if(!confirm("Log out "+name+" from every active session?"))return;
