@@ -31,6 +31,8 @@ import { logAdminAction, listAuditLog } from "./services/auditService.js";
 import { complianceOverview, listProcessingActivities, createProcessingActivity, listDataSubjectRequests, createDataSubjectRequest, updateDataSubjectRequest, listComplianceVendors, createComplianceVendor, listRetentionPolicies, createRetentionPolicy, listSecurityIncidents, createSecurityIncident } from "./services/complianceService.js";
 import { requestSecurityContext, enrichSecurityContext, recordLoginEvent, securityOverview, listSessions, listLoginEvents, listSecurityAlerts, resolveSecurityAlert, pruneSecurityHistory, listSecurityDevices, listDataAccessEvents, recordDataAccessEvent, databaseSecuritySnapshot } from "./services/securityService.js";
 import { exportAuditLogCsv, exportSecurityAuditLogCsv, exportImportBatchCsv } from "./services/exportService.js";
+import { listAnalyticsRoutes, saveAnalyticsRoute } from "./services/syncService.js";
+import { enterpriseOperationsOverview, dataQualityOverview } from "./services/enterpriseOperationsService.js";
 import { ensureSectionDefaults, listSections, updateSection, grantUserSection, revokeUserSection, sectionsForUser } from "./services/sectionService.js";
 import { publicEmailConfig, saveEmailConfig, testEmailConnection, createReportSchedule, listReportSchedules, updateReportSchedule, deleteReportSchedule, sendReportNow, recentReportDeliveries, runDueReports } from "./services/reportScheduler.js";
 import type { ScheduleInput } from "./services/reportScheduler.js";
@@ -999,6 +1001,11 @@ app.post<{ Body: {
   sqlViewPrefix?: string | null;
   sqlQueryTimeoutMs?: number;
   sqlMaxRowsPerReport?: number;
+  analyticsMode?: string;
+  sourceAnalyticsEnabled?: boolean;
+  sourceAnalyticsReadOnly?: boolean;
+  sourceAnalyticsUseReplica?: boolean;
+  sourceAnalyticsNote?: string | null;
 } }>(
   "/api/admin/integration",
   async (req, reply) => {
@@ -1068,6 +1075,28 @@ app.post<{ Body: { confirm?: string } }>("/api/admin/integration/full-resync", a
 app.get("/api/admin/integration/logs", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
   return recentSyncLogs(10);
+});
+
+// ── Enterprise operations and analytics placement ──
+app.get("/api/admin/enterprise/overview", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  return enterpriseOperationsOverview();
+});
+app.get("/api/admin/enterprise/data-quality", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  return dataQualityOverview();
+});
+app.get("/api/admin/integration/routes", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  return listAnalyticsRoutes();
+});
+app.post<{ Body: { reportKey?: string; executionMode?: string; sourceView?: string | null; enabled?: boolean; rationale?: string | null } }>("/api/admin/integration/routes", async (req, reply) => {
+  const admin = await requireAdmin(req, reply); if (!admin) return;
+  try {
+    const result = await saveAnalyticsRoute({ reportKey: String(req.body?.reportKey || ""), executionMode: String(req.body?.executionMode || "POSTGRES"), sourceView: req.body?.sourceView, enabled: req.body?.enabled, rationale: req.body?.rationale });
+    logAdminAction(admin, "integration.route_update", `Updated analytics route for ${result.reportKey} to ${result.executionMode}`, { targetType: "AnalyticsRoute", targetId: result.id });
+    return result;
+  } catch (e: any) { return reply.code(400).send({ error: e?.message || "Could not save analytics route." }); }
 });
 
 
