@@ -275,10 +275,11 @@
             <div class="security-stat"><div class="k">Analytics store</div><div class="v" id="ops-store" style="font-size:16px;">-</div></div>
             <div class="security-stat"><div class="k">Data freshness</div><div class="v" id="ops-freshness" style="font-size:16px;">-</div></div>
             <div class="security-stat"><div class="k">Open imports</div><div class="v" id="ops-imports">-</div></div>
+            <div class="security-stat"><div class="k">Source replica</div><div class="v" id="ops-replica" style="font-size:16px;">-</div></div>
           </div>
           <div id="ops-architecture" style="margin-top:14px;padding:14px;border:1px solid var(--line);border-radius:12px;background:#fff;font-size:12px;color:#617486;line-height:1.55;"></div>
           <div style="margin-top:14px;overflow:auto;">
-            <table><thead><tr><th>Feed</th><th>Execution</th><th>Source view</th><th>Enabled</th><th>Reason</th></tr></thead><tbody id="ops-routes"><tr><td colspan="5" class="muted">Loading routes...</td></tr></tbody></table>
+            <table><thead><tr><th>Feed</th><th>Workload</th><th>Execution</th><th>Source view</th><th>Replica</th><th>Enabled</th><th>Reason</th></tr></thead><tbody id="ops-routes"><tr><td colspan="7" class="muted">Loading routes...</td></tr></tbody></table>
           </div>
           <div id="ops-quality-detail" style="margin-top:14px;"></div>
         </div>
@@ -1617,12 +1618,14 @@ async function loadEnterpriseOperations(){
     const freshness=o.integration.freshnessState==='FRESH'?'Fresh':o.integration.freshnessState==='STALE'?'Stale':'Unknown';
     document.getElementById('ops-freshness').textContent=freshness;
     document.getElementById('ops-imports').textContent=String(o.imports.open||0);
+    const rep=o.integration.replica||{};
+    document.getElementById('ops-replica').textContent=rep.configured ? (rep.healthy ? (rep.lagSeconds!=null ? 'Healthy · '+rep.lagSeconds+'s' : 'Reachable') : 'Attention') : 'Not configured';
     const replica=o.integration.sourceAnalyticsUseReplica?'read replica':'source database';
     document.getElementById('ops-architecture').innerHTML=
       '<strong style="color:var(--brand-primary);">Recommended placement:</strong> '+esc(o.integration.sourceMode)+' remains the source of truth. PostgreSQL serves the application read model and governed audit/history. Heavy analytics should run against approved source-side reporting views'+
       (o.integration.sourceAnalyticsUseReplica?' on a read replica':'')+' rather than the production source database. '+(o.integration.sourceAnalyticsEnabled?'Source-side analytics is enabled.':'Source-side analytics is currently disabled.')+
       ' No raw SQL is exposed to administrators.';
-    document.getElementById('ops-routes').innerHTML=(r||[]).map(x=>'<tr><td><code>'+esc(x.reportKey)+'</code></td><td>'+esc(x.executionMode)+'</td><td>'+esc(x.sourceView||'not configured')+'</td><td>'+ (x.enabled?'Yes':'No') +'</td><td class="muted">'+esc(x.rationale||'No rationale recorded')+'</td></tr>').join('')||'<tr><td colspan="5" class="muted">No per-feed routes configured. PostgreSQL is used by default.</td></tr>';
+    document.getElementById('ops-routes').innerHTML=(r||[]).map(x=>'<tr><td><code>'+esc(x.reportKey)+'</code></td><td>'+esc(x.workloadClass||'POSTGRES_READ_MODEL')+'</td><td>'+esc(x.executionMode)+'</td><td>'+esc(x.sourceView||'not configured')+'</td><td>'+ (x.useReplica?'Yes':'No') +'</td><td>'+ (x.enabled?'Yes':'No') +'</td><td class="muted">'+esc(x.rationale||'No rationale recorded')+'</td></tr>').join('')||'<tr><td colspan="7" class="muted">No per-feed routes configured. PostgreSQL is used by default.</td></tr>';
     const c=q.checks||{};
     document.getElementById('ops-quality-detail').innerHTML='<div class="compliance-grid">'+
       '<div class="compliance-box"><h3>Completeness</h3><p>'+esc(c.employeeRecordsChecked||0)+' employee records checked. Missing income band: '+esc(c.employeesMissingIncomeBand||0)+'. Missing site: '+esc(c.employeesMissingSite||0)+'.</p></div>'+
