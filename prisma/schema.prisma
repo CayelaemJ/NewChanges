@@ -616,6 +616,18 @@ model IntegrationConfig {
   sourceAnalyticsUseReplica Boolean   @default(false)
   sourceAnalyticsNote       String?
 
+  // Optional read-only analytics replica for heavy source-side workloads.
+  sourceAnalyticsReplicaEnabled           Boolean @default(false)
+  sourceAnalyticsReplicaHost              String?
+  sourceAnalyticsReplicaPort              Int?
+  sourceAnalyticsReplicaDatabase          String?
+  sourceAnalyticsReplicaSchema             String?
+  sourceAnalyticsReplicaUsername           String?
+  sourceAnalyticsReplicaPassword           String?
+  sourceAnalyticsReplicaSsl                Boolean @default(true)
+  sourceAnalyticsReplicaTrustServerCertificate Boolean @default(false)
+  sourceAnalyticsReplicaMaxLagSeconds     Int @default(60)
+
   // Incremental source pulls are cheap after the initial cursor-based load.
   scheduleHours             Int       @default(1)
   lastSyncAt                DateTime?
@@ -629,7 +641,9 @@ model AnalyticsRoute {
   id             String   @id @default(cuid())
   reportKey      String   @unique
   executionMode  String   @default("POSTGRES")
+  workloadClass  String   @default("POSTGRES_READ_MODEL")
   sourceView     String?
+  useReplica     Boolean  @default(false)
   enabled        Boolean  @default(true)
   rationale      String?
   lastVerifiedAt DateTime?

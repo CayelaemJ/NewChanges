@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { getConfig, listAnalyticsRoutes } from "./syncService.js";
+import { checkMysqlReadReplica } from "./sourceAdapter.js";
 
 const prisma = new PrismaClient();
 
@@ -23,6 +24,7 @@ export async function enterpriseOperationsOverview() {
   const freshnessMinutes = lastSync == null ? null : Math.max(0, Math.round((now - lastSync) / 60000));
 
   const sourceMode = String(config.sourceMode || "API").toUpperCase();
+  const replica = sourceMode === "SQL" ? await checkMysqlReadReplica(config) : { configured: false, reachable: false, readOnly: null, lagSeconds: null, lagWithinThreshold: null, host: null, database: null, note: "Replica health is only applicable to SQL sources." };
   const sourceConfigured = sourceMode === "SQL"
     ? Boolean(config.sqlHost && config.sqlDatabase && config.sqlUsername && (process.env.SOURCE_SQL_PASSWORD || config.sqlPassword))
     : Boolean(process.env.SOURCE_API_BASE_URL || config.baseUrl);
@@ -44,11 +46,14 @@ export async function enterpriseOperationsOverview() {
       lastSyncStatus: config.lastSyncStatus,
       freshnessMinutes,
       freshnessState: freshnessMinutes == null ? "UNKNOWN" : freshnessMinutes <= Math.max(60, config.scheduleHours * 60 * 2) ? "FRESH" : "STALE",
+      replica,
     },
     routing: routes.map(route => ({
       reportKey: route.reportKey,
       executionMode: route.executionMode,
+      workloadClass: route.workloadClass,
       sourceView: route.sourceView,
+      useReplica: route.useReplica,
       enabled: route.enabled,
       rationale: route.rationale,
       lastVerifiedAt: route.lastVerifiedAt,

@@ -278,7 +278,7 @@
           </div>
           <div id="ops-architecture" style="margin-top:14px;padding:14px;border:1px solid var(--line);border-radius:12px;background:#fff;font-size:12px;color:#617486;line-height:1.55;"></div>
           <div style="margin-top:14px;overflow:auto;">
-            <table><thead><tr><th>Feed</th><th>Execution</th><th>Source view</th><th>Enabled</th><th>Reason</th></tr></thead><tbody id="ops-routes"><tr><td colspan="5" class="muted">Loading routes...</td></tr></tbody></table>
+            <table><thead><tr><th>Feed</th><th>Workload</th><th>Execution</th><th>Source view</th><th>Replica</th><th>Enabled</th><th>Reason</th></tr></thead><tbody id="ops-routes"><tr><td colspan="7" class="muted">Loading routes...</td></tr></tbody></table>
           </div>
           <div id="ops-quality-detail" style="margin-top:14px;"></div>
         </div>
@@ -369,6 +369,31 @@
             <label style="display:flex;align-items:center;gap:9px;font-size:13px;font-weight:700;color:#32217c;cursor:pointer;">
               <input id="integ-sql-trust" type="checkbox" style="width:17px;height:17px;"> Trust server certificate (only when approved)
             </label>
+            <div style="grid-column:span 2;margin-top:4px;padding:12px;border:1px solid #e8e1f7;border-radius:10px;background:#fff;">
+              <div style="font-size:12.5px;font-weight:800;color:var(--brand-primary);margin-bottom:8px;">Optional source analytics read replica</div>
+              <div class="integration-two-col" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <label style="font-size:12px;font-weight:700;color:#5b6b7a;">Replica host
+                  <input id="integ-replica-host" placeholder="mysql-replica.internal" style="display:block;width:100%;margin-top:5px;font:inherit;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">
+                </label>
+                <label style="font-size:12px;font-weight:700;color:#5b6b7a;">Replica port
+                  <input id="integ-replica-port" type="number" min="1" max="65535" placeholder="3306" style="display:block;width:100%;margin-top:5px;font:inherit;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">
+                </label>
+                <label style="font-size:12px;font-weight:700;color:#5b6b7a;">Replica database
+                  <input id="integ-replica-database" placeholder="same database if blank" style="display:block;width:100%;margin-top:5px;font:inherit;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">
+                </label>
+                <label style="font-size:12px;font-weight:700;color:#5b6b7a;">Replica username
+                  <input id="integ-replica-user" autocomplete="off" placeholder="analytics_reader" style="display:block;width:100%;margin-top:5px;font:inherit;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">
+                </label>
+                <label style="font-size:12px;font-weight:700;color:#5b6b7a;">Maximum replica lag (seconds)
+                  <input id="integ-replica-lag" type="number" min="0" max="86400" value="60" style="display:block;width:100%;margin-top:5px;font:inherit;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">
+                </label>
+              </div>
+              <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:10px;">
+                <label style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:#32217c;cursor:pointer;"><input id="integ-replica-ssl" type="checkbox" checked style="width:17px;height:17px;"> Require encrypted replica connection</label>
+                <label style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:#32217c;cursor:pointer;"><input id="integ-replica-trust" type="checkbox" style="width:17px;height:17px;"> Trust replica certificate</label>
+              </div>
+              <div style="font-size:11px;color:#8497a7;margin-top:8px;">Replica credentials stay in the server environment. Set SOURCE_SQL_REPLICA_PASSWORD for the read-only replica account. The portal never exposes that secret to the browser.</div>
+            </div>
             <div style="grid-column:span 2;font-size:12px;color:#8497a7;line-height:1.5;">SQL mode expects 10 read-only canonical views named <b>v_employers</b>, <b>v_workforce_snapshots</b>, … <b>v_salary_advances</b> (or the configured prefix). The connection test checks every view and its contracted columns.</div>
           </div>
 
@@ -673,6 +698,13 @@ async function loadInteg(){
     $('#integ-analytics-mode').value = c.analyticsMode || 'POSTGRES_READ_MODEL';
     $('#integ-source-analytics').checked = !!c.sourceAnalyticsEnabled;
     $('#integ-source-replica').checked = !!c.sourceAnalyticsUseReplica;
+    $('#integ-replica-host').value = c.sourceAnalyticsReplicaHost || '';
+    $('#integ-replica-port').value = c.sourceAnalyticsReplicaPort || (c.sqlDialect==='MYSQL' ? 3306 : c.sqlPort || '');
+    $('#integ-replica-database').value = c.sourceAnalyticsReplicaDatabase || '';
+    $('#integ-replica-user').value = c.sourceAnalyticsReplicaUsername || '';
+    $('#integ-replica-lag').value = c.sourceAnalyticsReplicaMaxLagSeconds ?? 60;
+    $('#integ-replica-ssl').checked = c.sourceAnalyticsReplicaSsl !== false;
+    $('#integ-replica-trust').checked = !!c.sourceAnalyticsReplicaTrustServerCertificate;
     if(c.hasSqlPassword) $('#integ-sql-password').placeholder = c.sqlPasswordFromEnvironment ? '•••••• (provided by SOURCE_SQL_PASSWORD)' : '•••••• (saved — leave blank to keep)';
 
     const envBox = $('#integ-env-override');
@@ -724,6 +756,14 @@ function integrationDraft(){
     sourceAnalyticsEnabled: $('#integ-source-analytics').checked,
     sourceAnalyticsReadOnly: true,
     sourceAnalyticsUseReplica: $('#integ-source-replica').checked,
+    sourceAnalyticsReplicaEnabled: $('#integ-source-replica').checked,
+    sourceAnalyticsReplicaHost: $('#integ-replica-host').value.trim(),
+    sourceAnalyticsReplicaPort: parseInt($('#integ-replica-port').value)||null,
+    sourceAnalyticsReplicaDatabase: $('#integ-replica-database').value.trim(),
+    sourceAnalyticsReplicaUsername: $('#integ-replica-user').value.trim(),
+    sourceAnalyticsReplicaMaxLagSeconds: parseInt($('#integ-replica-lag').value)||60,
+    sourceAnalyticsReplicaSsl: $('#integ-replica-ssl').checked,
+    sourceAnalyticsReplicaTrustServerCertificate: $('#integ-replica-trust').checked,
   };
   const tok = $('#integ-token').value.trim(); if(tok) body.authToken = tok;
   const sqlPassword = $('#integ-sql-password').value.trim(); if(sqlPassword) body.sqlPassword = sqlPassword;
@@ -1606,10 +1646,11 @@ async function loadComplianceDetail(){
 
 async function loadEnterpriseOperations(){
   try{
-    const [o,q,r]=await Promise.all([
+    const [o,q,r,replica]=await Promise.all([
       fetch('/api/admin/enterprise/overview',{cache:'no-store'}).then(x=>x.json()),
       fetch('/api/admin/enterprise/data-quality',{cache:'no-store'}).then(x=>x.json()),
-      fetch('/api/admin/integration/routes',{cache:'no-store'}).then(x=>x.json())
+      fetch('/api/admin/integration/routes',{cache:'no-store'}).then(x=>x.json()),
+      fetch('/api/admin/integration/replica-health',{cache:'no-store'}).then(x=>x.json())
     ]);
     document.getElementById('ops-quality').textContent=(q.score??0).toFixed(1)+'%';
     document.getElementById('ops-source').textContent=o.integration.sourceMode;
@@ -1617,12 +1658,14 @@ async function loadEnterpriseOperations(){
     const freshness=o.integration.freshnessState==='FRESH'?'Fresh':o.integration.freshnessState==='STALE'?'Stale':'Unknown';
     document.getElementById('ops-freshness').textContent=freshness;
     document.getElementById('ops-imports').textContent=String(o.imports.open||0);
+    const replicaText = replica.configured ? (replica.reachable ? (replica.readOnly && replica.lagWithinThreshold !== false ? 'Healthy' : 'Attention') : 'Unreachable') : 'Not configured';
+    document.getElementById('ops-architecture').dataset.replica = replicaText;
     const replica=o.integration.sourceAnalyticsUseReplica?'read replica':'source database';
     document.getElementById('ops-architecture').innerHTML=
       '<strong style="color:var(--brand-primary);">Recommended placement:</strong> '+esc(o.integration.sourceMode)+' remains the source of truth. PostgreSQL serves the application read model and governed audit/history. Heavy analytics should run against approved source-side reporting views'+
       (o.integration.sourceAnalyticsUseReplica?' on a read replica':'')+' rather than the production source database. '+(o.integration.sourceAnalyticsEnabled?'Source-side analytics is enabled.':'Source-side analytics is currently disabled.')+
       ' No raw SQL is exposed to administrators.';
-    document.getElementById('ops-routes').innerHTML=(r||[]).map(x=>'<tr><td><code>'+esc(x.reportKey)+'</code></td><td>'+esc(x.executionMode)+'</td><td>'+esc(x.sourceView||'not configured')+'</td><td>'+ (x.enabled?'Yes':'No') +'</td><td class="muted">'+esc(x.rationale||'No rationale recorded')+'</td></tr>').join('')||'<tr><td colspan="5" class="muted">No per-feed routes configured. PostgreSQL is used by default.</td></tr>';
+    document.getElementById('ops-routes').innerHTML=(r||[]).map(x=>'<tr><td><code>'+esc(x.reportKey)+'</code></td><td>'+esc(x.workloadClass||'POSTGRES_READ_MODEL')+'</td><td>'+esc(x.executionMode)+'</td><td>'+esc(x.sourceView||'not configured')+'</td><td>'+ (x.useReplica?'Required':'No') +'</td><td>'+ (x.enabled?'Yes':'No') +'</td><td class="muted">'+esc(x.rationale||'No rationale recorded')+'</td></tr>').join('')||'<tr><td colspan="7" class="muted">No per-feed routes configured. PostgreSQL is used by default.</td></tr>';
     const c=q.checks||{};
     document.getElementById('ops-quality-detail').innerHTML='<div class="compliance-grid">'+
       '<div class="compliance-box"><h3>Completeness</h3><p>'+esc(c.employeeRecordsChecked||0)+' employee records checked. Missing income band: '+esc(c.employeesMissingIncomeBand||0)+'. Missing site: '+esc(c.employeesMissingSite||0)+'.</p></div>'+
