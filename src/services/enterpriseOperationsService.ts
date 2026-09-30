@@ -11,7 +11,7 @@ export async function enterpriseOperationsOverview() {
     prisma.employee.count({ where: { sourceDeletedAt: null } }),
     prisma.journey.count({ where: { sourceDeletedAt: null } }),
     prisma.debtAccount.count({ where: { sourceDeletedAt: null } }),
-    prisma.salaryAdvance.count({ where: { sourceDeletedAt: null } }),
+    prisma.salaryAdvance.count({ where: { sourceDeletedAt: null, advancedAt: { lt: new Date(Date.now() - 7 * 86400000) } } }),
     prisma.insurancePolicy.count({ where: { sourceDeletedAt: null } }),
     prisma.rating.count({ where: { sourceDeletedAt: null } }),
     prisma.user.count({ where: { deletedAt: null } }),
@@ -63,7 +63,7 @@ export async function dataQualityOverview() {
     prisma.employee.count({ where: { sourceDeletedAt: { not: null } } }),
     prisma.site.count({ where: { employer: { sourceDeletedAt: null }, employees: { none: {} } } }),
     prisma.employee.count({ where: { sourceDeletedAt: null, observedAt: { lt: new Date(Date.now() - 7 * 86400000) } } }),
-    prisma.salaryAdvance.count({ where: { sourceDeletedAt: null, observedAt: { lt: new Date(Date.now() - 7 * 86400000) } } }),
+    prisma.salaryAdvance.count({ where: { sourceDeletedAt: null, advancedAt: { lt: new Date(Date.now() - 7 * 86400000) } } }),
   ]);
 
   const total = await prisma.employee.count({ where: { sourceDeletedAt: null } });
