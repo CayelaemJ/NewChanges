@@ -137,10 +137,15 @@ export async function runSync(trigger: "manual" | "scheduled" = "manual") {
         if (isFirstSync) {
           console.log(`[sync] ${reportKey}: first sync detected, loading all records without date filtering.`);
         }
+        const route = await prisma.analyticsRoute.findUnique({ where: { reportKey } });
+        const useSourceRoute = route?.enabled && (route.executionMode === "SOURCE" || route.executionMode === "HYBRID") && route.sourceView;
+        if (useSourceRoute && configuredSourceMode(config) !== "SQL") {
+          throw new Error(`Analytics route for ${reportKey} requires SQL source mode.`);
+        }
         const pulled = await adapter.fetchReport(reportKey, {
           since: requestSince,
           through: throughAt,
-        });
+        }, useSourceRoute ? route.sourceView : null);
         const result = validate(format, pulled.records);
 
         const skewCeiling = new Date(throughAt.getTime() + CLOCK_SKEW_TOLERANCE_MS);
