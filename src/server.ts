@@ -28,7 +28,7 @@ import { createUser, listUsers, updateUser, resetPassword, completeSetup, deacti
 import { recordEvent, engagementSummary } from "./services/analyticsService.js";
 import { notifyAdmins, notifyScoreChangeIfCurrentPeriod, runStaleAccountCheck, runWeeklyDigestIfDue } from "./services/automationService.js";
 import { logAdminAction, listAuditLog } from "./services/auditService.js";
-import { requestSecurityContext, recordLoginEvent, securityOverview, listSessions, listLoginEvents, listSecurityAlerts, resolveSecurityAlert, pruneSecurityHistory } from "./services/securityService.js";
+import { requestSecurityContext, recordLoginEvent, securityOverview, listSessions, listLoginEvents, listSecurityAlerts, resolveSecurityAlert, pruneSecurityHistory, listSecurityDevices, listDataAccessEvents, recordDataAccessEvent } from "./services/securityService.js";
 import { exportAuditLogCsv, exportImportBatchCsv } from "./services/exportService.js";
 import { ensureSectionDefaults, listSections, updateSection, grantUserSection, revokeUserSection, sectionsForUser } from "./services/sectionService.js";
 import { publicEmailConfig, saveEmailConfig, testEmailConnection, createReportSchedule, listReportSchedules, updateReportSchedule, deleteReportSchedule, sendReportNow, recentReportDeliveries, runDueReports } from "./services/reportScheduler.js";
@@ -147,7 +147,31 @@ app.addHook("onRequest", async (req, reply) => {
   }
 });
 
-// Periodically discard old rate-limit buckets so a long-lived process does not
+
+// Sensitive application-data access audit. This is intentionally scoped to
+// authenticated admin/data surfaces and does not log request bodies or payloads.
+app.addHook("onResponse", async (req, reply) => {
+  const path = req.url.split("?", 1)[0];
+  const sensitive = path.startsWith("/api/admin/") || path.startsWith("/api/dashboard") || path.startsWith("/api/portfolio");
+  if (!sensitive) return;
+  try {
+    const token = req.cookies?.session;
+    const user = token ? await resolveSession(token) : null;
+    if (!user) return;
+    const context = await requestSecurityContext(req);
+    await recordDataAccessEvent({
+      userId: user.id,
+      actorEmail: user.email,
+      method: req.method,
+      route: path,
+      resource: path.split("/").filter(Boolean).slice(1, 3).join("/"),
+      context,
+      statusCode: reply.statusCode,
+      durationMs: Math.max(0, Math.round(Number(reply.getResponseTime?.() ?? 0))),
+    });
+  } catch {}
+});
+\n// Periodically discard old rate-limit buckets so a long-lived process does not
 // retain one entry forever for every IP that ever touched it.
 setInterval(() => {
   const now = Date.now();
@@ -434,6 +458,20 @@ app.post<{ Body: { email: string } }>("/api/auth/forgot-password", async (req, r
 });
 
 // ════════════════════ SECURITY & IDENTITY CENTER ════════════════════
+app.get("/api/admin/security/devices", async (req, reply) => {
+  const admin = await requireAdmin(req, reply); if (!admin) return;
+  return listSecurityDevices(300);
+});
+
+app.get<{ Querystring: { limit?: string; userId?: string; route?: string } }>("/api/admin/security/data-access", async (req, reply) => {
+  const admin = await requireAdmin(req, reply); if (!admin) return;
+  return listDataAccessEvents({
+    limit: Number(req.query.limit) || 200,
+    userId: req.query.userId,
+    route: req.query.route,
+  });
+});
+
 app.get("/api/admin/security/overview", async (req, reply) => {
   const admin = await requireAdmin(req, reply); if (!admin) return;
   await pruneSecurityHistory().catch(() => {});
