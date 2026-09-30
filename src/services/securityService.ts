@@ -16,7 +16,7 @@ export interface RequestSecurityContext {
 
 const trim = (value: unknown, max: number) => typeof value === "string" ? value.trim().slice(0, max) || undefined : undefined;
 
-export async function requestSecurityContext(input: any): Promise<RequestSecurityContext> {
+export function requestSecurityContext(input: any): RequestSecurityContext {
   const headers = input?.headers ?? {};
   const userAgent = trim(headers["user-agent"], 600);
   const deviceType = trim(headers["x-device-type"], 32);
@@ -44,7 +44,7 @@ export async function requestSecurityContext(input: any): Promise<RequestSecurit
   const resolvedBrowser = browser ?? ua.browser;
   const resolvedOperatingSystem = operatingSystem ?? ua.operatingSystem;
   const deviceKey = ipSafeDeviceKey(resolvedDeviceType, resolvedBrowser, resolvedOperatingSystem, userAgent);
-  const geo = (!country && !region && !city) ? await resolveIpGeography(ipAddress) : {};
+  const geo: { country?: string; region?: string; city?: string } = {};
   return {
     ipAddress,
     userAgent,
@@ -56,6 +56,13 @@ export async function requestSecurityContext(input: any): Promise<RequestSecurit
     city: city ?? geo.city,
     deviceKey,
   };
+}
+
+export async function enrichSecurityContext(input: any): Promise<RequestSecurityContext> {
+  const context = requestSecurityContext(input);
+  if (context.country || context.region || context.city) return context;
+  const geo = await resolveIpGeography(context.ipAddress);
+  return { ...context, country: geo.country, region: geo.region, city: geo.city };
 }
 
 function ipSafeDeviceKey(deviceType?: string, browser?: string, operatingSystem?: string, userAgent?: string) {
