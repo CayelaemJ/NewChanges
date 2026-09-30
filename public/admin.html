@@ -172,7 +172,8 @@
   @keyframes welcome-spin{to{transform:rotate(360deg);}}
   .welcome-splash-greeting{font-family:'Fraunces',serif;font-weight:600;font-size:26px;color:var(--brand-primary);}
   .welcome-splash-sub{margin-top:6px;font-size:13.5px;color:var(--grey);font-weight:600;}
-.security-stat{padding:14px;border:1px solid #d7cde9;border-radius:13px;background:#fff}.security-stat .k{font-size:9px;font-weight:850;letter-spacing:.08em;text-transform:uppercase;color:#617486}.security-stat .v{font-size:24px;font-weight:850;color:#2b1b68;margin-top:4px;font-variant-numeric:tabular-nums}@media(max-width:900px){#admin-security-summary{grid-template-columns:1fr 1fr!important}}@media(max-width:600px){#admin-security-summary{grid-template-columns:1fr!important}}</style>
+.security-stat{padding:14px;border:1px solid #d7cde9;border-radius:13px;background:#fff}.security-stat .k{font-size:9px;font-weight:850;letter-spacing:.08em;text-transform:uppercase;color:#617486}.security-stat .v{font-size:24px;font-weight:850;color:#2b1b68;margin-top:4px;font-variant-numeric:tabular-nums}@media(max-width:900px){#admin-security-summary{grid-template-columns:1fr 1fr!important}}@media(max-width:600px){#admin-security-summary{grid-template-columns:1fr!important}}.compliance-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}.compliance-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.compliance-box{border:1px solid var(--line);border-radius:12px;padding:14px;background:#fff}.compliance-box-wide{grid-column:1/-1}.compliance-box h3{font-size:12px;color:var(--brand-primary);margin-bottom:5px}.compliance-box p{font-size:11.5px;color:var(--grey);line-height:1.5}.compliance-list{margin-top:10px;display:grid;gap:6px}.compliance-item{border:1px solid var(--line-soft);border-radius:8px;padding:9px;font-size:11px}.compliance-item strong{color:var(--brand-primary)}.compliance-item small{display:block;color:var(--grey);margin-top:3px}@media(max-width:900px){.compliance-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.compliance-grid{grid-template-columns:1fr}}@media(max-width:600px){.compliance-summary{grid-template-columns:1fr}}
+</style>
 <link rel="stylesheet" href="/static/enterprise.css?v=2">
   <link rel="stylesheet" href="/static/enterprise-v3.css?v=3">
 <link rel="stylesheet" href="/static/dark-theme-v2.css?v=1">
@@ -211,6 +212,31 @@
         <div class="security-stat"><div class="k">Successful logins 24h</div><div class="v" id="admin-sec-success">-</div></div>
       </div>
       <div id="admin-sec-copy" style="margin-top:10px;font-size:12px;color:#617486;">Loading security posture...</div>
+    </div>
+  </section>
+  <section id="admin-compliance-strip" class="card" style="margin:18px 0;border-color:#d7cde9;">
+    <div class="card-hd">
+      <div><h2>POPIA &amp; Data Governance</h2><div class="note">Operational controls for South African privacy, access, retention, operators and security compromises</div></div>
+      <button class="btn btn-sm" type="button" onclick="openCompliancePanel()">Open compliance controls</button>
+    </div>
+    <div class="card-bd">
+      <div id="compliance-summary" class="compliance-summary">
+        <div class="security-stat"><div class="k">Processing activities</div><div class="v" id="comp-activities">-</div></div>
+        <div class="security-stat"><div class="k">Cross-border activities</div><div class="v" id="comp-crossborder">-</div></div>
+        <div class="security-stat"><div class="k">Open data requests</div><div class="v" id="comp-requests">-</div></div>
+        <div class="security-stat"><div class="k">Open security incidents</div><div class="v" id="comp-incidents">-</div></div>
+        <div class="security-stat"><div class="k">Governance gaps</div><div class="v" id="comp-gaps">-</div></div>
+      </div>
+      <div id="comp-status" style="margin-top:10px;font-size:12px;color:#617486;">Loading compliance controls...</div>
+      <div id="compliance-panel" style="display:none;margin-top:16px;">
+        <div class="compliance-grid">
+          <div class="compliance-box"><h3>Processing register</h3><p>Every material processing activity should have a purpose, lawful basis, party role, data categories, retention approach and privacy-impact review.</p><div id="comp-activities-list" class="compliance-list"></div></div>
+          <div class="compliance-box"><h3>Operators &amp; cross-border vendors</h3><p>Foreign or outsourced processing must have an identified provider, transfer basis and contractual/security review before approval.</p><div id="comp-vendors-list" class="compliance-list"></div></div>
+          <div class="compliance-box"><h3>Data subject requests</h3><p>Record access, correction, deletion, objection and consent-withdrawal requests, verify identity and track the workflow to closure.</p><div id="comp-requests-list" class="compliance-list"></div></div>
+          <div class="compliance-box"><h3>Retention &amp; deletion</h3><p>Retention is purpose-driven. Policies are recorded before automated deletion is enabled, with legal holds preventing disposal.</p><div id="comp-retention-list" class="compliance-list"></div></div>
+          <div class="compliance-box compliance-box-wide"><h3>Security compromise register</h3><p>Suspected compromises are recorded as incidents so investigation, containment, Information Officer escalation and POPIA notification steps are not lost in ordinary security alerts.</p><div id="comp-incidents-list" class="compliance-list"></div></div>
+        </div>
+      </div>
     </div>
   </section>
   <div class="grid">
@@ -1282,6 +1308,7 @@ async function boot(){
     renderPresets();
     loadAuditLog();
     loadAdminSecuritySummary();
+    loadComplianceSummary();
   }catch(e){
     $('#rep-list').innerHTML = `<p class="muted">Could not reach the API. Start the server and reload.</p>`;
   }
@@ -1488,6 +1515,48 @@ if(window.BrandEngine){ BrandEngine.themeController().set({ brand:{ accentColor:
 </script>
 <script src="/static/shell.js?v=1"></script>
 <script>
+
+function openCompliancePanel(){
+  const el=document.getElementById('compliance-panel');
+  if(!el) return;
+  el.style.display=el.style.display==='none'?'block':'none';
+  if(el.style.display==='block') loadComplianceDetail();
+}
+function compEsc(v){ return esc(v==null?'':String(v)); }
+async function loadComplianceSummary(){
+  try{
+    const r=await fetch('/api/admin/compliance/overview',{cache:'no-store'});
+    if(!r.ok) return;
+    const d=await r.json();
+    document.getElementById('comp-activities').textContent=String(d.processingActivities||0);
+    document.getElementById('comp-crossborder').textContent=String(d.crossBorderActivities||0);
+    document.getElementById('comp-requests').textContent=String(d.openDataSubjectRequests||0);
+    document.getElementById('comp-incidents').textContent=String(d.openSecurityIncidents||0);
+    document.getElementById('comp-gaps').textContent=String(d.governanceGaps||0);
+    const el=document.getElementById('comp-status');
+    el.textContent=d.status==='ACTION_REQUIRED'
+      ? 'Action required: review governance gaps, overdue data-subject requests and/or open security incidents.'
+      : 'Governance controls are being monitored. Keep the processing register, vendor register and retention schedule current.';
+    el.style.color=d.status==='ACTION_REQUIRED'?'#b5391f':'#617486';
+  }catch(_){}
+}
+async function loadComplianceDetail(){
+  try{
+    const [a,v,r,i,p]=await Promise.all([
+      fetch('/api/admin/compliance/processing-activities').then(x=>x.json()),
+      fetch('/api/admin/compliance/vendors').then(x=>x.json()),
+      fetch('/api/admin/compliance/requests').then(x=>x.json()),
+      fetch('/api/admin/compliance/incidents').then(x=>x.json()),
+      fetch('/api/admin/compliance/retention').then(x=>x.json())
+    ]);
+    document.getElementById('comp-activities-list').innerHTML=(a||[]).slice(0,8).map(x=>`<div class="compliance-item"><strong>${compEsc(x.name)}</strong><small>${compEsc(x.partyRole)} · ${compEsc(x.lawfulBasis)} · PIA: ${compEsc(x.piaStatus)}${x.crossBorder?' · cross-border':''}</small></div>`).join('')||'<div class="compliance-item">No processing activities recorded yet.</div>';
+    document.getElementById('comp-vendors-list').innerHTML=(v||[]).slice(0,8).map(x=>`<div class="compliance-item"><strong>${compEsc(x.name)}</strong><small>${compEsc(x.country)} · ${x.crossBorder?'cross-border':'local'} · approved: ${x.approved?'yes':'no'} · operator agreement: ${x.operatorAgreement?'yes':'no'}</small></div>`).join('')||'<div class="compliance-item">No vendors recorded yet.</div>';
+    document.getElementById('comp-requests-list').innerHTML=(r||[]).slice(0,8).map(x=>`<div class="compliance-item"><strong>${compEsc(x.requestType)}</strong><small>${compEsc(x.requesterEmail)} · ${compEsc(x.status)} · due: ${x.dueAt?compEsc(fmtDate(x.dueAt)):'not set'}</small></div>`).join('')||'<div class="compliance-item">No data-subject requests recorded.</div>';
+    document.getElementById('comp-retention-list').innerHTML=(p||[]).slice(0,8).map(x=>`<div class="compliance-item"><strong>${compEsc(x.dataClass)}</strong><small>${x.retentionDays?compEsc(x.retentionDays+' days'):'event/purpose based'} · ${compEsc(x.deletionMethod)} · legal hold: ${x.legalHold?'yes':'no'}</small></div>`).join('')||'<div class="compliance-item">No retention policies recorded.</div>';
+    document.getElementById('comp-incidents-list').innerHTML=(i||[]).slice(0,8).map(x=>`<div class="compliance-item"><strong>${compEsc(x.title)}</strong><small>${compEsc(x.severity)} · ${compEsc(x.status)} · discovered: ${compEsc(fmtDate(x.discoveredAt))}</small></div>`).join('')||'<div class="compliance-item">No open security incidents.</div>';
+  }catch(_){}
+}
+
 async function loadAdminSecuritySummary(){
   try{
     const r=await fetch('/api/admin/security/overview',{cache:'no-store'});
