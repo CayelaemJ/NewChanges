@@ -1250,7 +1250,18 @@ function uploadPartnerLogo(id,input){
     const logoDataUrl=reader.result;
     const detected=await extractColorsFromImage(logoDataUrl);
     const payload=detected
-      ? { logoDataUrl, primaryColor:detected.primaryColor, accentColor:detected.accentColor, navyColor:detected.navyColor }
+      ? {
+          logoDataUrl,
+          primaryColor:detected.primaryColor,
+          accentColor:detected.accentColor,
+          navyColor:detected.navyColor,
+          brandEngineVersion:window.BrandEngine?.VERSION || '1.1.0',
+          brandDetectionStatus:(detected.confidence||0) >= 0.70 ? 'AUTO_ACCEPTED' : 'NEEDS_REVIEW',
+          brandDetectionConfidence:Number(detected.confidence||0),
+          brandDetectionWarnings:Array.isArray(detected.warnings) ? detected.warnings : [],
+          brandDetectionDiagnostics:detected.diagnostics || {},
+          brandDetectedPalette:Array.isArray(detected.palette) ? detected.palette : []
+        }
       : { logoDataUrl };
     await apiOk(`${API}/api/admin/partners/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
     showToast(detected ? 'Logo saved. '+brandSummary(detected) : 'Logo saved. No colours could be detected from this image.','ok');
