@@ -898,6 +898,8 @@ model SystemEmailConfig {
   staleDeactivateDays     Int?
   lastStaleCheckAt        DateTime?
   scoreChangeAlertsEnabled Boolean @default(true)
+  // When enabled, the portal visibly labels all dashboard figures as synthetic test data.
+  syntheticDataMode      Boolean @default(false)
 
   updatedAt               DateTime @default(now()) @updatedAt
 }
