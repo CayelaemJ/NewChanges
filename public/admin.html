@@ -567,7 +567,7 @@
             </label>
             <div></div>
             <label style="display:flex;align-items:center;gap:9px;font-size:13px;font-weight:700;color:#32217c;cursor:pointer;"><input id="auto-digest-enabled" type="checkbox" style="width:17px;height:17px;"> Weekly engagement digest to admin alert emails</label>
-            <label style="display:flex;align-items:center;gap:9px;font-size:13px;font-weight:700;color:#32217c;cursor:pointer;"><input id="auto-score-enabled" type="checkbox" checked style="width:17px;height:17px;"> Email employer users when their score changes</label>
+            <label style="display:flex;align-items:center;gap:9px;font-size:13px;font-weight:700;color:#32217c;cursor:pointer;"><input id="auto-score-enabled" type="checkbox" checked style="width:17px;height:17px;"> Email employer users when their score changes</label>\n            <label style="display:flex;align-items:flex-start;gap:9px;font-size:13px;font-weight:700;color:#7a5512;cursor:pointer;background:#fff8e8;border:1px solid #efd49b;border-radius:9px;padding:10px 12px;"><input id="synthetic-data-mode" type="checkbox" style="width:17px;height:17px;margin-top:1px;flex:0 0 auto;"> <span><strong>Mark all portal data as synthetic test data</strong><br><span style="font-weight:500;">When enabled, dashboards and portal views display a persistent warning that the figures are synthetic test data and must not be treated as factual information.</span></span></label>
           </div>
           <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
             <button class="btn" onclick="saveAutomations()">Save automation settings</button>
@@ -924,6 +924,7 @@ async function loadEmailSettings(){
     $('#auto-alert-emails').value=c.alertEmails||''; $('#auto-slack-webhook').value=c.alertSlackWebhookUrl||'';
     $('#auto-stale-days').value=c.staleDeactivateDays||''; $('#auto-digest-enabled').checked=!!c.digestEnabled;
     $('#auto-score-enabled').checked=c.scoreChangeAlertsEnabled!==false;
+    $('#synthetic-data-mode').checked=!!c.syntheticDataMode;
     const as=$('#auto-status'); as.style.display='block'; as.className='banner ok';
     let asText=`Automations use the ${provider} settings above to send.`;
     if(c.lastStaleCheckAt) asText+=` Last stale-account check: ${fmtDate(c.lastStaleCheckAt)}.`;
@@ -961,6 +962,7 @@ async function saveAutomations(){
       staleDeactivateDays: $('#auto-stale-days').value ? parseInt($('#auto-stale-days').value) : null,
       digestEnabled: $('#auto-digest-enabled').checked,
       scoreChangeAlertsEnabled: $('#auto-score-enabled').checked,
+      syntheticDataMode: $('#synthetic-data-mode').checked,
     };
     const r=await fetch(`${API}/api/admin/email-settings`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     const d=await r.json(); if(!r.ok) throw new Error(d.error||'Save failed');
