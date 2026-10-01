@@ -19,6 +19,7 @@
 })(typeof self !== 'undefined' ? self : globalThis, function () {
   'use strict';
 
+  var ENGINE_VERSION = '1.1.0';
   var TAU = Math.PI * 2, DEG = 180 / Math.PI;
   var clamp = function (v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; };
 
@@ -371,7 +372,7 @@
   function forDark(hex, surfaceHex) { return '#' + ensureContrast(String(hex).replace(/^#/, ''), String(surfaceHex).replace(/^#/, ''), 3.2); }
 
   return {
-    analyzePixels: analyzePixels, extractFromImage: extractFromImage, deriveChartPalette: deriveChartPalette, themeTokens: themeTokens, themeController: themeController, forDark: forDark,
+    VERSION: ENGINE_VERSION, analyzePixels: analyzePixels, extractFromImage: extractFromImage, deriveChartPalette: deriveChartPalette, themeTokens: themeTokens, themeController: themeController, forDark: forDark,
     contrast: contrast, ensureContrast: ensureContrast, mixHex: mixHex, hexToLch: hexToLch, lch: lch, luminance: luminance
   };
 });
