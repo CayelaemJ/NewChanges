@@ -12,6 +12,7 @@ import { snapshotEmployer } from "./snapshotBuilder.js";
 import { notifyScoreChangeIfCurrentPeriod } from "./automationService.js";
 import { commitBatch, commitSyncRows } from "./importService.js";
 import { createSourceAdapter, configuredSourceMode, sourceIsConfigured } from "./sourceAdapter.js";
+import { runMLOpsAssessment } from "./mlopsService.js";
 
 const prisma = new PrismaClient();
 type Json = Prisma.InputJsonValue;
@@ -357,7 +358,7 @@ export async function runSync(trigger: "manual" | "scheduled" = "manual") {
             pendingSnapshotEmployers.delete(employerId);
             try {
               const r = await snapshotEmployer(employerId);
-              if (r.persisted) notifyScoreChangeIfCurrentPeriod(employerId, r.period, r.period).catch(() => {});
+              if (r.persisted) { notifyScoreChangeIfCurrentPeriod(employerId, r.period, r.period).catch(() => {}); runMLOpsAssessment(employerId).catch((error: any) => console.error(`[sync] MLOps assessment failed for ${employerId}:`, error?.message ?? error)); }
             } catch (error: any) {
               console.error(`[sync] background snapshot failed for ${employerId}:`, error?.message ?? error);
             }
