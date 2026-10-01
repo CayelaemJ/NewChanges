@@ -37,7 +37,8 @@ import { checkMysqlReadReplica } from "./services/sourceAdapter.js";
 import { subscribeAdminEvents } from "./services/adminEventStream.js";
 import { ensureSectionDefaults, listSections, updateSection, grantUserSection, revokeUserSection, sectionsForUser } from "./services/sectionService.js";
 import { publicEmailConfig, saveEmailConfig, testEmailConnection, createReportSchedule, listReportSchedules, updateReportSchedule, deleteReportSchedule, sendReportNow, recentReportDeliveries, runDueReports } from "./services/reportScheduler.js";
-import type { ScheduleInput } from "./services/reportScheduler.js";\nimport { runMLOpsAssessment, getMLOpsPortfolioAssessment, recordMLOpsFeedback, listMLOpsModels, registerMLOpsModel, promoteMLOpsModel, rollbackMLOpsModel, listMLOpsEvents } from "./services/mlopsService.js";
+import type { ScheduleInput } from "./services/reportScheduler.js";
+import { runMLOpsAssessment, getMLOpsPortfolioAssessment, recordMLOpsFeedback, listMLOpsModels, registerMLOpsModel, promoteMLOpsModel, rollbackMLOpsModel, listMLOpsEvents } from "./services/mlopsService.js";
 import { getBrandLearningProfile, learnFromBrandUpload, recordBrandCorrection } from "./services/brandLearningService.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
