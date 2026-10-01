@@ -105,7 +105,7 @@
    * @param {number} w @param {number} h
    * @returns {{primaryColor,accentColor,navyColor,palette,confidence,warnings,diagnostics}|null}
    */
-  function analyzePixels(data, w, h) {
+  function analyzePixels(data, w, h, learning) {
     var n = w * h, warnings = [], i, x, y;
     if (!n || data.length < n * 4) return null;
 
@@ -186,7 +186,7 @@
       var hh = (Math.atan2(B, A) * DEG + 360) % 360, share = c.area / Math.max(total, 1e-9);
       var pen = (L > 0.9 || L < 0.14) ? 0.5 : 1;
       return { L: L, C: Cc, h: hh, share: share,
-               score: Math.pow(share, 0.55) * Math.pow(Math.min(Cc / 0.12, 1.6), 0.9) * pen,
+               score: Math.pow(share, 0.55) * Math.pow(Math.min(Cc / 0.12, 1.6), 0.9) * pen * (learning && Array.isArray(learning.huePrior) ? (0.82 + 0.36 * Number(learning.huePrior[Math.floor(hh / 10) % 36] || 0)) : 1),
                hex: lch(L, Cc, hh) };
     }).sort(function (a, b) { return b.score - a.score; });
     out.diagnostics.hueClusters = clusters.length;
@@ -225,7 +225,7 @@
   }
 
   /** Browser: decode an image data URL and run analyzePixels. Resolves null on any failure. */
-  function extractFromImage(dataUrl, maxSide) {
+  function extractFromImage(dataUrl, maxSide, learning) {
     return new Promise(function (resolve) {
       try {
         var img = new Image();
@@ -237,7 +237,7 @@
             var cv = document.createElement('canvas'); cv.width = w; cv.height = h;
             var ctx = cv.getContext('2d', { willReadFrequently: true });
             ctx.clearRect(0, 0, w, h); ctx.drawImage(img, 0, 0, w, h);
-            var res = analyzePixels(ctx.getImageData(0, 0, w, h).data, w, h);
+            var res = analyzePixels(ctx.getImageData(0, 0, w, h).data, w, h, learning);
             if (res && Math.max(iw, ih) < 128 && !res.warnings.some(function (x) { return /very small/.test(x); })) {
               res.warnings.push('The logo is very small (' + iw + 'x' + ih + 'px), so detection is less precise. A larger image (at least 256px wide) gives better results.');
             }
