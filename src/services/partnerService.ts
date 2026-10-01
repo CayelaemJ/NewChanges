@@ -26,6 +26,8 @@ export async function listPartners() {
       id: true, name: true, slug: true, displayName: true,
       primaryColor: true, accentColor: true, navyColor: true,
       tagline: true, active: true, logoDataUrl: true,
+      brandEngineVersion: true, brandDetectionStatus: true, brandDetectionConfidence: true,
+      brandDetectionWarnings: true, brandDetectionDiagnostics: true, brandDetectedPalette: true, brandDetectedAt: true,
       _count: { select: { users: true, employers: true } },
     },
   });
@@ -45,7 +47,7 @@ export async function createPartner(input: { name: string; displayName?: string 
 export async function updatePartner(id: string, patch: any) {
   if (!patch || typeof patch !== "object" || Array.isArray(patch)) throw new Error("invalid partner update");
   const data: any = {};
-  for (const k of ["name", "displayName", "primaryColor", "accentColor", "navyColor", "logoDataUrl", "tagline", "active"]) {
+  for (const k of ["name", "displayName", "primaryColor", "accentColor", "navyColor", "logoDataUrl", "tagline", "active", "brandEngineVersion", "brandDetectionStatus", "brandDetectionConfidence", "brandDetectionWarnings", "brandDetectionDiagnostics", "brandDetectedPalette"]) {
     if (k in patch) data[k] = patch[k] === "" ? null : patch[k];
   }
   for (const k of ["name", "displayName", "tagline"]) {
@@ -54,6 +56,17 @@ export async function updatePartner(id: string, patch: any) {
     }
   }
   if (data.active != null && typeof data.active !== "boolean") throw new Error("active must be true or false");
+  if (data.brandEngineVersion != null && (typeof data.brandEngineVersion !== "string" || data.brandEngineVersion.length > 40)) throw new Error("brand engine version is invalid");
+  if (data.brandDetectionStatus != null && !["AUTO_ACCEPTED","NEEDS_REVIEW","MANUAL","UNREVIEWED"].includes(String(data.brandDetectionStatus))) throw new Error("brand detection status is invalid");
+  if (data.brandDetectionConfidence != null) {
+    const n=Number(data.brandDetectionConfidence);
+    if (!Number.isFinite(n) || n < 0 || n > 1) throw new Error("brand detection confidence must be between 0 and 1");
+    data.brandDetectionConfidence=n;
+  }
+  for (const k of ["brandDetectionWarnings","brandDetectionDiagnostics","brandDetectedPalette"]) {
+    if (data[k] != null && (typeof data[k] !== "object" || Array.isArray(data[k]))) throw new Error(k+" must be structured JSON");
+  }
+  if (data.brandDetectionConfidence != null || data.brandEngineVersion != null || data.brandDetectionWarnings != null) data.brandDetectedAt = new Date();
   // Normalise colours and reject CSS/control-character injection before values
   // can reach inline styles in the browser or generated report HTML.
   for (const c of ["primaryColor", "accentColor", "navyColor"]) {
