@@ -38,6 +38,7 @@ import { subscribeAdminEvents } from "./services/adminEventStream.js";
 import { ensureSectionDefaults, listSections, updateSection, grantUserSection, revokeUserSection, sectionsForUser } from "./services/sectionService.js";
 import { publicEmailConfig, saveEmailConfig, testEmailConnection, createReportSchedule, listReportSchedules, updateReportSchedule, deleteReportSchedule, sendReportNow, recentReportDeliveries, runDueReports } from "./services/reportScheduler.js";
 import type { ScheduleInput } from "./services/reportScheduler.js";
+import { getBrandLearningProfile, learnFromBrandUpload, recordBrandCorrection } from "./services/brandLearningService.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = [join(__dirname, "public"), join(__dirname, "..", "public")]
@@ -1245,6 +1246,23 @@ app.post<{ Params: { id: string } }>("/api/report-schedules/:id/send-now", async
 app.get("/api/admin/partners", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
   return listPartners();
+});
+
+app.get("/api/admin/brand-learning/profile", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  return getBrandLearningProfile();
+});
+
+app.post<{ Body: { engineVersion?: string; palette?: any[]; confidence?: number; accepted?: boolean } }>("/api/admin/brand-learning/observe", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  const b=req.body||{};
+  return learnFromBrandUpload({engineVersion:String(b.engineVersion||"1.1.0"), palette:Array.isArray(b.palette)?b.palette:[], confidence:Number(b.confidence||0), accepted:Boolean(b.accepted)});
+});
+
+app.post<{ Body: { engineVersion?: string; palette?: any[] } }>("/api/admin/brand-learning/correction", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  const b=req.body||{};
+  return recordBrandCorrection({engineVersion:String(b.engineVersion||"1.1.0"), palette:Array.isArray(b.palette)?b.palette:[]});
 });
 
 app.get("/api/admin/brand-recognition/overview", async (req, reply) => {
