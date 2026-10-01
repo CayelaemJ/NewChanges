@@ -1229,9 +1229,31 @@ function hslToHex(h,s,l){
 }
 /* Brand colour detection: real-pixel, perceptual (OKLab) hue-bucket analysis in brand-engine.js.
    Runs entirely in the browser, no network calls. Returns hex values in the shape the API stores. */
+let BRAND_LEARNING_PROFILE=null;
+async function loadBrandLearningProfile(){
+  try{
+    BRAND_LEARNING_PROFILE=await fetch('/api/admin/brand-learning/profile',{cache:'no-store'}).then(r=>r.ok?r.json():null);
+  }catch(_){ BRAND_LEARNING_PROFILE=null; }
+  return BRAND_LEARNING_PROFILE;
+}
+async function observeBrandLearning(detected, accepted){
+  if(!detected) return;
+  try{
+    await fetch('/api/admin/brand-learning/observe',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        engineVersion:window.BrandEngine?.VERSION||'1.1.0',
+        palette:Array.isArray(detected.palette)?detected.palette:[],
+        confidence:Number(detected.confidence||0),
+        accepted:Boolean(accepted)
+      })
+    });
+  }catch(_){}
+}
 async function extractColorsFromImage(dataUrl){
   if(!window.BrandEngine) return null;
-  const r=await BrandEngine.extractFromImage(dataUrl);
+  if(!BRAND_LEARNING_PROFILE) await loadBrandLearningProfile();
+  const r=await BrandEngine.extractFromImage(dataUrl,256,BRAND_LEARNING_PROFILE);
   if(!r) return null;
   window.__lastBrandDetection=r;
   return r;
@@ -1264,7 +1286,8 @@ function uploadPartnerLogo(id,input){
         }
       : { logoDataUrl };
     await apiOk(`${API}/api/admin/partners/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-    showToast(detected ? 'Logo saved. '+brandSummary(detected) : 'Logo saved. No colours could be detected from this image.','ok');
+    if(detected) await observeBrandLearning(detected, (detected.confidence||0) >= 0.70);
+    showToast(detected ? 'Logo saved. '+brandSummary(detected)+' The recognizer has learned from this upload.' : 'Logo saved. No colours could be detected from this image.','ok');
     loadPartners();
   };
   reader.readAsDataURL(f);
