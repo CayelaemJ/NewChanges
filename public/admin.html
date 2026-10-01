@@ -1195,9 +1195,16 @@ function closeClientPreview(event){
 document.addEventListener('keydown',event=>{ if(event.key==='Escape' && $('#client-preview-overlay').classList.contains('is-open')) closeClientPreview(); });
 async function editPartner(id,field,value){
   if(field.endsWith('Color')) value=value.replace(/^#/,'');
-  await apiOk(`${API}/api/admin/partners/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({[field]:value})});
+  await apiOk('/api/admin/partners/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({[field]:value})});
+  if(field.endsWith('Color')){
+    try{
+      await fetch('/api/admin/brand-learning/correction',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({engineVersion:window.BrandEngine?.VERSION||'1.1.0',palette:[{hex:value,share:1,role:'manual-correction'}]})});
+    }catch(_){}
+  }
   loadPartners();
 }
+
 // ── colour extraction from an uploaded logo ──
 // Samples the logo's pixels on an offscreen canvas, ignores near-white/near-black/
 // low-saturation background pixels, and picks a brand palette from what's left:
