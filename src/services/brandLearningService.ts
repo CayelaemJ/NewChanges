@@ -1,6 +1,7 @@
 import { prisma } from "./snapshotBuilder.js";
 
 const BINS = 36;
+const MODEL_VERSION = "1.1.0";
 const EMPTY = () => Array.from({ length: BINS }, () => 1);
 
 function hueOf(hex: string) {
@@ -46,11 +47,15 @@ export async function learnFromBrandUpload(input:{engineVersion:string; palette:
   const uploads=current.uploadCount+1;
   const accepted=current.acceptedCount+(input.accepted?1:0);
   const avg=((current.averageConfidence*current.uploadCount)+Math.max(0,Math.min(1,Number(input.confidence)||0)))/uploads;
+  await prisma.mLOpsEvent.create({ data: { eventType: "BRAND_UPLOAD", modelKey: "brand-colour", modelVersion: input.engineVersion || MODEL_VERSION, confidence: Math.max(0, Math.min(1, Number(input.confidence) || 0)), status: input.accepted ? "AUTO_ACCEPTED" : "NEEDS_REVIEW", metadata: { paletteSize: Array.isArray(input.palette) ? input.palette.length : 0 } } });
   return prisma.brandLearningState.upsert({
     where:{id:"global"},
     create:{id:"global",engineVersion:input.engineVersion||"1.1.0",uploadCount:1,acceptedCount:input.accepted?1:0,averageConfidence:Number(avg.toFixed(4)),huePrior:next},
     update:{engineVersion:input.engineVersion||current.engineVersion,uploadCount:uploads,acceptedCount:accepted,averageConfidence:Number(avg.toFixed(4)),huePrior:next}
   });
+}
+
+  await prisma.mLOpsEvent.create({ data: { eventType: "BRAND_CORRECTION", modelKey: "brand-colour", modelVersion: input.engineVersion || MODEL_VERSION, feedback: "CORRECTED", status: "LABELLED", metadata: { paletteSize: Array.isArray(input.palette) ? input.palette.length : 0 } } });
 }
 
 export async function recordBrandCorrection(input:{engineVersion:string; palette:any[]}) {
