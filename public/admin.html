@@ -1075,6 +1075,7 @@ async function createPartner(){
       ? { logoDataUrl:PT_NEW_LOGO_DATAURL, primaryColor:detected.primaryColor, accentColor:detected.accentColor, navyColor:detected.navyColor }
       : { logoDataUrl:PT_NEW_LOGO_DATAURL };
     await apiOk(`${API}/api/admin/partners/${created.id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    if(detected) await observeBrandLearning(detected, (detected.confidence||0) >= 0.70);
     showToast(detected ? `${name} added. ${brandSummary(detected)}` : `${name} added.`,'ok');
   } else {
     showToast(`${name} added.`,'ok');
