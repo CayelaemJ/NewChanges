@@ -31,6 +31,7 @@ type EmailDraft = {
   digestEnabled?: boolean;
   staleDeactivateDays?: number | null;
   scoreChangeAlertsEnabled?: boolean;
+  syntheticDataMode?: boolean;
 };
 
 export type ScheduleInput = {
@@ -121,6 +122,7 @@ export async function publicEmailConfig() {
     staleDeactivateDays: (cfg as any).staleDeactivateDays,
     lastStaleCheckAt: (cfg as any).lastStaleCheckAt,
     scoreChangeAlertsEnabled: (cfg as any).scoreChangeAlertsEnabled,
+    syntheticDataMode: Boolean((cfg as any).syntheticDataMode),
   };
 }
 
@@ -157,6 +159,7 @@ export async function saveEmailConfig(input: EmailDraft) {
     data.staleDeactivateDays = n == null || Number(n) <= 0 ? null : Math.round(Math.max(7, Math.min(3650, Number(n))));
   }
   if ("scoreChangeAlertsEnabled" in input) data.scoreChangeAlertsEnabled = Boolean(input.scoreChangeAlertsEnabled);
+  if ("syntheticDataMode" in input) data.syntheticDataMode = Boolean(input.syntheticDataMode);
   if (data.fromEmail && !emailOk(data.fromEmail)) throw new Error("from email is not valid");
   if (data.replyTo && !emailOk(data.replyTo)) throw new Error("reply-to email is not valid");
   if (data.resendFromEmail && !emailOk(data.resendFromEmail)) throw new Error("Resend From email is not valid");
