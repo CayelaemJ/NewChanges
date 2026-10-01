@@ -74,23 +74,21 @@ This is an engineering security assessment, not a certification and not a substi
 
 ## Important limitations / remaining enterprise controls
 
-These are not claimed as complete until separately implemented and tested:
+The following status is based on repository evidence only. A feature or procedure is not complete until its production configuration and evidence are recorded. `PARTIAL` means some application or repository groundwork exists, not that the operational control is effective.
 
-- MFA / phishing-resistant authentication for administrators
-- Centralised SIEM integration and immutable off-platform log retention
-- Formal secrets rotation and secret inventory
-- Formal database backup restore testing
-- PostgreSQL role separation and least-privilege database accounts
-- Row-level security where tenant isolation requires database-enforced boundaries
-- Encryption/key-management review for data at rest and backups
-- Data classification and field-level minimisation for client PII
-- Formal incident response playbooks and breach notification procedures
-- Independent external black-box penetration test
-- Authenticated vulnerability scanning against the production perimeter
-- Dependency/SCA policy with a defined remediation SLA
-- Infrastructure configuration review for Railway workspace/project permissions
-- Formal privacy impact assessment and retention schedule
-- Admin MFA recovery and break-glass procedures
+| # | Control | Status | Evidence in this repository | Closure evidence required |
+|---|---|---|---|---|
+| 1 | External security test | OPEN | This assessment contains a proposed test scope; it explicitly says no independent test has been performed. | Dated report from an independent tester, authorized scope and production perimeter, findings owner/severity, remediation evidence, and retest results. Track unresolved critical/high findings as a release blocker. |
+| 2 | Admin MFA | OPEN | Admin routes require application authentication; no MFA implementation or identity-provider enforcement is evidenced in source. | Enforced MFA for every administrator, tested enrollment and recovery, factor-change session revocation, and documented break-glass access. Verify enforcement at the identity boundary, not only in the UI. |
+| 3 | Backup and restore | OPEN | The release runbook requires a restore test, but no completed restore record or measured RPO/RTO is present. | Restore a production-like backup into an isolated environment; record backup timestamp, restore completion, integrity/application checks, measured RPO/RTO, and approver. |
+| 4 | Production monitoring and alerting | PARTIAL | `/health`, `/version`, application security alerts, and optional email/Slack notification paths exist. Production uptime, error, database, and delivery alert configuration is not verified here. | Monitoring coverage and thresholds documented; trigger a controlled test for each critical alert and retain delivery/acknowledgement evidence, escalation owner, and runbook link. |
+| 5 | Centralised security logging | PARTIAL | Application audit and security-event records exist. Central SIEM forwarding and immutable off-platform retention are explicitly outstanding. | Demonstrate redacted event forwarding, reliable delivery, access controls, retention/immutability, time correlation, and an alert/query against a test event. Never send credentials, tokens, or request bodies. |
+| 6 | Secrets and credential rotation | OPEN | `SECURITY.md` and deployment guidance place secrets in Railway variables; there is no complete inventory, rotation schedule, or rotation evidence. | Inventory each production credential with owner, purpose, storage, expiry/rotation interval, and last-rotated date; rotate and revoke a test credential using the documented procedure and verify dependent services recover. |
+| 7 | Dependency updates | PARTIAL | Daily npm, Docker, and GitHub Actions Dependabot update automation is configured. Current open updates, successful lockfile/build validation, and audit status are not verified in this assessment. | Review and merge applicable Dependabot/security updates; run `npm ci`, `npm run build`, `npm run check:all`, and resolve or formally disposition every high/critical audit finding. Record exceptions with owner and expiry. |
+| 8 | Mobile, desktop, and business-data end-to-end testing | PARTIAL | Static UI/accessibility/performance/regression checks and a release smoke checklist exist. No recorded browser-based end-to-end run against representative business data is present. | Retain a browser test report across desktop, tablet, phone portrait, and phone landscape, plus a data-reconciliation report covering filters, periods, missing data, and key dashboard totals. |
+| 9 | Independent reporting validation | OPEN | Reporting semantics and source-reconciliation requirements are documented; no independent reviewer sign-off or recurring validation record is present. | A reviewer independent of report implementation reconciles selected periods, cohorts, and totals to authoritative source data, records discrepancies and resolution, and signs off before release. |
+
+Other outstanding enterprise controls include PostgreSQL role separation and least-privilege accounts, row-level security where required, encryption/key-management review, data classification and minimisation, incident response and breach-notification playbooks, authenticated perimeter scanning, Railway permission review, and a formal privacy impact assessment/retention schedule. These also require separate implementation or operational evidence.
 
 ## Penetration testing plan
 

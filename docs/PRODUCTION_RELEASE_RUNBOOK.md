@@ -28,10 +28,25 @@ The live service should treat main as the production release source. Preview or 
 - Scheduled report configuration and send-now flow.
 - Data-quality warning visibility.
 
+## End-to-end and reporting evidence
+
+For each release candidate, retain the build/version, test date, environment, tester, and pass/fail result. Static regression checks are necessary but do not replace these runtime checks.
+
+- Exercise authentication, logout, employer isolation, filters, drill-downs, scheduled reports, and error/empty-data states in a real browser at desktop, tablet, phone portrait, and phone landscape sizes. Record screenshots or test output for failures and verify keyboard/focus behavior on critical admin flows.
+- Reconcile at least three closed reporting months and the current month-to-date period against the authoritative source. Include portfolio and employer totals, date boundaries, site/income cohorts, missing-feed behavior, and at least one empty cohort. Use the same as-at date and filter context on both sides.
+- Have a reviewer who did not implement the report independently verify the source extracts, calculation rules, and displayed totals. Record the reviewer, source/query or extract identifiers, periods/cohorts checked, differences, resolution, and sign-off. Do not promote while unexplained material differences remain.
+- Run a controlled production alert test and verify it reaches the on-call destination and is acknowledged. Preserve the alert and acknowledgement identifiers; do not use real customer data in test events.
+
 ## Recovery
 
 Keep a known-good deployment available for rollback. Database schema changes must be additive or explicitly planned. Do not use destructive reset options in Production.
 
+Before release, restore a recent production backup into an isolated non-production database. Record the backup timestamp, restore start/end, schema and application versions, integrity checks, representative read-only business queries, measured data-loss window and recovery duration, and approver. Verify access controls and sanitise or restrict restored personal data. A backup is not considered tested merely because the provider reports that it completed.
+
 ## RPO/RTO
 
-Document the acceptable data-loss window and recovery time with the production owner. Test database restoration before treating the service as enterprise-ready.
+Document the acceptable data-loss window and recovery time with the production owner. Compare the measured restore result to those targets and record any gap with an owner and remediation date. Test database restoration before treating the service as enterprise-ready.
+
+## Release blockers
+
+Use the status and evidence gates in [the security assessment](../SECURITY_ASSESSMENT.md) as the control register. Production configuration must be verified rather than inferred from source code. Do not describe the service as independently tested, MFA-protected, restorable within target, centrally monitored, or independently reporting-validated until the corresponding evidence is attached to the release record. Critical/high external security findings and unexplained material reporting differences block promotion.
