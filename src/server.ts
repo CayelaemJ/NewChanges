@@ -1246,6 +1246,25 @@ app.get("/api/admin/partners", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
   return listPartners();
 });
+
+app.get("/api/admin/brand-recognition/overview", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  const rows = await prisma.partner.findMany({
+    where: { brandDetectionConfidence: { not: null } },
+    select: { brandDetectionStatus: true, brandDetectionConfidence: true, brandEngineVersion: true },
+  });
+  const confidence = rows.map((r: any) => Number(r.brandDetectionConfidence)).filter(Number.isFinite);
+  const averageConfidence = confidence.length ? confidence.reduce((a: number, b: number) => a + b, 0) / confidence.length : null;
+  return {
+    engineVersion: rows.map((r: any) => r.brandEngineVersion).filter(Boolean).sort().pop() || "1.1.0",
+    totalAnalysed: rows.length,
+    autoAccepted: rows.filter((r: any) => r.brandDetectionStatus === "AUTO_ACCEPTED").length,
+    needsReview: rows.filter((r: any) => r.brandDetectionStatus === "NEEDS_REVIEW").length,
+    manual: rows.filter((r: any) => r.brandDetectionStatus === "MANUAL").length,
+    averageConfidence: averageConfidence == null ? null : Math.round(averageConfidence * 100) / 100,
+    lowConfidence: confidence.filter((v: number) => v < 0.45).length,
+  };
+});
 app.post<{ Body: { name: string; displayName?: string } }>("/api/admin/partners", async (req, reply) => {
   const admin = await requireAdmin(req, reply); if (!admin) return;
   if (typeof req.body?.name !== "string" || !req.body.name.trim()) return reply.code(400).send({ error: "partner name required" });
