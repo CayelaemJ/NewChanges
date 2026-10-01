@@ -55,9 +55,6 @@ export async function learnFromBrandUpload(input:{engineVersion:string; palette:
   });
 }
 
-  await prisma.mLOpsEvent.create({ data: { eventType: "BRAND_CORRECTION", modelKey: "brand-colour", modelVersion: input.engineVersion || MODEL_VERSION, feedback: "CORRECTED", status: "LABELLED", metadata: { paletteSize: Array.isArray(input.palette) ? input.palette.length : 0 } } });
-}
-
 export async function recordBrandCorrection(input:{engineVersion:string; palette:any[]}) {
   const current=await getBrandLearningProfile();
   const prior=current.huePrior.length===BINS?current.huePrior:EMPTY();
