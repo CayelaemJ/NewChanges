@@ -668,6 +668,49 @@ model SyncLog {
 
 // Per-report incremental cursor. A failed report does not advance its cursor,
 // so a partial sync cannot silently skip changes on the next run.
+// ──────────────────────── MLOps telemetry & governance ────────────────────────
+model MLOpsEvent {
+  id             String   @id @default(cuid())
+  eventType      String
+  modelKey       String
+  modelVersion   String
+  employerId     String?
+  period         String?
+  metric         String?
+  actualValue    Float?
+  predictedValue Float?
+  confidence     Float?
+  driftScore     Float?
+  anomalyScore   Float?
+  status         String?
+  feedback       String?
+  features       Json?
+  metadata       Json?
+  createdAt      DateTime @default(now())
+
+  @@index([modelKey, createdAt])
+  @@index([employerId, period])
+  @@index([eventType, createdAt])
+}
+
+model MLOpsModel {
+  id              String   @id @default(cuid())
+  modelKey        String
+  version         String
+  modelType       String
+  status          String   @default("SHADOW")
+  trainingVersion String?
+  metrics         Json?
+  featureSchema   Json?
+  promotedAt      DateTime?
+  retiredAt       DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([modelKey, version])
+  @@index([modelKey, status])
+}
+
 model IntegrationCursor {
   reportKey           String   @id
   lastAttemptAt       DateTime?
