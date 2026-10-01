@@ -68,6 +68,7 @@ export async function recordBrandCorrection(input:{engineVersion:string; palette
   const normalized=signal.map(v=>v/total);
   const lr=0.30;
   const next=prior.map((v,i)=>Math.max(0.01,(1-lr)*Number(v||1)+lr*(normalized[i]||0.01)));
+  await prisma.mLOpsEvent.create({ data: { eventType: "BRAND_CORRECTION", modelKey: "brand-colour", modelVersion: input.engineVersion || MODEL_VERSION, feedback: "CORRECTED", status: "LABELLED", metadata: { paletteSize: Array.isArray(input.palette) ? input.palette.length : 0 } } });
   return prisma.brandLearningState.upsert({
     where:{id:"global"},
     create:{id:"global",engineVersion:input.engineVersion||"1.1.0",uploadCount:0,labelledCount:1,acceptedCount:0,averageConfidence:0,huePrior:next},
