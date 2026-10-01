@@ -63,9 +63,9 @@ export async function updatePartner(id: string, patch: any) {
     if (!Number.isFinite(n) || n < 0 || n > 1) throw new Error("brand detection confidence must be between 0 and 1");
     data.brandDetectionConfidence=n;
   }
-  for (const k of ["brandDetectionWarnings","brandDetectionDiagnostics","brandDetectedPalette"]) {
-    if (data[k] != null && (typeof data[k] !== "object" || Array.isArray(data[k]))) throw new Error(k+" must be structured JSON");
-  }
+  if (data.brandDetectionWarnings != null && !Array.isArray(data.brandDetectionWarnings)) throw new Error("brandDetectionWarnings must be an array");
+  if (data.brandDetectionDiagnostics != null && (typeof data.brandDetectionDiagnostics !== "object" || Array.isArray(data.brandDetectionDiagnostics))) throw new Error("brandDetectionDiagnostics must be an object");
+  if (data.brandDetectedPalette != null && !Array.isArray(data.brandDetectedPalette)) throw new Error("brandDetectedPalette must be an array");
   if (data.brandDetectionConfidence != null || data.brandEngineVersion != null || data.brandDetectionWarnings != null) data.brandDetectedAt = new Date();
   // Normalise colours and reject CSS/control-character injection before values
   // can reach inline styles in the browser or generated report HTML.
