@@ -418,6 +418,7 @@ app.get("/api/auth/me", async (req, reply) => {
   }
   return {
     name: user.name, email: user.email, role: user.role,
+    syntheticDataMode: Boolean((await publicEmailConfig()).syntheticDataMode),
     modules: {
       admin: canAccessModule(user, "admin"),
       dashboard: canAccessModule(user, "dashboard"),
