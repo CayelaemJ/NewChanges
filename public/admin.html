@@ -1815,7 +1815,7 @@ async function loadEnterpriseOperations(){
     document.getElementById('ops-imports').textContent=String(o.imports.open||0);
     const replicaText = replica.configured ? (replica.reachable ? (replica.readOnly && replica.lagWithinThreshold !== false ? 'Healthy' : 'Attention') : 'Unreachable') : 'Not configured';
     document.getElementById('ops-architecture').dataset.replica = replicaText;
-    const replica=o.integration.sourceAnalyticsUseReplica?'read replica':'source database';
+    const replicaMode=o.integration.sourceAnalyticsUseReplica?'read replica':'source database';
     document.getElementById('ops-architecture').innerHTML=
       '<strong style="color:var(--brand-primary);">Recommended placement:</strong> '+esc(o.integration.sourceMode)+' remains the source of truth. PostgreSQL serves the application read model and governed audit/history. Heavy analytics should run against approved source-side reporting views'+
       (o.integration.sourceAnalyticsUseReplica?' on a read replica':'')+' rather than the production source database. '+(o.integration.sourceAnalyticsEnabled?'Source-side analytics is enabled.':'Source-side analytics is currently disabled.')+
