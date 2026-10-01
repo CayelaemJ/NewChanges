@@ -37,7 +37,7 @@ import { checkMysqlReadReplica } from "./services/sourceAdapter.js";
 import { subscribeAdminEvents } from "./services/adminEventStream.js";
 import { ensureSectionDefaults, listSections, updateSection, grantUserSection, revokeUserSection, sectionsForUser } from "./services/sectionService.js";
 import { publicEmailConfig, saveEmailConfig, testEmailConnection, createReportSchedule, listReportSchedules, updateReportSchedule, deleteReportSchedule, sendReportNow, recentReportDeliveries, runDueReports } from "./services/reportScheduler.js";
-import type { ScheduleInput } from "./services/reportScheduler.js";
+import type { ScheduleInput } from "./services/reportScheduler.js";\nimport { runMLOpsAssessment, getMLOpsPortfolioAssessment, recordMLOpsFeedback, listMLOpsModels, registerMLOpsModel, promoteMLOpsModel, rollbackMLOpsModel, listMLOpsEvents } from "./services/mlopsService.js";
 import { getBrandLearningProfile, learnFromBrandUpload, recordBrandCorrection } from "./services/brandLearningService.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -1243,6 +1243,53 @@ app.post<{ Params: { id: string } }>("/api/report-schedules/:id/send-now", async
 });
 
 // ── channel partners (white-label) — admin only ──
+// ── MLOps governance — admin only ──
+app.get<{ Params: { employerId: string } }>("/api/admin/mlops/assessment/:employerId", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  try { return await runMLOpsAssessment(req.params.employerId); }
+  catch (e:any) { return reply.code(400).send({ error:e?.message||"MLOps assessment failed" }); }
+});
+app.get("/api/admin/mlops/models", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  return listMLOpsModels();
+});
+app.post<{Body:{modelKey:string;version:string;modelType:string;trainingVersion?:string;metrics?:any;featureSchema?:any}}>("/api/admin/mlops/models", async (req, reply) => {
+  const admin=await requireAdmin(req, reply); if(!admin) return;
+  try {
+    const result=await registerMLOpsModel(req.body);
+    logAdminAction(admin,"mlops.model_register",`Registered ${req.body.modelKey} ${req.body.version}`,{targetType:"MLOpsModel",targetId:result.id});
+    return result;
+  } catch(e:any) { return reply.code(400).send({error:e?.message||"Could not register model"}); }
+});
+app.post<{Params:{modelKey:string;version:string}}>("/api/admin/mlops/models/:modelKey/:version/promote", async (req, reply) => {
+  const admin=await requireAdmin(req, reply); if(!admin) return;
+  try {
+    const result=await promoteMLOpsModel(req.params.modelKey,req.params.version);
+    logAdminAction(admin,"mlops.model_promote",`Promoted ${req.params.modelKey} ${req.params.version}`,{targetType:"MLOpsModel",targetId:result?.id});
+    return result;
+  } catch(e:any) { return reply.code(400).send({error:e?.message||"Could not promote model"}); }
+});
+app.post<{Params:{modelKey:string;version:string}}>("/api/admin/mlops/models/:modelKey/:version/rollback", async (req, reply) => {
+  const admin=await requireAdmin(req, reply); if(!admin) return;
+  try {
+    const result=await rollbackMLOpsModel(req.params.modelKey,req.params.version);
+    logAdminAction(admin,"mlops.model_rollback",`Rolled back ${req.params.modelKey} ${req.params.version}`,{targetType:"MLOpsModel",targetId:result.id});
+    return result;
+  } catch(e:any) { return reply.code(400).send({error:e?.message||"Could not roll back model"}); }
+});
+app.get<{Querystring:{modelKey?:string;limit?:string}}>("/api/admin/mlops/events", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  return listMLOpsEvents(req.query.modelKey,Number(req.query.limit||100));
+});
+app.post<{Body:{modelKey:string;eventId?:string;employerId?:string;feedback:"CORRECT"|"INCORRECT"|"REVIEWED";actualValue?:number;notes?:string}}>("/api/admin/mlops/feedback", async (req, reply) => {
+  const admin=await requireAdmin(req, reply); if(!admin) return;
+  try {
+    const result=await recordMLOpsFeedback(req.body);
+    logAdminAction(admin,"mlops.feedback",`Recorded ${req.body.feedback} feedback for ${req.body.modelKey}`,{targetType:"MLOpsEvent",targetId:result.feedbackId});
+    return result;
+  } catch(e:any) { return reply.code(400).send({error:e?.message||"Could not record feedback"}); }
+});
+
 app.get("/api/admin/partners", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
   return listPartners();
