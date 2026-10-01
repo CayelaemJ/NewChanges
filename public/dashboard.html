@@ -2980,7 +2980,7 @@ async function loadLiveData({refreshOnly=false}={}){
     try{ const r=await fetch('/api/auth/me'); if(!r.ok){ location.href='/login'; return; } me=await r.json(); }
     catch(e){ location.href='/login'; return; }
     window.__ME__=me;
-    addAuthBar(me); applyTheme(me.theme, me); handleWelcomeSplash(me); applySectionVisibility(me); populateEmployerSelect(me);
+    addAuthBar(me); applyTheme(me.theme, me); handleWelcomeSplash(me); applySectionVisibility(me); populateEmployerSelect(me); applySyntheticDataNotice(me);
   }
   try{
     let id=employerIdFromUrl();
@@ -3400,6 +3400,19 @@ function showLiveError(error){
   </div>`;
   const fl=document.getElementById('data-fresh-label'); if(fl) fl.textContent='Data unavailable';
   document.querySelector('.data-fresh')?.classList.add('is-error');
+}
+
+function applySyntheticDataNotice(me){
+  document.getElementById('synthetic-data-notice')?.remove();
+  if(!me?.syntheticDataMode) return;
+  const host=document.querySelector('.head') || document.querySelector('.topbar') || document.body;
+  if(!host) return;
+  const notice=document.createElement('div');
+  notice.id='synthetic-data-notice';
+  notice.setAttribute('role','alert');
+  notice.style.cssText='margin:12px 0;padding:13px 16px;border:1px solid #d6a94f;background:#fff8e8;color:#6b4b08;border-radius:10px;font:700 13px/1.5 Manrope,sans-serif;box-shadow:0 2px 8px rgba(0,0,0,.04);';
+  notice.innerHTML='<strong>⚠ Synthetic test data</strong><br><span style="font-weight:500;">All figures and information shown in this portal are synthetic test data. They must not be treated as factual, financial, operational, customer, or other real-world information.</span>';
+  host.parentNode?.insertBefore(notice,host.nextSibling);
 }
 
 function showDemoBanner(){
