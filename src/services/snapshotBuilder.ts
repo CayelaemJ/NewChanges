@@ -886,7 +886,7 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
     avg: zar(advances.length ? Math.round(ewaTotal / advances.length) : 0),
     avgRaw: advances.length ? rand(Math.round(ewaTotal / advances.length)) : 0,
     perClient: ewaClients ? Number((advances.length / ewaClients).toFixed(1)) : 0,
-    trend: ewaMonths.map((key) => Math.round(rand(ewaByMonth.get(key) ?? 0) / 1_000)),
+    trend: ewaMonths.map((key) => Math.round(rand(ewaByMonth.get(key) ?? 0))),
     trendLabels: ewaMonths.map(monthLabel),
   };
 
