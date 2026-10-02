@@ -180,11 +180,82 @@ function DashboardView({me}:{me:Me}) {
   </main>;
 }
 
+function AdminView({me}:{me:Me}) {
+  const [security,setSecurity]=useState<any>(null);
+  const [ops,setOps]=useState<any>(null);
+  const [compliance,setCompliance]=useState<any>(null);
+  const [mlops,setMlops]=useState<any[]>([]);
+  const [error,setError]=useState("");
+  const load=async()=>{
+    try {
+      const [s,o,c,m]=await Promise.all([
+        api<any>("/api/admin/security/overview"),
+        api<any>("/api/admin/enterprise/overview"),
+        api<any>("/api/admin/compliance/overview"),
+        api<any>("/api/admin/mlops/events?limit=50")
+      ]);
+      setSecurity(s); setOps(o); setCompliance(c);
+      setMlops(Array.isArray(m)?m:[]);
+      setError("");
+    } catch(e:any) { setError(e.message || "Could not load administration data"); }
+  };
+  useEffect(()=>{load(); const id=window.setInterval(load,30000); return()=>window.clearInterval(id)},[]);
+  const role=roleLabels[me.role??""]??me.role??"User";
+  const issueCount=mlops.filter(e=>e.eventType==="DATA_QUALITY_GATE" && e.status && e.status!=="PASS").length;
+  return <main className="min-h-screen bg-slate-50/70">
+    <div className="mx-auto w-full max-w-[1440px] px-3 py-4 sm:px-5 lg:px-8">
+      <header className="flex flex-col gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-center sm:justify-between">
+        <div><div className="text-[10px] font-extrabold uppercase tracking-[.16em] text-violet-700">EFS Optimise</div><h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Administration console</h1><p className="mt-1 text-sm text-slate-500">Operational control, security posture and governed data operations.</p></div>
+        <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm"><p className="text-sm font-semibold text-slate-900">{me.name||me.email}</p><p className="text-[11px] text-slate-500">{role}</p></div>
+      </header>
+      {error&&<div className="mt-4 flex gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"><CircleAlert className="h-5 w-5 shrink-0"/>{error}</div>}
+      <section className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {[
+          ["Active sessions",number(security?.activeSessions),Users],
+          ["Failed logins, 24h",number(security?.failedLogins24h),CircleAlert],
+          ["Open security alerts",number(security?.openAlerts),ShieldCheck],
+          ["Data quality",ops?.dataQuality?.score==null?"Not available":ops.dataQuality.score.toFixed(1)+"%",Activity]
+        ].map(([label,value,Icon])=><Card key={label as string}><CardContent className="p-5"><div className="flex items-center justify-between"><span className="text-xs font-semibold text-slate-500">{label as string}</span><Icon className="h-4 w-4 text-violet-600"/></div><strong className="mt-3 block break-words text-2xl font-bold text-violet-800">{value as string}</strong></CardContent></Card>)}
+      </section>
+      <section className="mt-4 grid gap-4 lg:grid-cols-2">
+        <Card><CardHeader><SectionHeading icon={ShieldCheck} title="Security & identity" description="Live authentication and access posture."/></CardHeader><CardContent>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4"><div className="flex items-center gap-2"><CheckCircle2 className="h-5 w-5 text-emerald-600"/><strong className="text-sm">{security?.riskState==="Good"?"Security posture clear":"Attention required"}</strong></div><p className="mt-2 text-xs leading-5 text-slate-600">{security?.successfulLogins24h==null?"Not available":number(security.successfulLogins24h)+" successful logins in the last 24 hours."}</p></div>
+          <div className="mt-3 flex flex-wrap gap-2"><Badge>Sessions {number(security?.activeSessions)}</Badge><Badge>Failed {number(security?.failedLogins24h)}</Badge><Badge>Alerts {number(security?.openAlerts)}</Badge></div>
+          <Button className="mt-4" onClick={()=>window.location.assign("/users")}>Open identity centre</Button>
+        </CardContent></Card>
+        <Card><CardHeader><SectionHeading icon={Landmark} title="Enterprise operations" description="Source, read-model and freshness posture."/></CardHeader><CardContent>
+          <div className="grid gap-3 sm:grid-cols-2">{[
+            ["Source mode",ops?.integration?.sourceMode],
+            ["Analytics mode",ops?.integration?.analyticsMode],
+            ["Freshness",ops?.integration?.freshnessState],
+            ["Open imports",ops?.imports?.open]
+          ].map(([label,value])=><div className="rounded-xl border border-slate-200 p-4" key={label as string}><span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{label as string}</span><strong className="mt-1 block break-words text-sm text-slate-900">{value==null?"Not available":typeof value==="number"?number(value):String(value)}</strong></div>)}</div>
+        </CardContent></Card>
+      </section>
+      <section className="mt-4 grid gap-4 lg:grid-cols-2">
+        <Card><CardHeader><SectionHeading icon={TriangleAlert} title="MLOps data-quality alerts" description="Latest governed events that require review."/></CardHeader><CardContent>
+          {issueCount===0?<div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800"><CheckCircle2 className="mr-2 inline h-4 w-4"/>No unresolved data-quality gate issues surfaced.</div>:<div className="space-y-2">{mlops.filter(e=>e.eventType==="DATA_QUALITY_GATE"&&e.status&&e.status!=="PASS").slice(0,5).map((e,i)=><div className="rounded-xl border border-red-200 bg-red-50 p-3" key={e.id||i}><div className="flex items-center justify-between gap-3"><strong className="text-xs text-red-800">{e.metadata?.reportKey||"Dataset"}</strong><Badge>{e.status}</Badge></div><p className="mt-1 text-[11px] text-red-700">{e.metadata?.findingCount||0} finding(s) require review.</p></div>)}</div>}
+        </CardContent></Card>
+        <Card><CardHeader><SectionHeading icon={ShieldCheck} title="POPIA governance" description="Current compliance-control overview."/></CardHeader><CardContent><div className="grid gap-3 sm:grid-cols-2">{[
+          ["Processing activities",compliance?.processingActivities],
+          ["Cross-border activities",compliance?.crossBorderActivities],
+          ["Open data-subject requests",compliance?.openDataSubjectRequests],
+          ["Open incidents",compliance?.openSecurityIncidents]
+        ].map(([label,value])=><div className="rounded-xl bg-slate-50 p-4" key={label as string}><span className="text-[10px] text-slate-500">{label as string}</span><strong className="mt-1 block text-xl text-violet-800">{number(value as number|undefined)}</strong></div>)}</div><p className="mt-3 text-xs text-slate-500">{compliance?.status==="ACTION_REQUIRED"?"Governance action is required. Review the underlying compliance registers.":"Governance controls are currently being monitored."}</p></CardContent></Card>
+      </section>
+      <section className="mt-4 grid gap-4 pb-8 lg:grid-cols-[1.3fr_.7fr]">
+        <Card><CardHeader><SectionHeading icon={Activity} title="Operational actions" description="Continue into the existing governed workflows."/></CardHeader><CardContent><div className="grid gap-2 sm:grid-cols-2"><Button variant="outline" onClick={()=>window.location.assign("/admin")}>Open full administration console</Button><Button variant="outline" onClick={()=>window.location.assign("/users")}>Manage users & roles</Button><Button variant="outline" onClick={()=>window.location.assign("/admin#integrations")}>Live integrations</Button><Button variant="outline" onClick={()=>window.location.assign("/admin#compliance")}>Compliance registers</Button></div></CardContent></Card>
+        <Card><CardHeader><SectionHeading icon={Activity} title="Admin refresh" description="Operational data refreshes automatically."/></CardHeader><CardContent><p className="text-sm text-slate-600">Security, enterprise operations, compliance and MLOps data refresh every 30 seconds while this workspace is visible.</p><Badge className="mt-4">Live posture</Badge></CardContent></Card>
+      </section>
+    </div>
+  </main>;
+}
+
 function App() {
   const [me,setMe]=useState<Me|null>(null); const [loading,setLoading]=useState(true);
   useEffect(()=>{api<Me>("/api/auth/me").then(setMe).catch(()=>setMe(null)).finally(()=>setLoading(false));},[]);
   if(loading)return <div className="min-h-screen bg-slate-50 px-4 py-20"><Card className="mx-auto max-w-2xl"><CardContent className="py-12 text-center text-sm text-slate-500">Loading your workspace...</CardContent></Card></div>;
   if(!me)return <div className="min-h-screen bg-slate-50 px-4 py-20"><Card className="mx-auto max-w-lg"><CardHeader><div className="text-[10px] font-extrabold uppercase tracking-[.16em] text-violet-700">EFS Optimise</div><CardTitle className="mt-2 text-2xl">Sign in to continue</CardTitle><CardDescription>Your existing secure Fastify session remains the authentication authority.</CardDescription></CardHeader><CardContent><Button onClick={()=>window.location.assign("/login")}>Sign in</Button></CardContent></Card></div>;
-  return <DashboardView me={me}/>;
+  const isAdminRoute=window.location.pathname==="/react/admin" || window.location.pathname==="/react/admin/";\n  return isAdminRoute && (me.role==="ADMIN" || me.role==="SUPERADMIN") ? <AdminView me={me}/> : <DashboardView me={me}/>;
 }
 export default App;
