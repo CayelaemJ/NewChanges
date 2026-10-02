@@ -31,6 +31,13 @@ if (resetRequested) {
 }
 
 console.log("Applying non-destructive Prisma schema sync...");
+// Prisma db push intentionally refuses enum renames because they look destructive.
+// Apply the role rename explicitly first, so existing users keep their role data.
+const roleMigration = run(["db", "execute", "--file", "prisma/migrations/20261002120000_redesign_user_roles/migration.sql"]);
+if (roleMigration !== 0) {
+  console.error("Role migration failed. No database reset was attempted.");
+  process.exit(roleMigration);
+}
 const status = run(["db", "push", "--skip-generate"]);
 if (status !== 0) {
   console.error("Database schema sync failed. Because destructive fallback is disabled, no reset was attempted.");
