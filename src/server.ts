@@ -1673,6 +1673,12 @@ app.get<{ Querystring: { period?: string; quarter?: string; range?: "30d" | "qua
 );
 
 // ── convenience: live dashboard of the first employer THIS USER can see ──
+app.get("/api/dashboard/version", async (req, reply) => {
+  const user = await requireUser(req, reply); if (!user) return;
+  const latest = await prisma.integrationCursor.aggregate({ _max: { lastSuccessAt: true } });
+  return { version: latest._max.lastSuccessAt?.toISOString() ?? null };
+});
+
 app.get<{ Querystring: { period?: string; quarter?: string; range?: "30d" | "quarter" | "all" | "month" | "30" | "q" | "latest"; site?: string; income?: string } }>(
   "/api/dashboard/first",
   async (req, reply) => {
