@@ -10,7 +10,7 @@ import { compareDateValues, dateMillis, rehydrateStagedRows } from "./stagedRows
 import { validateRecordDeferred } from "./validationStrategies.js";
 import { parseFile, validate, detectFormat, parseAndValidateCsvStreaming, parseAndValidateXlsxJsonStreaming, CellError } from "./importParser.js";
 import { snapshotEmployer } from "./snapshotBuilder.js";
-import { notifyScoreChangeIfCurrentPeriod } from "./automationService.js";
+import { notifyAdmins, notifyScoreChangeIfCurrentPeriod } from "./automationService.js";
 import { assessIncomingRows } from "./dataQualityService.js";
 
 const prisma = new PrismaClient();
@@ -127,9 +127,14 @@ export async function uploadAndValidate(opts: {
       result = {
         ...result,
         ok: false,
-        errors: [...result.errors, ...quality.findings.map((f) => ({ row: f.row ?? 0, column: f.field ?? "dataset", value: null, reason: `[MLOPS:${f.code}] ${f.message}` }))],
+        errors: [...result.errors, ...quality.findings.map((f) => ({ row: f.row ?? 0, column: f.field ?? "dataset", value: null, reason: `[MLOPS:${f.code}] ${f.message} Fix: ${f.action}` }))],
       };
       await prisma.importBatchRow.deleteMany({ where: { batchId: batch.id } });
+      notifyAdmins({
+        subject: `MLOps blocked data import: ${opts.reportKey}`,
+        html: `<p>An incoming data batch was blocked by the MLOps data-quality gate for <strong>${opts.reportKey}</strong>.</p><p>The batch was not committed to live tables. Review the MLOps event log and correct the source data before retrying.</p>`,
+        slackText: `:rotating_light: MLOps blocked ${opts.reportKey}. The batch was not committed to live tables; review the MLOps event log and correct the source data before retrying.`,
+      }).catch(() => {});
     }
   }
 
