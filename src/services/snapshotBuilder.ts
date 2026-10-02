@@ -900,7 +900,7 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
   const rangeMonth = filter.rangeStart ? monthKey(filter.rangeStart) : null;
   const savingsPairs = [...savingByMonth.keys()].sort().map((key) => {
     cumulative += savingByMonth.get(key) ?? 0;
-    return { key, value: Math.round(rand(cumulative) / 1_000) };
+    return { key, value: Math.round(rand(cumulative)) };
   }).filter((point) => !rangeMonth || point.key >= rangeMonth).slice(-12);
   const savings = savingsPairs.map((point) => point.value);
   const savingsLabels = savingsPairs.map((point) => monthLabel(point.key));
@@ -1250,6 +1250,8 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
         label: filter.label,
         savings: savings,
         savingsLabels: savingsLabels,
+        monthlySavingRand: Number(rand(cumulativeMonthlySaving)),
+        totalAdvancedRaw: Number(rand(ewaTotal)),
         ewa: ewa.trend,
         ewaLabels: ewa.trendLabels,
         outcomes: Object.fromEntries((Array.isArray(outcomes) ? outcomes : []).map((row: any) => [row.key, row.trend || []])),
