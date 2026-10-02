@@ -19,6 +19,10 @@ const checks = [
   ["Fastify serves React preview", server.includes('prefix: "/react/"') && server.includes('join(PUBLIC_DIR, "react")')],
   ["Role-aware shell exists", app.includes("roleLabels") && app.includes("VIEWER") && app.includes("SUPERADMIN")],
   ["Responsive React shell exists", fs.existsSync(path.join(root, "frontend/src/styles.css")) && read("frontend/src/styles.css").includes("@media")],
+  ["Financial analytics surfaces migrated", app.includes("Total advanced") && app.includes("Financial problems resolved") && app.includes("creditors") && app.includes("Activated employees by income band")],
+  ["Real dashboard filter options used", app.includes("data.filterOptions?.incomes") && read("src/services/snapshotBuilder.ts").includes("incomes: INCOME_VALUES.map")],
+  ["Full-value financial trend units", read("src/services/snapshotBuilder.ts").includes("return { key, value: Math.round(rand(cumulative)) }") && !read("src/services/snapshotBuilder.ts").includes("Math.round(rand(cumulative) / 1_000)")],
+  ["Period comparison points exposed", read("src/services/snapshotBuilder.ts").includes("monthlySavingRand: Number(rand(cumulativeMonthlySaving))") && read("src/services/snapshotBuilder.ts").includes("totalAdvancedRaw: Number(rand(ewaTotal))")],
 ];
 
 let failed = 0;
