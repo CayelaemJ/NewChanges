@@ -49,9 +49,9 @@ const roleLabels: Record<string,string> = {
   SUPERADMIN:"Super Admin", ADMIN:"Admin", EMPLOYER_MANAGER:"Employer Manager",
   PORTFOLIO_MANAGER:"Portfolio Manager", VIEWER:"Viewer"
 };
-const money = (n:number|null|undefined) => n == null ? "—" : new Intl.NumberFormat("en-ZA",{style:"currency",currency:"ZAR",maximumFractionDigits:0}).format(n);
-const number = (n:number|null|undefined) => n == null ? "—" : new Intl.NumberFormat("en-ZA").format(n);
-const pct = (n:number|null|undefined) => n == null ? "—" : `${n.toFixed(1)}%`;
+const money = (n:number|null|undefined) => n == null ? "Not available" : new Intl.NumberFormat("en-ZA",{style:"currency",currency:"ZAR",maximumFractionDigits:0}).format(n);
+const number = (n:number|null|undefined) => n == null ? "Not available" : new Intl.NumberFormat("en-ZA").format(n);
+const pct = (n:number|null|undefined) => n == null ? "Not available" : `${n.toFixed(1)}%`;
 const api = async <T,>(url:string):Promise<T> => {
   const r=await fetch(url,{credentials:"same-origin",cache:"no-store"});
   if(!r.ok) throw new Error((await r.json().catch(()=>({}))).error || "Request failed");
@@ -89,7 +89,7 @@ function DashboardView({me}:{me:Me}) {
   useEffect(()=>{if(!employer?.id)return;api<string[]>(`/api/employers/${encodeURIComponent(employer.id)}/periods`).then(rows=>setPeriodOptions(Array.isArray(rows)?rows:[])).catch(()=>setPeriodOptions([]));},[employer?.id]);
 
   if(!employer)return <Card className="mx-auto mt-20 max-w-2xl"><CardHeader><CardTitle>No employer data available</CardTitle><CardDescription>Your authenticated role has no employer assignment.</CardDescription></CardHeader></Card>;
-  if(loading)return <Card className="mx-auto mt-20 max-w-2xl"><CardContent className="py-12 text-center text-sm text-slate-500">Loading governed dashboard data…</CardContent></Card>;
+  if(loading)return <Card className="mx-auto mt-20 max-w-2xl"><CardContent className="py-12 text-center text-sm text-slate-500">Loading governed dashboard data...</CardContent></Card>;
   if(error)return <Card className="mx-auto mt-20 max-w-2xl border-red-200"><CardContent className="py-10"><div className="flex gap-3"><CircleAlert className="h-5 w-5 text-red-600"/><div><p className="font-semibold text-red-700">Dashboard unavailable</p><p className="mt-1 text-sm text-slate-600">{error}</p></div></div></CardContent></Card>;
   if(!data)return null;
 
@@ -135,12 +135,13 @@ function DashboardView({me}:{me:Me}) {
           ["Employees enrolled",number(data.kpis?.takeUp?.enrolled),`${pct(data.kpis?.takeUp?.pct)} take-up`,Users],
           ["Employees activated",number(data.kpis?.activated?.count),`${pct(data.kpis?.activated?.pct)} of workforce`,CheckCircle2],
           ["Monthly cash freed up",money(data.kpis?.monthlySaving?.rand),savingDelta===0?"No prior comparison":`${savingDelta>=0?"+":""}${money(savingDelta)} vs prior`,WalletCards],
-          ["Employee rating",data.kpis?.avgRating?.val==null?"—":`${data.kpis.avgRating.val.toFixed(1)}/5`,`${number(data.kpis?.avgRating?.responses)} responses`,Star]
+          ["Employee rating",data.kpis?.avgRating?.val==null?"Not available":`${data.kpis.avgRating.val.toFixed(1)}/5`,`${number(data.kpis?.avgRating?.responses)} responses`,Star]
         ].map(([label,value,sub,Icon])=><Card key={label as string}><CardContent className="p-5"><div className="flex items-center justify-between"><span className="text-xs font-semibold text-slate-500">{label as string}</span><Icon className="h-4 w-4 text-violet-600"/></div><p className="mt-3 break-words text-2xl font-bold tracking-tight text-violet-800 sm:text-3xl">{value as string}</p><p className="mt-1 text-[11px] text-slate-500">{sub as string}</p></CardContent></Card>)}
       </section>
 
       <section className="mt-4 grid gap-4 lg:grid-cols-2">
-        <Card><CardHeader><SectionHeading icon={Activity} title="Optimise Score" description="Current governed wellbeing score and weighted drivers."/></CardHeader><CardContent><div className="flex items-baseline gap-3"><strong className="text-5xl font-bold tracking-tight text-violet-800">{data.wellness?.score==null?"—":data.wellness.score.toFixed(1)}</strong><Badge>{data.wellness?.band||"Unavailable"}</Badge></div><div className="mt-5 grid gap-4">{(data.wellness?.drivers||[]).map(d=><div key={d.name}><div className="mb-1 flex justify-between text-xs font-semibold"><span>{d.name}</span><b className="text-violet-700">{d.score==null?"—":d.score.toFixed(1)}</b></div><Progress value={d.score??0}/></div>)}</div></CardContent></Card>
+        <Card><CardHeader><SectionHeading icon={Star} title="Employee voice" description="Average rating and response coverage from employee feedback."/></CardHeader><CardContent><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><div className="flex flex-wrap items-center gap-3"><strong className="text-4xl font-bold tracking-tight text-violet-800">{data.ratings?.avg==null?"Not available":data.ratings.avg.toFixed(1)}</strong><div className="flex gap-0.5" aria-label={data.ratings?.avg==null?"Rating unavailable":data.ratings.avg.toFixed(1)+" out of 5 stars"}>{Array.from({length:5},(_,i)=><Star key={i} className={"h-5 w-5 "+(data.ratings?.avg!=null&&i<Math.round(data.ratings.avg)?"fill-amber-400 text-amber-400":"text-slate-300")} aria-hidden="true"/>)}</div></div><p className="mt-1 text-xs text-slate-500">{number(data.ratings?.responses)} employee responses</p></div><div className="min-w-0 sm:w-52"><div className="mb-1 flex justify-between text-[10px] font-semibold text-slate-500"><span>Five-star responses</span><span>{pct(data.ratings?.fiveStarPct)}</span></div><Progress value={data.ratings?.fiveStarPct??0}/></div></div></CardContent></Card>
+        <Card><CardHeader><SectionHeading icon={Activity} title="Optimise Score" description="Current governed wellbeing score and weighted drivers."/></CardHeader><CardContent><div className="flex items-baseline gap-3"><strong className="text-5xl font-bold tracking-tight text-violet-800">{data.wellness?.score==null?"Not available":data.wellness.score.toFixed(1)}</strong><Badge>{data.wellness?.band||"Unavailable"}</Badge></div><div className="mt-5 grid gap-4">{(data.wellness?.drivers||[]).map(d=><div key={d.name}><div className="mb-1 flex justify-between text-xs font-semibold"><span>{d.name}</span><b className="text-violet-700">{d.score==null?"Not available":d.score.toFixed(1)}</b></div><Progress value={d.score??0}/></div>)}</div></CardContent></Card>
         <Card><CardHeader><SectionHeading icon={WalletCards} title="Monthly cash freed up" description="Line trend respects the selected reporting period and comparison window."/></CardHeader><CardContent><LineChart values={trend} labels={trendLabels}/></CardContent></Card>
       </section>
 
@@ -170,7 +171,7 @@ function DashboardView({me}:{me:Me}) {
 function App() {
   const [me,setMe]=useState<Me|null>(null); const [loading,setLoading]=useState(true);
   useEffect(()=>{api<Me>("/api/auth/me").then(setMe).catch(()=>setMe(null)).finally(()=>setLoading(false));},[]);
-  if(loading)return <div className="min-h-screen bg-slate-50 px-4 py-20"><Card className="mx-auto max-w-2xl"><CardContent className="py-12 text-center text-sm text-slate-500">Loading your workspace…</CardContent></Card></div>;
+  if(loading)return <div className="min-h-screen bg-slate-50 px-4 py-20"><Card className="mx-auto max-w-2xl"><CardContent className="py-12 text-center text-sm text-slate-500">Loading your workspace...</CardContent></Card></div>;
   if(!me)return <div className="min-h-screen bg-slate-50 px-4 py-20"><Card className="mx-auto max-w-lg"><CardHeader><div className="text-[10px] font-extrabold uppercase tracking-[.16em] text-violet-700">EFS Optimise</div><CardTitle className="mt-2 text-2xl">Sign in to continue</CardTitle><CardDescription>Your existing secure Fastify session remains the authentication authority.</CardDescription></CardHeader><CardContent><Button onClick={()=>window.location.assign("/login")}>Sign in</Button></CardContent></Card></div>;
   return <DashboardView me={me}/>;
 }
