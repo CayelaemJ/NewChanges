@@ -9,8 +9,9 @@ import { PrismaClient, Prisma } from "@prisma/client";
 import { LOAD_ORDER, getFormat } from "./reportFormats.js";
 import { validate } from "./importParser.js";
 import { snapshotEmployer } from "./snapshotBuilder.js";
-import { notifyScoreChangeIfCurrentPeriod } from "./automationService.js";
+import { notifyAdmins, notifyScoreChangeIfCurrentPeriod } from "./automationService.js";
 import { commitBatch, commitSyncRows } from "./importService.js";
+import { assessIncomingRows } from "./dataQualityService.js";
 import { createSourceAdapter, configuredSourceMode, sourceIsConfigured } from "./sourceAdapter.js";
 import { runMLOpsAssessment } from "./mlopsService.js";
 
@@ -252,6 +253,44 @@ export async function runSync(trigger: "manual" | "scheduled" = "manual") {
           });
           summary[reportKey] = { source: pulled.location, pulled: 0, committed: 0, since: requestSince, through: throughAt };
           anyOk = true;
+          continue;
+        }
+
+        // MLOps safety gate: external database/API rows must pass the same
+        // anomaly controls as file uploads before any live-table procedure runs.
+        const quality = await assessIncomingRows({ reportKey, rows: result.rows as Record<string, unknown>[] });
+        if (quality.status !== "PASS") {
+          const qualityErrors = quality.findings.map((f) => ({
+            row: f.row ?? 0,
+            column: f.field ?? "dataset",
+            value: null,
+            reason: `[MLOPS:${f.code}] ${f.message} Fix: ${f.action}`,
+          }));
+          const blockedBatch = await prisma.importBatch.create({
+            data: {
+              reportKey,
+              filename: `${adapter.mode.toLowerCase()}-sync:${reportKey}`,
+              fileFormat: adapter.mode.toLowerCase(),
+              status: "FAILED",
+              rowCount: result.rowCount,
+              errorCount: qualityErrors.length,
+              errors: ({ cellErrors: qualityErrors, missingColumns: [], unknownColumns: [] } as unknown as Json),
+              uploadedBy: `${adapter.mode.toLowerCase()}-sync (${trigger})`,
+              sourceSince: cursor.lastSourceUpdatedAt,
+              sourceThrough: throughAt,
+            },
+          });
+          const reason = quality.findings.slice(0, 3).map((f) => `${f.code}: ${f.message}`).join(" | ");
+          await prisma.integrationCursor.update({
+            where: { reportKey },
+            data: { lastStatus: "FAILED", lastNote: `MLOps data-quality gate blocked this sync. ${reason}` },
+          });
+          await notifyAdmins({
+            subject: `MLOps blocked live sync: ${reportKey}`,
+            html: `<p>An incoming sync for <strong>${reportKey}</strong> was blocked by the MLOps data-quality gate.</p><p>No rows were written to live tables. Review the MLOps event log and correct the source data before retrying.</p>`,
+            slackText: `:rotating_light: MLOps blocked live sync ${reportKey}. No rows were written to live tables; review the MLOps event log and correct the source data before retrying.`,
+          }).catch(() => {});
+          summary[reportKey] = { error: `MLOps data-quality gate blocked the sync: ${reason}`, source: pulled.location, pulled: result.rowCount, committed: 0, batchId: blockedBatch.id };
           continue;
         }
 
