@@ -169,7 +169,7 @@
   @keyframes welcome-spin{to{transform:rotate(360deg);}}
   .welcome-splash-greeting{font-family:'Fraunces',serif;font-weight:600;font-size:26px;color:var(--brand-primary);}
   .welcome-splash-sub{margin-top:6px;font-size:13.5px;color:var(--grey);font-weight:600;}
-.security-stat{padding:14px;border:1px solid #d7cde9;border-radius:13px;background:#fff}.security-stat .k{font-size:9px;font-weight:850;letter-spacing:.08em;text-transform:uppercase;color:#617486}.security-stat .v{font-size:24px;font-weight:850;color:#2b1b68;margin-top:4px;font-variant-numeric:tabular-nums}@media(max-width:900px){#admin-security-summary{grid-template-columns:1fr 1fr!important}}@media(max-width:600px){#admin-security-summary{grid-template-columns:1fr!important}}.compliance-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}.compliance-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.compliance-box{border:1px solid var(--line);border-radius:12px;padding:14px;background:#fff}.compliance-box-wide{grid-column:1/-1}.compliance-box h3{font-size:12px;color:var(--brand-primary);margin-bottom:5px}.compliance-box p{font-size:11.5px;color:var(--grey);line-height:1.5}.compliance-list{margin-top:10px;display:grid;gap:6px}.compliance-item{border:1px solid var(--line-soft);border-radius:8px;padding:9px;font-size:11px}.compliance-item strong{color:var(--brand-primary)}.compliance-item small{display:block;color:var(--grey);margin-top:3px}@media(max-width:900px){.compliance-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.compliance-grid{grid-template-columns:1fr}}@media(max-width:600px){.compliance-summary{grid-template-columns:1fr}}
+.security-stat{padding:14px;border:1px solid #d7cde9;border-radius:13px;background:#fff}.security-stat .k{font-size:9px;font-weight:850;letter-spacing:.08em;text-transform:uppercase;color:#617486}.security-stat .v{font-size:24px;font-weight:850;color:#2b1b68;margin-top:4px;font-variant-numeric:tabular-nums}@media(max-width:900px){#admin-security-summary{grid-template-columns:1fr 1fr!important}}@media(max-width:600px){#admin-security-summary{grid-template-columns:1fr!important}}.mlops-alert{display:none;margin:18px 0;border-color:#efc7bf;background:#fff}.mlops-alert.show{display:block}.mlops-alert .card-hd{display:flex;align-items:center;gap:12px}.mlops-alert .mlops-badge{font-size:10px;font-weight:850;letter-spacing:.08em;text-transform:uppercase;color:#b5391f;background:#fdecea;border:1px solid #f3c9c1;padding:5px 8px;border-radius:7px;white-space:nowrap}.mlops-alert .mlops-summary{font-size:12px;color:#5b6b7a;line-height:1.5}.mlops-alert .mlops-detail{display:none;margin-top:12px;padding:12px 14px;border:1px solid #f1d8d3;border-radius:10px;background:#fff8f7}.mlops-alert .mlops-detail.open{display:block}.mlops-alert .mlops-finding{padding:8px 0;border-bottom:1px solid #f3e2df;font-size:11.5px;line-height:1.5}.mlops-alert .mlops-finding:last-child{border-bottom:0}.mlops-alert .mlops-finding strong{color:#b5391f}.compliance-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}.compliance-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.compliance-box{border:1px solid var(--line);border-radius:12px;padding:14px;background:#fff}.compliance-box-wide{grid-column:1/-1}.compliance-box h3{font-size:12px;color:var(--brand-primary);margin-bottom:5px}.compliance-box p{font-size:11.5px;color:var(--grey);line-height:1.5}.compliance-list{margin-top:10px;display:grid;gap:6px}.compliance-item{border:1px solid var(--line-soft);border-radius:8px;padding:9px;font-size:11px}.compliance-item strong{color:var(--brand-primary)}.compliance-item small{display:block;color:var(--grey);margin-top:3px}@media(max-width:900px){.compliance-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.compliance-grid{grid-template-columns:1fr}}@media(max-width:600px){.compliance-summary{grid-template-columns:1fr}}
 
   .ingestion-method-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;max-width:1000px;}
   .ingestion-method{display:flex;align-items:flex-start;gap:12px;text-align:left;border:1px solid var(--line);background:#fff;border-radius:13px;padding:16px;cursor:pointer;font-family:inherit;color:var(--ink);transition:.16s;min-width:0;}
@@ -250,6 +250,14 @@
         </div>
       </div>
     </div>
+  </section>
+  <section id="admin-mlops-alert" class="card mlops-alert" aria-live="assertive">
+    <div class="card-hd">
+      <div style="flex:1"><h2>MLOps data-quality alert</h2><div class="note" id="mlops-alert-summary">An incoming dataset has been blocked before reaching live tables.</div></div>
+      <span class="mlops-badge" id="mlops-alert-badge">ACTION REQUIRED</span>
+      <button class="btn btn-sm" type="button" onclick="toggleMLOpsAlert()">Review</button>
+    </div>
+    <div class="card-bd"><div id="mlops-alert-detail" class="mlops-detail"></div></div>
   </section>
   <section id="data-centre" class="card section-gap">
     <div class="card-hd">
@@ -1504,7 +1512,8 @@ async function boot(){
     ['audit',loadAuditLog],
     ['security',loadAdminSecuritySummary],
     ['compliance',loadComplianceSummary],
-    ['enterprise',loadEnterpriseOperations]
+    ['enterprise',loadEnterpriseOperations],
+    ['mlops',loadMLOpsAlert]
   ];
   await Promise.allSettled(optionalLoads.map(async ([name,fn])=>{
     try{ await fn(); }catch(e){ console.error(`Admin panel ${name} failed:`,e); }
@@ -1870,6 +1879,32 @@ async function loadEnterpriseOperations(){
   }catch(e){
     const el=document.getElementById('ops-architecture'); if(el) el.textContent='Could not load enterprise operations: '+e.message;
   }
+}
+
+function toggleMLOpsAlert(){
+  const el=document.getElementById('mlops-alert-detail');
+  if(el) el.classList.toggle('open');
+}
+async function loadMLOpsAlert(){
+  const card=document.getElementById('admin-mlops-alert');
+  if(!card) return;
+  try{
+    const r=await fetch('/api/admin/mlops/events?limit=50',{cache:'no-store'});
+    if(!r.ok) throw new Error('MLOps events unavailable');
+    const events=await r.json();
+    const issue=(Array.isArray(events)?events:[]).find(e=>e.eventType==='DATA_QUALITY_GATE' && e.status && e.status!=='PASS');
+    if(!issue) return;
+    card.classList.add('show');
+    const meta=issue.metadata||{};
+    const findings=Array.isArray(meta.findings)?meta.findings:[];
+    document.getElementById('mlops-alert-summary').textContent=
+      `${issue.status}: ${meta.reportKey||'incoming dataset'} was blocked before live-table commit. ${meta.findingCount||findings.length||0} issue(s) require review.`;
+    const detail=document.getElementById('mlops-alert-detail');
+    detail.innerHTML=
+      `<div class="mlops-summary"><strong>What is off:</strong> ${esc(issue.modelKey||'data-quality')} detected abnormal incoming data.</div>`+
+      (findings.slice(0,8).map(f=>`<div class="mlops-finding"><strong>${esc(f.code||'DATA_QUALITY')}</strong> · ${esc(f.field||'dataset')} — ${esc(f.message||'Review this finding.')}<br><span class="muted"><strong>Fix:</strong> ${esc(f.action||'Correct the source data and retry the load.')}</span></div>`).join('')||
+       '<div class="mlops-finding">Review the MLOps event metadata for the full diagnostic record.</div>');
+  }catch(_){}
 }
 
 async function loadAdminSecuritySummary(){
