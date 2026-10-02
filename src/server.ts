@@ -199,6 +199,19 @@ app.register(multipart, {
 });
 
 app.register(fastifyStatic, {
+  root: join(PUBLIC_DIR, "react"),
+  prefix: "/react/",
+  decorateReply: false,
+  setHeaders(res, filePath) {
+    if (/\\.(?:js|css|html)$/i.test(filePath)) {
+      res.header("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+      res.header("Pragma", "no-cache");
+      res.header("Expires", "0");
+    }
+  },
+});
+
+app.register(fastifyStatic, {
   root: PUBLIC_DIR,
   prefix: "/static/",
   // The portal HTML is deployed independently of browser cache state. UI assets
