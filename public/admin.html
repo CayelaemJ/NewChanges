@@ -1892,7 +1892,13 @@ async function loadMLOpsAlert(){
     const r=await fetch('/api/admin/mlops/events?limit=50',{cache:'no-store'});
     if(!r.ok) throw new Error('MLOps events unavailable');
     const events=await r.json();
-    const issue=(Array.isArray(events)?events:[]).find(e=>e.eventType==='DATA_QUALITY_GATE' && e.status && e.status!=='PASS');
+    const latestByReport=new Map();
+    for(const e of (Array.isArray(events)?events:[])){
+      if(e.eventType!=='DATA_QUALITY_GATE') continue;
+      const reportKey=e.metadata?.reportKey||'dataset';
+      if(!latestByReport.has(reportKey)) latestByReport.set(reportKey,e);
+    }
+    const issue=[...latestByReport.values()].find(e=>e.status && e.status!=='PASS');
     if(!issue) return;
     card.classList.add('show');
     const meta=issue.metadata||{};
