@@ -22,7 +22,7 @@ export const SECTION_DEFS: { key: string; label: string }[] = [
   { key: "voiceOfEmployee", label: "Voice of the employee" },
 ];
 
-const ALL_ROLES = "ADMIN,SUPERADMIN,EMPLOYER_VIEW,PORTFOLIO_VIEW";
+const ALL_ROLES = "ADMIN,SUPERADMIN,EMPLOYER_MANAGER,PORTFOLIO_MANAGER,VIEWER";
 
 // idempotent — call at boot so every known section has a config row.
 // New sections default to visible; flip `enabled` off manually for
