@@ -548,7 +548,7 @@
 
       <!-- admin audit log -->
       <div class="card section-gap">
-        <div class="card-hd"><h2>Admin Audit Log</h2><div class="note">Showing the latest 20 changes · older entries remain available in the CSV export</div></div>
+        <div class="card-hd"><h2>Admin Audit Log</h2><div class="note">Top 5 most critical admin changes · full history remains available in the CSV export</div></div>
         <div class="card-bd">
           <div style="overflow:auto;"><table class="hist"><thead><tr><th>When</th><th>Admin</th><th>Action</th><th>Details</th></tr></thead><tbody id="audit-rows"><tr><td colspan="4" class="muted" style="padding:10px;">Loading…</td></tr></tbody></table></div>
           <div class="row" style="justify-content:space-between;margin-top:14px;">
@@ -618,8 +618,8 @@
       <style>@media(max-width:820px){.eng-grid{grid-template-columns:1fr!important;}}</style>
 
       <!-- channel partners (white-label) -->
-      <div class="card section-gap">
-        <div class="card-hd"><h2>Channel Partners</h2><div class="note">White-label branding · each partner's users see their colours, logo &amp; name</div></div>
+      <div class="card section-gap" id="channel-partners-card">
+        <div class="card-hd"><h2>Channel Partners</h2><button class="btn btn-sm" type="button" onclick="toggleChannelPartners()">Collapse</button><div class="note">White-label branding · each partner's users see their colours, logo &amp; name</div></div>
         <div class="card-bd">
           <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
             <input id="pt-new-name" placeholder="New partner name (e.g. Acme Financial)" style="flex:1;min-width:220px;font:inherit;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">
@@ -1013,9 +1013,18 @@ async function loadEmailDeliveries(){
 async function loadAuditLog(){
   const rows=$('#audit-rows'); if(!rows) return;
   try{
-    const log=await fetch(`${API}/api/admin/audit-log?limit=20`).then(r=>r.json());
-    if(!Array.isArray(log) || !log.length){ rows.innerHTML='<tr><td colspan="4" class="muted" style="padding:10px;">No admin changes recorded yet.</td></tr>'; return; }
-    rows.innerHTML=log.map(l=>`<tr>
+    const log=await fetch(`${API}/api/admin/audit-log?limit=200`).then(r=>r.json());
+     const criticalRank={
+       "user.delete":0,"user.revoke":0,"user.update":1,"user.create":2,
+       "partner.delete":0,"partner.update":1,"partner.create":2,
+       "security.alert.resolve":1,"section.update":2
+     };
+     const ranked=(Array.isArray(log)?log:[]).slice().sort((a,b)=>{
+       const ar=criticalRank[a.action]??3, br=criticalRank[b.action]??3;
+       return ar-br || new Date(b.createdAt||0)-new Date(a.createdAt||0);
+     }).slice(0,5);
+    if(!ranked.length){ rows.innerHTML='<tr><td colspan="4" class="muted" style="padding:10px;">No admin changes recorded yet.</td></tr>'; return; }
+    rows.innerHTML=ranked.map(l=>`<tr>
       <td class="muted" style="white-space:nowrap;">${fmtDate(l.createdAt)}</td>
       <td><b>${esc(l.actorName)}</b><div class="muted">${esc(l.actorEmail)}</div></td>
       <td><span class="tag">${esc(l.action)}</span></td>
@@ -1941,3 +1950,10 @@ async function loadAdminSecuritySummary(){
 </script>
 </body>
 </html>
+<script>
+function toggleChannelPartners(){
+  const card=document.getElementById('channel-partners-card'); if(!card) return;
+  const body=card.querySelector('.card-bd'), btn=card.querySelector('.card-hd button');
+  const collapsed=body.style.display==='none'; body.style.display=collapsed?'':'none'; if(btn) btn.textContent=collapsed?'Collapse':'Expand';
+}
+</script>
