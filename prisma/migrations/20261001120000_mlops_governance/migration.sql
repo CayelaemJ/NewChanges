@@ -1,9 +1,9 @@
 -- NewChanges MLOps governance layer
 -- Reconciliation is additive so an existing non-empty telemetry table is never dropped.
 ALTER TABLE IF EXISTS "MLOpsEvent"
-  ADD COLUMN IF NOT EXISTS "eventType" TEXT,
-  ADD COLUMN IF NOT EXISTS "modelKey" TEXT,
-  ADD COLUMN IF NOT EXISTS "modelVersion" TEXT,
+  ADD COLUMN IF NOT EXISTS "eventType" TEXT DEFAULT 'UNKNOWN',
+  ADD COLUMN IF NOT EXISTS "modelKey" TEXT DEFAULT 'unknown',
+  ADD COLUMN IF NOT EXISTS "modelVersion" TEXT DEFAULT 'legacy',
   ADD COLUMN IF NOT EXISTS "employerId" TEXT,
   ADD COLUMN IF NOT EXISTS "period" TEXT,
   ADD COLUMN IF NOT EXISTS "metric" TEXT,
@@ -17,6 +17,15 @@ ALTER TABLE IF EXISTS "MLOpsEvent"
   ADD COLUMN IF NOT EXISTS "features" JSONB,
   ADD COLUMN IF NOT EXISTS "metadata" JSONB,
   ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP;
+UPDATE "MLOpsEvent" SET "eventType"='UNKNOWN' WHERE "eventType" IS NULL;
+UPDATE "MLOpsEvent" SET "modelKey"='unknown' WHERE "modelKey" IS NULL;
+UPDATE "MLOpsEvent" SET "modelVersion"='legacy' WHERE "modelVersion" IS NULL;
+UPDATE "MLOpsEvent" SET "createdAt"=CURRENT_TIMESTAMP WHERE "createdAt" IS NULL;
+ALTER TABLE "MLOpsEvent"
+  ALTER COLUMN "eventType" SET NOT NULL,
+  ALTER COLUMN "modelKey" SET NOT NULL,
+  ALTER COLUMN "modelVersion" SET NOT NULL,
+  ALTER COLUMN "createdAt" SET NOT NULL;
 
 CREATE TABLE IF NOT EXISTS "MLOpsEvent" (
   "id" TEXT NOT NULL,
