@@ -278,7 +278,7 @@ async function requireUser(req: FastifyRequest, reply: FastifyReply): Promise<Au
 async function requireAdmin(req: FastifyRequest, reply: FastifyReply): Promise<AuthUser | null> {
   const user = await requireUser(req, reply);
   if (!user) return null;
-  if (user.role !== "ADMIN") { reply.code(403).send({ error: "admin only" }); return null; }
+  if (user.role !== "ADMIN" && user.role !== "SUPERADMIN") { reply.code(403).send({ error: "admin only" }); return null; }
   return user;
 }
 function redactAuditDetail(value: unknown): unknown {
