@@ -514,7 +514,20 @@ async function deleteUserForever(id,name){
   if(!r.ok){ const d=await r.json().catch(()=>({})); alert(d.error||'Could not delete this user.'); return; }
   loadRevokedUsers();
 }
+function installCompactCollapse(){
+  ['security-center','user-list-card','revoked-users-card'].forEach(function(id){
+    const card=document.getElementById(id); if(!card||card.dataset.collapsibleInstalled)return;
+    card.dataset.collapsibleInstalled='1';
+    if(id==='user-list-card'||id==='revoked-users-card') card.classList.add('compact-collapsed');
+    const head=card.querySelector('.card-hd'); if(!head)return;
+    const btn=document.createElement('button'); btn.type='button'; btn.className='btn btn-sm compact-toggle';
+    const set=function(){ const c=card.classList.contains('compact-collapsed'); btn.textContent=c?'Expand':'Collapse'; btn.setAttribute('aria-expanded',String(!c)); };
+    btn.onclick=function(){card.classList.toggle('compact-collapsed');set();};
+    head.appendChild(btn); set();
+  });
+}
 function show(el,t,m){ el.className='msg '+t; el.textContent=m; el.style.display='block'; }
+installCompactCollapse();
 boot();
 </script>
 <script>
