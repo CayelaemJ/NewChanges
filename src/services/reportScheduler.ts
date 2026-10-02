@@ -1,3 +1,4 @@
+import { isAdminRole } from "./authService.js";
 import nodemailer from "nodemailer";
 import { DateTime } from "luxon";
 import { prisma, getDashboardPayload } from "./snapshotBuilder.js";
@@ -328,7 +329,7 @@ export async function createReportSchedule(user: any, input: ScheduleInput) {
   if (!mail.configured) throw new Error("Email delivery is not configured. Ask an administrator to complete System Email Setup first.");
   const employer = await prisma.employer.findUnique({ where: { id: input.employerId }, select: { id: true, name: true } });
   if (!employer) throw new Error("employer not found");
-  const canSee = user.role === "ADMIN" || (user.links || []).some((link: any) => link.employerId === employer.id);
+  const canSee = isAdminRole(user) || (user.links || []).some((link: any) => link.employerId === employer.id);
   if (!canSee) throw new Error("you do not have access to this employer");
   const timezone = clean(input.timezone) || mail.defaultTimezone || "Africa/Johannesburg";
   const frequency = String(input.frequency || "").toUpperCase() as ScheduleInput["frequency"];
@@ -336,7 +337,7 @@ export async function createReportSchedule(user: any, input: ScheduleInput) {
   const sendTime = input.sendTime || "08:00";
   const normalized: ScheduleInput = { ...input, frequency, timezone, sendTime };
   const nextRunAt = nextRunFor(normalized);
-  const recipients = normalizeRecipients(input.recipients, user.email, user.role === "ADMIN");
+  const recipients = normalizeRecipients(input.recipients, user.email, isAdminRole(user));
   const filters = cleanFilters(input.filters || {});
   return prisma.reportSchedule.create({
     data: {
@@ -358,7 +359,7 @@ export async function createReportSchedule(user: any, input: ScheduleInput) {
 }
 
 export async function listReportSchedules(user: any, all = false) {
-  const where = user.role === "ADMIN" && all ? {} : { userId: user.id };
+  const where = isAdminRole(user) && all ? {} : { userId: user.id };
   return prisma.reportSchedule.findMany({
     where,
     orderBy: [{ active: "desc" }, { nextRunAt: "asc" }],
