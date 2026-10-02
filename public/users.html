@@ -206,7 +206,8 @@
           <select id="n-role" onchange="onRoleChange()">
             <option value="EMPLOYER_VIEW">Employer view — sees linked employers' dashboards</option>
             <option value="PORTFOLIO_VIEW">Portfolio view — compares linked employers</option>
-            <option value="ADMIN">Admin — full access incl. imports & users</option>
+            <option value="ADMIN">Admin — operational administration</option>
+            <option value="SUPERADMIN">Superadmin — full platform administration</option>
           </select>
         </div>
         <div>
@@ -286,7 +287,7 @@ function showUsersLoadError(message){
 async function boot(){
   try{
     ME=await getJson('/api/auth/me');
-    if(!ME||ME.role!=='ADMIN'){ location.href='/login'; return; }
+    if(!ME||ME.role!=='ADMIN'&&ME.role!=='SUPERADMIN'){ location.href='/login'; return; }
     renderNav();
     EMPLOYERS=Array.isArray(ME.employers)?ME.employers:[];
     renderEmpPick();
@@ -308,7 +309,7 @@ function renderNav(){
 function onRoleChange(){
   const role=$('#n-role').value;
   // admins see everything, so hide employer linking for admins
-  $('#emp-wrap').style.display = role==='ADMIN' ? 'none' : 'block';
+  $('#emp-wrap').style.display = (role==='ADMIN'||role==='SUPERADMIN') ? 'none' : 'block';
 }
 function onAccessChange(){
   const mode=document.querySelector('input[name=access]:checked').value;
@@ -320,7 +321,7 @@ async function addUser(){
   const role=$('#n-role').value;
   const mode=document.querySelector('input[name=access]:checked').value;
   const employerIds=[...document.querySelectorAll('#emp-pick input:checked')].map(c=>c.value);
-  const body={ name:$('#n-name').value, email:$('#n-email').value, role, employerIds:role==='ADMIN'?[]:employerIds };
+  const body={ name:$('#n-name').value, email:$('#n-email').value, role, employerIds:(role==='ADMIN'||role==='SUPERADMIN')?[]:employerIds };
   const pid=$('#n-partner').value; if(pid) body.partnerId=pid;
   if(mode==='temp'){ body.tempPassword=$('#n-pass').value; } else { body.sendSetupLink=true; }
   const r=await fetch('/api/users',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
@@ -417,7 +418,7 @@ function editUser(id){
         <input id="e-name-${id}" value="${u.name.replace(/"/g,'&quot;')}" style="display:block;width:100%;margin-top:4px;padding:8px 11px;border:1px solid #e8e1f7;border-radius:8px;font:inherit;">
       </label>
       <label style="font-size:12px;font-weight:700;color:#5b6b7a;">Role
-        <select id="e-role-${id}" onchange="document.getElementById('e-emp-wrap-${id}').style.display=this.value==='ADMIN'?'none':'block'" style="display:block;width:100%;margin-top:4px;padding:8px 11px;border:1px solid #e8e1f7;border-radius:8px;font:inherit;">${roleOpts}</select>
+        <select id="e-role-${id}" onchange="document.getElementById('e-emp-wrap-${id}').style.display=(this.value==='ADMIN'||this.value==='SUPERADMIN')?'none':'block'" style="display:block;width:100%;margin-top:4px;padding:8px 11px;border:1px solid #e8e1f7;border-radius:8px;font:inherit;">${roleOpts}</select>
       </label>
       <label style="font-size:12px;font-weight:700;color:#5b6b7a;grid-column:span 2;">Channel partner
         <select id="e-partner-${id}" style="display:block;width:100%;margin-top:4px;padding:8px 11px;border:1px solid #e8e1f7;border-radius:8px;font:inherit;">${partnerOpts}</select>
@@ -443,7 +444,7 @@ async function saveUser(id){
     name: $('#e-name-'+id).value.trim(),
     role,
     partnerId: $('#e-partner-'+id).value || null,
-    employerIds: role==='ADMIN' ? [] : employerIds,
+    employerIds: (role==='ADMIN'||role==='SUPERADMIN') ? [] : employerIds,
   };
   const msg=$('#e-msg-'+id); msg.textContent='Saving…'; msg.style.color='#5b6b7a';
   try{
