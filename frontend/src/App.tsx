@@ -1,5 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-
+import {
+  Activity, ArrowUpRight, CheckCircle2, CircleAlert, CreditCard,
+  Landmark, ShieldCheck, Star, Users, WalletCards
+} from "lucide-react";
+import { Badge } from "./components/ui/badge";
+import { Button } from "./components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./components/ui/card";
+import { Progress } from "./components/ui/progress";
+import { Select } from "./components/ui/select";
 type Me = {
   name?: string; email?: string; role?: string;
   employers?: Array<{ id: string; name: string }>;
