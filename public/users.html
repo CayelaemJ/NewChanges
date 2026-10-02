@@ -207,15 +207,14 @@
             <label><input type="checkbox" id="n-access-employer" checked onchange="syncRoleSelection()"> Employer view</label>
             <label><input type="checkbox" id="n-access-portfolio" onchange="syncRoleSelection()"> Portfolio view</label>
             <label><input type="checkbox" id="n-access-admin" onchange="syncRoleSelection()"> Admin</label>
-            <label><input type="checkbox" id="n-access-superadmin" onchange="syncRoleSelection()"> Superadmin</label>
+            <span id="n-superadmin-access"></span>
           </div>
           <select id="n-role" onchange="onRoleChange()" style="display:none" aria-hidden="true">
             <option value="EMPLOYER_VIEW">Employer view</option>
             <option value="PORTFOLIO_VIEW">Portfolio view</option>
             <option value="ADMIN">Admin</option>
-            <option value="SUPERADMIN">Superadmin</option>
           </select>
-          <div class="muted" style="font-size:11px;margin-top:6px;">Admin and Superadmin include the operational access above. Portfolio access includes employer dashboard access.</div>
+          <div class="muted" style="font-size:11px;margin-top:6px;">Admin includes the operational access above. Portfolio access includes employer dashboard access.</div>
         </div>
         <div>
           <label>How they get access</label>
@@ -298,6 +297,7 @@ async function boot(){
     renderNav();
     EMPLOYERS=Array.isArray(ME.employers)?ME.employers:[];
     renderEmpPick();
+    installPrivilegedAccess();
     onRoleChange();
     onAccessChange();
     await Promise.allSettled([loadPartnersDropdown(),loadUsers(),loadRevokedUsers(),loadSecurityCenter()]);
@@ -313,8 +313,15 @@ function renderNav(){
     window.EmpowerPortalNav.render({me:ME,navSelector:'#portal-nav',accountSelector:'#portal-account',active:'users'});
   }
 }
+function installPrivilegedAccess(){
+  if(ME?.role!=='SUPERADMIN') return;
+  const host=document.getElementById('n-superadmin-access');
+  if(!host || host.dataset.installed) return;
+  host.dataset.installed='1';
+  host.innerHTML='<label><input type="checkbox" id="n-access-superadmin" onchange="syncRoleSelection()"> Superadmin</label>';
+}
 function syncRoleSelection(){
-  const superadmin=document.getElementById('n-access-superadmin')?.checked;
+  const superadmin=document.getElementById('n-access-superadmin')?.checked === true;
   const admin=document.getElementById('n-access-admin')?.checked;
   const portfolio=document.getElementById('n-access-portfolio')?.checked;
   const employer=document.getElementById('n-access-employer')?.checked;
@@ -425,7 +432,8 @@ function editUser(id){
     : '<span class="muted">No employers yet.</span>';
   const partnerOpts = '<option value="">None (standard branding)</option>'+
     PARTNERS_LIST.map(p=>`<option value="${esc(p.id)}" ${u.partner&&u.partner.id===p.id?'selected':''}>${p.displayName||p.name}</option>`).join('');
-  const roleOpts = ['EMPLOYER_VIEW','PORTFOLIO_VIEW','ADMIN','SUPERADMIN'].map(r=>`<option value="${r}" ${u.role===r?'selected':''}>${r.replace('_',' ')}</option>`).join('');
+  const availableRoles = ME?.role==='SUPERADMIN' ? ['EMPLOYER_VIEW','PORTFOLIO_VIEW','ADMIN','SUPERADMIN'] : ['EMPLOYER_VIEW','PORTFOLIO_VIEW','ADMIN'];
+  const roleOpts = availableRoles.map(r=>`<option value="${r}" ${u.role===r?'selected':''}>${r.replace('_',' ')}</option>`).join('');
   const tr=document.createElement('tr');
   tr.id='editor-'+id;
   tr.innerHTML=`<td colspan="7" style="background:#eef3f8;padding:16px 14px;">
