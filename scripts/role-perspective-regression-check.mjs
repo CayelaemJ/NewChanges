@@ -4,7 +4,8 @@ import assert from "node:assert/strict";
 const files = {
   auth: fs.readFileSync("src/services/authService.ts", "utf8"),
   server: fs.readFileSync("src/server.ts", "utf8"),
-  users: fs.readFileSync("public/users.html", "utf8"),\n  admin: fs.readFileSync("public/admin.html", "utf8"),
+  users: fs.readFileSync("public/users.html", "utf8"),
+  admin: fs.readFileSync("public/admin.html", "utf8"),
   nav: fs.readFileSync("public/portal-nav-v080.js", "utf8"),
   schema: fs.readFileSync("prisma/schema.prisma", "utf8"),
 };
