@@ -150,12 +150,12 @@ export async function login(email: string, password: string, remember: boolean =
 export type AuthUser = NonNullable<Awaited<ReturnType<typeof resolveSession>>>;
 
 export function isAdmin(user: AuthUser) {
-  return user.role === "ADMIN";
+  return user.role === "ADMIN" || user.role === "SUPERADMIN";
 }
 
 /** employer ids this user may see. Admin => null meaning "all". */
 export function allowedEmployerIds(user: AuthUser): string[] | null {
-  if (user.role === "ADMIN") return null; // all
+  if (user.role === "ADMIN" || user.role === "SUPERADMIN") return null; // all
   return (user.links ?? []).map((l: any) => l.employerId);
 }
 
@@ -167,7 +167,7 @@ export function canViewEmployer(user: AuthUser, employerId: string): boolean {
 }
 
 export function canAccessModule(user: AuthUser, module: "admin" | "dashboard" | "portfolio"): boolean {
-  if (user.role === "ADMIN") return true;
+  if (user.role === "ADMIN" || user.role === "SUPERADMIN") return true;
   if (module === "admin") return false; // only admins
   if (module === "dashboard") return user.role === "EMPLOYER_VIEW" || user.role === "PORTFOLIO_VIEW";
   if (module === "portfolio") return user.role === "PORTFOLIO_VIEW";
