@@ -33,6 +33,7 @@ jobs:
       - run: npm run check:security-identity
       - run: npm run check:security-operations
       - run: npm run check:role-perspective
+      - run: npm run check:react
       - run: npm run check:security-governance
       - run: npm run check:south-africa-compliance
       - run: npm run check:period-comparison
