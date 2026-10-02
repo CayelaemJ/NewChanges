@@ -367,7 +367,7 @@ app.get("/admin", async (req, reply) => {
 });
 app.get("/users", async (req, reply) => {
   const user = await currentUser(req);
-  if (!user || user.role !== "ADMIN") return reply.redirect("/login");
+  if (!user || (user.role !== "ADMIN" && user.role !== "SUPERADMIN")) return reply.redirect("/login");
   return serveHtml(reply, "users.html");
 });
 
@@ -679,7 +679,7 @@ app.patch<{ Params: { id: string }; Body: any }>("/api/users/:id", async (req, r
     body.name = input.name.trim();
   }
   if (input.role !== undefined) {
-    if (!["ADMIN", "EMPLOYER_VIEW", "PORTFOLIO_VIEW"].includes(input.role)) return reply.code(400).send({ error: "invalid role" });
+    if (!["ADMIN", "SUPERADMIN", "EMPLOYER_VIEW", "PORTFOLIO_VIEW"].includes(input.role)) return reply.code(400).send({ error: "invalid role" });
     body.role = input.role;
   }
   if (input.active !== undefined) {
@@ -692,7 +692,7 @@ app.patch<{ Params: { id: string }; Body: any }>("/api/users/:id", async (req, r
   }
   if ("partnerId" in input) body.partnerId = typeof input.partnerId === "string" ? input.partnerId : null;
   if (typeof input.reason === "string") body.reason = input.reason.slice(0, 300);
-  if (req.params.id === admin.id && (body.active === false || (body.role && body.role !== "ADMIN"))) {
+  if (req.params.id === admin.id && (body.active === false || (body.role && body.role !== "ADMIN" && body.role !== "SUPERADMIN"))) {
     return reply.code(400).send({ error: "you cannot deactivate or demote your own account" });
   }
   // when an admin flips a user inactive, capture who did it and why for the
