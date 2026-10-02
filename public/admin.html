@@ -1491,6 +1491,27 @@ async function boot(){
   }
   if(!me.modules.admin){ location.href='/dashboard'; return; }
 
+  const isSuperAdmin = me.role === 'SUPERADMIN';
+  const posture = document.getElementById('role-posture');
+  if(posture){
+    document.getElementById('role-posture-title').textContent = isSuperAdmin ? 'Super Admin control plane' : 'Operational administration';
+    document.getElementById('role-posture-copy').textContent = isSuperAdmin
+      ? 'Full platform control: role governance, security operations, integrations, MLOps governance, dashboard permissions and high-impact system controls.'
+      : 'Day-to-day administration: users, employers, partners, reporting and operational settings. Privileged control-plane functions are intentionally hidden.';
+    document.getElementById('role-posture-badge').textContent = isSuperAdmin ? 'Super Admin' : 'Admin';
+    posture.querySelector('div[style*="background:#32217c"]').textContent = isSuperAdmin ? 'S' : 'A';
+  }
+
+  if(!isSuperAdmin){
+    const privilegedHeadings = new Set(['Security centre','MLOps data-quality alert','Live Data Integration','Dashboard Sections','Danger zone']);
+    document.querySelectorAll('h2').forEach(h=>{
+      const title=h.textContent.trim();
+      if(!privilegedHeadings.has(title)) return;
+      const card=h.closest('.card');
+      if(card) card.style.display='none';
+    });
+  }
+
   handleWelcomeSplash(me);
   addNav(me);
 
