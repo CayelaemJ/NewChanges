@@ -11,7 +11,7 @@ must(service.includes("NEGATIVE_NON_NEGATIVE_FIELD"),"negative financial/count g
 must(service.includes("NON_FINITE"),"non-finite numeric values must quarantine");
 must(service.includes("DATA_QUALITY_GATE"),"data-quality decisions must emit telemetry");
 must(service.includes("action:string"),"findings must explain what must be fixed");
-must(service.includes('status==="QUARANTINE"'),"quarantine state must be explicit");
+must(service.includes('"QUARANTINE"') && service.includes('"REVIEW"'),"quarantine and review states must be explicit");
 must(importer.includes("assessIncomingRows"),"incoming imports must invoke the data-quality gate");
 must(importer.includes("importBatchRow.deleteMany"),"quarantined staged rows must be removed before commit");
 must(sync.includes("assessIncomingRows"),"live database/API syncs must invoke the data-quality gate");
