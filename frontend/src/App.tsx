@@ -194,7 +194,7 @@ function AdminView({me}:{me:Me}) {
         api<any>("/api/admin/compliance/overview"),
         api<any>("/api/admin/mlops/events?limit=50")
       ]);
-      setSecurity(s); setOps(o); setCompliance(c);
+      setSecurity(s); setOps({...o,dataQuality:q}); setCompliance(c);
       setMlops(Array.isArray(m)?m:[]);
       setError("");
     } catch(e:any) { setError(e.message || "Could not load administration data"); }
