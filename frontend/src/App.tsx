@@ -70,6 +70,8 @@ function DashboardView({me}:{me:Me}) {
   const [period,setPeriod]=useState("");
   const [range,setRange]=useState<"latest"|"quarter"|"all">("latest");
   const [income,setIncome]=useState("all");
+  const [site,setSite]=useState("all");
+  const [periodOptions,setPeriodOptions]=useState<string[]>([]);
   const [selectedEmployerId,setSelectedEmployerId]=useState(me.employers?.[0]?.id ?? "");
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState("");
@@ -81,8 +83,9 @@ function DashboardView({me}:{me:Me}) {
     const p=new URLSearchParams();
     if(period) p.set("period",period); else p.set("range",range);
     if(income!=="all") p.set("income",income);
+    if(site!=="all") p.set("site",site);
     return p.toString();
-  },[period,range,income]);
+  },[period,range,income,site]);
 
   useEffect(()=>{
     if(!employer) return;
@@ -91,12 +94,10 @@ function DashboardView({me}:{me:Me}) {
     api<Dashboard>(url).then(setData).catch(e=>setError(e.message)).finally(()=>setLoading(false));
   },[query,employer?.id]);
 
-  const months=useMemo(()=>{
-    const now=new Date();
-    const out:string[]=[];
-    for(let i=0;i<18;i++){ const d=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth()-i,1)); out.push(d.toISOString().slice(0,7)); }
-    return out;
-  },[]);
+  useEffect(()=>{
+    if(!employer?.id) return;
+    api<string[]>(`/api/employers/${encodeURIComponent(employer.id)}/periods`).then(rows=>setPeriodOptions(Array.isArray(rows)?rows:[])).catch(()=>setPeriodOptions([]));
+  },[employer?.id]);
 
   if(!employer) return <section className="panel"><h2>No employer data available</h2><p>Your role is authenticated, but there is currently no employer assigned to this account.</p></section>;
   if(loading) return <section className="panel loading">Loading governed dashboard data…</section>;
@@ -130,7 +131,8 @@ function DashboardView({me}:{me:Me}) {
 
     <section className="filters">
       <div className="seg"><button className={!period&&range==="latest"?"on":""} onClick={()=>{setPeriod("");setRange("latest")}}>Latest</button><button className={!period&&range==="quarter"?"on":""} onClick={()=>{setPeriod("");setRange("quarter")}}>Quarter</button><button className={!period&&range==="all"?"on":""} onClick={()=>{setPeriod("");setRange("all")}}>Programme</button></div>
-      <label className="select"><span>Month</span><select value={period} onChange={e=>{setPeriod(e.target.value);if(e.target.value)setRange("latest")}}><option value="">Select month</option>{months.map(m=><option key={m} value={m}>{new Date(m+"-01T00:00:00Z").toLocaleDateString("en-ZA",{month:"long",year:"numeric",timeZone:"UTC"})}</option>)}</select></label>
+      <label className="select"><span>Month</span><select value={period} onChange={e=>{setPeriod(e.target.value);if(e.target.value)setRange("latest")}}><option value="">Select month</option>{periodOptions.map(m=><option key={m} value={m}>{new Date(m+"-01T00:00:00Z").toLocaleDateString("en-ZA",{month:"long",year:"numeric",timeZone:"UTC"})}</option>)}</select></label>
+      {data.filterOptions?.sites?.length ? <label className="select"><span>Site</span><select value={site} onChange={e=>setSite(e.target.value)}><option value="all">All sites</option>{data.filterOptions.sites.map(v=><option key={v.value} value={v.value}>{v.label}</option>)}</select></label> : null}
       <label className="select"><span>Income band</span><select value={income} onChange={e=>setIncome(e.target.value)}><option value="all">All income bands</option>{incomeOptions.map(v=><option key={v.value} value={v.value}>{v.label}</option>)}</select></label>
       {comparison?.current&&<span className="comparison">Comparing <strong>{comparison.current}</strong>{comparison.previous&&<> with <strong>{comparison.previous}</strong></>}</span>}
     </section>
