@@ -68,3 +68,25 @@ CREATE TABLE IF NOT EXISTS "MLOpsModel" (
   CONSTRAINT "MLOpsModel_modelKey_version_key" UNIQUE ("modelKey","version")
 );
 CREATE INDEX IF NOT EXISTS "MLOpsModel_modelKey_status_idx" ON "MLOpsModel"("modelKey","status");
+
+-- Brand-learning state and partner diagnostics are additive. Existing brand configuration is preserved.
+CREATE TABLE IF NOT EXISTS "BrandLearningState" (
+  "id" TEXT NOT NULL DEFAULT 'global',
+  "engineVersion" TEXT NOT NULL,
+  "uploadCount" INTEGER NOT NULL DEFAULT 0,
+  "labelledCount" INTEGER NOT NULL DEFAULT 0,
+  "acceptedCount" INTEGER NOT NULL DEFAULT 0,
+  "averageConfidence" DOUBLE PRECISION NOT NULL DEFAULT 0,
+  "huePrior" JSONB,
+  "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "BrandLearningState_pkey" PRIMARY KEY ("id")
+);
+
+ALTER TABLE IF EXISTS "Partner"
+  ADD COLUMN IF NOT EXISTS "brandEngineVersion" TEXT,
+  ADD COLUMN IF NOT EXISTS "brandDetectionStatus" TEXT DEFAULT 'UNREVIEWED',
+  ADD COLUMN IF NOT EXISTS "brandDetectionConfidence" DOUBLE PRECISION,
+  ADD COLUMN IF NOT EXISTS "brandDetectionWarnings" JSONB,
+  ADD COLUMN IF NOT EXISTS "brandDetectionDiagnostics" JSONB,
+  ADD COLUMN IF NOT EXISTS "brandDetectedPalette" JSONB,
+  ADD COLUMN IF NOT EXISTS "brandDetectedAt" TIMESTAMP(3);
