@@ -39,7 +39,8 @@
     "check:unified-data-ingestion": "node scripts/unified-data-ingestion-regression-check.mjs",
     "check:admin-report-selector": "node scripts/admin-report-selector-regression-check.mjs",
     "check:admin-realtime": "node scripts/admin-realtime-regression-check.mjs",
-    "check:mlops": "node scripts/mlops-regression-check.mjs"
+    "check:mlops": "node scripts/mlops-regression-check.mjs",
+    "check:mlops-data-quality": "node scripts/mlops-data-quality-regression-check.mjs"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.2",
