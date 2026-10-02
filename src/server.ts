@@ -666,7 +666,7 @@ app.post<{ Body: { email: string; name: string; role: any; employerIds?: string[
     const b = req.body;
     // Ordinary admins can manage normal users, but cannot create or discover
     // the privileged control-plane role.
-    if (admin.role !== "SUPERADMIN" && b.role === "SUPERADMIN") {
+    if (admin.role !== "SUPERADMIN" && (b.role === "SUPERADMIN" || b.role === "ADMIN")) {
       return reply.code(400).send({ error: "invalid role" });
     }
     const created = await createUser({
@@ -693,7 +693,7 @@ app.patch<{ Params: { id: string }; Body: any }>("/api/users/:id", async (req, r
     body.name = input.name.trim();
   }
   if (input.role !== undefined) {
-    if (!["ADMIN", "SUPERADMIN", "EMPLOYER_VIEW", "PORTFOLIO_VIEW"].includes(input.role)) return reply.code(400).send({ error: "invalid role" });
+    if (!["ADMIN", "SUPERADMIN", "EMPLOYER_MANAGER", "PORTFOLIO_MANAGER", "VIEWER"].includes(input.role)) return reply.code(400).send({ error: "invalid role" });
     body.role = input.role;
   }
   if (input.active !== undefined) {
