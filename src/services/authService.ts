@@ -52,7 +52,7 @@ export function digestSetupToken(token: string): string {
 // does not hand out live sessions. The raw token exists only in the cookie.
 const digestSession = (token: string) => createHash("sha256").update(token, "utf8").digest("hex");
 
-export type UserRole = "ADMIN" | "SUPERADMIN" | "EMPLOYER_MANAGER" | "PORTFOLIO_MANAGER";
+export type UserRole = "ADMIN" | "SUPERADMIN" | "EMPLOYER_MANAGER" | "PORTFOLIO_MANAGER" | "VIEWER";
 
 export function isAdminRole(user: { role?: string | null } | null | undefined): boolean {
   return user?.role === "ADMIN" || user?.role === "SUPERADMIN";
