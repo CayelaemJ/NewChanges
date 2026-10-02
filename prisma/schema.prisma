@@ -772,6 +772,7 @@ model Partner {
 
 enum Role {
   ADMIN          // everything: admin console, all dashboards, portfolio, user mgmt
+  SUPERADMIN     // full admin access with platform-level privileges
   EMPLOYER_VIEW  // dashboard for linked employers only
   PORTFOLIO_VIEW // portfolio across linked employers only
 }
