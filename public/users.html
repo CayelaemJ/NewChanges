@@ -425,7 +425,7 @@ function editUser(id){
     : '<span class="muted">No employers yet.</span>';
   const partnerOpts = '<option value="">None (standard branding)</option>'+
     PARTNERS_LIST.map(p=>`<option value="${esc(p.id)}" ${u.partner&&u.partner.id===p.id?'selected':''}>${p.displayName||p.name}</option>`).join('');
-  const roleOpts = ['EMPLOYER_VIEW','PORTFOLIO_VIEW','ADMIN'].map(r=>`<option value="${r}" ${u.role===r?'selected':''}>${r.replace('_',' ')}</option>`).join('');
+  const roleOpts = ['EMPLOYER_VIEW','PORTFOLIO_VIEW','ADMIN','SUPERADMIN'].map(r=>`<option value="${r}" ${u.role===r?'selected':''}>${r.replace('_',' ')}</option>`).join('');
   const tr=document.createElement('tr');
   tr.id='editor-'+id;
   tr.innerHTML=`<td colspan="7" style="background:#eef3f8;padding:16px 14px;">
