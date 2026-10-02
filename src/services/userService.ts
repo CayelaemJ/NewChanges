@@ -9,7 +9,7 @@ import { prisma, hashPassword, destroyAllSessionsForUser, digestSetupToken } fro
 import { sendMail, portalBaseUrl } from "./reportScheduler.js";
 import { notifyAdmins } from "./automationService.js";
 
-type Role = "ADMIN" | "EMPLOYER_VIEW" | "PORTFOLIO_VIEW";
+type Role = "ADMIN" | "SUPERADMIN" | "EMPLOYER_VIEW" | "PORTFOLIO_VIEW";
 
 function validatePassword(password: string) {
   if (typeof password !== "string" || password.length < 12) throw new Error("password must be at least 12 characters");
