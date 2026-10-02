@@ -29,7 +29,7 @@
 <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
 <link rel="manifest" href="/static/site.webmanifest">
-<style>
+<style>.compact-collapse{float:right}.compact-collapsed .card-bd{display:none!important}.compact-collapsed .card-hd{border-bottom:0!important}.compact-toggle{margin-left:auto}
   @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap');
   :root{
     --blue:#b15be8;--blue-d:#8e42bd;--brand-primary:#32217c;--ice:#f3efff;--ice-2:#f4f9fd;
@@ -1792,7 +1792,19 @@ async function loadHistory(){
   }
 }
 
-window.addEventListener("load", () => boot(), { once: true });
+function installCompactCollapse(){
+  const ids=["enterprise-operations-card","live-integration"];
+  ids.forEach(function(id){
+    const card=document.getElementById(id); if(!card||card.dataset.collapsibleInstalled)return;
+    const head=card.querySelector('.card-hd'); if(!head)return;
+    card.dataset.collapsibleInstalled='1';
+    const btn=document.createElement('button'); btn.type='button'; btn.className='btn btn-sm compact-toggle'; btn.textContent='Collapse';
+    btn.setAttribute('aria-expanded','true');
+    btn.onclick=function(){ const collapsed=card.classList.toggle('compact-collapsed'); btn.textContent=collapsed?'Expand':'Collapse'; btn.setAttribute('aria-expanded',String(!collapsed)); };
+    head.appendChild(btn);
+  });
+}
+window.addEventListener("load", () => { installCompactCollapse(); boot(); }, { once: true });
 window.setInterval(() => {
   if(document.visibilityState !== 'visible') return;
   Promise.allSettled([loadAdminSecuritySummary(), loadComplianceSummary()]);
