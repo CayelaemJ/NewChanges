@@ -10,7 +10,7 @@ const files = {
 const checks = [
   ["users security action is not duplicated by telemetry", files.security.includes("const existing=Array.from(actionCell.querySelectorAll(\"button\")).find") && files.users.includes('onclick="viewUserSecurity(')],
   ["security audit table is full width", files.users.includes(".security-grid{display:grid;grid-template-columns:1fr;gap:16px}")],
-  ["top 20 audit events are loaded", files.security.includes('/api/admin/security/data-access?limit=20') && files.security.includes("slice(0,20)")],
+  ["top 5 most critical audit events are loaded", files.security.includes('/api/admin/security/data-access?limit=50') && files.security.includes("slice(0,5)") && files.security.includes("severityRank")],
   ["full security audit CSV button exists", files.users.includes("downloadSecurityAuditLog()") && files.security.includes('/api/admin/security/audit-log.csv')],
   ["full security audit endpoint exists", files.server.includes('/api/admin/security/audit-log.csv')],
   ["security audit export includes admin actions", files.exports.includes('eventType: "ADMIN_ACTION"')],
