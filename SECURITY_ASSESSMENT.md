@@ -1,7 +1,7 @@
-# NewChanges Enterprise Security Assessment
+# EFS Optimise Enterprise Security Assessment
 
 Date: 30 September 2026
-Scope: NewChanges application, production deployment architecture, authentication/session controls, admin APIs, security telemetry, PostgreSQL application access, and security monitoring.
+Scope: EFS Optimise application, production deployment architecture, authentication/session controls, admin APIs, security telemetry, PostgreSQL application access, and security monitoring.
 
 ## Assessment basis
 
