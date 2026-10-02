@@ -6,7 +6,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "build": "prisma generate && tsc",
+    "build": "prisma generate && tsc && npm run frontend:build",
     "start": "node dist/server.js",
     "dev": "tsx watch src/server.ts",
     "db:generate": "prisma generate",
@@ -41,7 +41,9 @@
     "check:admin-realtime": "node scripts/admin-realtime-regression-check.mjs",
     "check:mlops": "node scripts/mlops-regression-check.mjs",
     "check:mlops-data-quality": "node scripts/mlops-data-quality-regression-check.mjs",
-    "check:role-perspective": "node scripts/role-perspective-regression-check.mjs"
+    "check:role-perspective": "node scripts/role-perspective-regression-check.mjs",
+    "frontend:build": "npm install --prefix frontend --no-audit --no-fund && npm run build --prefix frontend",
+    "check:react": "node scripts/react-migration-regression-check.mjs"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.2",
