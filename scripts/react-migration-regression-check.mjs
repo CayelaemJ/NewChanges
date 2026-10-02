@@ -23,6 +23,8 @@ const checks = [
   ["Real dashboard filter options used", app.includes("data.filterOptions?.incomes") && read("src/services/snapshotBuilder.ts").includes("incomes: INCOME_VALUES.map")],
   ["Full-value financial trend units", read("src/services/snapshotBuilder.ts").includes("return { key, value: Math.round(rand(cumulative)) }") && !read("src/services/snapshotBuilder.ts").includes("Math.round(rand(cumulative) / 1_000)")],
   ["Period comparison points exposed", read("src/services/snapshotBuilder.ts").includes("monthlySavingRand: Number(rand(cumulativeMonthlySaving))") && read("src/services/snapshotBuilder.ts").includes("totalAdvancedRaw: Number(rand(ewaTotal))")],
+  ["Governed period filter endpoint used", app.includes("/api/employers/") && app.includes("/periods") && app.includes("periodOptions")],
+  ["Site filter is wired to dashboard query", app.includes('p.set("site",site)') && app.includes("filterOptions?.sites")],
 ];
 
 let failed = 0;
