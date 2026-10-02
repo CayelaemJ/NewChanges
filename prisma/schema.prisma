@@ -771,17 +771,18 @@ model Partner {
 // is what a future broker login will use.
 
 enum Role {
-  ADMIN          // everything: admin console, all dashboards, portfolio, user mgmt
-  SUPERADMIN     // full admin access with platform-level privileges
-  EMPLOYER_VIEW  // dashboard for linked employers only
-  PORTFOLIO_VIEW // portfolio across linked employers only
+  ADMIN          // operational administration
+  SUPERADMIN     // platform owner and full control-plane access
+  EMPLOYER_MANAGER // dashboard access for linked employers
+  PORTFOLIO_MANAGER // portfolio access across linked employers
+  VIEWER         // read-only access to explicitly assigned dashboards
 }
 
 model User {
   id            String   @id @default(cuid())
   email         String   @unique
   name          String
-  role          Role     @default(EMPLOYER_VIEW)
+  role          Role     @default(EMPLOYER_MANAGER)
   passwordHash  String?  // null until a set-password link is used
   active        Boolean  @default(true)
   // one-time token for "send link to set password"
@@ -870,7 +871,7 @@ model DashboardSection {
   key          String   @id            // stable key referenced by the frontend, e.g. "voiceOfEmployee"
   label        String                  // human-readable name shown in the admin UI
   enabled      Boolean  @default(true) // master switch — set false while a feature is unfinished
-  allowedRoles String                  // comma-separated Role values, e.g. "ADMIN,EMPLOYER_VIEW,PORTFOLIO_VIEW"
+  allowedRoles String                  // comma-separated Role values
   updatedAt    DateTime @updatedAt
 
   overrides UserSectionAccess[]
