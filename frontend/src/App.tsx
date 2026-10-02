@@ -25,7 +25,12 @@ type Dashboard = {
   valueStrip?: Array<{l:string;v:string;d:string;available:boolean}>;
   income?: Array<{name:string;count:number;color:string}>;
   ratings?: {avg:number|null;fiveStarPct:number|null;responses:number|null};
-  comparison?: {current?:{label:string;savings:number[];savingsLabels:string[];monthlySavingRand:number;totalAdvancedRaw:number};previous?:{label:string;savings:number[];savingsLabels:string[];monthlySavingRand:number;totalAdvancedRaw:number}};
+  comparison?: {current?:{label:string;savings:number[];savingsLabels:string[];monthlySavingRand?:number;totalAdvancedRaw?:number;ewa?:number[];ewaLabels?:string[]};previous?:{label:string;savings:number[];savingsLabels:string[];monthlySavingRand:number;totalAdvancedRaw:number;ewa?:number[];ewaLabels?:string[]}};
+  filterOptions?: { sites?:Array<{value:string;label:string}>; incomes?:Array<{value:string;label:string}> };
+  outcomes?: Array<{key:string;name:string;count:number;stat:string;statL:string;avgPerEmployee:string;trend?:number[];delta?:number|null}>;
+  creditors?: Array<{name:string;accounts:number;balance:string;avg:string;stateBreakdown?:Array<{label:string;count:number;pct:number}>}>;
+  creditorsTotal?: {accounts:number;balance:string};
+  debtStates?: {active?:{rand:number;employees:number};challenged?:{rand:number;employees:number};guided?:{rand:number;employees:number}};
   ewa?: {totalRaw?:number; total?:string; trend?:number[]; trendLabels?:string[]};
   savings?: number[];
   savingsLabels?: string[];
@@ -100,6 +105,9 @@ function DashboardView({me}:{me:Me}) {
   const savingDelta=currentSaving-previousSaving;
   const trend=data.comparison?.current?.savings ?? data.kpis?.monthlySaving?.trend ?? data.savings ?? [];
   const trendLabels=data.comparison?.current?.savingsLabels ?? data.savingsLabels ?? [];
+  const advancedTrend=data.comparison?.current?.ewa ?? data.ewa?.trend ?? [];
+  const advancedLabels=data.comparison?.current?.ewaLabels ?? data.ewa?.trendLabels ?? [];
+  const incomeOptions=data.filterOptions?.incomes ?? [];
   const role=roleLabels[me.role??""]??me.role??"User";
 
   return <main>
@@ -116,7 +124,7 @@ function DashboardView({me}:{me:Me}) {
     <section className="filters">
       <div className="seg"><button className={!period&&range==="latest"?"on":""} onClick={()=>{setPeriod("");setRange("latest")}}>Latest</button><button className={!period&&range==="quarter"?"on":""} onClick={()=>{setPeriod("");setRange("quarter")}}>Quarter</button><button className={!period&&range==="all"?"on":""} onClick={()=>{setPeriod("");setRange("all")}}>Programme</button></div>
       <label className="select"><span>Month</span><select value={period} onChange={e=>{setPeriod(e.target.value);if(e.target.value)setRange("latest")}}><option value="">Select month</option>{months.map(m=><option key={m} value={m}>{new Date(m+"-01T00:00:00Z").toLocaleDateString("en-ZA",{month:"long",year:"numeric",timeZone:"UTC"})}</option>)}</select></label>
-      <label className="select"><span>Income band</span><select value={income} onChange={e=>setIncome(e.target.value)}><option value="all">All income bands</option>{data.filterContext?.incomeLabel&&<option value={income}>{data.filterContext.incomeLabel}</option>}{data.filterContext?.incomeLabel==null&&["UNDER_5K","BAND_5_10K","BAND_10_20K","BAND_20_40K","OVER_40K"].map(v=><option key={v} value={v}>{v.replaceAll("_"," ").replace("BAND ","R ")}</option>)}</select></label>
+      <label className="select"><span>Income band</span><select value={income} onChange={e=>setIncome(e.target.value)}><option value="all">All income bands</option>{incomeOptions.map(v=><option key={v.value} value={v.value}>{v.label}</option>)}</select></label>
       {comparison?.current&&<span className="comparison">Comparing <strong>{comparison.current}</strong>{comparison.previous&&<> with <strong>{comparison.previous}</strong></>}</span>}
     </section>
 
@@ -142,12 +150,42 @@ function DashboardView({me}:{me:Me}) {
 
     <section className="grid two">
       <article className="card">
+        <div className="card-title">Total advanced</div>
+        <p className="note">Early wage access advanced in the selected period.</p>
+        <div className="mini-total"><strong>{money(data.comparison?.current?.totalAdvancedRaw ?? data.ewa?.totalRaw)}</strong><span>Current period total</span></div>
+        <LineChart values={advancedTrend} labels={advancedLabels}/>
+      </article>
+      <article className="card">
+        <div className="card-title">Financial problems resolved</div>
+        <p className="note">Completed fixes from the governed journey data.</p>
+        <div className="outcomes">{(data.outcomes||[]).map(row=><div className="outcome" key={row.key}><div><b>{row.name}</b><small>{row.avgPerEmployee}</small></div><strong>{number(row.count)}</strong><span>{row.statL}</span></div>)}</div>
+      </article>
+    </section>
+
+    <section className="grid two">
+      <article className="card">
         <div className="card-title">Workforce funnel</div>
         <div className="funnel">{(data.funnel||[]).map(row=><div className="funnel-row" key={row.label}><div><b>{row.label}</b><small>{row.sub}</small></div><div className="track"><i style={{width:`${Math.max(0,Math.min(100,row.pct??0))}%`}}/></div><strong>{number(row.n)}</strong></div>)}</div>
       </article>
       <article className="card">
         <div className="card-title">Activated employees by income band</div>
         <div className="income">{(data.income||[]).map(row=><div className="income-row" key={row.name}><span>{row.name}</span><div className="track"><i style={{width:`${Math.min(100,(row.count/Math.max(1,...(data.income||[]).map(x=>x.count)))*100)}%`}}/></div><strong>{number(row.count)}</strong></div>)}</div>
+      </article>
+    </section>
+
+    <section className="grid two">
+      <article className="card">
+        <div className="card-title">Financial problems resolved by creditor</div>
+        <div className="creditors">{(data.creditors||[]).slice(0,8).map(row=><div className="creditor" key={row.name}><div><b>{row.name}</b><small>{number(row.accounts)} accounts · {row.avg} average</small></div><strong>{row.balance}</strong><span>{(row.stateBreakdown||[]).map(s=>`${s.label}: ${number(s.count)}`).join(" · ") || "No state detail"}</span></div>)}</div>
+        {data.creditorsTotal&&<div className="creditor-total"><span>Total in arrears journey</span><strong>{data.creditorsTotal.balance}</strong></div>}
+      </article>
+      <article className="card">
+        <div className="card-title">Intervention states</div>
+        <div className="state-grid">
+          <div><strong>{money(data.debtStates?.active?.rand)}</strong><span>Active intervention</span><small>{number(data.debtStates?.active?.employees)} employees</small></div>
+          <div><strong>{money(data.debtStates?.challenged?.rand)}</strong><span>Prescription challenged</span><small>{number(data.debtStates?.challenged?.employees)} employees</small></div>
+          <div><strong>{money(data.debtStates?.guided?.rand)}</strong><span>Self-guided</span><small>{number(data.debtStates?.guided?.employees)} employees</small></div>
+        </div>
       </article>
     </section>
 
