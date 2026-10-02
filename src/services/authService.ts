@@ -52,6 +52,16 @@ export function digestSetupToken(token: string): string {
 // does not hand out live sessions. The raw token exists only in the cookie.
 const digestSession = (token: string) => createHash("sha256").update(token, "utf8").digest("hex");
 
+export type UserRole = "ADMIN" | "SUPERADMIN" | "EMPLOYER_VIEW" | "PORTFOLIO_VIEW";
+
+export function isAdminRole(user: { role?: string | null } | null | undefined): boolean {
+  return user?.role === "ADMIN" || user?.role === "SUPERADMIN";
+}
+
+export function isSuperAdmin(user: { role?: string | null } | null | undefined): boolean {
+  return user?.role === "SUPERADMIN";
+}
+
 export interface SessionContext {
   ipAddress?: string;
   userAgent?: string;
@@ -151,7 +161,7 @@ export function allowedEmployerIds(user: AuthUser): string[] | null {
 
 /** can this user view a specific employer's dashboard? */
 export function canViewEmployer(user: AuthUser, employerId: string): boolean {
-  if (user.role === "ADMIN") return true;
+  if (user.role === "ADMIN" || user.role === "SUPERADMIN") return true;
   if (user.role !== "EMPLOYER_VIEW" && user.role !== "PORTFOLIO_VIEW") return false;
   return (user.links ?? []).some((l: any) => l.employerId === employerId);
 }
