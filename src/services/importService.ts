@@ -123,11 +123,11 @@ export async function uploadAndValidate(opts: {
   if (result.ok) {
     const staged = await loadStagedRows(batch);
     const quality = await assessIncomingRows({ reportKey: opts.reportKey, rows: staged });
-    if (quality.status === "QUARANTINE") {
+    if (quality.status !== "PASS") {
       result = {
         ...result,
         ok: false,
-        errors: [...result.errors, ...quality.findings.map((f) => ({ row: f.row ?? 0, column: f.field ?? "dataset", message: f.message }))],
+        errors: [...result.errors, ...quality.findings.map((f) => ({ row: f.row ?? 0, column: f.field ?? "dataset", value: null, reason: `[MLOPS:${f.code}] ${f.message}` }))],
       };
       await prisma.importBatchRow.deleteMany({ where: { batchId: batch.id } });
     }
