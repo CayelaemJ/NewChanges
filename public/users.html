@@ -202,13 +202,20 @@
       </div>
       <div class="row2">
         <div>
-          <label>Role</label>
-          <select id="n-role" onchange="onRoleChange()">
-            <option value="EMPLOYER_VIEW">Employer view — sees linked employers' dashboards</option>
-            <option value="PORTFOLIO_VIEW">Portfolio view — compares linked employers</option>
-            <option value="ADMIN">Admin — operational administration</option>
-            <option value="SUPERADMIN">Superadmin — full platform administration</option>
+          <label>Access</label>
+          <div class="radio-row" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;">
+            <label><input type="checkbox" id="n-access-employer" checked onchange="syncRoleSelection()"> Employer view</label>
+            <label><input type="checkbox" id="n-access-portfolio" onchange="syncRoleSelection()"> Portfolio view</label>
+            <label><input type="checkbox" id="n-access-admin" onchange="syncRoleSelection()"> Admin</label>
+            <label><input type="checkbox" id="n-access-superadmin" onchange="syncRoleSelection()"> Superadmin</label>
+          </div>
+          <select id="n-role" onchange="onRoleChange()" style="display:none" aria-hidden="true">
+            <option value="EMPLOYER_VIEW">Employer view</option>
+            <option value="PORTFOLIO_VIEW">Portfolio view</option>
+            <option value="ADMIN">Admin</option>
+            <option value="SUPERADMIN">Superadmin</option>
           </select>
+          <div class="muted" style="font-size:11px;margin-top:6px;">Admin and Superadmin include the operational access above. Portfolio access includes employer dashboard access.</div>
         </div>
         <div>
           <label>How they get access</label>
@@ -305,6 +312,15 @@ function renderNav(){
   if(window.EmpowerPortalNav){
     window.EmpowerPortalNav.render({me:ME,navSelector:'#portal-nav',accountSelector:'#portal-account',active:'users'});
   }
+}
+function syncRoleSelection(){
+  const superadmin=document.getElementById('n-access-superadmin')?.checked;
+  const admin=document.getElementById('n-access-admin')?.checked;
+  const portfolio=document.getElementById('n-access-portfolio')?.checked;
+  const employer=document.getElementById('n-access-employer')?.checked;
+  const role=superadmin?'SUPERADMIN':admin?'ADMIN':portfolio?'PORTFOLIO_VIEW':employer?'EMPLOYER_VIEW':'EMPLOYER_VIEW';
+  const select=document.getElementById('n-role'); if(select) select.value=role;
+  onRoleChange();
 }
 function onRoleChange(){
   const role=$('#n-role').value;
