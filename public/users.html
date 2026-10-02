@@ -59,8 +59,9 @@
   th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--grey);font-weight:800;}
   .role{font-size:11px;font-weight:800;padding:3px 9px;border-radius:6px;}
   .role.ADMIN{background:var(--amber-soft);color:var(--amber);}
-  .role.EMPLOYER_VIEW{background:var(--ice);color:var(--blue-d);}
-  .role.PORTFOLIO_VIEW{background:var(--green-soft);color:#137a47;}
+  .role.EMPLOYER_MANAGER{background:var(--ice);color:var(--blue-d);}
+  .role.PORTFOLIO_MANAGER{background:var(--green-soft);color:#137a47;}
+  .role.VIEWER{background:#eef1f4;color:#425466;}
   .chip{display:inline-block;font-size:11px;font-weight:700;background:var(--ice);color:var(--grey);padding:2px 8px;border-radius:6px;margin:2px 3px 2px 0;}
   .tag{font-size:11px;font-weight:800;padding:2px 8px;border-radius:6px;}
   .tag.live{background:var(--green-soft);color:#137a47;}.tag.pend{background:var(--amber-soft);color:var(--amber);}.tag.off{background:#e2e4e8;color:#46515b;}
@@ -204,14 +205,16 @@
         <div>
           <label>Access</label>
           <div class="radio-row" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;">
-            <label><input type="checkbox" id="n-access-employer" checked onchange="syncRoleSelection()"> Employer view</label>
-            <label><input type="checkbox" id="n-access-portfolio" onchange="syncRoleSelection()"> Portfolio view</label>
+            <label><input type="checkbox" id="n-access-employer" checked onchange="syncRoleSelection()"> Employer Manager</label>
+            <label><input type="checkbox" id="n-access-portfolio" onchange="syncRoleSelection()"> Portfolio Manager</label>
+            <label><input type="checkbox" id="n-access-viewer" onchange="syncRoleSelection()"> Viewer</label>
             <span id="n-admin-access"></span>
             <span id="n-superadmin-access"></span>
           </div>
           <select id="n-role" onchange="onRoleChange()" style="display:none" aria-hidden="true">
-            <option value="EMPLOYER_VIEW">Employer view</option>
-            <option value="PORTFOLIO_VIEW">Portfolio view</option>
+            <option value="EMPLOYER_MANAGER">Employer Manager</option>
+            <option value="PORTFOLIO_MANAGER">Portfolio Manager</option>
+            <option value="VIEWER">Viewer</option>
             <option value="ADMIN">Admin</option>
           </select>
           <div class="muted" style="font-size:11px;margin-top:6px;">Admin includes the operational access above. Portfolio access includes employer dashboard access.</div>
@@ -328,8 +331,9 @@ function syncRoleSelection(){
   const superadmin=document.getElementById('n-access-superadmin')?.checked === true;
   const admin=document.getElementById('n-access-admin')?.checked;
   const portfolio=document.getElementById('n-access-portfolio')?.checked;
+  const viewer=document.getElementById('n-access-viewer')?.checked;
   const employer=document.getElementById('n-access-employer')?.checked;
-  const role=superadmin?'SUPERADMIN':admin?'ADMIN':portfolio?'PORTFOLIO_VIEW':employer?'EMPLOYER_VIEW':'EMPLOYER_VIEW';
+  const role=superadmin?'SUPERADMIN':admin?'ADMIN':portfolio?'PORTFOLIO_MANAGER':viewer?'VIEWER':employer?'EMPLOYER_MANAGER':'VIEWER';
   const select=document.getElementById('n-role'); if(select) select.value=role;
   onRoleChange();
 }
@@ -402,7 +406,7 @@ async function loadUsers(){
     }
     if(rows) rows.innerHTML=USERS.map(u=>{
       const userEmployers=Array.isArray(u.employers)?u.employers:[];
-      const emps=u.role==='ADMIN'
+      const emps=(u.role==='ADMIN'||u.role==='SUPERADMIN')
         ? '<span class="muted">All</span>'
         : (userEmployers.map(e=>`<span class="chip">${escHtml(e.name)}</span>`).join('')||'<span class="muted">none</span>');
       const partner=u.partner?`<span class="chip">${escHtml(u.partner.name)}</span>`:'<span class="muted">—</span>';
@@ -436,7 +440,7 @@ function editUser(id){
     : '<span class="muted">No employers yet.</span>';
   const partnerOpts = '<option value="">None (standard branding)</option>'+
     PARTNERS_LIST.map(p=>`<option value="${esc(p.id)}" ${u.partner&&u.partner.id===p.id?'selected':''}>${p.displayName||p.name}</option>`).join('');
-  const availableRoles = ME?.role==='SUPERADMIN' ? ['EMPLOYER_VIEW','PORTFOLIO_VIEW','ADMIN','SUPERADMIN'] : ['EMPLOYER_VIEW','PORTFOLIO_VIEW'];
+  const availableRoles = ME?.role==='SUPERADMIN' ? ['EMPLOYER_MANAGER','PORTFOLIO_MANAGER','VIEWER','ADMIN','SUPERADMIN'] : ['EMPLOYER_MANAGER','PORTFOLIO_MANAGER','VIEWER'];
   const roleOpts = availableRoles.map(r=>`<option value="${r}" ${u.role===r?'selected':''}>${r.replace('_',' ')}</option>`).join('');
   const tr=document.createElement('tr');
   tr.id='editor-'+id;
@@ -452,7 +456,7 @@ function editUser(id){
         <select id="e-partner-${id}" style="display:block;width:100%;margin-top:4px;padding:8px 11px;border:1px solid #e8e1f7;border-radius:8px;font:inherit;">${partnerOpts}</select>
       </label>
     </div>
-    <div id="e-emp-wrap-${id}" style="margin-top:12px;${u.role==='ADMIN'?'display:none;':''}">
+    <div id="e-emp-wrap-${id}" style="margin-top:12px;${(u.role==='ADMIN'||u.role==='SUPERADMIN')?'display:none;':''}">
       <div style="font-size:12px;font-weight:700;color:#5b6b7a;margin-bottom:5px;">Linked employers (which employers this user may see)</div>
       <div style="border:1px solid #e8e1f7;border-radius:9px;padding:10px;background:#fff;">${empBoxes}</div>
     </div>
