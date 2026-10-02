@@ -206,7 +206,7 @@
           <div class="radio-row" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;">
             <label><input type="checkbox" id="n-access-employer" checked onchange="syncRoleSelection()"> Employer view</label>
             <label><input type="checkbox" id="n-access-portfolio" onchange="syncRoleSelection()"> Portfolio view</label>
-            <label><input type="checkbox" id="n-access-admin" onchange="syncRoleSelection()"> Admin</label>
+            <span id="n-admin-access"></span>
             <span id="n-superadmin-access"></span>
           </div>
           <select id="n-role" onchange="onRoleChange()" style="display:none" aria-hidden="true">
@@ -314,11 +314,15 @@ function renderNav(){
   }
 }
 function installPrivilegedAccess(){
-  if(ME?.role!=='SUPERADMIN') return;
-  const host=document.getElementById('n-superadmin-access');
-  if(!host || host.dataset.installed) return;
-  host.dataset.installed='1';
-  host.innerHTML='<label><input type="checkbox" id="n-access-superadmin" onchange="syncRoleSelection()"> Superadmin</label>';
+  const adminHost=document.getElementById('n-admin-access');
+  const superHost=document.getElementById('n-superadmin-access');
+  if(ME?.role==='SUPERADMIN'){
+    if(adminHost) adminHost.innerHTML='<label><input type="checkbox" id="n-access-admin" onchange="syncRoleSelection()"> Admin</label>';
+    if(superHost) superHost.innerHTML='<label><input type="checkbox" id="n-access-superadmin" onchange="syncRoleSelection()"> Superadmin</label>';
+  } else {
+    if(adminHost) adminHost.innerHTML='';
+    if(superHost) superHost.innerHTML='';
+  }
 }
 function syncRoleSelection(){
   const superadmin=document.getElementById('n-access-superadmin')?.checked === true;
@@ -432,7 +436,7 @@ function editUser(id){
     : '<span class="muted">No employers yet.</span>';
   const partnerOpts = '<option value="">None (standard branding)</option>'+
     PARTNERS_LIST.map(p=>`<option value="${esc(p.id)}" ${u.partner&&u.partner.id===p.id?'selected':''}>${p.displayName||p.name}</option>`).join('');
-  const availableRoles = ME?.role==='SUPERADMIN' ? ['EMPLOYER_VIEW','PORTFOLIO_VIEW','ADMIN','SUPERADMIN'] : ['EMPLOYER_VIEW','PORTFOLIO_VIEW','ADMIN'];
+  const availableRoles = ME?.role==='SUPERADMIN' ? ['EMPLOYER_VIEW','PORTFOLIO_VIEW','ADMIN','SUPERADMIN'] : ['EMPLOYER_VIEW','PORTFOLIO_VIEW'];
   const roleOpts = availableRoles.map(r=>`<option value="${r}" ${u.role===r?'selected':''}>${r.replace('_',' ')}</option>`).join('');
   const tr=document.createElement('tr');
   tr.id='editor-'+id;
