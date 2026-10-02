@@ -654,13 +654,21 @@ app.post<{ Params: { id: string } }>("/api/admin/security/alerts/:id/resolve", a
 
 // ════════════════════ USER MANAGEMENT (admin only) ════════════════════
 app.get("/api/users", async (req, reply) => {
-  if (!(await requireAdmin(req, reply))) return;
-  return listUsers();
+  const admin = await requireAdmin(req, reply); if (!admin) return;
+  const users = await listUsers();
+  // Superadmin is an internal control-plane role. Ordinary admins must not
+  // discover that the role exists, including through the user-management API.
+  return admin.role === "SUPERADMIN" ? users : users.filter((u: any) => u.role !== "SUPERADMIN");
 });
 app.post<{ Body: { email: string; name: string; role: any; employerIds?: string[]; partnerId?: string; tempPassword?: string; sendSetupLink?: boolean } }>("/api/users", async (req, reply) => {
   const admin = await requireAdmin(req, reply); if (!admin) return;
   try {
     const b = req.body;
+    // Ordinary admins can manage normal users, but cannot create or discover
+    // the privileged control-plane role.
+    if (admin.role !== "SUPERADMIN" && b.role === "SUPERADMIN") {
+      return reply.code(400).send({ error: "invalid role" });
+    }
     const created = await createUser({
       email: b.email, name: b.name, role: b.role, employerIds: b.employerIds ?? [],
       partnerId: b.partnerId, tempPassword: b.tempPassword, sendSetupLink: b.sendSetupLink, createdBy: admin.email,
@@ -672,6 +680,12 @@ app.post<{ Body: { email: string; name: string; role: any; employerIds?: string[
 app.patch<{ Params: { id: string }; Body: any }>("/api/users/:id", async (req, reply) => {
   const admin = await requireAdmin(req, reply); if (!admin) return;
   const input: Record<string, any> = req.body && typeof req.body === "object" ? req.body : {};
+  // Ordinary admins must not be able to discover, edit or promote a user into
+  // the privileged control-plane role.
+  const target = await prisma.user.findUnique({ where: { id: req.params.id }, select: { role: true } });
+  if (!target) return reply.code(404).send({ error: "user not found" });
+  if (admin.role !== "SUPERADMIN" && target.role === "SUPERADMIN") return reply.code(404).send({ error: "user not found" });
+  if (admin.role !== "SUPERADMIN" && input.role === "SUPERADMIN") return reply.code(400).send({ error: "invalid role" });
   // Allow-list fields: never pass an arbitrary client object through to the DB layer.
   const body: Record<string, any> = {};
   if (input.name !== undefined) {
@@ -732,6 +746,9 @@ app.post<{ Body: { reason?: string } }>("/api/users/me/deactivate", async (req, 
 // (defence in depth — nobody disappears without first going through revoke).
 app.delete<{ Params: { id: string } }>("/api/users/:id", async (req, reply) => {
   const admin = await requireAdmin(req, reply); if (!admin) return;
+  const target = await prisma.user.findUnique({ where: { id: req.params.id }, select: { role: true } });
+  if (!target) return reply.code(404).send({ error: "user not found" });
+  if (admin.role !== "SUPERADMIN" && target.role === "SUPERADMIN") return reply.code(404).send({ error: "user not found" });
   try {
     const result = await deleteUserPermanently(req.params.id);
     logAdminAction(admin, "user.delete", `Permanently deleted user ${req.params.id}`, { targetType: "User", targetId: req.params.id, impactCount: 1, context: requestSecurityContext(req) });
@@ -743,8 +760,10 @@ app.delete<{ Params: { id: string } }>("/api/users/:id", async (req, reply) => {
 // admin-only: "Past users" — everyone currently deactivated, with who revoked
 // access and why, so admins can see who once had access and why it ended.
 app.get("/api/admin/users/revoked", async (req, reply) => {
-  if (!(await requireAdmin(req, reply))) return;
-  return listRevokedUsers();
+  const admin = await requireAdmin(req, reply); if (!admin) return;
+  const users = await listRevokedUsers();
+  // Keep privileged control-plane accounts invisible to ordinary admins.
+  return admin.role === "SUPERADMIN" ? users : users.filter((u: any) => u.role !== "SUPERADMIN");
 });
 
 // ════════════════════ ENGAGEMENT ANALYTICS ════════════════════
