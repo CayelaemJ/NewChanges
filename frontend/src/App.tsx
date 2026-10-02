@@ -50,29 +50,6 @@ const api = async <T,>(url:string):Promise<T> => {
   return r.json();
 };
 
-function LineChart({values, labels, prefix="R "}:
-  {values:number[];labels:string[];prefix?:string}) {
-  if(!values.length) return <div className="empty">No trend data available for this period.</div>;
-  const max=Math.max(...values,1), min=Math.min(...values,0), span=Math.max(max-min,1);
-  const points=values.map((v,i)=>`${values.length===1?50:i/(values.length-1)*100},${92-(v-min)/span*76}`).join(" ");
-  return <div className="chart">
-    <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="Trend chart" role="img">
-      <line x1="0" y1="92" x2="100" y2="92" className="axis"/>
-      <polyline points={points} className="line"/>
-    </svg>
-    <div className="chart-labels">{labels.map((l,i)=><span key={i}>{l}</span>)}</div>
-    <div className="chart-values">{values.map((v,i)=><span key={i}>{prefix}{number(v)}</span>)}</div>
-  </div>;
-}
-
-
-import { Badge } from "./components/ui/badge";
-import { Button } from "./components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./components/ui/card";
-import { Progress } from "./components/ui/progress";
-import { Select } from "./components/ui/select";
-import { Activity, ArrowUpRight, Building2, CheckCircle2, CircleAlert, CreditCard, Landmark, ShieldCheck, Star, Users, WalletCards } from "lucide-react";
-
 function LineChart({values,labels,prefix="R "}:{values:number[];labels:string[];prefix?:string}) {
   if(!values.length) return <div className="flex h-44 items-center justify-center text-xs text-slate-500">No trend data available for this period.</div>;
   const max=Math.max(...values,1),min=Math.min(...values,0),span=Math.max(max-min,1);
