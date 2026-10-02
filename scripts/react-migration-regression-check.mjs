@@ -18,7 +18,7 @@ const checks = [
   ["Root build includes React build", pkg.scripts?.["frontend:build"] && pkg.scripts.build.includes("frontend:build")],
   ["Fastify serves React preview", server.includes('prefix: "/react/"') && server.includes('join(PUBLIC_DIR, "react")')],
   ["Role-aware shell exists", app.includes("roleLabels") && app.includes("VIEWER") && app.includes("SUPERADMIN")],
-  ["Responsive React shell exists", fs.existsSync(path.join(root, "frontend/src/styles.css")) && read("frontend/src/styles.css").includes("@media"),
+  ["Responsive React shell exists", fs.existsSync(path.join(root, "frontend/src/styles.css")) && read("frontend/src/styles.css").includes("@media")],
 ];
 
 let failed = 0;
