@@ -352,6 +352,7 @@ export async function runSync(trigger: "manual" | "scheduled" = "manual") {
           through: throughAt,
         };
 
+        const previousCursor = cursor.lastSourceUpdatedAt;
         await prisma.integrationCursor.update({
           where: { reportKey },
           data: {
@@ -361,6 +362,14 @@ export async function runSync(trigger: "manual" | "scheduled" = "manual") {
             lastNote: `${committed.inserted} inserted, ${committed.updated} updated, ${committed.deleted} deleted, ${committed.skipped} stale skipped via ${adapter.mode}.`,
           },
         });
+        if (previousCursor && (committed.inserted > 0 || committed.updated > 0 || committed.deleted > 0)) {
+          await notifyAdmins({
+            subject: `Source database changes detected: ${reportKey}`,
+            html: `<p>The connected source changed for <strong>${reportKey}</strong>.</p><p>${committed.inserted} inserted, ${committed.updated} updated and ${committed.deleted} deleted records were applied. Dashboard snapshots are being refreshed.</p>`,
+            slackText: `:information_source: Source DB changes detected for ${reportKey}: +${committed.inserted} / ~${committed.updated} / -${committed.deleted}. Dashboard refresh queued.`,
+          }).catch(() => {});
+        }
+        anyOk = true;
         anyOk = true;
       } catch (error: any) {
         const note = error?.message ?? String(error);
