@@ -63,8 +63,7 @@ must(
 );
 
 must(
-  files.users.includes("availableRoles=['EMPLOYER_MANAGER','PORTFOLIO_MANAGER','VIEWER']") ||
-  files.users.includes("availableRoles = ['EMPLOYER_MANAGER','PORTFOLIO_MANAGER','VIEWER']"),
+  files.users.includes("ME?.role==='SUPERADMIN' ? ['EMPLOYER_MANAGER','PORTFOLIO_MANAGER','VIEWER','ADMIN','SUPERADMIN'] : ['EMPLOYER_MANAGER','PORTFOLIO_MANAGER','VIEWER']"),
   "ordinary Admin role picker must be limited to non-privileged operational roles"
 );
 
