@@ -38,14 +38,36 @@ async function refreshViaDbProcedure() {
   return { ok: true, status: "OK", note: "refresh_all_reports() completed" };
 }
 
-async function refreshWithRetry(label: string, fn: () => Promise<any>) {\n  let lastError: any;\n  for (let attempt = 1; attempt <= 3; attempt++) {\n    try { return await fn(); }\n    catch (error: any) { lastError = error; console.error(`[${new Date().toISOString()}] ${label} attempt ${attempt}/3 failed:`, error?.message ?? error); if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 60_000)); }\n  }\n  throw lastError;\n}\n\nexport function startDailyRefresh() {
+async function refreshWithRetry(label: string, fn: () => Promise<any>) {
+  let lastError: any;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      lastError = error;
+      console.error(
+        `[${new Date().toISOString()}] ${label} attempt ${attempt}/3 failed:`,
+        error?.message ?? error,
+      );
+      if (attempt < 3) {
+        await new Promise((resolve) => setTimeout(resolve, attempt * 60_000));
+      }
+    }
+  }
+  throw lastError;
+}
+
+export function startDailyRefresh() {
   const schedule = process.env.DAILY_REFRESH_CRON ?? "0 0 * * *"; // 00:00 server time, daily
   const useSqlProc = (process.env.DAILY_REFRESH_MODE ?? "app") === "sqlproc";
 
   cron.schedule(schedule, async () => {
     try {
-      if (useSqlProc) await refreshViaDbProcedure();
-      else await refreshViaAppPipeline();
+      if (useSqlProc) {
+        await refreshWithRetry("Daily DB refresh", refreshViaDbProcedure);
+      } else {
+        await refreshWithRetry("Daily source sync", refreshViaAppPipeline);
+      }
     } catch (error: any) {
       console.error(`[${new Date().toISOString()}] Daily refresh failed:`, error?.message ?? error);
     }
