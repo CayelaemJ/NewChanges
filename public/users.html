@@ -108,7 +108,7 @@
 
 <div class="wrap">
   <div class="head"><h1>Users</h1><p>Create users, set their role, and link them to the employers they may see.</p></div>
-  <section class="card" aria-labelledby="security-center-title">
+  <section id="security-center" class="card" aria-labelledby="security-center-title">
     <div class="card-hd"><div><h2 id="security-center-title">Security &amp; identity centre</h2><div class="muted" style="margin-top:4px;">Live sessions, sign-ins, device context and high-impact admin activity.</div></div><button class="btn btn-sm" type="button" onclick="loadSecurityCenter()">Refresh</button></div>
     <div class="card-bd">
       <div class="security-hero">
@@ -145,9 +145,9 @@
 
       <div class="security-panel" style="margin-top:16px;">
         <div class="security-panel-head">
-          <div><h3>Sensitive data access</h3><div class="security-panel-note">Top 20 most recent protected-API access events. The full security audit export includes admin actions, data access, sign-ins and security alerts.</div></div>
+          <div><h3>Sensitive data access</h3><div class="security-panel-note">Top 5 most critical protected-API access events. The full security audit export includes admin actions, data access, sign-ins and security alerts.</div></div>
           <div class="security-panel-actions">
-            <span class="chip">Top 20 recent events</span>
+            <span class="chip">Top 5 critical events</span>
             <button class="btn btn-sm" type="button" onclick="downloadSecurityAuditLog()">Download full audit log</button>
           </div>
         </div>
@@ -240,7 +240,7 @@
     </div>
   </div>
 
-  <div class="card">
+  <div id="user-list-card" class="card">
     <div class="card-hd"><h2>Existing users</h2></div>
     <div class="card-bd" style="padding:6px 10px 12px;">
       <table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Employers</th><th>Partner</th><th>Status</th><th></th></tr></thead>
@@ -248,7 +248,7 @@
     </div>
   </div>
 
-  <div class="card" style="border-color:#f3c9c0;">
+  <div id="revoked-users-card" class="card" style="border-color:#f3c9c0;">
     <div class="card-hd" style="border-bottom-color:#fbe4df;"><h2 style="color:#b5391f;">Past users</h2><div class="note" style="margin-left:10px;color:#8497a7;font-size:12px;">Who once had access, and why it ended · admin-only</div></div>
     <div class="card-bd" style="padding:6px 10px 12px;">
       <table><thead><tr><th>User</th><th>Role</th><th>Reason</th><th>Revoked by</th><th>Date</th><th></th></tr></thead>
