@@ -81,7 +81,7 @@ must(
   "portal navigation must label the new roles"
 );
 
-must(files.users.includes("['ADMIN','SUPERADMIN'].includes(ME.role)"), "user management must support both Admin and Super Admin");
+must(files.users.includes("ME.role!=='ADMIN'&&ME.role!=='SUPERADMIN'") || files.users.includes("['ADMIN','SUPERADMIN'].includes(ME.role)"), "user management must support both Admin and Super Admin");
 must(files.admin.includes("Super Admin control plane") && files.admin.includes("Operational administration"), "Admin and Super Admin must have visibly distinct control-plane messaging");
 must(files.admin.includes("privilegedHeadings") && files.admin.includes("Dashboard Sections") && files.admin.includes("Danger zone"), "privileged control-plane sections must be hidden from ordinary Admin UI");
 must(files.admin.includes("const privilegedHeadings = new Set(['Security centre','MLOps data-quality alert','Dashboard Sections','Danger zone'])"), "Live Data Integration must remain available to ordinary Admin");
