@@ -307,6 +307,24 @@ function redactAuditDetail(value: unknown): unknown {
 
 
 // ── public pages ──
+app.get("/react", async (_req, reply) => reply.redirect("/react/"));
+app.get("/react/", async (_req, reply) => {
+  try {
+    const html = await readFile(join(PUBLIC_DIR, "react", "index.html"), "utf-8");
+    return reply.type("text/html; charset=utf-8").header("Cache-Control", "no-store").send(html);
+  } catch {
+    return reply.code(503).send({ error: "React frontend has not been built yet" });
+  }
+});
+app.get("/react/dashboard", async (_req, reply) => {
+  try {
+    const html = await readFile(join(PUBLIC_DIR, "react", "index.html"), "utf-8");
+    return reply.type("text/html; charset=utf-8").header("Cache-Control", "no-store").send(html);
+  } catch {
+    return reply.code(503).send({ error: "React frontend has not been built yet" });
+  }
+});
+
 app.get("/favicon.ico", async (_req, reply) => reply.redirect("/static/favicon.ico"));
 app.get("/contact", async (_req, reply) => serveHtml(reply, "contact.html"));
 app.get("/thank-you", async (_req, reply) => serveHtml(reply, "thank-you.html"));
