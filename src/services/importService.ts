@@ -11,6 +11,7 @@ import { validateRecordDeferred } from "./validationStrategies.js";
 import { parseFile, validate, detectFormat, parseAndValidateCsvStreaming, parseAndValidateXlsxJsonStreaming, CellError } from "./importParser.js";
 import { snapshotEmployer } from "./snapshotBuilder.js";
 import { notifyScoreChangeIfCurrentPeriod } from "./automationService.js";
+import { assessIncomingRows } from "./dataQualityService.js";
 
 const prisma = new PrismaClient();
 type Json = any;
@@ -117,6 +118,20 @@ export async function uploadAndValidate(opts: {
   // A failed validation has nothing to commit, so drop whatever chunks were
   // already written for it (a run of valid-looking rows before a later error).
   if (!result.ok) await prisma.importBatchRow.deleteMany({ where: { batchId: batch.id } });
+
+  // MLOps safety gate: abnormal data is quarantined before it can reach live tables.
+  if (result.ok) {
+    const staged = await loadStagedRows(batch);
+    const quality = await assessIncomingRows({ reportKey: opts.reportKey, rows: staged });
+    if (quality.status === "QUARANTINE") {
+      result = {
+        ...result,
+        ok: false,
+        errors: [...result.errors, ...quality.findings.map((f) => ({ row: f.row ?? 0, column: f.field ?? "dataset", message: f.message }))],
+      };
+      await prisma.importBatchRow.deleteMany({ where: { batchId: batch.id } });
+    }
+  }
 
   // Duplicate natural keys were checked while streaming. If any were found,
   // discard the staged rows so a failed batch can never be committed.
