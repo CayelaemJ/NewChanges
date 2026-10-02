@@ -3426,6 +3426,27 @@ function showDemoBanner(){
 
 loadLiveData();
 
+let __SOURCE_VERSION__ = null;
+let __SOURCE_REFRESH_BUSY__ = false;
+async function checkSourceVersion(){
+  if(document.visibilityState !== 'visible' || __SOURCE_REFRESH_BUSY__) return;
+  try{
+    const r=await fetch('/api/dashboard/version',{cache:'no-store'});
+    if(!r.ok) return;
+    const d=await r.json();
+    if(!__SOURCE_VERSION__) { __SOURCE_VERSION__=d.version||null; return; }
+    if(d.version && d.version !== __SOURCE_VERSION__){
+      __SOURCE_VERSION__=d.version;
+      __SOURCE_REFRESH_BUSY__=true;
+      try{
+        await loadLiveData({refreshOnly:true});
+      }finally{
+        __SOURCE_REFRESH_BUSY__=false;
+      }
+    }
+  }catch(_){}
+}
+setInterval(checkSourceVersion,60000);
 </script>
 <script>
 /* Employer chart recolouring pass: applies to all present and future chart marks,
