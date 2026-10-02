@@ -83,7 +83,9 @@ must(
 
 must(files.users.includes("['ADMIN','SUPERADMIN'].includes(ME.role)"), "user management must support both Admin and Super Admin");
 must(files.admin.includes("Super Admin control plane") && files.admin.includes("Operational administration"), "Admin and Super Admin must have visibly distinct control-plane messaging");
-must(files.admin.includes("privilegedHeadings") && files.admin.includes("Live Data Integration") && files.admin.includes("Dashboard Sections"), "privileged control-plane sections must be hidden from ordinary Admin UI");
+must(files.admin.includes("privilegedHeadings") && files.admin.includes("Dashboard Sections") && files.admin.includes("Danger zone"), "privileged control-plane sections must be hidden from ordinary Admin UI");
+must(files.admin.includes("const privilegedHeadings = new Set(['Security centre','MLOps data-quality alert','Dashboard Sections','Danger zone'])"), "Live Data Integration must remain available to ordinary Admin");
+must(files.admin.includes("live dashboard integrations"), "Admin posture must explicitly include live dashboard integrations");
 
 console.log("Role perspective regression checks passed.");
 console.log("Role matrix: Viewer -> read-only dashboard; Employer Manager -> assigned employer; Portfolio Manager -> assigned portfolio; Admin -> operational administration; Super Admin -> privileged administration.");
