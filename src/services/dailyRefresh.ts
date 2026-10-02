@@ -38,8 +38,8 @@ async function refreshViaDbProcedure() {
   return { ok: true, status: "OK", note: "refresh_all_reports() completed" };
 }
 
-export function startDailyRefresh() {
-  const schedule = process.env.DAILY_REFRESH_CRON ?? "0 2 * * *"; // 02:00 server time, daily
+async function refreshWithRetry(label: string, fn: () => Promise<any>) {\n  let lastError: any;\n  for (let attempt = 1; attempt <= 3; attempt++) {\n    try { return await fn(); }\n    catch (error: any) { lastError = error; console.error(`[${new Date().toISOString()}] ${label} attempt ${attempt}/3 failed:`, error?.message ?? error); if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 60_000)); }\n  }\n  throw lastError;\n}\n\nexport function startDailyRefresh() {
+  const schedule = process.env.DAILY_REFRESH_CRON ?? "0 0 * * *"; // 00:00 server time, daily
   const useSqlProc = (process.env.DAILY_REFRESH_MODE ?? "app") === "sqlproc";
 
   cron.schedule(schedule, async () => {
