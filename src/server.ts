@@ -425,7 +425,7 @@ app.get("/api/auth/me", async (req, reply) => {
       admin: canAccessModule(user, "admin"),
       dashboard: canAccessModule(user, "dashboard"),
       portfolio: canAccessModule(user, "portfolio"),
-      users: user.role === "ADMIN",
+      users: isAdminRole(user),
     },
     sections: await sectionsForUser(user),
     employers,
