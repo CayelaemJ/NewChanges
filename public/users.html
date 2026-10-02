@@ -205,9 +205,9 @@
         <div>
           <label>Access</label>
           <div class="radio-row" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;">
-            <label><input type="checkbox" id="n-access-employer" checked onchange="syncRoleSelection()"> Employer Manager</label>
-            <label><input type="checkbox" id="n-access-portfolio" onchange="syncRoleSelection()"> Portfolio Manager</label>
-            <label><input type="checkbox" id="n-access-viewer" onchange="syncRoleSelection()"> Viewer</label>
+            <label><input type="radio" name="n-role-choice" id="n-access-employer" value="EMPLOYER_MANAGER" checked onchange="syncRoleSelection()"> Employer Manager</label>
+            <label><input type="radio" name="n-role-choice" id="n-access-portfolio" value="PORTFOLIO_MANAGER" onchange="syncRoleSelection()"> Portfolio Manager</label>
+            <label><input type="radio" name="n-role-choice" id="n-access-viewer" value="VIEWER" onchange="syncRoleSelection()"> Viewer</label>
             <span id="n-admin-access"></span>
             <span id="n-superadmin-access"></span>
           </div>
@@ -320,21 +320,16 @@ function installPrivilegedAccess(){
   const adminHost=document.getElementById('n-admin-access');
   const superHost=document.getElementById('n-superadmin-access');
   if(ME?.role==='SUPERADMIN'){
-    if(adminHost) adminHost.innerHTML='<label><input type="checkbox" id="n-access-admin" onchange="syncRoleSelection()"> Admin</label>';
-    if(superHost) superHost.innerHTML='<label><input type="checkbox" id="n-access-superadmin" onchange="syncRoleSelection()"> Superadmin</label>';
+    if(adminHost) adminHost.innerHTML='<label><input type="radio" name="n-role-choice" id="n-access-admin" value="ADMIN" onchange="syncRoleSelection()"> Admin</label>';
+    if(superHost) superHost.innerHTML='<label><input type="radio" name="n-role-choice" id="n-access-superadmin" value="SUPERADMIN" onchange="syncRoleSelection()"> Superadmin</label>';
   } else {
     if(adminHost) adminHost.innerHTML='';
     if(superHost) superHost.innerHTML='';
   }
 }
 function syncRoleSelection(){
-  const superadmin=document.getElementById('n-access-superadmin')?.checked === true;
-  const admin=document.getElementById('n-access-admin')?.checked;
-  const portfolio=document.getElementById('n-access-portfolio')?.checked;
-  const viewer=document.getElementById('n-access-viewer')?.checked;
-  const employer=document.getElementById('n-access-employer')?.checked;
-  const role=superadmin?'SUPERADMIN':admin?'ADMIN':portfolio?'PORTFOLIO_MANAGER':viewer?'VIEWER':employer?'EMPLOYER_MANAGER':'VIEWER';
-  const select=document.getElementById('n-role'); if(select) select.value=role;
+  const selected=document.querySelector('input[name="n-role-choice"]:checked')?.value || 'VIEWER';
+  const select=document.getElementById('n-role'); if(select) select.value=selected;
   onRoleChange();
 }
 function onRoleChange(){
