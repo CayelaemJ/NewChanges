@@ -8,9 +8,15 @@ const pkg = JSON.parse(read("package.json"));
 const frontend = JSON.parse(read("frontend/package.json"));
 const vite = read("frontend/vite.config.ts");
 const app = read("frontend/src/App.tsx");
+const styles = read("frontend/src/styles.css");
+const lib = read("frontend/src/lib/utils.ts");
 const server = read("src/server.ts");
 
+const files = { package: read("frontend/package.json"), app, styles, lib };
+
 const checks = [
+  ["tailwind CSS is the React visual system", files.package.includes("tailwindcss") && files.package.includes("@tailwindcss/vite") && files.styles.includes("@import \"tailwindcss\"") && files.app.includes("./components/ui/card")],
+  ["shadcn-style primitives are present", files.app.includes("./components/ui/button") && files.app.includes("./components/ui/select") && files.app.includes("./components/ui/progress") && files.lib.includes("tailwind-merge")],
   ["React dependency present", frontend.dependencies?.react && frontend.dependencies?.["react-dom"]],
   ["Vite React plugin present", frontend.devDependencies?.["@vitejs/plugin-react"] && frontend.devDependencies?.vite],
   ["React TypeScript entrypoint", read("frontend/src/main.tsx").includes("createRoot") && fs.existsSync(path.join(root, "frontend/src/main.tsx"))],
@@ -18,7 +24,7 @@ const checks = [
   ["Root build includes React build", pkg.scripts?.["frontend:build"] && pkg.scripts.build.includes("frontend:build")],
   ["Fastify serves React preview", server.includes('prefix: "/react/"') && server.includes('join(PUBLIC_DIR, "react")')],
   ["Role-aware shell exists", app.includes("roleLabels") && app.includes("VIEWER") && app.includes("SUPERADMIN")],
-  ["Responsive React shell exists", fs.existsSync(path.join(root, "frontend/src/styles.css")) && read("frontend/src/styles.css").includes("@media")],
+  ["Responsive React shell exists", files.styles.includes("tailwind") && app.includes("sm:") && app.includes("lg:")],
   ["Financial analytics surfaces migrated", app.includes("Total advanced") && app.includes("Financial problems resolved") && app.includes("creditors") && app.includes("Activated employees by income band")],
   ["Real dashboard filter options used", app.includes("data.filterOptions?.incomes") && read("src/services/snapshotBuilder.ts").includes("incomes: INCOME_VALUES.map")],
   ["Full-value financial trend units", read("src/services/snapshotBuilder.ts").includes("return { key, value: Math.round(rand(cumulative)) }") && !read("src/services/snapshotBuilder.ts").includes("Math.round(rand(cumulative) / 1_000)")],
