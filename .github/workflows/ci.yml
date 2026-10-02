@@ -27,6 +27,7 @@ jobs:
       - run: npm run test:score
       - run: npm run check:brand
       - run: npm run check:mlops
+      - run: npm run check:mlops-data-quality
       - run: npm run check:accessibility
       - run: npm run check:performance
       - run: npm run check:security-identity
