@@ -52,7 +52,7 @@ export function digestSetupToken(token: string): string {
 // does not hand out live sessions. The raw token exists only in the cookie.
 const digestSession = (token: string) => createHash("sha256").update(token, "utf8").digest("hex");
 
-export type UserRole = "ADMIN" | "SUPERADMIN" | "EMPLOYER_VIEW" | "PORTFOLIO_VIEW";
+export type UserRole = "ADMIN" | "SUPERADMIN" | "EMPLOYER_MANAGER" | "PORTFOLIO_MANAGER";
 
 export function isAdminRole(user: { role?: string | null } | null | undefined): boolean {
   return user?.role === "ADMIN" || user?.role === "SUPERADMIN";
@@ -150,27 +150,27 @@ export async function login(email: string, password: string, remember: boolean =
 export type AuthUser = NonNullable<Awaited<ReturnType<typeof resolveSession>>>;
 
 export function isAdmin(user: AuthUser) {
-  return user.role === "ADMIN" || user.role === "SUPERADMIN";
+  return isAdminRole(user);
 }
 
 /** employer ids this user may see. Admin => null meaning "all". */
 export function allowedEmployerIds(user: AuthUser): string[] | null {
-  if (user.role === "ADMIN" || user.role === "SUPERADMIN") return null; // all
+  if (isAdminRole(user)) return null; // all
   return (user.links ?? []).map((l: any) => l.employerId);
 }
 
 /** can this user view a specific employer's dashboard? */
 export function canViewEmployer(user: AuthUser, employerId: string): boolean {
-  if (user.role === "ADMIN" || user.role === "SUPERADMIN") return true;
-  if (user.role !== "EMPLOYER_VIEW" && user.role !== "PORTFOLIO_VIEW") return false;
+  if (isAdminRole(user)) return true;
+  if (user.role !== "EMPLOYER_MANAGER" && user.role !== "PORTFOLIO_MANAGER" && user.role !== "VIEWER") return false;
   return (user.links ?? []).some((l: any) => l.employerId === employerId);
 }
 
 export function canAccessModule(user: AuthUser, module: "admin" | "dashboard" | "portfolio"): boolean {
-  if (user.role === "ADMIN" || user.role === "SUPERADMIN") return true;
+  if (isAdminRole(user)) return true;
   if (module === "admin") return false; // only admins
-  if (module === "dashboard") return user.role === "EMPLOYER_VIEW" || user.role === "PORTFOLIO_VIEW";
-  if (module === "portfolio") return user.role === "PORTFOLIO_VIEW";
+  if (module === "dashboard") return user.role === "EMPLOYER_MANAGER" || user.role === "PORTFOLIO_MANAGER" || user.role === "VIEWER";
+  if (module === "portfolio") return user.role === "PORTFOLIO_MANAGER";
   return false;
 }
 
