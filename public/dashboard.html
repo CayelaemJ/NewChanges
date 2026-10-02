@@ -3197,7 +3197,7 @@ function applyTheme(theme, user){
   const root=document.documentElement.style;
   // Admins retain the portal's original dashboard palette. Employer branding is
   // applied only inside an authenticated employer session.
-  if(user && String(user.role||'').toUpperCase()==='ADMIN'){
+  if(user && ['ADMIN','SUPERADMIN'].includes(String(user.role||'').toUpperCase())){
     // Preserve a vivid, multi-hue original portal palette for admins. Do not
     // clear these variables: all charts now consume semantic CSS variables.
     const adminPalette={
