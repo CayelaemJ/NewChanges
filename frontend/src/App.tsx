@@ -70,9 +70,12 @@ function DashboardView({me}:{me:Me}) {
   const [period,setPeriod]=useState("");
   const [range,setRange]=useState<"latest"|"quarter"|"all">("latest");
   const [income,setIncome]=useState("all");
+  const [selectedEmployerId,setSelectedEmployerId]=useState(me.employers?.[0]?.id ?? "");
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState("");
-  const employer=me.employers?.[0];
+  const employer=me.employers?.find(e=>e.id===selectedEmployerId) ?? me.employers?.[0];
+
+  useEffect(()=>{ if(me.employers?.[0]?.id && !selectedEmployerId) setSelectedEmployerId(me.employers[0].id); },[me.employers,selectedEmployerId]);
 
   const query=useMemo(()=>{
     const p=new URLSearchParams();
@@ -84,7 +87,8 @@ function DashboardView({me}:{me:Me}) {
   useEffect(()=>{
     if(!employer) return;
     setLoading(true); setError("");
-    api<Dashboard>(`/api/dashboard/first?${query}`).then(setData).catch(e=>setError(e.message)).finally(()=>setLoading(false));
+    const url=employer?.id ? `/api/employers/${encodeURIComponent(employer.id)}/dashboard?${query}` : `/api/dashboard/first?${query}`;
+    api<Dashboard>(url).then(setData).catch(e=>setError(e.message)).finally(()=>setLoading(false));
   },[query,employer?.id]);
 
   const months=useMemo(()=>{
@@ -118,7 +122,10 @@ function DashboardView({me}:{me:Me}) {
 
     <section className="dashboard-head">
       <div><div className="eyebrow">Employer workspace</div><h2>{data.employer}</h2><p>Financial wellbeing measured from governed source data, with period-aware comparisons.</p></div>
-      <div className="asat">Data as at {data.filterContext?.label || data.dataAsOf?.slice(0,10) || "latest"}</div>
+      <div className="workspace-actions">
+        {me.employers && me.employers.length > 1 && <label className="select employer-select"><span>Employer</span><select value={employer?.id||""} onChange={e=>setSelectedEmployerId(e.target.value)}>{me.employers.map(e=><option key={e.id} value={e.id}>{e.name}</option>)}</select></label>}
+        <div className="asat">Data as at {data.filterContext?.label || data.dataAsOf?.slice(0,10) || "latest"}</div>
+      </div>
     </section>
 
     <section className="filters">
