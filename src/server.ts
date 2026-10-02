@@ -685,7 +685,7 @@ app.patch<{ Params: { id: string }; Body: any }>("/api/users/:id", async (req, r
   const target = await prisma.user.findUnique({ where: { id: req.params.id }, select: { role: true } });
   if (!target) return reply.code(404).send({ error: "user not found" });
   if (admin.role !== "SUPERADMIN" && target.role === "SUPERADMIN") return reply.code(404).send({ error: "user not found" });
-  if (admin.role !== "SUPERADMIN" && input.role === "SUPERADMIN") return reply.code(400).send({ error: "invalid role" });
+  if (admin.role !== "SUPERADMIN" && (input.role === "SUPERADMIN" || input.role === "ADMIN")) return reply.code(400).send({ error: "invalid role" });
   // Allow-list fields: never pass an arbitrary client object through to the DB layer.
   const body: Record<string, any> = {};
   if (input.name !== undefined) {
