@@ -4,7 +4,8 @@ import { Button } from "./components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./components/ui/card";
 import { Progress } from "./components/ui/progress";
 import { Select } from "./components/ui/select";
-import { CartesianGrid, Line, LineChart as RechartsLineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { CartesianGrid, Line, LineChart as RechartsLineChart, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis, YAxis } from "recharts";
+import MuiTooltip from "@mui/material/Tooltip";
 import "./enterprise.css";
 type Me = {
   name?: string; email?: string; role?: string;
@@ -173,7 +174,7 @@ function DashboardView({me}:{me:Me}) {
         <div className="topbar-spacer" />
         <div className="topbar-meta">
           <div className="data-fresh"><span className="dot" /><span>Live dashboard</span></div>
-          <button type="button" className="portal-theme-quick" aria-label={darkMode?"Switch to light mode":"Switch to dark mode"} onClick={()=>setDarkMode(v=>!v)}>{darkMode?"☀":"☾"}</button>
+          <MuiTooltip title={darkMode ? "Switch to light mode" : "Switch to dark mode"} arrow><button type="button" className="portal-theme-quick" aria-label={darkMode?"Switch to light mode":"Switch to dark mode"} onClick={()=>setDarkMode(v=>!v)}>{darkMode?"☀":"☾"}</button></MuiTooltip>
           <div className="nav-who"><span className="nav-emp">{me.name||me.email||"User"}</span><span className="avatar">{(me.name||me.email||"U").slice(0,1).toUpperCase()}</span></div>
         </div>
       </div>
