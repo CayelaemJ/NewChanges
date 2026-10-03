@@ -153,7 +153,7 @@
     if (chromaArea < total * 0.04 || chromaArea < 3) {
       var ink = neutralDark >= neutralLight ? '1F2937' : '374151';
       warnings.push('This logo is monochrome (black/white/grey), so no brand colour could be detected. A neutral palette with the portal default accent was used; upload a coloured logo for a branded result.');
-      var acc = ensureContrast('B15BE8', 'FFFFFF', 4.5);
+      var acc = ensureContrast('5F756D', 'FFFFFF', 4.5);
       out.primaryColor = acc; out.accentColor = acc; out.navyColor = ink;
       out.palette = [{ hex: ink, share: 1, role: 'dark' }];
       out.confidence = 0.15; return out;
@@ -261,10 +261,10 @@
    */
   function themeTokens(theme, mode) {
     theme = theme || {};
-    var accent = String(theme.accentColor || theme.primaryColor || 'B15BE8').replace(/^#/, '');
+    var accent = String(theme.accentColor || theme.primaryColor || '5F756D').replace(/^#/, '');
     var navy = String(theme.navyColor || theme.primaryColor || accent).replace(/^#/, '');
     var second = String(theme.primaryColor || accent).replace(/^#/, '');
-    if (!parseHex(accent)) accent = 'B15BE8'; if (!parseHex(navy)) navy = '32217C'; if (!parseHex(second)) second = accent;
+    if (!parseHex(accent)) accent = '5F756D'; if (!parseHex(navy)) navy = '17212B'; if (!parseHex(second)) second = accent;
     var A = hexToLch(accent), N = hexToLch(navy), t = {};
 
     if (mode !== 'dark') {
@@ -308,9 +308,9 @@
    */
   function deriveChartPalette(theme) {
     theme = theme || {};
-    var accent = String(theme.accentColor || theme.primaryColor || 'B15BE8').replace(/^#/, '');
+    var accent = String(theme.accentColor || theme.primaryColor || '5F756D').replace(/^#/, '');
     var primary = String(theme.primaryColor || accent).replace(/^#/, '');
-    if (!parseHex(accent)) accent = 'B15BE8';
+    if (!parseHex(accent)) accent = '5F756D';
     if (!parseHex(primary)) primary = accent;
     var a = hexToLch(accent), p = hexToLch(primary);
     var hue = a.C > 0.035 ? a.h : p.h;
