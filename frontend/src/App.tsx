@@ -1,3 +1,4 @@
+import { Component, type CSSProperties, type PropsWithChildren, useEffect, useMemo, useState } from "react";
 import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./components/ui/card";
@@ -120,7 +121,7 @@ function DashboardView({me}:{me:Me}) {
   const role=roleLabels[me.role??""]??me.role??"User";
   const maxIncome=Math.max(1,...(data.income??[]).map(x=>x.count));
 
-  const themeStyle: React.CSSProperties = { "--brand-ink": normaliseHex(me.theme?.primaryColor, "#17212b"), "--brand-ink-strong": normaliseHex(me.theme?.navyColor, "#0d141b"), "--brand-accent": normaliseHex(me.theme?.accentColor, "#5f756d") } as React.CSSProperties;
+  const themeStyle: CSSProperties = { "--brand-ink": normaliseHex(me.theme?.primaryColor, "#17212b"), "--brand-ink-strong": normaliseHex(me.theme?.navyColor, "#0d141b"), "--brand-accent": normaliseHex(me.theme?.accentColor, "#5f756d") } as CSSProperties;
 
   return <main className="min-h-screen bg-[var(--brand-paper)]" style={themeStyle}>
     <div className="mx-auto w-full max-w-[1440px] px-3 py-4 sm:px-5 lg:px-8">
@@ -316,7 +317,7 @@ function App() {
   const isAdminRoute=window.location.pathname==="/react/admin" || window.location.pathname==="/react/admin/";
   return isAdminRoute && (me.role==="ADMIN" || me.role==="SUPERADMIN") ? <AdminView me={me}/> : <DashboardView me={me}/>;
 }
-class AppErrorBoundary extends React.Component<React.PropsWithChildren, {hasError:boolean}> {
+class AppErrorBoundary extends Component<PropsWithChildren, {hasError:boolean}> {
   state={hasError:false};
   static getDerivedStateFromError(){ return {hasError:true}; }
   render(){
