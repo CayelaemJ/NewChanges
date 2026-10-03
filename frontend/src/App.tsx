@@ -110,7 +110,7 @@ function DashboardView({me}:{me:Me}) {
         <div className="flex items-center gap-3 rounded-md border border-slate-200 bg-white px-3 py-2 shadow-sm"><div className="hidden h-8 w-8 items-center justify-center rounded-sm bg-[var(--brand-accent-soft)] text-[var(--brand-accent)] sm:flex"><span className="text-[10px] font-bold uppercase tracking-widest">User</span></div><div><p className="text-sm font-semibold text-slate-900">{me.name||me.email}</p><p className="text-[11px] text-slate-500">{role}</p></div></div>
       </header>
 
-      <section className="mt-5 overflow-hidden rounded-none bg-gradient-to-br from-slate-950 to-slate-800 p-5 text-white shadow-xl shadow-black/10 sm:p-7 lg:flex lg:items-end lg:justify-between lg:gap-8">
+      <section className="mt-5 overflow-hidden rounded-none bg-slate-950 p-5 text-white shadow-xl shadow-black/10 sm:p-7 lg:flex lg:items-end lg:justify-between lg:gap-8">
         <div className="min-w-0"><div className="text-[10px] font-bold uppercase tracking-[.15em] text-white/70">Employer workspace</div><h2 className="mt-1 break-words text-3xl font-bold tracking-tight sm:text-5xl">{data.employer}</h2><p className="mt-2 max-w-3xl text-sm leading-6 text-white/80">Financial wellbeing measured from governed source data, with period-aware comparisons.</p></div>
         <div className="mt-5 flex min-w-0 flex-col gap-2 sm:flex-row sm:items-end lg:mt-0 lg:justify-end">
           {me.employers&&me.employers.length>1&&<Select label="Employer" className="min-w-0 sm:min-w-[210px]" value={employer.id} onChange={e=>setSelectedEmployerId(e.target.value)}>{me.employers.map(e=><option key={e.id} value={e.id}>{e.name}</option>)}</Select>}
