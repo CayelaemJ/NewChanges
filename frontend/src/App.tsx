@@ -259,11 +259,32 @@ function DashboardView({me}:{me:Me}) {
         <Card style={{gridColumn:"span 5"}}><CardHeader><SectionHeading title="Financial problems resolved" description="Completed fixes and the value created."/></CardHeader><CardContent><div>{(data.outcomes||[]).slice(0,6).map(row=><div className="outcome" key={row.key}><div className="outcome-ico">{row.name.slice(0,1)}</div><div><div className="outcome-name">{row.name}</div><div className="outcome-meta">{row.avgPerEmployee||row.statL}</div></div><div className="outcome-stat"><div className="v">{number(row.count)}</div><div className="l">{row.statL}</div></div></div>)}</div></CardContent></Card>
       </section>
 
-      <section className="grid g-12 section-gap">
-        <Card><CardHeader><SectionHeading title="Total advanced" description="Early wage access advanced in the selected period."/></CardHeader><CardContent><div className="mb-2 flex flex-wrap items-baseline gap-2"><strong className="portal-number break-words text-3xl font-bold tracking-tight text-[var(--brand-ink-strong)]">{money(data.comparison?.current?.totalAdvancedRaw??data.ewa?.totalRaw)}</strong><span className="text-[10px] text-slate-500">Current period total</span></div><LineChart values={advancedTrend} labels={advancedLabels}/></CardContent></Card>
-        <Card><CardHeader><SectionHeading title="Financial problems resolved" description="Completed fixes from governed journey data."/></CardHeader><CardContent><div className="divide-y divide-slate-100">{(data.outcomes||[]).map(row=><div className="grid grid-cols-[1fr_auto] gap-2 py-3" key={row.key}><div><b className="text-xs">{row.name}</b><small className="mt-1 block text-[10px] text-slate-500">{row.avgPerEmployee}</small></div><strong className="text-sm text-[var(--brand-ink-strong)]">{number(row.count)}</strong><span className="col-span-2 text-[9px] text-slate-400">{row.statL}</span></div>)}</div></CardContent></Card>
+      <section className="dash-section" data-section="valueDelivered">
+        <div className="head" style={{padding:"36px 0 14px"}}>
+          <div><div className="head-eyebrow">The bottom line</div><h1 style={{fontSize:27}}>Value delivered to your people</h1></div>
+        </div>
+        <div className="stat-strip">
+          {(data.valueStrip||[]).map(row=><div className="stat-cell" key={row.l}><div className="l">{row.l}</div><div className="v">{row.v}</div><div className="d">{row.d}</div></div>)}
+        </div>
+        <div className="grid g-12 section-gap">
+          <Card style={{gridColumn:"span 5"}}><CardHeader><SectionHeading title="Monthly cash freed up" description="Recurring savings unlocked, cumulative run-rate."/></CardHeader><CardContent><div className="portal-number mb-2 text-3xl font-bold text-[var(--brand-ink-strong)]">{money(currentSaving)}</div><LineChart values={trend} labels={trendLabels}/></CardContent></Card>
+          <Card style={{gridColumn:"span 7"}}><CardHeader><SectionHeading title="Debt Pressure Profile" description="Where your people's arrears sit by intervention state, then by creditor."/></CardHeader><CardContent>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {[["Active intervention",data.debtStates?.active],["Prescription challenged",data.debtStates?.challenged],["Self-guided",data.debtStates?.guided]].map(([label,row])=><div className="stat-cell" key={label as string}><div className="l">{label as string}</div><div className="v">{money((row as any)?.rand)}</div><div className="d">{number((row as any)?.employees)} employees</div></div>)}
+            </div>
+            <div className="mt-4">{(data.creditors||[]).slice(0,6).map(row=><div className="outcome" key={row.name}><div className="outcome-ico">{row.name.slice(0,1)}</div><div><div className="outcome-name">{row.name}</div><div className="outcome-meta">{number(row.accounts)} accounts · {row.avg} average</div></div><div className="outcome-stat"><div className="v">{row.balance}</div><div className="l">Balance</div></div></div>)}</div>
+          </CardContent></Card>
+        </div>
       </section>
 
+      <section className="dash-section" data-section="earlyWageAccess">
+        <div className="head" style={{padding:"36px 0 14px"}}>
+          <div><div className="head-eyebrow">On-demand pay</div><h1 style={{fontSize:27}}>Early Wage Access</h1><div className="head-sub">How many employees are drawing earned wages early, and how much.</div></div>
+        </div>
+        <div className="grid g-12 section-gap">
+          <Card style={{gridColumn:"span 12"}}><CardHeader><SectionHeading title="Total advanced per month" description="Finalised advances only · monthly run-rate."/></CardHeader><CardContent><div className="portal-number mb-2 text-3xl font-bold text-[var(--brand-ink-strong)]">{money(data.comparison?.current?.totalAdvancedRaw??data.ewa?.totalRaw)}</div><LineChart values={advancedTrend} labels={advancedLabels}/></CardContent></Card>
+        </div>
+      </section>
       <section className="mt-4 grid gap-4 lg:grid-cols-2">
         <Card><CardHeader><SectionHeading title="Workforce funnel"/></CardHeader><CardContent><div className="grid gap-4">{(data.funnel||[]).map(row=><div className="grid grid-cols-[minmax(105px,1fr)_minmax(70px,2fr)_55px] items-center gap-3" key={row.label}><div><b className="text-xs">{row.label}</b><small className="mt-1 block text-[9px] text-slate-500">{row.sub}</small></div><Progress value={row.pct??0}/><strong className="text-right text-xs text-[var(--brand-ink-strong)]">{number(row.n)}</strong></div>)}</div></CardContent></Card>
         <Card><CardHeader><SectionHeading title="Activated employees by income band"/></CardHeader><CardContent><div className="grid gap-4">{(data.income||[]).map(row=><div className="grid grid-cols-[minmax(100px,1fr)_minmax(70px,2fr)_45px] items-center gap-3" key={row.name}><span className="text-xs">{row.name}</span><Progress value={row.count/maxIncome*100}/><strong className="text-right text-xs text-[var(--brand-ink-strong)]">{number(row.count)}</strong></div>)}</div></CardContent></Card>
