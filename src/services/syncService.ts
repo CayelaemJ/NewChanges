@@ -370,7 +370,6 @@ export async function runSync(trigger: "manual" | "scheduled" = "manual") {
           }).catch(() => {});
         }
         anyOk = true;
-        anyOk = true;
       } catch (error: any) {
         const note = error?.message ?? String(error);
         summary[reportKey] = { error: note, since: cursor.lastSourceUpdatedAt, through: throughAt };
