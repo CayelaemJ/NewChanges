@@ -1,4 +1,4 @@
-import { Component, type CSSProperties, type PropsWithChildren, useEffect, useMemo, useState } from "react";
+import { Component, type CSSProperties, type PropsWithChildren, useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./components/ui/card";
@@ -240,13 +240,17 @@ function AdminView({me}:{me:Me}) {
     }catch(e:any){ if(e?.name!=="AbortError") setError(e.message||"Could not load administration data"); }
     finally{setLoading(false);}
   };
+  const refreshBusy=useRef(false);
   useEffect(()=>{
     let active=true;
-    const controller=new AbortController();
-    const refresh=async()=>{ if(!active) return; await load(); };
+    const refresh=async()=>{
+      if(!active || refreshBusy.current) return;
+      refreshBusy.current=true;
+      try{ await load(); } finally { refreshBusy.current=false; }
+    };
     refresh();
     const id=window.setInterval(refresh,30000);
-    return()=>{active=false;controller.abort();window.clearInterval(id);};
+    return()=>{active=false;window.clearInterval(id);};
   },[]);
 
   const action=async(label:string,fn:()=>Promise<any>)=>{
