@@ -181,75 +181,117 @@ function DashboardView({me}:{me:Me}) {
 }
 
 function AdminView({me}:{me:Me}) {
+  const [tab,setTab]=useState<"overview"|"users"|"integrations"|"imports"|"audit"|"compliance"|"mlops">("overview");
+  const [users,setUsers]=useState<any[]>([]);
   const [security,setSecurity]=useState<any>(null);
   const [ops,setOps]=useState<any>(null);
   const [compliance,setCompliance]=useState<any>(null);
+  const [integration,setIntegration]=useState<any>(null);
+  const [batches,setBatches]=useState<any[]>([]);
+  const [audit,setAudit]=useState<any[]>([]);
   const [mlops,setMlops]=useState<any[]>([]);
+  const [loading,setLoading]=useState(true);
   const [error,setError]=useState("");
+  const [busy,setBusy]=useState("");
+  const isSuper=me.role==="SUPERADMIN";
+
   const load=async()=>{
-    try {
-      const [s,o,q,c,m]=await Promise.all([
+    try{
+      setLoading(true);
+      const [s,o,c,i,b,a,m,u]=await Promise.all([
         api<any>("/api/admin/security/overview"),
         api<any>("/api/admin/enterprise/overview"),
-        api<any>("/api/admin/enterprise/data-quality"),
         api<any>("/api/admin/compliance/overview"),
-        api<any>("/api/admin/mlops/events?limit=50")
+        api<any>("/api/admin/integration"),
+        api<any[]>("/api/admin/batches"),
+        api<any[]>("/api/admin/audit-log?limit=50"),
+        api<any[]>("/api/admin/mlops/events?limit=50"),
+        api<any[]>("/api/users")
       ]);
-      setSecurity(s); setOps({...o,dataQuality:q}); setCompliance(c);
-      setMlops(Array.isArray(m)?m:[]);
+      setSecurity(s);setOps(o);setCompliance(c);setIntegration(i);
+      setBatches(Array.isArray(b)?b:[]);setAudit(Array.isArray(a)?a:[]);
+      setMlops(Array.isArray(m)?m:[]);setUsers(Array.isArray(u)?u:[]);
       setError("");
-    } catch(e:any) { setError(e.message || "Could not load administration data"); }
+    }catch(e:any){setError(e.message||"Could not load administration data");}
+    finally{setLoading(false);}
   };
-  useEffect(()=>{load(); const id=window.setInterval(load,30000); return()=>window.clearInterval(id)},[]);
-  const role=roleLabels[me.role??""]??me.role??"User";
-  const issueCount=mlops.filter(e=>e.eventType==="DATA_QUALITY_GATE" && e.status && e.status!=="PASS").length;
+  useEffect(()=>{load();const id=window.setInterval(load,30000);return()=>window.clearInterval(id)},[]);
+
+  const action=async(label:string,fn:()=>Promise<any>)=>{
+    try{setBusy(label);await fn();await load();}catch(e:any){setError(e.message||"Action failed");}finally{setBusy("")}
+  };
+  const sync=()=>action("sync",async()=>{
+    const r=await api<any>("/api/admin/integration/sync",{});
+    if(r?.jobId){
+      for(let i=0;i<30;i++){await new Promise(res=>setTimeout(res,1000));const j=await api<any>("/api/admin/sync-jobs/"+r.jobId);if(j.status==="DONE"||j.status==="FAILED"){if(j.status==="FAILED")throw new Error(j.error||"Sync failed");break;}}
+    }
+  });
+  const critical=audit.filter((x:any)=>["user.delete","user.revoke","partner.delete","security.alert.resolve","user.update"].includes(x.action)).slice(0,5);
+  const unresolved=mlops.filter((e:any)=>e.eventType==="DATA_QUALITY_GATE"&&e.status&&e.status!=="PASS").slice(0,8);
+  const roleOptions=isSuper?["ADMIN","SUPERADMIN","EMPLOYER_MANAGER","PORTFOLIO_MANAGER","VIEWER"]:["EMPLOYER_MANAGER","PORTFOLIO_MANAGER","VIEWER"];
+
+  const nav=[
+    ["overview","Overview",ShieldCheck],["users","Users & roles",Users],["integrations","Live integrations",Landmark],
+    ["imports","Data governance",Activity],["audit","Audit history",CircleAlert],["compliance","POPIA",ShieldCheck],["mlops","MLOps",TrendingUp]
+  ] as const;
+
   return <main className="min-h-screen bg-slate-50/70">
-    <div className="mx-auto w-full max-w-[1440px] px-3 py-4 sm:px-5 lg:px-8">
-      <header className="flex flex-col gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-center sm:justify-between">
-        <div><div className="text-[10px] font-extrabold uppercase tracking-[.16em] text-violet-700">EFS Optimise</div><h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Administration console</h1><p className="mt-1 text-sm text-slate-500">Operational control, security posture and governed data operations.</p></div>
-        <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm"><p className="text-sm font-semibold text-slate-900">{me.name||me.email}</p><p className="text-[11px] text-slate-500">{role}</p></div>
+    <div className="mx-auto w-full max-w-[1480px] px-3 py-4 sm:px-5 lg:px-8">
+      <header className="flex flex-col gap-4 border-b border-slate-200 pb-5 lg:flex-row lg:items-center lg:justify-between">
+        <div><div className="text-[10px] font-extrabold uppercase tracking-[.16em] text-violet-700">EFS Optimise</div><h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Administration</h1><p className="mt-1 text-sm text-slate-500">Governed control plane for identity, integrations, data and compliance.</p></div>
+        <div className="flex items-center gap-3"><Badge>{roleLabels[me.role||""]||me.role||"User"}</Badge><Button variant="outline" onClick={()=>window.location.assign("/react/dashboard")}>Dashboard</Button></div>
       </header>
-      {error&&<div className="mt-4 flex gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"><CircleAlert className="h-5 w-5 shrink-0"/>{error}</div>}
-      <section className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {[
-          ["Active sessions",number(security?.activeSessions),Users],
-          ["Failed logins, 24h",number(security?.failedLogins24h),CircleAlert],
-          ["Open security alerts",number(security?.openAlerts),ShieldCheck],
-          ["Data quality",ops?.dataQuality?.score==null?"Not available":ops.dataQuality.score.toFixed(1)+"%",Activity]
-        ].map(([label,value,Icon])=><Card key={label as string}><CardContent className="p-5"><div className="flex items-center justify-between"><span className="text-xs font-semibold text-slate-500">{label as string}</span><Icon className="h-4 w-4 text-violet-600"/></div><strong className="mt-3 block break-words text-2xl font-bold text-violet-800">{value as string}</strong></CardContent></Card>)}
-      </section>
-      <section className="mt-4 grid gap-4 lg:grid-cols-2">
-        <Card><CardHeader><SectionHeading icon={ShieldCheck} title="Security & identity" description="Live authentication and access posture."/></CardHeader><CardContent>
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4"><div className="flex items-center gap-2"><CheckCircle2 className="h-5 w-5 text-emerald-600"/><strong className="text-sm">{security?.riskState==="Good"?"Security posture clear":"Attention required"}</strong></div><p className="mt-2 text-xs leading-5 text-slate-600">{security?.successfulLogins24h==null?"Not available":number(security.successfulLogins24h)+" successful logins in the last 24 hours."}</p></div>
-          <div className="mt-3 flex flex-wrap gap-2"><Badge>Sessions {number(security?.activeSessions)}</Badge><Badge>Failed {number(security?.failedLogins24h)}</Badge><Badge>Alerts {number(security?.openAlerts)}</Badge></div>
-          <Button className="mt-4" onClick={()=>window.location.assign("/users")}>Open identity centre</Button>
-        </CardContent></Card>
-        <Card><CardHeader><SectionHeading icon={Landmark} title="Enterprise operations" description="Source, read-model and freshness posture."/></CardHeader><CardContent>
-          <div className="grid gap-3 sm:grid-cols-2">{[
-            ["Source mode",ops?.integration?.sourceMode],
-            ["Analytics mode",ops?.integration?.analyticsMode],
-            ["Freshness",ops?.integration?.freshnessState],
-            ["Open imports",ops?.imports?.open]
-          ].map(([label,value])=><div className="rounded-xl border border-slate-200 p-4" key={label as string}><span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{label as string}</span><strong className="mt-1 block break-words text-sm text-slate-900">{value==null?"Not available":typeof value==="number"?number(value):String(value)}</strong></div>)}</div>
-        </CardContent></Card>
-      </section>
-      <section className="mt-4 grid gap-4 lg:grid-cols-2">
-        <Card><CardHeader><SectionHeading icon={TriangleAlert} title="MLOps data-quality alerts" description="Latest governed events that require review."/></CardHeader><CardContent>
-          {issueCount===0?<div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800"><CheckCircle2 className="mr-2 inline h-4 w-4"/>No unresolved data-quality gate issues surfaced.</div>:<div className="space-y-2">{mlops.filter(e=>e.eventType==="DATA_QUALITY_GATE"&&e.status&&e.status!=="PASS").slice(0,5).map((e,i)=><div className="rounded-xl border border-red-200 bg-red-50 p-3" key={e.id||i}><div className="flex items-center justify-between gap-3"><strong className="text-xs text-red-800">{e.metadata?.reportKey||"Dataset"}</strong><Badge>{e.status}</Badge></div><p className="mt-1 text-[11px] text-red-700">{e.metadata?.findingCount||0} finding(s) require review.</p></div>)}</div>}
-        </CardContent></Card>
-        <Card><CardHeader><SectionHeading icon={ShieldCheck} title="POPIA governance" description="Current compliance-control overview."/></CardHeader><CardContent><div className="grid gap-3 sm:grid-cols-2">{[
-          ["Processing activities",compliance?.processingActivities],
-          ["Cross-border activities",compliance?.crossBorderActivities],
-          ["Open data-subject requests",compliance?.openDataSubjectRequests],
-          ["Open incidents",compliance?.openSecurityIncidents]
-        ].map(([label,value])=><div className="rounded-xl bg-slate-50 p-4" key={label as string}><span className="text-[10px] text-slate-500">{label as string}</span><strong className="mt-1 block text-xl text-violet-800">{number(value as number|undefined)}</strong></div>)}</div><p className="mt-3 text-xs text-slate-500">{compliance?.status==="ACTION_REQUIRED"?"Governance action is required. Review the underlying compliance registers.":"Governance controls are currently being monitored."}</p></CardContent></Card>
-      </section>
-      <section className="mt-4 grid gap-4 pb-8 lg:grid-cols-[1.3fr_.7fr]">
-        <Card><CardHeader><SectionHeading icon={Activity} title="Operational actions" description="Continue into the existing governed workflows."/></CardHeader><CardContent><div className="grid gap-2 sm:grid-cols-2"><Button variant="outline" onClick={()=>window.location.assign("/admin")}>Open full administration console</Button><Button variant="outline" onClick={()=>window.location.assign("/users")}>Manage users & roles</Button><Button variant="outline" onClick={()=>window.location.assign("/admin#integrations")}>Live integrations</Button><Button variant="outline" onClick={()=>window.location.assign("/admin#compliance")}>Compliance registers</Button></div></CardContent></Card>
-        <Card><CardHeader><SectionHeading icon={Activity} title="Admin refresh" description="Operational data refreshes automatically."/></CardHeader><CardContent><p className="text-sm text-slate-600">Security, enterprise operations, compliance and MLOps data refresh every 30 seconds while this workspace is visible.</p><Badge className="mt-4">Live posture</Badge></CardContent></Card>
-      </section>
+      <nav className="mt-4 -mx-1 overflow-x-auto pb-1" aria-label="Administration sections"><div className="flex min-w-max gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">{nav.map(([key,label,Icon])=><Button key={key} size="sm" variant={tab===key?"default":"ghost"} onClick={()=>setTab(key)}><Icon className="mr-1.5 h-3.5 w-3.5"/>{label}</Button>)}</div></nav>
+      {error&&<div className="mt-4 flex gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"><CircleAlert className="h-5 w-5 shrink-0"/><span>{error}</span></div>}
+      {loading?<Card className="mt-5"><CardContent className="py-14 text-center text-sm text-slate-500">Loading governed administration data...</CardContent></Card>:<>
+        {tab==="overview"&&<section className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {[["Active sessions",number(security?.activeSessions),Users],["Failed logins, 24h",number(security?.failedLogins24h),CircleAlert],["Open security alerts",number(security?.openAlerts),ShieldCheck],["Open imports",number(ops?.imports?.open),Activity]].map(([label,value,Icon])=><Card key={label as string}><CardContent className="p-5"><div className="flex justify-between"><span className="text-xs font-semibold text-slate-500">{label as string}</span><Icon className="h-4 w-4 text-violet-600"/></div><strong className="mt-3 block break-words text-2xl font-bold text-violet-800">{value as string}</strong></CardContent></Card>)}
+        </section>}
+        {tab==="overview"&&<section className="mt-4 grid gap-4 lg:grid-cols-2">
+          <Card><CardHeader><SectionHeading icon={ShieldCheck} title="Security & identity" description="Live authentication and access posture."/></CardHeader><CardContent><div className="grid gap-3 sm:grid-cols-3"><div><b className="text-xl text-violet-800">{number(security?.successfulLogins24h)}</b><p className="text-[10px] text-slate-500">Successful logins</p></div><div><b className="text-xl text-violet-800">{number(security?.failedLogins24h)}</b><p className="text-[10px] text-slate-500">Failed logins</p></div><div><b className="text-xl text-violet-800">{number(security?.openAlerts)}</b><p className="text-[10px] text-slate-500">Open alerts</p></div></div><Button className="mt-4" onClick={()=>setTab("users")}>Open identity controls</Button></CardContent></Card>
+          <Card><CardHeader><SectionHeading icon={Landmark} title="Live enterprise integration" description="Connection and analytics routing remain visible to authorised admins."/></CardHeader><CardContent><div className="grid gap-3 sm:grid-cols-2">{[["Source",integration?.sourceType||ops?.integration?.sourceMode],["Enabled",integration?.enabled==null?"Not available":integration.enabled?"Yes":"No"],["Schedule",integration?.scheduleHours==null?"Not available":number(integration.scheduleHours)+" hours"],["Freshness",ops?.integration?.freshnessState]].map(([l,v])=><div className="rounded-xl bg-slate-50 p-4" key={l as string}><span className="text-[10px] text-slate-500">{l as string}</span><strong className="mt-1 block break-words text-sm">{v==null?"Not available":String(v)}</strong></div>)}</div><Button className="mt-4" onClick={()=>setTab("integrations")}>Manage integration</Button></CardContent></Card>
+          <Card><CardHeader><SectionHeading icon={TriangleAlert} title="Data-quality gate" description="Quarantine and review states are surfaced before live data use."/></CardHeader><CardContent>{unresolved.length?<div className="space-y-2">{unresolved.slice(0,5).map((e:any)=><div className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 p-3" key={e.id}><span className="min-w-0 break-words text-xs font-semibold">{e.metadata?.reportKey||"Dataset"}</span><Badge>{e.status}</Badge></div>)}</div>:<div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800"><CheckCircle2 className="mr-2 inline h-4 w-4"/>No unresolved data-quality gates.</div>}<Button className="mt-4" variant="outline" onClick={()=>setTab("imports")}>Review data</Button></CardContent></Card>
+          <Card><CardHeader><SectionHeading icon={Activity} title="Critical operational audit" description="Highest-priority operational changes, with full history retained separately."/></CardHeader><CardContent>{critical.length?<div className="space-y-2">{critical.map((e:any,i)=><div className="grid gap-1 rounded-lg border border-slate-200 p-3" key={e.id||i}><div className="flex justify-between gap-3"><b className="text-xs">{e.action||"Event"}</b><span className="text-[10px] text-slate-500">{e.createdAt?new Date(e.createdAt).toLocaleString("en-ZA"):""}</span></div><p className="break-words text-[11px] text-slate-600">{e.message||e.detail||"Operational event recorded."}</p></div>)}</div>:<p className="text-sm text-slate-500">No critical operational events in the returned history.</p>}<Button className="mt-4" variant="outline" onClick={()=>setTab("audit")}>Open full audit</Button></CardContent></Card>
+        </section>}
+
+        {tab==="users"&&<section className="mt-5 grid gap-4">
+          <Card><CardHeader><SectionHeading icon={Users} title="Users & roles" description="Role is authority. Employer and portfolio assignments define access scope."/></CardHeader><CardContent>
+            <div className="overflow-x-auto rounded-xl border border-slate-200"><table className="w-full min-w-[760px] text-left text-xs"><thead className="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500"><tr><th className="p-3">User</th><th className="p-3">Role</th><th className="p-3">Status</th><th className="p-3">Scope</th><th className="p-3">Action</th></tr></thead><tbody className="divide-y divide-slate-100">{users.map((u:any)=><tr key={u.id}><td className="p-3"><b>{u.name||"Unnamed"}</b><span className="mt-1 block text-slate-500">{u.email}</span></td><td className="p-3"><Badge>{roleLabels[u.role]||u.role||"Unknown"}</Badge></td><td className="p-3">{u.active===false?<span className="text-red-700">Inactive</span>:<span className="text-emerald-700">Active</span>}</td><td className="p-3 break-words">{number(Array.isArray(u.employers)?u.employers.length:u.employerIds?.length)} employer assignments</td><td className="p-3"><Select aria-label={"Change role for "+(u.name||u.email)} value={u.role||""} onChange={e=>{const next=e.target.value;if(!roleOptions.includes(next))return;action("role",()=>api("/api/users/"+u.id,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({role:next,reason:"Role updated from React administration"})}))}}><option value={u.role}>{roleLabels[u.role]||u.role}</option>{roleOptions.filter(r=>r!==u.role).map(r=><option key={r} value={r}>{roleLabels[r]}</option>)}</Select></td></tr>)}</tbody></table></div>
+            <p className="mt-3 text-[10px] text-slate-500">{isSuper?"Super Admin control-plane roles are visible here.":"Privileged Super Admin accounts are intentionally not discoverable to ordinary Admins."}</p>
+          </CardContent></Card>
+        </section>}
+
+        {tab==="integrations"&&<section className="mt-5 grid gap-4 lg:grid-cols-2">
+          <Card><CardHeader><SectionHeading icon={Landmark} title="Live data integration" description="Connection state, schedule and governed sync controls."/></CardHeader><CardContent><div className="grid gap-3">{[["Source type",integration?.sourceType],["Enabled",integration?.enabled==null?"Not available":integration.enabled?"Enabled":"Disabled"],["Schedule",integration?.scheduleHours==null?"Not available":number(integration.scheduleHours)+" hours"],["Last successful sync",integration?.lastSuccessAt?new Date(integration.lastSuccessAt).toLocaleString("en-ZA"):"Not available"],["Analytics mode",ops?.integration?.analyticsMode]].map(([l,v])=><div className="flex flex-col gap-1 rounded-xl border border-slate-200 p-4 sm:flex-row sm:justify-between"><span className="text-xs text-slate-500">{l as string}</span><b className="break-words text-sm text-slate-900">{v==null?"Not available":String(v)}</b></div>)}</div><div className="mt-4 flex flex-wrap gap-2"><Button disabled={busy==="sync"} onClick={sync}>{busy==="sync"?"Syncing...":"Sync now"}</Button><Button variant="outline" onClick={()=>action("test",()=>api("/api/admin/integration/test",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({})}))}>Test connection</Button><Button variant="outline" onClick={()=>action("refresh",()=>api("/api/admin/integration/refresh",{method:"POST"}))}>Refresh health</Button></div></CardContent></Card>
+          <Card><CardHeader><SectionHeading icon={Activity} title="Integration logs" description="Recent sync activity and outcomes."/></CardHeader><CardContent><IntegrationLogs/></CardContent></Card>
+        </section>}
+
+        {tab==="imports"&&<section className="mt-5 grid gap-4">
+          <Card><CardHeader><SectionHeading icon={Activity} title="Imports & data governance" description="Validated files remain staged until an authorised commit. Data-quality gates fail closed."/></CardHeader><CardContent><div className="overflow-x-auto rounded-xl border border-slate-200"><table className="w-full min-w-[920px] text-left text-xs"><thead className="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500"><tr><th className="p-3">Report</th><th className="p-3">File</th><th className="p-3">Status</th><th className="p-3">Rows</th><th className="p-3">Errors</th><th className="p-3">Uploaded</th><th className="p-3">Actions</th></tr></thead><tbody className="divide-y divide-slate-100">{batches.slice(0,50).map((b:any)=><tr key={b.id}><td className="p-3 font-semibold">{b.reportKey}</td><td className="p-3 max-w-[240px] break-words">{b.filename}</td><td className="p-3"><Badge>{b.status}</Badge></td><td className="p-3">{number(b.rowCount)}</td><td className="p-3">{number(b.errorCount)}</td><td className="p-3 whitespace-nowrap">{b.uploadedAt?new Date(b.uploadedAt).toLocaleString("en-ZA"):"Not available"}</td><td className="p-3"><div className="flex flex-wrap gap-1">{b.status==="STAGED"&&<Button size="sm" onClick={()=>action("commit",()=>api("/api/admin/batches/"+b.id+"/commit",{method:"POST"}))}>Commit</Button>}{b.revertable&&<Button size="sm" variant="outline" onClick={()=>action("revert",()=>api("/api/admin/batches/"+b.id+"/revert",{method:"POST"}))}>Revert</Button>}<Button size="sm" variant="ghost" onClick={()=>window.location.assign("/api/admin/batches/"+b.id+"/csv")}>CSV</Button></div></td></tr>)}</tbody></table></div></CardContent></Card>
+        </section>}
+
+        {tab==="audit"&&<section className="mt-5 grid gap-4">
+          <Card><CardHeader><SectionHeading icon={CircleAlert} title="Audit history" description="The top operational events are prioritised in Overview. Full history remains available here."/></CardHeader><CardContent><div className="overflow-x-auto rounded-xl border border-slate-200"><table className="w-full min-w-[900px] text-left text-xs"><thead className="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500"><tr><th className="p-3">Time</th><th className="p-3">Action</th><th className="p-3">Actor</th><th className="p-3">Target</th><th className="p-3">Detail</th></tr></thead><tbody className="divide-y divide-slate-100">{audit.map((e:any,i)=><tr key={e.id||i}><td className="p-3 whitespace-nowrap">{e.createdAt?new Date(e.createdAt).toLocaleString("en-ZA"):"Not available"}</td><td className="p-3 font-semibold">{e.action||"Event"}</td><td className="p-3">{e.actorEmail||e.user?.email||"System"}</td><td className="p-3 break-words">{e.targetType||""} {e.targetId||""}</td><td className="max-w-[360px] break-words p-3 text-slate-600">{e.message||e.detail?typeof(e.message||e.detail)==="string"?(e.message||e.detail):JSON.stringify(e.message||e.detail):"Recorded event"}</td></tr>)}</tbody></table></div><Button className="mt-4" variant="outline" onClick={()=>window.location.assign("/api/admin/audit-log.csv")}>Export full CSV</Button></CardContent></Card>
+        </section>}
+
+        {tab==="compliance"&&<section className="mt-5 grid gap-4 lg:grid-cols-2">
+          <Card><CardHeader><SectionHeading icon={ShieldCheck} title="POPIA governance" description="Live compliance-control overview."/></CardHeader><CardContent><div className="grid gap-3 sm:grid-cols-2">{[["Processing activities",compliance?.processingActivities],["Cross-border activities",compliance?.crossBorderActivities],["Open data-subject requests",compliance?.openDataSubjectRequests],["Open incidents",compliance?.openSecurityIncidents]].map(([l,v])=><div className="rounded-xl bg-slate-50 p-4" key={l as string}><span className="text-[10px] text-slate-500">{l as string}</span><strong className="mt-1 block text-xl text-violet-800">{number(v as number|undefined)}</strong></div>)}</div><p className="mt-4 text-xs text-slate-600">{compliance?.status==="ACTION_REQUIRED"?"Governance action is required. Review the underlying registers.":"Governance controls are currently being monitored."}</p></CardContent></Card>
+          <Card><CardHeader><SectionHeading icon={ShieldCheck} title="Compliance registers" description="The existing governed workflows remain authoritative."/></CardHeader><CardContent><div className="grid gap-2 sm:grid-cols-2"><Button variant="outline" onClick={()=>window.location.assign("/admin#compliance")}>Processing activities</Button><Button variant="outline" onClick={()=>window.location.assign("/admin#compliance")}>Data-subject requests</Button><Button variant="outline" onClick={()=>window.location.assign("/admin#compliance")}>Vendors</Button><Button variant="outline" onClick={()=>window.location.assign("/admin#compliance")}>Retention</Button><Button variant="outline" onClick={()=>window.location.assign("/admin#compliance")}>Incidents</Button><Button variant="outline" onClick={()=>window.location.assign("/admin#security")}>Security controls</Button></div></CardContent></Card>
+        </section>}
+
+        {tab==="mlops"&&<section className="mt-5 grid gap-4 lg:grid-cols-2">
+          <Card><CardHeader><SectionHeading icon={TrendingUp} title="Governed MLOps events" description="Data-quality, anomaly, feedback and model-governance events."/></CardHeader><CardContent><div className="space-y-2">{mlops.slice(0,20).map((e:any,i)=><div className="rounded-xl border border-slate-200 p-3" key={e.id||i}><div className="flex flex-wrap items-center justify-between gap-2"><b className="text-xs">{e.eventType||"Event"}</b><Badge>{e.status||"Recorded"}</Badge></div><p className="mt-1 break-words text-[10px] text-slate-500">{e.metadata?.reportKey||e.modelKey||"Governed event"}{e.createdAt?" · "+new Date(e.createdAt).toLocaleString("en-ZA"):""}</p></div>)}</div></CardContent></Card>
+          <Card><CardHeader><SectionHeading icon={Activity} title="Model governance" description="Promotion and rollback stay behind admin controls."/></CardHeader><CardContent><p className="text-sm leading-6 text-slate-600">Approved data can update governed baselines and models. Quarantined or unresolved data-quality events remain outside the learning path until reviewed.</p><div className="mt-4 flex flex-wrap gap-2"><Button variant="outline" onClick={()=>window.location.assign("/admin#mlops")}>Open MLOps control centre</Button><Button variant="outline" onClick={()=>window.location.assign("/admin#brand-learning")}>Brand learning</Button></div></CardContent></Card>
+        </section>}
+      </>}
     </div>
   </main>;
+}
+
+function IntegrationLogs(){
+  const [logs,setLogs]=useState<any[]>([]);
+  useEffect(()=>{api<any[]>("/api/admin/integration/logs").then(v=>setLogs(Array.isArray(v)?v:[])).catch(()=>setLogs([]));},[]);
+  return <div className="space-y-2">{logs.length?logs.map((l:any,i)=><div className="rounded-lg border border-slate-200 p-3" key={l.id||i}><div className="flex justify-between gap-2"><b className="text-xs">{l.status||"Sync"}</b><span className="text-[10px] text-slate-500">{l.createdAt?new Date(l.createdAt).toLocaleString("en-ZA"):""}</span></div><p className="mt-1 break-words text-[10px] text-slate-500">{l.message||l.mode||"Integration event"}</p></div>):<p className="text-xs text-slate-500">No recent integration logs returned.</p>}</div>;
 }
 
 function App() {
