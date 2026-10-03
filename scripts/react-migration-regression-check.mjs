@@ -35,7 +35,7 @@ const checks = [
   ["No generic icon library in React dashboard", !app.includes("lucide-react") && !app.includes("<Icon ")],
   ["No decorative gradient treatment in React dashboard", !app.includes("gradient")],
   ["Neutral-first palette replaces saturated violet utility classes", !/violet-(50|100|200|300|400|500|600|700|800|900|950)/.test(app)],
-  ["Full-value typography remains intact", app.includes("Intl.NumberFormat("en-ZA"") && !app.includes("/ 1_000")],
+  ["Full-value typography remains intact", app.includes(`Intl.NumberFormat("en-ZA"`) && !app.includes("/ 1_000")],
 ];
 
 let failed = 0;
