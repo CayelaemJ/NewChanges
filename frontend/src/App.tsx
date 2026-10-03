@@ -188,9 +188,10 @@ function AdminView({me}:{me:Me}) {
   const [error,setError]=useState("");
   const load=async()=>{
     try {
-      const [s,o,c,m]=await Promise.all([
+      const [s,o,q,c,m]=await Promise.all([
         api<any>("/api/admin/security/overview"),
         api<any>("/api/admin/enterprise/overview"),
+        api<any>("/api/admin/enterprise/data-quality"),
         api<any>("/api/admin/compliance/overview"),
         api<any>("/api/admin/mlops/events?limit=50")
       ]);
