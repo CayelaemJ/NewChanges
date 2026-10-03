@@ -335,7 +335,6 @@
 :root{
   --blue:var(--brand-accent,#7d2fa3);
   --blue-d:color-mix(in srgb,var(--blue) 82%,#2b1b68);
-  --brand-primary:var(--brand-primary,#2b1b68);
   --brand-primary-deep:var(--brand-navy,#0d2a47);
   --ice:color-mix(in srgb,var(--blue) 12%,#fff);
   --ice-2:#edf4fa;
