@@ -135,8 +135,8 @@ function DashboardView({me}:{me:Me}) {
   },[me.theme?.accentColor,me.theme?.primaryColor,me.theme?.navyColor]);
 
   return <main className="dashboard-shell" style={themeStyle}>
-    <div className="wrap">
-      <header className="head">
+    <div className="mx-auto w-full max-w-[1440px] px-3 py-4 sm:px-5 lg:px-8">
+      <header className="portal-header flex flex-col gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-center sm:justify-between">
         <div><div className="head-eyebrow">Employer Insights · Financial Wellbeing Programme</div><h1 className="mt-1 font-display text-3xl font-bold tracking-tight text-[var(--brand-primary)] sm:text-4xl">Your workforce <span className="emp">{data.employer}</span></h1></div>
         <div className="flex items-center gap-3 rounded-md border border-slate-200 bg-white px-3 py-2 shadow-sm"><div className="hidden h-8 w-8 items-center justify-center rounded-sm bg-[var(--brand-accent-soft)] text-[var(--brand-accent)] sm:flex"><span className="text-[10px] font-bold uppercase tracking-widest">User</span></div><div><p className="text-sm font-semibold text-slate-900">{me.name||me.email}</p><p className="text-[11px] text-slate-500">{role}</p></div></div>
       </header>
@@ -150,7 +150,7 @@ function DashboardView({me}:{me:Me}) {
       </section>
 
       <section className="filters">
-        <div className="seg">
+        <div className="flex flex-wrap gap-1 rounded-md bg-slate-100 p-1">
           {([["latest","Latest"],["quarter","Quarter"],["all","Programme"]] as const).map(([key,label])=><Button key={key} size="sm" variant={!period&&range===key?"default":"ghost"} onClick={()=>{setPeriod("");setRange(key)}}>{label}</Button>)}
         </div>
         <Select label="Month" value={period} onChange={e=>{setPeriod(e.target.value);if(e.target.value)setRange("latest")}}><option value="">Select month</option>{periodOptions.map(m=><option key={m} value={m}>{new Date(m+"-01T00:00:00Z").toLocaleDateString("en-ZA",{month:"long",year:"numeric",timeZone:"UTC"})}</option>)}</Select>
@@ -185,16 +185,10 @@ function DashboardView({me}:{me:Me}) {
         <Card><CardHeader><SectionHeading title="Financial problems resolved" description="Completed fixes from governed journey data."/></CardHeader><CardContent><div className="divide-y divide-slate-100">{(data.outcomes||[]).map(row=><div className="grid grid-cols-[1fr_auto] gap-2 py-3" key={row.key}><div><b className="text-xs">{row.name}</b><small className="mt-1 block text-[10px] text-slate-500">{row.avgPerEmployee}</small></div><strong className="text-sm text-[var(--brand-ink-strong)]">{number(row.count)}</strong><span className="col-span-2 text-[9px] text-slate-400">{row.statL}</span></div>)}</div></CardContent></Card>
       </section>
 
-      <section className="grid g-12 section-gap">
+      <section className="mt-4 grid gap-4 lg:grid-cols-2">
         <Card><CardHeader><SectionHeading title="Workforce funnel"/></CardHeader><CardContent><div className="grid gap-4">{(data.funnel||[]).map(row=><div className="grid grid-cols-[minmax(105px,1fr)_minmax(70px,2fr)_55px] items-center gap-3" key={row.label}><div><b className="text-xs">{row.label}</b><small className="mt-1 block text-[9px] text-slate-500">{row.sub}</small></div><Progress value={row.pct??0}/><strong className="text-right text-xs text-[var(--brand-ink-strong)]">{number(row.n)}</strong></div>)}</div></CardContent></Card>
         <Card><CardHeader><SectionHeading title="Activated employees by income band"/></CardHeader><CardContent><div className="grid gap-4">{(data.income||[]).map(row=><div className="grid grid-cols-[minmax(100px,1fr)_minmax(70px,2fr)_45px] items-center gap-3" key={row.name}><span className="text-xs">{row.name}</span><Progress value={row.count/maxIncome*100}/><strong className="text-right text-xs text-[var(--brand-ink-strong)]">{number(row.count)}</strong></div>)}</div></CardContent></Card>
       </section>
-
-      {(data as any).regions?.length>0&&<section>
-        <div className="head section-head"><div><div className="head-eyebrow">Where the pressure sits</div><h1>Workforce Financial Stress Map</h1><div className="head-sub">Financial pressure is not evenly spread. Use the site view to see where programme engagement and financial pressure concentrate.</div></div></div>
-        {(data as any).stressMap?.length>0&&<div className="stress-grid">{(data as any).stressMap.map((row:any)=><div className="stress-cell" style={{"--t":row.tone==="red"?"var(--portal-red)":row.tone==="green"?"var(--portal-green)":"var(--portal-blue)"} as CSSProperties} key={row.l}><div className="stress-l">{row.l}</div><div className="stress-v">{row.v}</div><div className="stress-d">{row.d}</div></div>)}</div>}
-        <div className="grid g-12 section-gap"><Card style={{gridColumn:"span 7"}}><CardHeader><SectionHeading title="Stress index by site" description="Higher means more financial pressure."/></CardHeader><CardContent><div className="hbar">{(data as any).regions.map((row:any)=><div className="hbar-row" key={row.name}><div className="hbar-lbl">{row.name}</div><div className="hbar-track"><div className="hbar-fill" style={{width:`${row.stress}%`,background:"var(--portal-blue)"}}/></div><div className="hbar-val">{number(row.stress)}</div></div>)}</div></CardContent></Card><Card style={{gridColumn:"span 5"}}><CardHeader><SectionHeading title="Regional engagement" description="Enrolment by site."/></CardHeader><CardContent><div className="hbar">{(data as any).regions.map((row:any)=><div className="hbar-row" key={row.name}><div className="hbar-lbl">{row.name}</div><div className="hbar-track"><div className="hbar-fill" style={{width:`${row.pct}%`,background:"var(--portal-primary)"}}/></div><div className="hbar-val">{row.pct}%</div></div>)}</div></CardContent></Card></div>
-      </section>}
 
       <section className="mt-4 grid gap-4 lg:grid-cols-2">
         <Card><CardHeader><SectionHeading title="Financial problems resolved by creditor"/></CardHeader><CardContent><div className="divide-y divide-slate-100">{(data.creditors||[]).slice(0,8).map(row=><div className="grid grid-cols-[1fr_auto] gap-2 py-3" key={row.name}><div><b className="text-xs">{row.name}</b><small className="mt-1 block text-[10px] text-slate-500">{number(row.accounts)} accounts · {row.avg} average</small></div><strong className="break-words text-right text-sm text-[var(--brand-ink-strong)]">{row.balance}</strong><span className="col-span-2 text-[9px] text-slate-400">{(row.stateBreakdown||[]).map(s=>`${s.label}: ${number(s.count)}`).join(" · ")||"No state detail"}</span></div>)}</div>{data.creditorsTotal&&<div className="mt-3 flex justify-between gap-3 border-t border-slate-200 pt-3 text-xs"><span>Total in arrears journey</span><strong className="text-[var(--brand-ink-strong)]">{data.creditorsTotal.balance}</strong></div>}</CardContent></Card>
