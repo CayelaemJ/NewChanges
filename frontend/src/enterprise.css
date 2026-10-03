@@ -330,3 +330,17 @@
 @media(max-width:380px){
   .dashboard-shell .topbar-inner,.dashboard-shell .wrap{padding-left:12px;padding-right:12px}
 }
+
+/* Main-branch dark mode contract for the React dashboard. */
+html.portal-dark body{background:var(--dm-bg,#15171f)!important;color:var(--ink,#eceef4)!important}
+html.portal-dark .dashboard-shell{background:var(--dm-bg,#15171f)!important;color:var(--ink,#eceef4)!important}
+html.portal-dark .dashboard-shell .topbar{background:var(--bar-bg,#1c1f2b)!important;border-color:var(--dm-line,#343849)!important;box-shadow:inset 0 -3px 0 var(--brand-vivid,var(--blue,#b15be8)),0 1px 0 rgba(0,0,0,.35)!important}
+html.portal-dark .dashboard-shell .card{background:var(--dm-surface,#1d2029)!important;border-color:var(--dm-line,#343849)!important;color:var(--ink,#eceef4)!important;box-shadow:0 1px 0 rgba(255,255,255,.03) inset,0 6px 20px rgba(0,0,0,.28)!important}
+html.portal-dark .dashboard-shell .card-title,html.portal-dark .dashboard-shell .kpi-value,html.portal-dark .dashboard-shell .stat-cell .v,html.portal-dark .dashboard-shell .num,html.portal-dark .dashboard-shell .head h1{color:var(--ink,#eceef4)!important}
+html.portal-dark .dashboard-shell .card-note,html.portal-dark .dashboard-shell .head-sub,html.portal-dark .dashboard-shell .muted{color:var(--grey-l,#aeb6c5)!important}
+html.portal-dark .dashboard-shell .funnel-bar-bg,html.portal-dark .dashboard-shell .hbar-track,html.portal-dark .dashboard-shell .rb-track,html.portal-dark .dashboard-shell .wd-track{background:var(--ice)!important;border-color:var(--dm-line,#343849)!important}
+html.portal-dark .dashboard-shell .stat-strip,html.portal-dark .dashboard-shell .stat-cell{background:var(--dm-surface,#1d2029)!important;border-color:var(--dm-line,#343849)!important}
+html.portal-dark .dashboard-shell .filters .seg,html.portal-dark .dashboard-shell .filters select{background:var(--dm-surface-2,#262a36)!important;color:var(--ink,#eceef4)!important;border-color:var(--dm-line,#343849)!important}
+html.portal-dark .dashboard-shell .seg button.on{background:var(--blue)!important;color:#fff!important}
+html.portal-dark .dashboard-shell .outcome,html.portal-dark .dashboard-shell .risk-row,html.portal-dark .dashboard-shell .trend-row,html.portal-dark .dashboard-shell table.ct th,html.portal-dark .dashboard-shell table.ct td{border-color:var(--dm-line,#343849)!important}
+html.portal-dark .dashboard-shell .portal-theme-quick{background:var(--dm-surface-2,#262a36)!important;color:var(--ink,#eceef4)!important;border-color:var(--dm-line,#343849)!important}
