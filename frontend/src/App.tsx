@@ -74,20 +74,37 @@ function normaliseHex(value?: string | null, fallback = "#5f756d") {
   return /^#[0-9a-fA-F]{6}$/.test(hex) ? hex : fallback;
 }
 
-function LineChart({values,labels,prefix="R "}:{values:number[];labels:string[];prefix?:string}) {
-  if(!values.length) return <div className="flex h-44 items-center justify-center text-xs text-slate-500">No trend data available for this period.</div>;
-  const max=Math.max(...values,1),min=Math.min(...values,0),span=Math.max(max-min,1);
-  const points=values.map((v,i)=>`${values.length===1?50:i/(values.length-1)*100},${92-(v-min)/span*76}`).join(" ");
-  return <div className="mt-3 min-w-0">
-    <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="Trend chart" role="img" className="dashboard-chart w-full">
-      <line x1="0" y1="92" x2="100" y2="92" className="stroke-slate-200" strokeWidth=".7"/>
-      <polyline points={points} fill="none" className="stroke-[var(--brand-accent)]" strokeWidth="2.5" vectorEffect="non-scaling-stroke"/>
+function LineChart({values,labels,previous=[],previousLabels=[],currentLabel="Selected period",previousLabel="Previous period",prefix="R "}:{values:number[];labels:string[];previous?:number[];previousLabels?:string[];currentLabel?:string;previousLabel?:string;prefix?:string}) {
+  const current=values.map(Number).filter(Number.isFinite);
+  const prior=previous.map(Number).filter(Number.isFinite);
+  if(!current.length&&!prior.length) return <div className="muted comparison-empty">No data is available for this period.</div>;
+  const n=Math.max(current.length,prior.length,1);
+  const align=(arr:number[])=>Array.from({length:n},(_,i)=>arr[i-(n-arr.length)]??null);
+  const a=align(current), b=align(prior);
+  const all=[...a,...b].filter((v):v is number=>v!==null);
+  const min=Math.min(...all,0), max=Math.max(...all,1), span=Math.max(max-min,1);
+  const w=720,h=230,left=42,right=16,top=18,bottom=38;
+  const point=(v:number|null,i:number)=>v===null?null:[left+(n===1?(w-left-right)/2:i/(n-1)*(w-left-right)),top+(1-(v-min)/span)*(h-top-bottom)];
+  const path=(arr:Array<number|null>)=>arr.map((v,i)=>{const p=point(v,i);return p?\`\${i?"L":"M"} \${p[0].toFixed(1)} \${p[1].toFixed(1)}\`:null}).filter(Boolean).join(" ");
+  const currentPath=path(a), priorPath=path(b);
+  const labelsForChart=labels.length?labels:previousLabels;
+  return <div className="comparison-chart">
+    <div className="comparison-value-row">
+      <div className="comparison-value-card previous"><span className="comparison-value-period">{previousLabel}</span><strong>{prior.length?prefix+number(prior[prior.length-1]):"Not available"}</strong></div>
+      <div className="comparison-value-card current"><span className="comparison-value-period">{currentLabel}</span><strong>{current.length?prefix+number(current[current.length-1]):"Not available"}</strong></div>
+    </div>
+    <div className="comparison-legend"><span><i className="comparison-dot current"></i>{currentLabel}</span><span><i className="comparison-dot previous"></i>{previousLabel}</span></div>
+    <svg viewBox={`0 0 ${w} ${h}`} role="img" aria-label={`${currentLabel} compared with ${previousLabel}`} className="w-full" preserveAspectRatio="none">
+      <line x1={left} x2={w-right} y1={h-bottom} y2={h-bottom} stroke="var(--line)" />
+      <line x1={left} x2={w-right} y1={top+(h-top-bottom)/2} y2={top+(h-top-bottom)/2} stroke="var(--line-soft)" />
+      {priorPath&&<path d={priorPath} fill="none" stroke="var(--grey-l)" strokeWidth="2" strokeDasharray="5 5" strokeLinecap="round" strokeLinejoin="round" />}
+      {currentPath&&<path d={currentPath} fill="none" stroke="var(--chart-cashflow,var(--brand-accent))" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />}
+      {a.map((v,i)=>{const p=point(v,i);return p?<circle key={`c${i}`} cx={p[0]} cy={p[1]} r="4" fill="var(--chart-cashflow,var(--brand-accent))" />:null})}
+      {b.map((v,i)=>{const p=point(v,i);return p?<circle key={`p${i}`} cx={p[0]} cy={p[1]} r="3" fill="var(--grey-l)" />:null})}
+      {labelsForChart.map((label,i)=>{const x=n===1?(w-left-right)/2+left:left+i/(Math.max(labelsForChart.length-1,1))*(w-left-right);return <text key={i} x={x} y={h-12} textAnchor={i===0?"start":i===labelsForChart.length-1?"end":"middle"} fontSize="10" fontWeight="800" fill={i===labelsForChart.length-1?"var(--brand-primary)":"var(--grey-l)"}>{label}</text>})}
     </svg>
-    <div className="mt-2 flex justify-between gap-2 overflow-hidden text-[9px] text-slate-400">{labels.map((l,i)=><span className="whitespace-nowrap" key={i}>{l}</span>)}</div>
-    <div className="mt-1 flex justify-between gap-2 overflow-hidden text-[9px] font-bold text-[var(--brand-ink-strong)]">{values.map((v,i)=><span className="whitespace-nowrap" key={i}>{prefix}{number(v)}</span>)}</div>
   </div>;
 }
-
 function SectionHeading({title,description}:{title:string;description?:string}) {
   return <div className="mb-4 border-b border-slate-200 pb-3"><CardTitle>{title}</CardTitle>{description&&<CardDescription className="mt-1">{description}</CardDescription>}</div>;
 }
@@ -268,7 +285,7 @@ function DashboardView({me}:{me:Me}) {
           {(data.valueStrip||[]).map(row=><div className="stat-cell" key={row.l}><div className="l">{row.l}</div><div className="v">{row.v}</div><div className="d">{row.d}</div></div>)}
         </div>
         <div className="grid g-12 section-gap">
-          <Card style={{gridColumn:"span 5"}}><CardHeader><SectionHeading title="Monthly cash freed up" description="Recurring savings unlocked, cumulative run-rate."/></CardHeader><CardContent><div className="portal-number mb-2 text-3xl font-bold text-[var(--brand-ink-strong)]">{money(currentSaving)}</div><LineChart values={trend} labels={trendLabels}/></CardContent></Card>
+          <Card style={{gridColumn:"span 5"}}><CardHeader><SectionHeading title="Monthly cash freed up" description="Recurring savings unlocked, cumulative run-rate."/></CardHeader><CardContent><div className="portal-number mb-2 text-3xl font-bold text-[var(--brand-ink-strong)]">{money(currentSaving)}</div><LineChart values={trend} labels={trendLabels} previous={data.comparison?.previous?.savings??[]} previousLabels={data.comparison?.previous?.savingsLabels??[]} currentLabel={data.comparison?.current?.label||comparison?.current||"Selected period"} previousLabel={data.comparison?.previous?.label||comparison?.previous||"Previous period"}/></CardContent></Card>
           <Card style={{gridColumn:"span 7"}}><CardHeader><SectionHeading title="Debt Pressure Profile" description="Where your people's arrears sit by intervention state, then by creditor."/></CardHeader><CardContent>
             <div className="grid gap-3 sm:grid-cols-3">
               {[["Active intervention",data.debtStates?.active],["Prescription challenged",data.debtStates?.challenged],["Self-guided",data.debtStates?.guided]].map(([label,row])=><div className="stat-cell" key={label as string}><div className="l">{label as string}</div><div className="v">{money((row as any)?.rand)}</div><div className="d">{number((row as any)?.employees)} employees</div></div>)}
@@ -283,7 +300,7 @@ function DashboardView({me}:{me:Me}) {
           <div><div className="head-eyebrow">On-demand pay</div><h1 style={{fontSize:27}}>Early Wage Access</h1><div className="head-sub">How many employees are drawing earned wages early, and how much.</div></div>
         </div>
         <div className="grid g-12 section-gap">
-          <Card style={{gridColumn:"span 12"}}><CardHeader><SectionHeading title="Total advanced per month" description="Finalised advances only · monthly run-rate."/></CardHeader><CardContent><div className="portal-number mb-2 text-3xl font-bold text-[var(--brand-ink-strong)]">{money(data.comparison?.current?.totalAdvancedRaw??data.ewa?.totalRaw)}</div><LineChart values={advancedTrend} labels={advancedLabels}/></CardContent></Card>
+          <Card style={{gridColumn:"span 12"}}><CardHeader><SectionHeading title="Total advanced per month" description="Finalised advances only · monthly run-rate."/></CardHeader><CardContent><div className="portal-number mb-2 text-3xl font-bold text-[var(--brand-ink-strong)]">{money(data.comparison?.current?.totalAdvancedRaw??data.ewa?.totalRaw)}</div><LineChart values={advancedTrend} labels={advancedLabels} previous={data.comparison?.previous?.ewa??[]} previousLabels={data.comparison?.previous?.ewaLabels??[]} currentLabel={data.comparison?.current?.label||comparison?.current||"Selected period"} previousLabel={data.comparison?.previous?.label||comparison?.previous||"Previous period"}/></CardContent></Card>
         </div>
       </section>
       <section className="mt-4 grid gap-4 lg:grid-cols-2">
