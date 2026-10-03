@@ -140,7 +140,7 @@ function DashboardView({me}:{me:Me}) {
     "--brand-accent": brandAccent,
     "--blue": brandAccent,
     "--blue-d": brandAccent,
-    ...Object.fromEntries(Object.entries(chartPalette).map(([key,value]) => [`--${key.replace(/^--/,"")}`, value]))
+    ...Object.fromEntries(Object.entries(chartPalette).map(([key,value]) => [`--chart-${key.replace(/^--chart-/,"")}`, value]))
   } as CSSProperties;
   useEffect(()=>{
     document.documentElement.classList.toggle("portal-dark",darkMode);
