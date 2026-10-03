@@ -1967,3 +1967,11 @@ table.ct th,table.ct td{vertical-align:middle;}
 .dashboard-shell .recharts-line path,.dashboard-shell .recharts-line-curve { stroke:var(--chart-cashflow,var(--blue))!important; }
 @media(max-width:1080px){.dashboard-shell .wrap{padding-left:22px;padding-right:22px;}}
 @media(max-width:640px){.dashboard-shell .wrap{padding-left:16px!important;padding-right:16px!important}.dashboard-shell .portal-hero{padding:20px}.dashboard-shell .portal-header{padding:22px 0 14px}.dashboard-shell .topbar-inner{padding-left:16px!important;padding-right:16px!important;height:58px!important}.dashboard-shell .topbar-divider,.dashboard-shell .audience-switch,.dashboard-shell .data-fresh{display:none}.dashboard-shell .topbar-meta{margin-left:auto}.dashboard-shell .card{border-radius:14px}.dashboard-shell .card-hd{padding:14px 16px 10px}.dashboard-shell .card-bd{padding:14px}}
+
+
+/* React parity: preserve the canonical main dashboard executive summary geometry. */
+.exec-check{display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:3px;width:19px;height:19px;border-radius:6px;background:rgba(61,220,145,.14);color:#3ddc91;font-size:13px;font-weight:900;line-height:1;}
+.wellness-gauge{display:block;margin:0 auto;}
+.wellness-gauge-empty{font-family:'Fraunces',serif;font-size:38px;line-height:1.1;color:var(--brand-primary);padding:18px 0 24px;}
+.dashboard-shell .portal-header{padding:34px 0 22px;border-bottom:0;}
+.dashboard-shell .portal-header .font-display{font-family:'Fraunces',serif;font-weight:600;}
