@@ -28,6 +28,7 @@ type Dashboard = {
   };
   portfolio?: Record<string, number | null>;
   wellness?: { score?: number | null; prior?: number | null; band?: string; complete?: boolean; drivers?: Array<{name:string;score:number|null;weight:number}> };
+  exec?: { items?: Array<{l:string;v:string}> };
   kpis?: {
     takeUp?: {pct:number|null; enrolled:number|null; delta:number|null};
     activated?: {pct:number|null; count:number|null; delta:number|null};
@@ -88,6 +89,19 @@ function LineChart({values,labels,prefix="R "}:{values:number[];labels:string[];
 
 function SectionHeading({title,description}:{title:string;description?:string}) {
   return <div className="mb-4 border-b border-slate-200 pb-3"><CardTitle>{title}</CardTitle>{description&&<CardDescription className="mt-1">{description}</CardDescription>}</div>;
+}
+
+function WellnessGauge({score}:{score:number|null|undefined}) {
+  if(score==null || !Number.isFinite(Number(score))) return <div className="wellness-gauge-empty">Not available</div>;
+  const value=Math.max(0,Math.min(100,Number(score)));
+  const r=64, circumference=Math.PI*r, dash=(circumference*(value/100)).toFixed(1);
+  return <svg viewBox="0 0 160 96" width="180" className="wellness-gauge" role="img" aria-label={`Workforce Financial Wellness Score ${value} out of 100`}>
+    <defs><linearGradient id="wellnessGaugeGradient" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stopColor="var(--brand-grad-1)"/><stop offset=".5" stopColor="var(--brand-grad-3)"/><stop offset="1" stopColor="var(--brand-grad-5)"/></linearGradient></defs>
+    <path d="M16 88 A64 64 0 0 1 144 88" fill="none" stroke="var(--ice-2)" strokeWidth="13" strokeLinecap="round"/>
+    <path d="M16 88 A64 64 0 0 1 144 88" fill="none" stroke="url(#wellnessGaugeGradient)" strokeWidth="13" strokeLinecap="round" strokeDasharray={`${dash} ${circumference.toFixed(1)}`}/>
+    <text x="80" y="74" textAnchor="middle" fontFamily="Fraunces,serif" fontSize="34" fontWeight="600" fill="var(--brand-primary)">{value.toFixed(0)}</text>
+    <text x="80" y="90" textAnchor="middle" fontSize="9.5" fontWeight="700" fill="var(--grey-l)">/ 100</text>
+  </svg>;
 }
 
 function DashboardView({me}:{me:Me}) {
@@ -188,11 +202,55 @@ function DashboardView({me}:{me:Me}) {
         {comparison?.current&&<div className="text-xs text-slate-500 lg:ml-auto">Comparing <span className="font-bold text-[var(--brand-accent)]">{comparison.current}</span>{comparison.previous&&<> with <span className="font-bold text-[var(--brand-accent)]">{comparison.previous}</span></>}</div>}
       </section>
 
-      <section className="card wellness-card section-gap">
-        <div className="card-hd"><div><div className="card-title">Workforce Financial Wellness Score</div><div className="card-note">The single number that tracks your people's financial health and its trajectory.</div></div><span className="card-tag">Index · modelled</span></div>
+      <div className="enterprise-toolbar" aria-label="Dashboard tools">
+        <div id="executive-insight" className="min-w-0">
+          <div className="enterprise-insight">
+            <div className="enterprise-insight-eyebrow">Executive insight</div>
+            <div className="enterprise-insight-copy">
+              {(() => {
+                const score=Number(data.wellness?.score), prior=Number(data.wellness?.prior);
+                const delta=Number.isFinite(score)&&Number.isFinite(prior)?score-prior:null;
+                const pc=data.comparison;
+                const statements:string[]=[];
+                if(Number.isFinite(score)) statements.push(`Financial wellbeing score is ${score}/100${delta===null?"":", "+(delta>0?"up ":delta<0?"down ":"unchanged ")+Math.abs(delta)+" points versus "+(comparison?.previous||"the comparison period")}.`);
+                if(Number.isFinite(Number(pc?.current?.monthlySavingRand))) statements.push(`Monthly cash freed up is ${money(pc?.current?.monthlySavingRand)}.`);
+                if(Number.isFinite(Number(pc?.current?.totalAdvancedRaw))) statements.push(`Total advanced through early wage access is ${money(pc?.current?.totalAdvancedRaw)} in this period.`);
+                return statements.join(" ") || "More data is required to produce an executive insight for this view.";
+              })()}
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="exec-band reveal">
+        <div className="exec-head">
+          <div className="exec-pulse"></div>
+          <div><div className="exec-title">Financial wellbeing impact summary</div><div className="exec-sub">{data.filterContext?.label||"Programme to date"} · at a glance</div></div>
+          <div className={`exec-verdict ${data.wellness?.complete===false||data.wellness?.score==null?"is-incomplete":""}`}>
+            {data.wellness?.complete===false||data.wellness?.score==null?"Data incomplete":Number(data.wellness.score)>=75?"Strong":Number(data.wellness.score)>=60?"On track":"Needs attention"}
+          </div>
+        </div>
+        <div className="exec-grid">
+          {(data.exec?.items?.length ? data.exec.items : [
+            {l:"Employees enrolled",v:number(data.kpis?.takeUp?.enrolled)},
+            {l:"Monthly cashflow restored",v:money(data.kpis?.monthlySaving?.rand)},
+            {l:"Employees better off",v:number(data.outcomes?.reduce((n,o)=>n+(Number(o.count)||0),0))},
+            {l:"Employee satisfaction",v:data.ratings?.avg==null?"Not available":`${data.ratings.avg.toFixed(1)}/5`},
+            {l:"Financial wellbeing score",v:data.wellness?.score==null?"Not available":`${data.wellness.score}/100`},
+            {l:"Data quality",v:data.dataQuality?.scoreReady?"Score ready":"Review required"}
+          ]).slice(0,6).map((item,i)=><div className="exec-item" key={item.l+i}><span aria-hidden="true" className="exec-check">✓</span><div><div className="exec-v">{item.v}</div><div className="exec-l">{item.l}</div></div></div>)}
+        </div>
+      </div>
+
+      <section className="card reveal wellness-card section-gap" style={{animationDelay:".04s"}}>
+        <div className="card-hd"><div><div className="card-title">Workforce Financial Wellness Score</div><div className="card-note">The single number that tracks your people's financial health and its trajectory</div></div><span className="card-tag">Index · modelled</span></div>
         <div className="wellness-inner">
-          <div className="wellness-left"><div className="rating-big">{data.wellness?.score==null?"Not available":data.wellness.score.toFixed(0)}</div><div className="wellness-band">{data.wellness?.band||"Unavailable"}</div><div className="wellness-delta">{data.wellness?.prior==null?"":`${data.wellness.score!=null&&data.wellness.score>=data.wellness.prior?"+":""}${data.wellness.score!=null?(data.wellness.score-data.wellness.prior).toFixed(0):""} pts vs prior`}</div></div>
-          <div className="wellness-right">{(data.wellness?.drivers||[]).map(d=><div className="wd-row" key={d.name}><div className="wd-name">{d.name}<small>{Math.round(d.weight*100)}% weight</small></div><div className="wd-track"><div className="wd-fill" style={{width:`${Math.max(0,Math.min(100,d.score??0))}%`,background:"var(--brand-accent)"}}/></div><div className="wd-val">{d.score==null?"N/A":d.score.toFixed(0)}</div></div>)}</div>
+          <div className="wellness-left">
+            <WellnessGauge score={data.wellness?.score}/>
+            <div className="wellness-band">{data.wellness?.band||"Unavailable"}</div>
+            <div className="wellness-delta">{data.wellness?.prior==null||data.wellness?.score==null?"No prior period":`${data.wellness.score-data.wellness.prior>0?"+":""}${(data.wellness.score-data.wellness.prior).toFixed(0)} pts vs ${comparison?.previous||"previous period"}`}</div>
+            <div className="wellness-note">A composite of four weighted drivers. Use it to track workforce financial health over time.</div>
+          </div>
+          <div className="wellness-right">{(data.wellness?.drivers||[]).map(d=><div className="wd-row" key={d.name}><div className="wd-name">{d.name}<small>{Math.round(d.weight*100)}% weight</small></div><div className="wd-track"><div className="wd-fill" style={{width:`${Math.max(0,Math.min(100,d.score??0))}%`,background:d.score==null?"var(--brand-soft)":"var(--chart-low)"}}/></div><div className="wd-val">{d.score==null?"Not available":d.score.toFixed(0)}</div></div>)}</div>
         </div>
       </section>
       <section className="grid g-4 section-gap">
