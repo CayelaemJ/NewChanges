@@ -12,6 +12,12 @@ type Me = {
   theme?: { name?: string; primaryColor?: string; accentColor?: string; navyColor?: string; logoDataUrl?: string | null; tagline?: string | null };
 };
 
+type BrandEngine = {
+  themeController: () => { set: (options: { brand?: { accentColor?: string; primaryColor?: string; navyColor?: string }; light?: "engine" | null; charts?: Record<string,string> }) => void };
+  deriveChartPalette: (theme: { accentColor?: string; primaryColor?: string; navyColor?: string }) => Record<string,string>;
+};
+declare global { interface Window { BrandEngine?: BrandEngine } }
+
 type Dashboard = {
   employer?: string; headcount?: number;
   dataAsOf?: string;
@@ -122,6 +128,10 @@ function DashboardView({me}:{me:Me}) {
   const maxIncome=Math.max(1,...(data.income??[]).map(x=>x.count));
 
   const themeStyle: CSSProperties = { "--brand-ink": normaliseHex(me.theme?.primaryColor, "#17212b"), "--brand-ink-strong": normaliseHex(me.theme?.navyColor, "#0d141b"), "--brand-accent": normaliseHex(me.theme?.accentColor, "#5f756d") } as CSSProperties;
+  useEffect(()=>{
+    const engine=window.BrandEngine?.themeController();
+    if(engine) engine.set({brand:{accentColor:me.theme?.accentColor,primaryColor:me.theme?.primaryColor,navyColor:me.theme?.navyColor},light:"engine"});
+  },[me.theme?.accentColor,me.theme?.primaryColor,me.theme?.navyColor]);
 
   return <main className="min-h-screen bg-[var(--brand-paper)]" style={themeStyle}>
     <div className="mx-auto w-full max-w-[1440px] px-3 py-4 sm:px-5 lg:px-8">
@@ -250,21 +260,22 @@ function AdminView({me}:{me:Me}) {
     ["imports","Data governance"],["audit","Audit history"],["compliance","POPIA"],["mlops","MLOps"]
   ] as const;
 
-  return <main className="min-h-screen bg-[var(--brand-paper)]">
+  const adminThemeStyle: CSSProperties = { "--brand-ink": normaliseHex(me.theme?.primaryColor, "#17212b"), "--brand-ink-strong": normaliseHex(me.theme?.navyColor, "#0d141b"), "--brand-accent": normaliseHex(me.theme?.accentColor, "#5f756d") } as CSSProperties;
+  return <main className="min-h-screen bg-[var(--brand-paper)]" style={adminThemeStyle}>
     <div className="mx-auto w-full max-w-[1480px] px-3 py-4 sm:px-5 lg:px-8">
       <header className="flex flex-col gap-4 border-b border-slate-200 pb-5 lg:flex-row lg:items-center lg:justify-between">
-        <div><div className="text-[10px] font-extrabold uppercase tracking-[.16em] text-[var(--brand-accent)]">EFS Optimise</div><h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Administration</h1><p className="mt-1 text-sm text-slate-500">Governed control plane for identity, integrations, data and compliance.</p></div>
+        <div><div className="portal-kicker">EFS Optimise</div><h1 className="mt-1 font-display text-3xl font-bold tracking-tight text-[var(--brand-ink-strong)] sm:text-4xl">Administration</h1><p className="mt-1 text-sm text-slate-500">Governed control plane for identity, integrations, data and compliance.</p></div>
         <div className="flex items-center gap-3"><Badge>{roleLabels[me.role||""]||me.role||"User"}</Badge><Button variant="outline" onClick={()=>window.location.assign("/react/dashboard")}>Dashboard</Button></div>
       </header>
-      <nav className="mt-4 -mx-1 overflow-x-auto pb-1" aria-label="Administration sections"><div className="flex min-w-max gap-1 rounded-md border border-slate-200 bg-white p-1 shadow-sm">{nav.map(([key,label])=><Button key={key} size="sm" variant={tab===key?"default":"ghost"} onClick={()=>setTab(key)}>{label}</Button>)}</div></nav>
+      <nav className="mt-5 -mx-1 overflow-x-auto border-b border-[var(--brand-line)] pb-0" aria-label="Administration sections"><div className="flex min-w-max gap-0 bg-transparent">{nav.map(([key,label])=><Button key={key} size="sm" variant={tab===key?"default":"ghost"} className={tab===key?"border-b-2 border-[var(--brand-accent)] rounded-none":"rounded-none border-b-2 border-transparent"} onClick={()=>setTab(key)}>{label}</Button>)}</div></nav>
       {error&&<div className="mt-4 flex gap-2 rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700"><span className="text-xs font-bold uppercase tracking-widest text-red-700">Error</span><span>{error}</span></div>}
       {loading?<Card className="mt-5"><CardContent className="py-14 text-center text-sm text-slate-500">Loading governed administration data...</CardContent></Card>:<>
-        {tab==="overview"&&<section className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {[["Active sessions",number(security?.activeSessions)],["Failed logins, 24h",number(security?.failedLogins24h)],["Open security alerts",number(security?.openAlerts)],["Open imports",number(ops?.imports?.open)]].map(([label,value])=><Card key={label as string}><CardContent className="p-5"><div className="flex justify-between"><span className="text-xs font-semibold text-slate-500">{label as string}</span></div><strong className="mt-3 block break-words text-2xl font-bold text-[var(--brand-ink-strong)]">{value as string}</strong></CardContent></Card>)}
+        {tab==="overview"&&<section className="portal-section mt-5 grid gap-px border-y border-[var(--brand-line)] bg-[var(--brand-line)] sm:grid-cols-2 xl:grid-cols-4">
+          {[["Active sessions",number(security?.activeSessions)],["Failed logins, 24h",number(security?.failedLogins24h)],["Open security alerts",number(security?.openAlerts)],["Open imports",number(ops?.imports?.open)]].map(([label,value])=><Card key={label as string} className="rounded-none border-0 bg-[var(--brand-surface)] shadow-none"><CardContent className="p-5"><div className="flex justify-between"><span className="text-xs font-semibold text-slate-500">{label as string}</span></div><strong className="mt-3 block break-words text-2xl font-bold text-[var(--brand-ink-strong)]">{value as string}</strong></CardContent></Card>)}
         </section>}
         {tab==="overview"&&<section className="mt-4 grid gap-4 lg:grid-cols-2">
           <Card><CardHeader><SectionHeading title="Security & identity" description="Live authentication and access posture."/></CardHeader><CardContent><div className="grid gap-3 sm:grid-cols-3"><div><b className="text-xl text-[var(--brand-ink-strong)]">{number(security?.successfulLogins24h)}</b><p className="text-[10px] text-slate-500">Successful logins</p></div><div><b className="text-xl text-[var(--brand-ink-strong)]">{number(security?.failedLogins24h)}</b><p className="text-[10px] text-slate-500">Failed logins</p></div><div><b className="text-xl text-[var(--brand-ink-strong)]">{number(security?.openAlerts)}</b><p className="text-[10px] text-slate-500">Open alerts</p></div></div><Button className="mt-4" onClick={()=>setTab("users")}>Open identity controls</Button></CardContent></Card>
-          <Card><CardHeader><SectionHeading title="Live enterprise integration" description="Connection and analytics routing remain visible to authorised admins."/></CardHeader><CardContent><div className="grid gap-3 sm:grid-cols-2">{[["Source",integration?.sourceType||ops?.integration?.sourceMode],["Enabled",integration?.enabled==null?"Not available":integration.enabled?"Yes":"No"],["Schedule",integration?.scheduleHours==null?"Not available":number(integration.scheduleHours)+" hours"],["Freshness",ops?.integration?.freshnessState]].map(([l,v])=><div className="rounded-md bg-slate-50 p-4" key={l as string}><span className="text-[10px] text-slate-500">{l as string}</span><strong className="mt-1 block break-words text-sm">{v==null?"Not available":String(v)}</strong></div>)}</div><Button className="mt-4" onClick={()=>setTab("integrations")}>Manage integration</Button></CardContent></Card>
+          <Card><CardHeader><SectionHeading title="Live enterprise integration" description="Connection and analytics routing remain visible to authorised admins."/></CardHeader><CardContent><div className="grid gap-3 sm:grid-cols-2">{[["Source",integration?.sourceType||ops?.integration?.sourceMode],["Enabled",integration?.enabled==null?"Not available":integration.enabled?"Yes":"No"],["Schedule",integration?.scheduleHours==null?"Not available":number(integration.scheduleHours)+" hours"],["Freshness",ops?.integration?.freshnessState]].map(([l,v])=><div className="border-l-2 border-[var(--brand-accent)] bg-[var(--brand-accent-soft)] p-4" key={l as string}><span className="text-[10px] text-slate-500">{l as string}</span><strong className="mt-1 block break-words text-sm">{v==null?"Not available":String(v)}</strong></div>)}</div><Button className="mt-4" onClick={()=>setTab("integrations")}>Manage integration</Button></CardContent></Card>
           <Card><CardHeader><SectionHeading title="Data-quality gate" description="Quarantine and review states are surfaced before live data use."/></CardHeader><CardContent>{unresolved.length?<div className="space-y-2">{unresolved.slice(0,5).map((e:any)=><div className="flex items-center justify-between rounded-md border border-red-200 bg-red-50 p-3" key={e.id}><span className="min-w-0 break-words text-xs font-semibold">{e.metadata?.reportKey||"Dataset"}</span><Badge>{e.status}</Badge></div>)}</div>:<div className="rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">No unresolved data-quality gates.</div>}<Button className="mt-4" variant="outline" onClick={()=>setTab("imports")}>Review data</Button></CardContent></Card>
           <Card><CardHeader><SectionHeading title="Critical operational audit" description="Highest-priority operational changes, with full history retained separately."/></CardHeader><CardContent>{critical.length?<div className="space-y-2">{critical.map((e:any,i)=><div className="grid gap-1 rounded-md border border-slate-200 p-3" key={e.id||i}><div className="flex justify-between gap-3"><b className="text-xs">{e.action||"Event"}</b><span className="text-[10px] text-slate-500">{e.createdAt?new Date(e.createdAt).toLocaleString("en-ZA"):""}</span></div><p className="break-words text-[11px] text-slate-600">{e.message||e.detail||"Operational event recorded."}</p></div>)}</div>:<p className="text-sm text-slate-500">No critical operational events in the returned history.</p>}<Button className="mt-4" variant="outline" onClick={()=>setTab("audit")}>Open full audit</Button></CardContent></Card>
         </section>}
