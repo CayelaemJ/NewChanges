@@ -346,3 +346,8 @@ html.portal-dark .dashboard-shell .outcome,html.portal-dark .dashboard-shell .ri
 html.portal-dark .dashboard-shell .portal-theme-quick{background:var(--dm-surface-2,#262a36)!important;color:var(--ink,#eceef4)!important;border-color:var(--dm-line,#343849)!important}
 
 .dashboard-shell .portal-theme-quick{width:34px;height:34px;border:1px solid var(--line);border-radius:10px;background:var(--ice);color:var(--brand-primary);display:flex;align-items:center;justify-content:center;cursor:pointer;font:700 15px Manrope,sans-serif}.dashboard-shell .portal-theme-quick:hover{border-color:var(--blue);color:var(--blue)}
+
+/* Preserve the main branch lighting and depth. */
+body{background:radial-gradient(1200px 600px at 85% -10%,rgba(0,120,199,.07),transparent 60%),radial-gradient(900px 500px at -5% 110%,rgba(0,58,102,.06),transparent 55%),#f3f7fb}
+.dashboard-shell .topbar{background:linear-gradient(180deg,rgba(243,247,251,.92),rgba(243,247,251,.78));backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.dashboard-shell .card{box-shadow:var(--shadow)}
