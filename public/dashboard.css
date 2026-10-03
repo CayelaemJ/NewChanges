@@ -128,67 +128,8 @@ table tbody tr:hover { background: var(--ice-2, #f4f9fd); }
 
 @media (prefers-reduced-motion: no-preference) {
 
-  /* ── cards: soft physical tilt toward the cursor + a light that tracks it ──
-     Driven by --mx/--my/--rx/--ry, set by ui-enhance-v2.js on pointer move.
-     Falls back to flat if the vars are unset (JS not loaded / touch).
-     perspective() is applied per-card inside `transform`, NOT on a shared
-     ancestor like <body> — putting `perspective` on an ancestor makes that
-     ancestor the containing block for every position:fixed descendant
-     (drawers, modals, backdrops), which pins them to the document instead
-     of the viewport. Keeping it scoped to each card avoids that entirely. */
-  .card {
-    --rx: 0deg; --ry: 0deg; --mx: 50%; --my: 50%;
-    transform-style: preserve-3d;
-    transform: perspective(1000px) rotateX(var(--rx)) rotateY(var(--ry)) translateZ(0);
-    transition: transform .35s cubic-bezier(.2,.7,.2,1), box-shadow .35s ease, border-color .22s ease;
-    isolation: isolate;
-  }
-  .card.tilting { transition: transform .06s linear, box-shadow .12s ease; }
-  .card:hover {
-    box-shadow:
-      0 2px 4px rgba(13,42,71,.06),
-      0 12px 28px rgba(13,42,71,.10),
-      0 32px 64px -12px rgba(50,33,124,.22);
-  }
-  .card::before {
-    content: ""; position: absolute; inset: 0; border-radius: inherit;
-    background: transparent; opacity: 0; transition: opacity .3s ease; pointer-events: none;
-    mix-blend-mode: soft-light; z-index: 1;
-  }
-  .card:hover::before { opacity: 1; }
-
-  /* pull real content above the sheen layer */
-  .card > * { position: relative; z-index: 2; }
-
-  /* KPI/stat numbers sit slightly "raised" off the card on hover — a subtle
-     parallax layer, not a bounce */
-  .kpi-value, .stat-value, .metric-value {
-    display: inline-block;
-    transition: transform .35s cubic-bezier(.2,.7,.2,1);
-  }
-  .card:hover .kpi-value, .card:hover .stat-value, .card:hover .metric-value {
-    transform: translateZ(18px);
-  }
-}
-
-/* touch/imprecise pointers never get the tilt tracking — hover is sticky
-   on touch devices and would leave cards permanently skewed */
-@media (hover: none), (pointer: coarse) {
-  .card { transform: none !important; }
-  .card::before { display: none; }
-}
-
-/* ── a value just changed on screen: a brief, deliberate pop + colour
-   pulse so the eye catches the update. Class is added/removed briefly by
-   ui-enhance-v2.js whenever a KPI's rendered text changes — it never fires
-   on first paint, only on a real value change, so it can't read as fake
-   "loading" motion over static numbers. ── */
-@keyframes ui-value-pop {
-  0%   { transform: scale(1);    color: var(--brand-primary, #32217c); }
-  35%  { transform: scale(1.09); color: var(--blue, #b15be8); }
-  100% { transform: scale(1);    color: inherit; }
-}
-.ui-value-changed { animation: ui-value-pop .5s cubic-bezier(.2,.7,.2,1); }
+  .card { transition: border-color .18s ease; }
+  .card:hover { border-color: var(--brand-line, #d7dbd8); }
 
 /* ── audience switch (Employer / Portfolio): a sliding capsule behind the
    active label instead of an instant background swap ── */
