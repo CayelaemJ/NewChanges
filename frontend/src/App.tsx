@@ -256,6 +256,7 @@ function App() {
   useEffect(()=>{api<Me>("/api/auth/me").then(setMe).catch(()=>setMe(null)).finally(()=>setLoading(false));},[]);
   if(loading)return <div className="min-h-screen bg-slate-50 px-4 py-20"><Card className="mx-auto max-w-2xl"><CardContent className="py-12 text-center text-sm text-slate-500">Loading your workspace...</CardContent></Card></div>;
   if(!me)return <div className="min-h-screen bg-slate-50 px-4 py-20"><Card className="mx-auto max-w-lg"><CardHeader><div className="text-[10px] font-extrabold uppercase tracking-[.16em] text-violet-700">EFS Optimise</div><CardTitle className="mt-2 text-2xl">Sign in to continue</CardTitle><CardDescription>Your existing secure Fastify session remains the authentication authority.</CardDescription></CardHeader><CardContent><Button onClick={()=>window.location.assign("/login")}>Sign in</Button></CardContent></Card></div>;
-  const isAdminRoute=window.location.pathname==="/react/admin" || window.location.pathname==="/react/admin/";\n  return isAdminRoute && (me.role==="ADMIN" || me.role==="SUPERADMIN") ? <AdminView me={me}/> : <DashboardView me={me}/>;
+  const isAdminRoute=window.location.pathname==="/react/admin" || window.location.pathname==="/react/admin/";
+  return isAdminRoute && (me.role==="ADMIN" || me.role==="SUPERADMIN") ? <AdminView me={me}/> : <DashboardView me={me}/>;
 }
 export default App;
