@@ -134,14 +134,14 @@ function DashboardView({me}:{me:Me}) {
     if(engine) engine.set({brand:{accentColor:me.theme?.accentColor,primaryColor:me.theme?.primaryColor,navyColor:me.theme?.navyColor},light:"engine"});
   },[me.theme?.accentColor,me.theme?.primaryColor,me.theme?.navyColor]);
 
-  return <main className="min-h-screen bg-[var(--brand-paper)]" style={themeStyle}>
+  return <main className="dashboard-shell" style={themeStyle}>
     <div className="mx-auto w-full max-w-[1440px] px-3 py-4 sm:px-5 lg:px-8">
       <header className="portal-header flex flex-col gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-center sm:justify-between">
-        <div><div className="portal-kicker">EFS Optimise / MANAGEMENT INFORMATION</div><h1 className="portal-title mt-1 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Financial wellbeing dashboard</h1></div>
+        <div><div className="head-eyebrow">Employer Insights · Financial Wellbeing Programme</div><h1 className="mt-1 font-display text-3xl font-bold tracking-tight text-[var(--brand-primary)] sm:text-4xl">Your workforce <span className="emp">{data.employer}</span></h1></div>
         <div className="flex items-center gap-3 rounded-md border border-slate-200 bg-white px-3 py-2 shadow-sm"><div className="hidden h-8 w-8 items-center justify-center rounded-sm bg-[var(--brand-accent-soft)] text-[var(--brand-accent)] sm:flex"><span className="text-[10px] font-bold uppercase tracking-widest">User</span></div><div><p className="text-sm font-semibold text-slate-900">{me.name||me.email}</p><p className="text-[11px] text-slate-500">{role}</p></div></div>
       </header>
 
-      <section className="portal-hero mt-5 overflow-hidden rounded-none bg-slate-950 p-5 text-white sm:p-7 lg:flex lg:items-end lg:justify-between lg:gap-8">
+      <section className="portal-hero">
         <div className="min-w-0"><div className="text-[10px] font-bold uppercase tracking-[.15em] text-white/70">Employer workspace</div><h2 className="mt-1 break-words text-3xl font-bold tracking-tight sm:text-5xl">{data.employer}</h2><p className="mt-2 max-w-3xl text-sm leading-6 text-white/80">Financial wellbeing measured from governed source data, with period-aware comparisons.</p></div>
         <div className="mt-5 flex min-w-0 flex-col gap-2 sm:flex-row sm:items-end lg:mt-0 lg:justify-end">
           {me.employers&&me.employers.length>1&&<Select label="Employer" className="min-w-0 sm:min-w-[210px]" value={employer.id} onChange={e=>setSelectedEmployerId(e.target.value)}>{me.employers.map(e=><option key={e.id} value={e.id}>{e.name}</option>)}</Select>}
@@ -149,7 +149,7 @@ function DashboardView({me}:{me:Me}) {
         </div>
       </section>
 
-      <section className="portal-filterbar mt-4 flex flex-col gap-3 border-y border-slate-200 bg-white p-3 lg:flex-row lg:items-end">
+      <section className="filters">
         <div className="flex flex-wrap gap-1 rounded-md bg-slate-100 p-1">
           {([["latest","Latest"],["quarter","Quarter"],["all","Programme"]] as const).map(([key,label])=><Button key={key} size="sm" variant={!period&&range===key?"default":"ghost"} onClick={()=>{setPeriod("");setRange(key)}}>{label}</Button>)}
         </div>
@@ -159,7 +159,7 @@ function DashboardView({me}:{me:Me}) {
         {comparison?.current&&<div className="text-xs text-slate-500 lg:ml-auto">Comparing <span className="font-bold text-[var(--brand-accent)]">{comparison.current}</span>{comparison.previous&&<> with <span className="font-bold text-[var(--brand-accent)]">{comparison.previous}</span></>}</div>}
       </section>
 
-      <section className="portal-kpis mt-4 grid gap-0 border-y border-slate-200 bg-white sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid g-4 section-gap">
         {[
           ["Employees enrolled",number(data.kpis?.takeUp?.enrolled),`${pct(data.kpis?.takeUp?.pct)} take-up`],
           ["Employees activated",number(data.kpis?.activated?.count),`${pct(data.kpis?.activated?.pct)} of workforce`],
@@ -168,13 +168,13 @@ function DashboardView({me}:{me:Me}) {
         ] .map(([label,value,sub], index)=><Card key={label as string} className="portal-kpi"><CardContent className="p-5"><div className="flex items-center justify-between"><span className="portal-kpi-label text-xs font-semibold text-slate-500">{label as string}</span><span className="portal-kpi-index">0{index + 1}</span></div><p className="portal-number portal-kpi-value mt-3 break-words text-2xl font-bold tracking-tight text-[var(--brand-ink-strong)] sm:text-3xl">{value as string}</p><p className="mt-1 text-[11px] text-slate-500">{sub as string}</p></CardContent></Card>)}
       </section>
 
-      <section className="portal-section mt-5 grid gap-4 lg:grid-cols-2">
+      <section className="grid g-12 section-gap">
         <Card><CardHeader><SectionHeading title="Employee voice" description="Average rating and response coverage from employee feedback."/></CardHeader><CardContent><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><div className="flex flex-wrap items-center gap-3"><strong className="portal-number text-4xl font-bold tracking-tight text-[var(--brand-ink-strong)]">{data.ratings?.avg==null?"Not available":data.ratings.avg.toFixed(1)}</strong><div className="flex gap-0.5" aria-label={data.ratings?.avg==null?"Rating unavailable":data.ratings.avg.toFixed(1)+" out of 5 stars"}>{Array.from({length:5},(_,i)=><span aria-hidden="true" className="text-[var(--brand-accent)]">★</span>)}</div></div><p className="mt-1 text-xs text-slate-500">{number(data.ratings?.responses)} employee responses</p></div><div className="min-w-0 sm:w-52"><div className="mb-1 flex justify-between text-[10px] font-semibold text-slate-500"><span>Five-star responses</span><span>{pct(data.ratings?.fiveStarPct)}</span></div><Progress value={data.ratings?.fiveStarPct??0}/></div></div></CardContent></Card>
         <Card><CardHeader><SectionHeading title="Optimise Score" description="Current governed wellbeing score and weighted drivers."/></CardHeader><CardContent><div className="flex items-baseline gap-3"><strong className="portal-number text-5xl font-bold tracking-tight text-[var(--brand-ink-strong)]">{data.wellness?.score==null?"Not available":data.wellness.score.toFixed(1)}</strong><Badge>{data.wellness?.band||"Unavailable"}</Badge></div><div className="mt-5 grid gap-4">{(data.wellness?.drivers||[]).map(d=><div key={d.name}><div className="mb-1 flex justify-between text-xs font-semibold"><span>{d.name}</span><b className="text-[var(--brand-accent)]">{d.score==null?"Not available":d.score.toFixed(1)}</b></div><Progress value={d.score??0}/></div>)}</div></CardContent></Card>
         <Card><CardHeader><SectionHeading title="Monthly cash freed up" description="Line trend respects the selected reporting period and comparison window."/></CardHeader><CardContent><LineChart values={trend} labels={trendLabels}/></CardContent></Card>
       </section>
 
-      <section className="mt-4 grid gap-4 lg:grid-cols-2">
+      <section className="grid g-12 section-gap">
         <Card><CardHeader><SectionHeading title="Total advanced" description="Early wage access advanced in the selected period."/></CardHeader><CardContent><div className="mb-2 flex flex-wrap items-baseline gap-2"><strong className="portal-number break-words text-3xl font-bold tracking-tight text-[var(--brand-ink-strong)]">{money(data.comparison?.current?.totalAdvancedRaw??data.ewa?.totalRaw)}</strong><span className="text-[10px] text-slate-500">Current period total</span></div><LineChart values={advancedTrend} labels={advancedLabels}/></CardContent></Card>
         <Card><CardHeader><SectionHeading title="Financial problems resolved" description="Completed fixes from governed journey data."/></CardHeader><CardContent><div className="divide-y divide-slate-100">{(data.outcomes||[]).map(row=><div className="grid grid-cols-[1fr_auto] gap-2 py-3" key={row.key}><div><b className="text-xs">{row.name}</b><small className="mt-1 block text-[10px] text-slate-500">{row.avgPerEmployee}</small></div><strong className="text-sm text-[var(--brand-ink-strong)]">{number(row.count)}</strong><span className="col-span-2 text-[9px] text-slate-400">{row.statL}</span></div>)}</div></CardContent></Card>
       </section>
