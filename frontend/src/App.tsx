@@ -237,10 +237,17 @@ function AdminView({me}:{me:Me}) {
       setBatches(Array.isArray(b)?b:[]);setAudit(Array.isArray(a)?a:[]);
       setMlops(Array.isArray(m)?m:[]);setUsers(Array.isArray(u)?u:[]);
       setError("");
-    }catch(e:any){setError(e.message||"Could not load administration data");}
+    }catch(e:any){ if(e?.name!=="AbortError") setError(e.message||"Could not load administration data"); }
     finally{setLoading(false);}
   };
-  useEffect(()=>{load();const id=window.setInterval(load,30000);return()=>window.clearInterval(id)},[]);
+  useEffect(()=>{
+    let active=true;
+    const controller=new AbortController();
+    const refresh=async()=>{ if(!active) return; await load(); };
+    refresh();
+    const id=window.setInterval(refresh,30000);
+    return()=>{active=false;controller.abort();window.clearInterval(id);};
+  },[]);
 
   const action=async(label:string,fn:()=>Promise<any>)=>{
     try{setBusy(label);await fn();await load();}catch(e:any){setError(e.message||"Action failed");}finally{setBusy("")}
