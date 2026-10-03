@@ -396,15 +396,10 @@ app.get("/dashboard", async (req, reply) => {
   const user = await currentUser(req);
   if (!user) return reply.redirect("/login");
   if (!canAccessModule(user, "dashboard")) return reply.redirect("/login");
-  // The React dashboard is the current dashboard frontend. Keep /dashboard as
-  // the canonical authenticated route so production testing cannot silently
-  // render the legacy HTML dashboard instead of the frontend being developed.
-  try {
-    const html = await readFile(join(PUBLIC_DIR, "react", "index.html"), "utf-8");
-    return reply.type("text/html; charset=utf-8").header("Cache-Control", "no-store").send(html);
-  } catch {
-    return reply.code(503).send({ error: "React frontend has not been built yet" });
-  }
+  // Keep the canonical dashboard route on the original production dashboard.
+  // The React frontend remains available separately at /react/dashboard while
+  // the original dashboard remains the visual source of truth for /dashboard.
+  return serveHtml(reply, "dashboard.html");
 });
 app.get("/admin", async (req, reply) => {
   const user = await currentUser(req);
