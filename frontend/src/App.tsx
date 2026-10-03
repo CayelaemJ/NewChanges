@@ -92,7 +92,8 @@ function SectionHeading({title,description}:{title:string;description?:string}) 
 
 function DashboardView({me}:{me:Me}) {
   const [data,setData]=useState<Dashboard|null>(null);
-  const [period,setPeriod]=useState(""); const [range,setRange]=useState<"latest"|"quarter"|"all">("latest");
+  const [period,setPeriod]=useState("");
+  const [darkMode,setDarkMode]=useState(()=>document.documentElement.classList.contains("portal-dark")); const [range,setRange]=useState<"latest"|"quarter"|"all">("latest");
   const [income,setIncome]=useState("all"); const [site,setSite]=useState("all"); const [periodOptions,setPeriodOptions]=useState<string[]>([]);
   const [selectedEmployerId,setSelectedEmployerId]=useState(me.employers?.[0]?.id??""); const [loading,setLoading]=useState(true); const [error,setError]=useState("");
   const employer=me.employers?.find(e=>e.id===selectedEmployerId)??me.employers?.[0];
@@ -130,12 +131,28 @@ function DashboardView({me}:{me:Me}) {
 
   const themeStyle: CSSProperties = { "--brand-primary": normaliseHex(me.theme?.primaryColor, "#2b1b68"), "--brand-navy": normaliseHex(me.theme?.navyColor, "#0d2a47"), "--brand-accent": normaliseHex(me.theme?.accentColor, "#7d2fa3") } as CSSProperties;
   useEffect(()=>{
+    document.documentElement.classList.toggle("portal-dark",darkMode);
+  },[darkMode]);
+  useEffect(()=>{
     const engine=window.BrandEngine?.themeController();
     if(engine) engine.set({brand:{accentColor:me.theme?.accentColor,primaryColor:me.theme?.primaryColor,navyColor:me.theme?.navyColor},light:"engine"});
   },[me.theme?.accentColor,me.theme?.primaryColor,me.theme?.navyColor]);
 
   return <main className="dashboard-shell" style={themeStyle}>
-    <div className="mx-auto w-full max-w-[1440px] px-3 py-4 sm:px-5 lg:px-8">
+    <div className="topbar">
+      <div className="topbar-inner">
+        <div className="logo"><img src="/static/logo.png" alt="empower-fin Dashboard Portal" /><span className="logo-text">{me.theme?.name||""}</span></div>
+        <div className="topbar-divider" />
+        <div className="audience-switch"><button className="on" type="button">Employer view</button><button type="button" disabled>Portfolio view</button></div>
+        <div className="topbar-spacer" />
+        <div className="topbar-meta">
+          <div className="data-fresh"><span className="dot" /><span>Live dashboard</span></div>
+          <button type="button" className="portal-theme-quick" aria-label={darkMode?"Switch to light mode":"Switch to dark mode"} onClick={()=>setDarkMode(v=>!v)}>{darkMode?"☀":"☾"}</button>
+          <div className="nav-who"><span className="nav-emp">{me.name||me.email||"User"}</span><span className="avatar">{(me.name||me.email||"U").slice(0,1).toUpperCase()}</span></div>
+        </div>
+      </div>
+    </div>
+    <div className="wrap">
       <header className="portal-header flex flex-col gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-center sm:justify-between">
         <div><div className="head-eyebrow">Employer Insights · Financial Wellbeing Programme</div><h1 className="mt-1 font-display text-3xl font-bold tracking-tight text-[var(--brand-primary)] sm:text-4xl">Your workforce <span className="emp">{data.employer}</span></h1></div>
         <div className="flex items-center gap-3 rounded-md border border-slate-200 bg-white px-3 py-2 shadow-sm"><div className="hidden h-8 w-8 items-center justify-center rounded-sm bg-[var(--brand-accent-soft)] text-[var(--brand-accent)] sm:flex"><span className="text-[10px] font-bold uppercase tracking-widest">User</span></div><div><p className="text-sm font-semibold text-slate-900">{me.name||me.email}</p><p className="text-[11px] text-slate-500">{role}</p></div></div>
