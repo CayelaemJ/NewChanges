@@ -85,10 +85,6 @@
 .dashboard-shell .btn-primary{background:var(--portal-primary);color:#fff;border-color:var(--portal-primary)}
 .dashboard-shell .btn-primary:hover{background:var(--portal-blue-dark);border-color:var(--portal-blue-dark);color:#fff}
 
-.dashboard-shell .filters label{display:grid;min-width:0;gap:5px}
-.dashboard-shell .filters label>span{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--portal-grey)}
-.dashboard-shell .filters label select{height:40px;min-width:190px;border:1px solid var(--portal-line);border-radius:11px;background:#fff;color:var(--portal-blue-dark);font:700 12.5px 'Manrope',sans-serif;padding:8px 16px;box-shadow:none}
-.dashboard-shell .filters label select:focus{outline:2px solid color-mix(in srgb,var(--portal-blue) 22%,transparent);outline-offset:2px}
 .dashboard-shell .filters{
   display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:22px
 }
