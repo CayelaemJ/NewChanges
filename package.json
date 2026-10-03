@@ -68,5 +68,8 @@
     "@types/mssql": "^9.1.5",
     "@types/pg": "^8.11.10",
     "tsx": "^4.19.2"
+  },
+  "overrides": {
+    "@fastify/busboy": "3.2.1"
   }
 }
