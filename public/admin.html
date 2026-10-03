@@ -23,16 +23,16 @@
 <meta name="twitter:title" content="Administration Console | empower-fin">
 <meta name="twitter:description" content="Data imports, integrations, users and audit trail for the empower-fin Dashboard Portal.">
 <meta name="twitter:image" content="{{BASE_URL}}/static/og-image.png">
-<meta name="theme-color" content="#32217c">
+<meta name="theme-color" content="#17212b">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
 <link rel="manifest" href="/static/site.webmanifest">
-<style>
+<style>.compact-collapse{float:right}.compact-collapsed .card-bd{display:none!important}.compact-collapsed .card-hd{border-bottom:0!important}.compact-toggle{margin-left:auto}
   @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap');
   :root{
-    --blue:#b15be8;--blue-d:#8e42bd;--brand-primary:#32217c;--ice:#f3efff;--ice-2:#f4f9fd;
+    --blue:#65766f;--blue-d:#4f625b;--brand-primary:#17212b;--ice:#f3efff;--ice-2:#f4f9fd;
     --line:#e8e1f7;--line-soft:#f7f4ff;--ink:#0f2438;--grey:#5b6b7a;--grey-l:#8497a7;
     --green:#1fa463;--green-soft:#e7f7ef;--amber:#e8910c;--amber-soft:#fdf3e2;
     --red:#e0492f;--red-soft:#fdecea;--white:#fff;
@@ -41,9 +41,9 @@
   }
   *{box-sizing:border-box;margin:0;padding:0;}
   body{font-family:'Manrope',system-ui,sans-serif;color:var(--ink);
-    background:radial-gradient(1100px 560px at 88% -10%,rgba(0,120,199,.07),transparent 60%),#f3f7fb;min-height:100vh;}
+    background:#f3f7fb;min-height:100vh;}
   .wrap{max-width:1100px;margin:0 auto;padding:0 32px 96px;}
-  .topbar{position:sticky;top:0;z-index:40;background:rgba(243,247,251,.86);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);}
+  .topbar{position:sticky;top:0;z-index:40;background:rgba(243,247,251,.86);border-bottom:1px solid var(--line);}
   .topbar-inner{max-width:1100px;margin:0 auto;padding:0 32px;height:68px;display:flex;align-items:center;gap:14px;}
   .logo-text{font-weight:800;font-size:16px;letter-spacing:-.3px;color:var(--brand-primary);}
   .logo-text .opt{color:var(--blue);}
@@ -98,23 +98,23 @@
   .field-desc{color:var(--grey-l);}
   code{background:var(--ice);padding:1px 6px;border-radius:5px;font-size:12px;}
   .hidden{display:none;}
-  .partner-preview{display:flex;align-items:center;gap:12px;margin-top:12px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:linear-gradient(135deg,#fff 0%,#f7f4ff 100%);}
+  .partner-preview{display:flex;align-items:center;gap:12px;margin-top:12px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--brand-primary);}
   .partner-preview-logo{width:52px;height:52px;border-radius:12px;object-fit:contain;background:#fff;border:1px solid var(--line);padding:5px;flex:0 0 auto;}
   .partner-preview-fallback{display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#fff;padding:0;}
   .partner-preview-copy{min-width:0;}
   .partner-preview-copy strong{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .partner-preview-copy span{display:block;margin-top:3px;font-size:11.5px;color:var(--grey);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .partner-preview-badge{margin-left:auto;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--grey-l);white-space:nowrap;}
-  .partner-preview-open{margin-top:12px;width:100%;justify-content:center;background:linear-gradient(135deg,var(--brand-primary),var(--blue-d));color:#fff;border-color:transparent;}
+  .partner-preview-open{margin-top:12px;width:100%;justify-content:center;background:var(--brand-primary);color:#fff;border-color:transparent;}
   .partner-preview-open:hover{color:#fff;border-color:transparent;box-shadow:0 10px 24px rgba(50,33,124,.2);}
   .partner-card{animation:partner-card-in .45s both;}
   .partner-card:nth-child(2){animation-delay:.05s}.partner-card:nth-child(3){animation-delay:.1s}.partner-card:nth-child(4){animation-delay:.15s}
   @keyframes partner-card-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-  .client-preview-overlay{position:fixed;inset:0;z-index:200;background:rgba(15,36,56,.48);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;padding:18px;opacity:0;visibility:hidden;transition:opacity .25s ease,visibility .25s ease;}
+  .client-preview-overlay{position:fixed;inset:0;z-index:200;background:rgba(15,36,56,.48);display:flex;align-items:center;justify-content:center;padding:18px;opacity:0;visibility:hidden;transition:opacity .25s ease,visibility .25s ease;}
   .client-preview-overlay.is-open{opacity:1;visibility:visible;}
   .client-preview-dialog{width:min(1080px,100%);max-height:min(820px,calc(100vh - 36px));overflow:auto;background:#f4f7fb;border:1px solid rgba(255,255,255,.7);border-radius:22px;box-shadow:0 28px 90px rgba(15,36,56,.3);transform:translateY(14px) scale(.985);transition:transform .3s cubic-bezier(.2,.8,.2,1);}
   .client-preview-overlay.is-open .client-preview-dialog{transform:translateY(0) scale(1);}
-  .client-preview-toolbar{display:flex;align-items:center;gap:12px;padding:14px 18px;background:rgba(255,255,255,.88);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:2;backdrop-filter:blur(14px);}
+  .client-preview-toolbar{display:flex;align-items:center;gap:12px;padding:14px 18px;background:rgba(255,255,255,.88);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:2;}
   .client-preview-toolbar strong{font-size:13px;color:var(--brand-primary);flex:1;}
   .client-preview-toolbar span{font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--blue-d);background:var(--ice);padding:6px 9px;border-radius:7px;}
   .client-preview-close{width:32px;height:32px;border-radius:9px;border:1px solid var(--line);background:#fff;color:var(--grey);font-size:20px;line-height:1;cursor:pointer;}
@@ -122,7 +122,7 @@
   .client-preview-app .cp-topbar{display:flex;align-items:center;gap:12px;padding:16px 28px;background:#fff;border-bottom:1px solid var(--preview-line);}
   .client-preview-app .cp-logo{width:34px;height:34px;border-radius:9px;object-fit:contain;background:#fff;border:1px solid var(--preview-line);padding:3px;}
   .client-preview-app .cp-brand{font-weight:800;color:var(--preview-navy);font-size:14px;}
-  .client-preview-app .cp-user{margin-left:auto;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,var(--preview-blue),var(--preview-navy));color:#fff;font-size:11px;font-weight:800;}
+  .client-preview-app .cp-user{margin-left:auto;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--brand-primary);color:#fff;font-size:11px;font-weight:800;}
   .client-preview-app .cp-body{padding:30px 28px 38px;}
   .client-preview-app .cp-eyebrow{font-size:10px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--preview-blue);}
   .client-preview-app h3{margin-top:7px;font:600 29px Fraunces,serif;color:var(--preview-navy);letter-spacing:-.4px;}
@@ -138,7 +138,7 @@
   .client-preview-app .cp-score strong{font-size:42px;line-height:1;color:var(--preview-navy);}
   .client-preview-app .cp-score span{font-size:11px;color:#1fa463;font-weight:800;padding-bottom:5px;}
   .client-preview-app .cp-bars{height:82px;display:flex;align-items:end;gap:7px;margin-top:16px;padding-bottom:3px;border-bottom:1px solid var(--preview-line);}
-  .client-preview-app .cp-bars i{display:block;flex:1;border-radius:5px 5px 2px 2px;background:linear-gradient(180deg,var(--preview-blue),var(--preview-navy));animation:cpBarIn .65s cubic-bezier(.2,.8,.2,1) both;transform-origin:bottom;}
+  .client-preview-app .cp-bars i{display:block;flex:1;border-radius:5px 5px 2px 2px;background:var(--brand-primary);animation:cpBarIn .65s cubic-bezier(.2,.8,.2,1) both;transform-origin:bottom;}
   @keyframes cpBarIn{from{transform:scaleY(0);opacity:.2}to{transform:scaleY(1);opacity:1}}
   .client-preview-app .cp-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:15px;}
   .client-preview-app .cp-kpi{padding:11px;border-radius:10px;background:var(--preview-ice);}
@@ -146,14 +146,14 @@
   .client-preview-app .cp-kpi span{display:block;margin-top:3px;font-size:10px;color:#5b6b7a;font-weight:700;}
   .client-preview-app .cp-outcome{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f7f4ff;font-size:12px;font-weight:700;color:var(--preview-navy);}
   .client-preview-app .cp-outcome:last-child{border-bottom:0;}
-  .client-preview-app .cp-dot{width:9px;height:9px;border-radius:50%;background:var(--preview-blue);box-shadow:0 0 0 4px var(--preview-ice);}
+  .client-preview-app .cp-dot{width:9px;height:9px;border-radius:50%;background:var(--preview-blue);}
   @media(max-width:700px){.client-preview-app .cp-grid{grid-template-columns:1fr}.client-preview-app .cp-card-wide{grid-column:span 1}.client-preview-app .cp-body{padding:24px 16px 30px}.client-preview-app .cp-topbar{padding:13px 16px}.client-preview-app h3{font-size:25px}.client-preview-toolbar span{display:none}}
   @media(max-width:760px){.wrap{padding-left:16px;padding-right:16px}.grid{grid-template-columns:1fr}.topbar-inner{padding-left:16px;padding-right:16px}.head h1{font-size:29px}.partner-preview-badge{display:none}}
 
   .source-mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:820px;margin-bottom:16px;}
   .source-mode-card{display:flex;align-items:flex-start;gap:12px;text-align:left;border:1px solid var(--line);background:#fff;border-radius:13px;padding:15px 16px;cursor:pointer;font-family:inherit;color:var(--ink);transition:.16s;}
   .source-mode-card:hover{border-color:#cdb8f3;background:#fcfbff;}
-  .source-mode-card.on{border-color:var(--blue);background:var(--ice);box-shadow:0 0 0 2px rgba(177,91,232,.08);}
+  .source-mode-card.on{border-color:var(--blue);background:var(--ice);}
   .source-mode-icon{width:34px;height:34px;border-radius:10px;background:#f3efff;color:var(--blue-d);display:flex;align-items:center;justify-content:center;flex:0 0 auto;font-weight:800;}
   .source-mode-card strong{display:block;font-size:13.5px;color:var(--brand-primary);}
   .source-mode-card small{display:block;margin-top:3px;color:var(--grey-l);font-size:11.5px;line-height:1.4;font-weight:600;}
@@ -161,7 +161,7 @@
   @media(max-width:720px){.source-mode-grid{grid-template-columns:1fr}.integration-two-col{grid-template-columns:1fr!important}.integration-two-col label[style*="grid-column:span 2"],.integration-panel-title{grid-column:span 1!important}}
 
   /* ── welcome splash (shown briefly right after sign-in) ── */
-  #welcome-splash{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:radial-gradient(1200px 700px at 50% -10%, rgba(177,91,232,.18), transparent 60%), linear-gradient(160deg,#f3f7fb 0%,#eef2ff 100%);transition:opacity .45s ease, visibility .45s ease;}
+  #welcome-splash{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:var(--brand-primary);transition:opacity .45s ease, visibility .45s ease;}
   #welcome-splash.hide{opacity:0;visibility:hidden;pointer-events:none;}
   .welcome-splash-inner{text-align:center;}
   .welcome-splash-logo{height:40px;width:auto;margin-bottom:22px;opacity:.94;}
@@ -169,18 +169,18 @@
   @keyframes welcome-spin{to{transform:rotate(360deg);}}
   .welcome-splash-greeting{font-family:'Fraunces',serif;font-weight:600;font-size:26px;color:var(--brand-primary);}
   .welcome-splash-sub{margin-top:6px;font-size:13.5px;color:var(--grey);font-weight:600;}
-.security-stat{padding:14px;border:1px solid #d7cde9;border-radius:13px;background:#fff}.security-stat .k{font-size:9px;font-weight:850;letter-spacing:.08em;text-transform:uppercase;color:#617486}.security-stat .v{font-size:24px;font-weight:850;color:#2b1b68;margin-top:4px;font-variant-numeric:tabular-nums}@media(max-width:900px){#admin-security-summary{grid-template-columns:1fr 1fr!important}}@media(max-width:600px){#admin-security-summary{grid-template-columns:1fr!important}}.compliance-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}.compliance-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.compliance-box{border:1px solid var(--line);border-radius:12px;padding:14px;background:#fff}.compliance-box-wide{grid-column:1/-1}.compliance-box h3{font-size:12px;color:var(--brand-primary);margin-bottom:5px}.compliance-box p{font-size:11.5px;color:var(--grey);line-height:1.5}.compliance-list{margin-top:10px;display:grid;gap:6px}.compliance-item{border:1px solid var(--line-soft);border-radius:8px;padding:9px;font-size:11px}.compliance-item strong{color:var(--brand-primary)}.compliance-item small{display:block;color:var(--grey);margin-top:3px}@media(max-width:900px){.compliance-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.compliance-grid{grid-template-columns:1fr}}@media(max-width:600px){.compliance-summary{grid-template-columns:1fr}}
+.security-stat{padding:14px;border:1px solid #d7cde9;border-radius:13px;background:#fff}.security-stat .k{font-size:9px;font-weight:850;letter-spacing:.08em;text-transform:uppercase;color:#617486}.security-stat .v{font-size:24px;font-weight:850;color:#2b1b68;margin-top:4px;font-variant-numeric:tabular-nums}@media(max-width:900px){#admin-security-summary{grid-template-columns:1fr 1fr!important}}@media(max-width:600px){#admin-security-summary{grid-template-columns:1fr!important}}.mlops-alert{display:none;margin:18px 0;border-color:#efc7bf;background:#fff}.mlops-alert.show{display:block}.mlops-alert .card-hd{display:flex;align-items:center;gap:12px}.mlops-alert .mlops-badge{font-size:10px;font-weight:850;letter-spacing:.08em;text-transform:uppercase;color:#b5391f;background:#fdecea;border:1px solid #f3c9c1;padding:5px 8px;border-radius:7px;white-space:nowrap}.mlops-alert .mlops-summary{font-size:12px;color:#5b6b7a;line-height:1.5}.mlops-alert .mlops-detail{display:none;margin-top:12px;padding:12px 14px;border:1px solid #f1d8d3;border-radius:10px;background:#fff8f7}.mlops-alert .mlops-detail.open{display:block}.mlops-alert .mlops-finding{padding:8px 0;border-bottom:1px solid #f3e2df;font-size:11.5px;line-height:1.5}.mlops-alert .mlops-finding:last-child{border-bottom:0}.mlops-alert .mlops-finding strong{color:#b5391f}.compliance-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}.compliance-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.compliance-box{border:1px solid var(--line);border-radius:12px;padding:14px;background:#fff}.compliance-box-wide{grid-column:1/-1}.compliance-box h3{font-size:12px;color:var(--brand-primary);margin-bottom:5px}.compliance-box p{font-size:11.5px;color:var(--grey);line-height:1.5}.compliance-list{margin-top:10px;display:grid;gap:6px}.compliance-item{border:1px solid var(--line-soft);border-radius:8px;padding:9px;font-size:11px}.compliance-item strong{color:var(--brand-primary)}.compliance-item small{display:block;color:var(--grey);margin-top:3px}@media(max-width:900px){.compliance-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.compliance-grid{grid-template-columns:1fr}}@media(max-width:600px){.compliance-summary{grid-template-columns:1fr}}
 
   .ingestion-method-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;max-width:1000px;}
   .ingestion-method{display:flex;align-items:flex-start;gap:12px;text-align:left;border:1px solid var(--line);background:#fff;border-radius:13px;padding:16px;cursor:pointer;font-family:inherit;color:var(--ink);transition:.16s;min-width:0;}
   .ingestion-method:hover{border-color:#cdb8f3;background:#fcfbff;transform:translateY(-1px);}
-  .ingestion-method.on{border-color:var(--blue);background:var(--ice);box-shadow:0 0 0 2px rgba(177,91,232,.08);}
+  .ingestion-method.on{border-color:var(--blue);background:var(--ice);}
   .ingestion-method-icon{width:42px;height:42px;border-radius:11px;background:#f3efff;color:var(--blue-d);display:flex;align-items:center;justify-content:center;flex:0 0 auto;font-size:10px;font-weight:850;letter-spacing:.03em;}
   .ingestion-method strong{display:block;font-size:13.5px;color:var(--brand-primary);}
   .ingestion-method small{display:block;margin-top:5px;color:var(--grey-l);font-size:11.5px;line-height:1.45;font-weight:600;}
   .job-progress{margin-top:14px;padding:13px 14px;border:1px solid var(--line);border-radius:11px;background:#fff;}
   .job-progress-track{height:8px;background:#eeeafa;border-radius:999px;overflow:hidden;margin-top:9px;}
-  .job-progress-fill{height:100%;width:0;background:linear-gradient(90deg,var(--blue),var(--brand-primary));border-radius:999px;transition:width .18s ease;}
+  .job-progress-fill{height:100%;width:0;background:var(--brand-primary);border-radius:999px;transition:width .18s ease;}
   .job-progress-meta{display:flex;justify-content:space-between;gap:12px;font-size:11px;color:var(--grey);margin-top:6px;}
   .job-progress-meta strong{color:var(--brand-primary);}
   .ingestion-note{margin-top:14px;padding:12px 14px;border-radius:10px;background:#f8f5ff;border:1px solid var(--line);color:#5b6b7a;font-size:12px;line-height:1.55;max-width:1000px;}
@@ -250,6 +250,14 @@
         </div>
       </div>
     </div>
+  </section>
+  <section id="admin-mlops-alert" class="card mlops-alert" aria-live="assertive">
+    <div class="card-hd">
+      <div style="flex:1"><h2>MLOps data-quality alert</h2><div class="note" id="mlops-alert-summary">An incoming dataset has been blocked before reaching live tables.</div></div>
+      <span class="mlops-badge" id="mlops-alert-badge">ACTION REQUIRED</span>
+      <button class="btn btn-sm" type="button" onclick="toggleMLOpsAlert()">Review</button>
+    </div>
+    <div class="card-bd"><div id="mlops-alert-detail" class="mlops-detail"></div></div>
   </section>
   <section id="data-centre" class="card section-gap">
     <div class="card-hd">
@@ -540,7 +548,7 @@
 
       <!-- admin audit log -->
       <div class="card section-gap">
-        <div class="card-hd"><h2>Admin Audit Log</h2><div class="note">Showing the latest 20 changes · older entries remain available in the CSV export</div></div>
+        <div class="card-hd"><h2>Admin Audit Log</h2><div class="note">Top 5 most critical admin changes · full history remains available in the CSV export</div></div>
         <div class="card-bd">
           <div style="overflow:auto;"><table class="hist"><thead><tr><th>When</th><th>Admin</th><th>Action</th><th>Details</th></tr></thead><tbody id="audit-rows"><tr><td colspan="4" class="muted" style="padding:10px;">Loading…</td></tr></tbody></table></div>
           <div class="row" style="justify-content:space-between;margin-top:14px;">
@@ -610,8 +618,8 @@
       <style>@media(max-width:820px){.eng-grid{grid-template-columns:1fr!important;}}</style>
 
       <!-- channel partners (white-label) -->
-      <div class="card section-gap">
-        <div class="card-hd"><h2>Channel Partners</h2><div class="note">White-label branding · each partner's users see their colours, logo &amp; name</div></div>
+      <div class="card section-gap" id="channel-partners-card">
+        <div class="card-hd"><h2>Channel Partners</h2><button class="btn btn-sm" type="button" onclick="toggleChannelPartners()">Collapse</button><div class="note">White-label branding · each partner's users see their colours, logo &amp; name</div></div>
         <div class="card-bd">
           <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
             <input id="pt-new-name" placeholder="New partner name (e.g. Acme Financial)" style="flex:1;min-width:220px;font:inherit;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">
@@ -1005,9 +1013,18 @@ async function loadEmailDeliveries(){
 async function loadAuditLog(){
   const rows=$('#audit-rows'); if(!rows) return;
   try{
-    const log=await fetch(`${API}/api/admin/audit-log?limit=20`).then(r=>r.json());
-    if(!Array.isArray(log) || !log.length){ rows.innerHTML='<tr><td colspan="4" class="muted" style="padding:10px;">No admin changes recorded yet.</td></tr>'; return; }
-    rows.innerHTML=log.map(l=>`<tr>
+    const log=await fetch(`${API}/api/admin/audit-log?limit=200`).then(r=>r.json());
+     const criticalRank={
+       "user.delete":0,"user.revoke":0,"user.update":1,"user.create":2,
+       "partner.delete":0,"partner.update":1,"partner.create":2,
+       "security.alert.resolve":1,"section.update":2
+     };
+     const ranked=(Array.isArray(log)?log:[]).slice().sort((a,b)=>{
+       const ar=criticalRank[a.action]??3, br=criticalRank[b.action]??3;
+       return ar-br || new Date(b.createdAt||0)-new Date(a.createdAt||0);
+     }).slice(0,5);
+    if(!ranked.length){ rows.innerHTML='<tr><td colspan="4" class="muted" style="padding:10px;">No admin changes recorded yet.</td></tr>'; return; }
+    rows.innerHTML=ranked.map(l=>`<tr>
       <td class="muted" style="white-space:nowrap;">${fmtDate(l.createdAt)}</td>
       <td><b>${esc(l.actorName)}</b><div class="muted">${esc(l.actorEmail)}</div></td>
       <td><span class="tag">${esc(l.action)}</span></td>
@@ -1075,6 +1092,7 @@ async function createPartner(){
       ? { logoDataUrl:PT_NEW_LOGO_DATAURL, primaryColor:detected.primaryColor, accentColor:detected.accentColor, navyColor:detected.navyColor }
       : { logoDataUrl:PT_NEW_LOGO_DATAURL };
     await apiOk(`${API}/api/admin/partners/${created.id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    if(detected) await observeBrandLearning(detected, (detected.confidence||0) >= 0.70);
     showToast(detected ? `${name} added. ${brandSummary(detected)}` : `${name} added.`,'ok');
   } else {
     showToast(`${name} added.`,'ok');
@@ -1194,9 +1212,16 @@ function closeClientPreview(event){
 document.addEventListener('keydown',event=>{ if(event.key==='Escape' && $('#client-preview-overlay').classList.contains('is-open')) closeClientPreview(); });
 async function editPartner(id,field,value){
   if(field.endsWith('Color')) value=value.replace(/^#/,'');
-  await apiOk(`${API}/api/admin/partners/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({[field]:value})});
+  await apiOk('/api/admin/partners/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({[field]:value})});
+  if(field.endsWith('Color')){
+    try{
+      await fetch('/api/admin/brand-learning/correction',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({engineVersion:window.BrandEngine?.VERSION||'1.1.0',palette:[{hex:value,share:1,role:'manual-correction'}]})});
+    }catch(_){}
+  }
   loadPartners();
 }
+
 // ── colour extraction from an uploaded logo ──
 // Samples the logo's pixels on an offscreen canvas, ignores near-white/near-black/
 // low-saturation background pixels, and picks a brand palette from what's left:
@@ -1229,9 +1254,31 @@ function hslToHex(h,s,l){
 }
 /* Brand colour detection: real-pixel, perceptual (OKLab) hue-bucket analysis in brand-engine.js.
    Runs entirely in the browser, no network calls. Returns hex values in the shape the API stores. */
+let BRAND_LEARNING_PROFILE=null;
+async function loadBrandLearningProfile(){
+  try{
+    BRAND_LEARNING_PROFILE=await fetch('/api/admin/brand-learning/profile',{cache:'no-store'}).then(r=>r.ok?r.json():null);
+  }catch(_){ BRAND_LEARNING_PROFILE=null; }
+  return BRAND_LEARNING_PROFILE;
+}
+async function observeBrandLearning(detected, accepted){
+  if(!detected) return;
+  try{
+    await fetch('/api/admin/brand-learning/observe',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        engineVersion:window.BrandEngine?.VERSION||'1.1.0',
+        palette:Array.isArray(detected.palette)?detected.palette:[],
+        confidence:Number(detected.confidence||0),
+        accepted:Boolean(accepted)
+      })
+    });
+  }catch(_){}
+}
 async function extractColorsFromImage(dataUrl){
   if(!window.BrandEngine) return null;
-  const r=await BrandEngine.extractFromImage(dataUrl);
+  if(!BRAND_LEARNING_PROFILE) await loadBrandLearningProfile();
+  const r=await BrandEngine.extractFromImage(dataUrl,256,BRAND_LEARNING_PROFILE);
   if(!r) return null;
   window.__lastBrandDetection=r;
   return r;
@@ -1250,10 +1297,22 @@ function uploadPartnerLogo(id,input){
     const logoDataUrl=reader.result;
     const detected=await extractColorsFromImage(logoDataUrl);
     const payload=detected
-      ? { logoDataUrl, primaryColor:detected.primaryColor, accentColor:detected.accentColor, navyColor:detected.navyColor }
+      ? {
+          logoDataUrl,
+          primaryColor:detected.primaryColor,
+          accentColor:detected.accentColor,
+          navyColor:detected.navyColor,
+          brandEngineVersion:window.BrandEngine?.VERSION || '1.1.0',
+          brandDetectionStatus:(detected.confidence||0) >= 0.70 ? 'AUTO_ACCEPTED' : 'NEEDS_REVIEW',
+          brandDetectionConfidence:Number(detected.confidence||0),
+          brandDetectionWarnings:Array.isArray(detected.warnings) ? detected.warnings : [],
+          brandDetectionDiagnostics:detected.diagnostics || {},
+          brandDetectedPalette:Array.isArray(detected.palette) ? detected.palette : []
+        }
       : { logoDataUrl };
     await apiOk(`${API}/api/admin/partners/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-    showToast(detected ? 'Logo saved. '+brandSummary(detected) : 'Logo saved. No colours could be detected from this image.','ok');
+    if(detected) await observeBrandLearning(detected, (detected.confidence||0) >= 0.70);
+    showToast(detected ? 'Logo saved. '+brandSummary(detected)+' The recognizer has learned from this upload.' : 'Logo saved. No colours could be detected from this image.','ok');
     loadPartners();
   };
   reader.readAsDataURL(f);
@@ -1289,7 +1348,7 @@ async function deletePartner(id,name){
 }
 
 // ── dashboard section permissions ──
-const ROLE_LABEL = { ADMIN:'Admin', EMPLOYER_VIEW:'Employer view', PORTFOLIO_VIEW:'Portfolio view' };
+const ROLE_LABEL = { ADMIN:'Admin', EMPLOYER_MANAGER:'Employer Manager', PORTFOLIO_MANAGER:'Portfolio Manager', VIEWER:'Viewer' };
 let SECTIONS=[];
 async function loadSections(){
   try{
@@ -1432,6 +1491,27 @@ async function boot(){
   }
   if(!me.modules.admin){ location.href='/dashboard'; return; }
 
+  const isSuperAdmin = me.role === 'SUPERADMIN';
+  const posture = document.getElementById('role-posture');
+  if(posture){
+    document.getElementById('role-posture-title').textContent = isSuperAdmin ? 'Super Admin control plane' : 'Operational administration';
+    document.getElementById('role-posture-copy').textContent = isSuperAdmin
+      ? 'Full platform control: role governance, security operations, integrations, MLOps governance, dashboard permissions and high-impact system controls.'
+      : 'Day-to-day administration: users, employers, partners, reporting, operational settings and live dashboard integrations. Privileged control-plane functions are intentionally hidden.';
+    document.getElementById('role-posture-badge').textContent = isSuperAdmin ? 'Super Admin' : 'Admin';
+    posture.querySelector('div[style*="background:#32217c"]').textContent = isSuperAdmin ? 'S' : 'A';
+  }
+
+  if(!isSuperAdmin){
+    const privilegedHeadings = new Set(['Security centre','MLOps data-quality alert','Dashboard Sections','Danger zone']);
+    document.querySelectorAll('h2').forEach(h=>{
+      const title=h.textContent.trim();
+      if(!privilegedHeadings.has(title)) return;
+      const card=h.closest('.card');
+      if(card) card.style.display='none';
+    });
+  }
+
   handleWelcomeSplash(me);
   addNav(me);
 
@@ -1462,7 +1542,8 @@ async function boot(){
     ['audit',loadAuditLog],
     ['security',loadAdminSecuritySummary],
     ['compliance',loadComplianceSummary],
-    ['enterprise',loadEnterpriseOperations]
+    ['enterprise',loadEnterpriseOperations],
+    ['mlops',loadMLOpsAlert]
   ];
   await Promise.allSettled(optionalLoads.map(async ([name,fn])=>{
     try{ await fn(); }catch(e){ console.error(`Admin panel ${name} failed:`,e); }
@@ -1741,7 +1822,19 @@ async function loadHistory(){
   }
 }
 
-window.addEventListener("load", () => boot(), { once: true });
+function installCompactCollapse(){
+  const ids=["enterprise-operations-card","live-integration"];
+  ids.forEach(function(id){
+    const card=document.getElementById(id); if(!card||card.dataset.collapsibleInstalled)return;
+    const head=card.querySelector('.card-hd'); if(!head)return;
+    card.dataset.collapsibleInstalled='1';
+    const btn=document.createElement('button'); btn.type='button'; btn.className='btn btn-sm compact-toggle'; btn.textContent='Collapse';
+    btn.setAttribute('aria-expanded','true');
+    btn.onclick=function(){ const collapsed=card.classList.toggle('compact-collapsed'); btn.textContent=collapsed?'Expand':'Collapse'; btn.setAttribute('aria-expanded',String(!collapsed)); };
+    head.appendChild(btn);
+  });
+}
+window.addEventListener("load", () => { installCompactCollapse(); boot(); }, { once: true });
 window.setInterval(() => {
   if(document.visibilityState !== 'visible') return;
   Promise.allSettled([loadAdminSecuritySummary(), loadComplianceSummary()]);
@@ -1830,6 +1923,38 @@ async function loadEnterpriseOperations(){
   }
 }
 
+function toggleMLOpsAlert(){
+  const el=document.getElementById('mlops-alert-detail');
+  if(el) el.classList.toggle('open');
+}
+async function loadMLOpsAlert(){
+  const card=document.getElementById('admin-mlops-alert');
+  if(!card) return;
+  try{
+    const r=await fetch('/api/admin/mlops/events?limit=50',{cache:'no-store'});
+    if(!r.ok) throw new Error('MLOps events unavailable');
+    const events=await r.json();
+    const latestByReport=new Map();
+    for(const e of (Array.isArray(events)?events:[])){
+      if(e.eventType!=='DATA_QUALITY_GATE') continue;
+      const reportKey=e.metadata?.reportKey||'dataset';
+      if(!latestByReport.has(reportKey)) latestByReport.set(reportKey,e);
+    }
+    const issue=[...latestByReport.values()].find(e=>e.status && e.status!=='PASS');
+    if(!issue) return;
+    card.classList.add('show');
+    const meta=issue.metadata||{};
+    const findings=Array.isArray(meta.findings)?meta.findings:[];
+    document.getElementById('mlops-alert-summary').textContent=
+      `${issue.status}: ${meta.reportKey||'incoming dataset'} was blocked before live-table commit. ${meta.findingCount||findings.length||0} issue(s) require review.`;
+    const detail=document.getElementById('mlops-alert-detail');
+    detail.innerHTML=
+      `<div class="mlops-summary"><strong>What is off:</strong> ${esc(issue.modelKey||'data-quality')} detected abnormal incoming data.</div>`+
+      (findings.slice(0,8).map(f=>`<div class="mlops-finding"><strong>${esc(f.code||'DATA_QUALITY')}</strong> · ${esc(f.field||'dataset')} — ${esc(f.message||'Review this finding.')}<br><span class="muted"><strong>Fix:</strong> ${esc(f.action||'Correct the source data and retry the load.')}</span></div>`).join('')||
+       '<div class="mlops-finding">Review the MLOps event metadata for the full diagnostic record.</div>');
+  }catch(_){}
+}
+
 async function loadAdminSecuritySummary(){
   try{
     const r=await fetch('/api/admin/security/overview',{cache:'no-store'});
@@ -1846,3 +1971,10 @@ async function loadAdminSecuritySummary(){
 </script>
 </body>
 </html>
+<script>
+function toggleChannelPartners(){
+  const card=document.getElementById('channel-partners-card'); if(!card) return;
+  const body=card.querySelector('.card-bd'), btn=card.querySelector('.card-hd button');
+  const collapsed=body.style.display==='none'; body.style.display=collapsed?'':'none'; if(btn) btn.textContent=collapsed?'Collapse':'Expand';
+}
+</script>

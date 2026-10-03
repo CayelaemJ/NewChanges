@@ -19,6 +19,7 @@
 })(typeof self !== 'undefined' ? self : globalThis, function () {
   'use strict';
 
+  var ENGINE_VERSION = '1.1.0';
   var TAU = Math.PI * 2, DEG = 180 / Math.PI;
   var clamp = function (v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; };
 
@@ -104,7 +105,7 @@
    * @param {number} w @param {number} h
    * @returns {{primaryColor,accentColor,navyColor,palette,confidence,warnings,diagnostics}|null}
    */
-  function analyzePixels(data, w, h) {
+  function analyzePixels(data, w, h, learning) {
     var n = w * h, warnings = [], i, x, y;
     if (!n || data.length < n * 4) return null;
 
@@ -152,7 +153,7 @@
     if (chromaArea < total * 0.04 || chromaArea < 3) {
       var ink = neutralDark >= neutralLight ? '1F2937' : '374151';
       warnings.push('This logo is monochrome (black/white/grey), so no brand colour could be detected. A neutral palette with the portal default accent was used; upload a coloured logo for a branded result.');
-      var acc = ensureContrast('B15BE8', 'FFFFFF', 4.5);
+      var acc = ensureContrast('5F756D', 'FFFFFF', 4.5);
       out.primaryColor = acc; out.accentColor = acc; out.navyColor = ink;
       out.palette = [{ hex: ink, share: 1, role: 'dark' }];
       out.confidence = 0.15; return out;
@@ -185,7 +186,7 @@
       var hh = (Math.atan2(B, A) * DEG + 360) % 360, share = c.area / Math.max(total, 1e-9);
       var pen = (L > 0.9 || L < 0.14) ? 0.5 : 1;
       return { L: L, C: Cc, h: hh, share: share,
-               score: Math.pow(share, 0.55) * Math.pow(Math.min(Cc / 0.12, 1.6), 0.9) * pen,
+               score: Math.pow(share, 0.55) * Math.pow(Math.min(Cc / 0.12, 1.6), 0.9) * pen * (learning && Array.isArray(learning.huePrior) ? (0.82 + 0.36 * Number(learning.huePrior[Math.floor(hh / 10) % 36] || 0)) : 1),
                hex: lch(L, Cc, hh) };
     }).sort(function (a, b) { return b.score - a.score; });
     out.diagnostics.hueClusters = clusters.length;
@@ -224,7 +225,7 @@
   }
 
   /** Browser: decode an image data URL and run analyzePixels. Resolves null on any failure. */
-  function extractFromImage(dataUrl, maxSide) {
+  function extractFromImage(dataUrl, maxSide, learning) {
     return new Promise(function (resolve) {
       try {
         var img = new Image();
@@ -236,7 +237,7 @@
             var cv = document.createElement('canvas'); cv.width = w; cv.height = h;
             var ctx = cv.getContext('2d', { willReadFrequently: true });
             ctx.clearRect(0, 0, w, h); ctx.drawImage(img, 0, 0, w, h);
-            var res = analyzePixels(ctx.getImageData(0, 0, w, h).data, w, h);
+            var res = analyzePixels(ctx.getImageData(0, 0, w, h).data, w, h, learning);
             if (res && Math.max(iw, ih) < 128 && !res.warnings.some(function (x) { return /very small/.test(x); })) {
               res.warnings.push('The logo is very small (' + iw + 'x' + ih + 'px), so detection is less precise. A larger image (at least 256px wide) gives better results.');
             }
@@ -263,7 +264,7 @@
     var accent = String(theme.accentColor || theme.primaryColor || 'B15BE8').replace(/^#/, '');
     var navy = String(theme.navyColor || theme.primaryColor || accent).replace(/^#/, '');
     var second = String(theme.primaryColor || accent).replace(/^#/, '');
-    if (!parseHex(accent)) accent = 'B15BE8'; if (!parseHex(navy)) navy = '32217C'; if (!parseHex(second)) second = accent;
+    if (!parseHex(accent)) accent = '5F756D'; if (!parseHex(navy)) navy = '17212B'; if (!parseHex(second)) second = accent;
     var A = hexToLch(accent), N = hexToLch(navy), t = {};
 
     if (mode !== 'dark') {
@@ -272,8 +273,7 @@
       t['--blue'] = pound(a); t['--blue-d'] = pound(lch(aL.L - 0.08, aL.C, aL.h));
       t['--brand-primary'] = pound(n); t['--brand-primary-deep'] = pound(lch(hexToLch(n).L - 0.07, hexToLch(n).C, hexToLch(n).h));
       t['--ice'] = pound(lch(0.955, Math.min(A.C * 0.22, 0.04), A.h)); t['--brand-soft'] = pound(lch(0.972, Math.min(A.C * 0.16, 0.03), A.h));
-      t['--brand-grad-1'] = pound(n); t['--brand-grad-2'] = pound(mixHex(n, a, 0.45)); t['--brand-grad-3'] = pound(a);
-      t['--brand-grad-4'] = pound(lch(Math.min(aL.L + 0.1, 0.9), aL.C * 0.85, aL.h)); t['--brand-grad-5'] = pound(lch(Math.min(aL.L + 0.2, 0.93), aL.C * 0.6, aL.h));
+      t['--brand-grad-1'] = pound(n); t['--brand-grad-2'] = pound(n); t['--brand-grad-3'] = pound(a); t['--brand-grad-4'] = pound(a); t['--brand-grad-5'] = pound(a);
       t['--bar-bg'] = pound(n); t['--ent-paper'] = '#f6f4fb'; t['--brand-vivid'] = pound(accent);
       Object.keys(LIGHT_STATIC).forEach(function (k) { t[k] = LIGHT_STATIC[k]; });
       return t;
@@ -293,8 +293,7 @@
     t['--blue'] = pound(acc); t['--blue-d'] = pound(lch(Math.min(accL.L + 0.07, 0.92), accL.C, accL.h));
     t['--brand-primary'] = pound(head); t['--brand-primary-deep'] = pound(bar); t['--bar-bg'] = pound(bar); t['--brand-vivid'] = pound(ensureContrast(accent, bar, 3));
     t['--dm-on-accent'] = contrast('FFFFFF', accent) >= 4.5 ? '#ffffff' : '#0b0f19';
-    t['--brand-grad-1'] = pound(bar); t['--brand-grad-2'] = pound(mixHex(bar, acc, 0.4)); t['--brand-grad-3'] = pound(acc);
-    t['--brand-grad-4'] = pound(lch(Math.min(accL.L + 0.08, 0.9), accL.C * 0.8, accL.h)); t['--brand-grad-5'] = pound(lch(Math.min(accL.L + 0.16, 0.93), accL.C * 0.55, accL.h));
+    t['--brand-grad-1'] = pound(bar); t['--brand-grad-2'] = pound(bar); t['--brand-grad-3'] = pound(acc); t['--brand-grad-4'] = pound(acc); t['--brand-grad-5'] = pound(acc);
     t['--green-soft'] = '#153d2e'; t['--amber-soft'] = '#41321a'; t['--red-soft'] = '#45262a';
     return t;
   }
@@ -307,9 +306,9 @@
    */
   function deriveChartPalette(theme) {
     theme = theme || {};
-    var accent = String(theme.accentColor || theme.primaryColor || 'B15BE8').replace(/^#/, '');
+    var accent = String(theme.accentColor || theme.primaryColor || '5F756D').replace(/^#/, '');
     var primary = String(theme.primaryColor || accent).replace(/^#/, '');
-    if (!parseHex(accent)) accent = 'B15BE8';
+    if (!parseHex(accent)) accent = '5F756D';
     if (!parseHex(primary)) primary = accent;
     var a = hexToLch(accent), p = hexToLch(primary);
     var hue = a.C > 0.035 ? a.h : p.h;
@@ -371,7 +370,7 @@
   function forDark(hex, surfaceHex) { return '#' + ensureContrast(String(hex).replace(/^#/, ''), String(surfaceHex).replace(/^#/, ''), 3.2); }
 
   return {
-    analyzePixels: analyzePixels, extractFromImage: extractFromImage, deriveChartPalette: deriveChartPalette, themeTokens: themeTokens, themeController: themeController, forDark: forDark,
+    VERSION: ENGINE_VERSION, analyzePixels: analyzePixels, extractFromImage: extractFromImage, deriveChartPalette: deriveChartPalette, themeTokens: themeTokens, themeController: themeController, forDark: forDark,
     contrast: contrast, ensureContrast: ensureContrast, mixHex: mixHex, hexToLch: hexToLch, lch: lch, luminance: luminance
   };
 });

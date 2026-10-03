@@ -90,7 +90,7 @@
         getJson("/api/admin/security/alerts?status=OPEN&limit=50"),
         getJson("/api/admin/security/logins?limit=80"),
         getJson("/api/admin/security/devices?limit=300"),
-        getJson("/api/admin/security/data-access?limit=20"),
+        getJson("/api/admin/security/data-access?limit=50"),
         getJson("/api/admin/security/database")
       ]);
       const overview=data[0]||{};
@@ -99,6 +99,8 @@
       window.SECURITY_LOGINS=Array.isArray(data[3])?data[3]:[];
       window.SECURITY_DEVICES=Array.isArray(data[4])?data[4]:[];
       window.SECURITY_ACCESS=Array.isArray(data[5])?data[5]:[];
+      window.SECURITY_ACCESS.sort(function(a,b){ const rank={CRITICAL:0,HIGH:1,MEDIUM:2,LOW:3}; return (rank[String(a.severity||a.risk||"LOW").toUpperCase()]??4)-(rank[String(b.severity||b.risk||"LOW").toUpperCase()]??4) || new Date(b.createdAt||b.at||0)-new Date(a.createdAt||a.at||0); });
+      window.SECURITY_ACCESS=window.SECURITY_ACCESS.slice(0,5);
       window.SESSION_SUMMARY=new Map();
       window.SECURITY_SESSIONS.forEach(function(s){
         const prev=window.SESSION_SUMMARY.get(s.user.id)||{count:0,lastSeenAt:null};

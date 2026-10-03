@@ -1,0 +1,118 @@
+@import url("https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap");
+@import "tailwindcss";
+
+@theme {
+  --font-sans: Manrope, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: Fraunces, "Source Serif 4", Georgia, "Times New Roman", serif;
+  --color-brand-primary: var(--brand-primary, #2b1b68);
+  --color-brand-navy: var(--brand-navy, #0d2a47);
+  --color-brand-accent: var(--brand-accent, #7d2fa3);
+  --color-brand-surface: var(--white, #ffffff);
+  --color-brand-paper: #f3f7fb;
+  --color-brand-line: var(--line, #d7dde4);
+  --color-brand-muted: var(--grey-l, #617486);
+  --color-brand-success: var(--green, #187a4d);
+}
+
+:root {
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  --brand-ink: var(--ink, #0f2438);
+  --brand-ink-strong: var(--brand-primary, #2b1b68);
+  --brand-paper: #f3f7fb;
+  --brand-surface: var(--white, #ffffff);
+  --brand-line: var(--line, #d7dde4);
+  --brand-muted: var(--grey-l, #617486);
+  --brand-accent: #7d2fa3;
+  --brand-accent-soft: var(--ice, #eee8fb);
+  --brand-focus: #7d2fa3;
+}
+
+html {
+  min-width: 320px;
+  background: var(--brand-paper);
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: var(--brand-paper);
+  color: var(--brand-ink);
+  font-family: var(--font-sans);
+  line-height: 1.6;
+}
+
+button, select {
+  font: inherit;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  color: var(--brand-ink-strong);
+  font-weight: 700;
+}
+
+h1, h2 {
+  line-height: .94;
+  letter-spacing: -.04em;
+}
+
+h3, h4 {
+  line-height: 1.05;
+  letter-spacing: -.02em;
+}
+
+p, small {
+  line-height: 1.65;
+}
+
+::selection {
+  background: var(--brand-accent);
+  color: white;
+}
+
+/* Keep the React portal visually editorial rather than card-floating. */
+.portal-section {
+  border-top: 1px solid var(--brand-line);
+  padding-top: 1.25rem;
+}
+
+.portal-section > [data-section-heading] {
+  margin-bottom: .25rem;
+}
+
+.portal-kicker {
+  color: var(--brand-accent);
+  font-size: .625rem;
+  font-weight: 800;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.portal-rule {
+  border-top: 1px solid var(--brand-line);
+}
+
+.portal-number {
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: -.025em;
+}
+
+.portal-table {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 640px) {
+  h1 {
+    font-size: 2rem;
+  }
+
+  h2 {
+    font-size: 1.75rem;
+  }
+}

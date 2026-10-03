@@ -1,0 +1,21 @@
+import fs from "node:fs";
+const service=fs.readFileSync("src/services/dataQualityService.ts","utf8");
+const importer=fs.readFileSync("src/services/importService.ts","utf8");
+const sync=fs.readFileSync("src/services/syncService.ts","utf8");
+const admin=fs.readFileSync("public/admin.html","utf8");
+const failures=[];
+const must=(ok,msg)=>{if(!ok) failures.push(msg);};
+must(service.includes("ROBUST_OUTLIERS"),"robust outlier detection must exist");
+must(service.includes("DISTRIBUTION_SHIFT"),"baseline distribution-shift detection must exist");
+must(service.includes("NEGATIVE_NON_NEGATIVE_FIELD"),"negative financial/count guardrail must exist");
+must(service.includes("NON_FINITE"),"non-finite numeric values must quarantine");
+must(service.includes("DATA_QUALITY_GATE"),"data-quality decisions must emit telemetry");
+must(service.includes("action:string"),"findings must explain what must be fixed");
+must(service.includes('"QUARANTINE"') && service.includes('"REVIEW"'),"quarantine and review states must be explicit");
+must(importer.includes("assessIncomingRows"),"incoming imports must invoke the data-quality gate");
+must(importer.includes("importBatchRow.deleteMany"),"quarantined staged rows must be removed before commit");
+must(sync.includes("assessIncomingRows"),"live database/API syncs must invoke the data-quality gate");
+must(sync.includes("No rows were written to live tables"),"blocked live syncs must report that no live rows were written");
+must(admin.includes("/api/admin/mlops/events?limit=50"),"admin console must surface blocked MLOps events");
+if(failures.length){console.error("MLOps data-quality regression check failed:\\n- "+failures.join("\\n- "));process.exit(1);}
+console.log("MLOps data-quality regression checks passed.");

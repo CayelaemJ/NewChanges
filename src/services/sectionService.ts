@@ -22,7 +22,7 @@ export const SECTION_DEFS: { key: string; label: string }[] = [
   { key: "voiceOfEmployee", label: "Voice of the employee" },
 ];
 
-const ALL_ROLES = "ADMIN,EMPLOYER_VIEW,PORTFOLIO_VIEW";
+const ALL_ROLES = "ADMIN,SUPERADMIN,EMPLOYER_MANAGER,PORTFOLIO_MANAGER,VIEWER";
 
 // idempotent — call at boot so every known section has a config row.
 // New sections default to visible; flip `enabled` off manually for
@@ -32,7 +32,7 @@ export async function ensureSectionDefaults() {
   for (const def of SECTION_DEFS) {
     await prisma.dashboardSection.upsert({
       where: { key: def.key },
-      update: { label: def.label }, // keep the label current if we rename it in code
+      update: { label: def.label, allowedRoles: ALL_ROLES }, // keep the label current and include all supported roles
       create: { key: def.key, label: def.label, enabled: true, allowedRoles: ALL_ROLES },
     });
   }
@@ -77,7 +77,7 @@ export async function sectionsForUser(user: AuthUser): Promise<Record<string, bo
   });
   const out: Record<string, boolean> = {};
   for (const s of sections) {
-    if (user.role === "ADMIN") { out[s.key] = true; continue; } // admins can always preview
+    if (user.role === "ADMIN" || user.role === "SUPERADMIN") { out[s.key] = true; continue; } // admins can always preview
     if (s.overrides.length > 0) { out[s.key] = true; continue; } // explicit per-user grant
     const roles = s.allowedRoles.split(",").map((r) => r.trim());
     out[s.key] = s.enabled && roles.includes(user.role);

@@ -31,7 +31,7 @@
 <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
 <link rel="manifest" href="/static/site.webmanifest">
-<style>
+<style>.compact-collapse{float:right}.compact-collapsed .card-bd{display:none!important}.compact-collapsed .card-hd{border-bottom:0!important}.compact-toggle{margin-left:auto}
   @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap');
   :root{--blue:#7d2fa3;--blue-d:#682487;--brand-primary:#2b1b68;--ice:#eee8fb;--ice-2:#edf4fa;--line:#d7cde9;--line-soft:#e8e3f1;--ink:#0f2438;--grey:#425466;--grey-l:#617486;--green:#187a4d;--green-soft:#dff3e8;--amber:#9a5b00;--amber-soft:#fcedd4;--red:#b5391f;--red-soft:#fbe4df;--shadow:0 1px 2px rgba(13,42,71,.06),0 8px 24px rgba(13,42,71,.08);}
   *{box-sizing:border-box;margin:0;padding:0;}
@@ -59,8 +59,9 @@
   th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--grey);font-weight:800;}
   .role{font-size:11px;font-weight:800;padding:3px 9px;border-radius:6px;}
   .role.ADMIN{background:var(--amber-soft);color:var(--amber);}
-  .role.EMPLOYER_VIEW{background:var(--ice);color:var(--blue-d);}
-  .role.PORTFOLIO_VIEW{background:var(--green-soft);color:#137a47;}
+  .role.EMPLOYER_MANAGER{background:var(--ice);color:var(--blue-d);}
+  .role.PORTFOLIO_MANAGER{background:var(--green-soft);color:#137a47;}
+  .role.VIEWER{background:#eef1f4;color:#425466;}
   .chip{display:inline-block;font-size:11px;font-weight:700;background:var(--ice);color:var(--grey);padding:2px 8px;border-radius:6px;margin:2px 3px 2px 0;}
   .tag{font-size:11px;font-weight:800;padding:2px 8px;border-radius:6px;}
   .tag.live{background:var(--green-soft);color:#137a47;}.tag.pend{background:var(--amber-soft);color:var(--amber);}.tag.off{background:#e2e4e8;color:#46515b;}
@@ -108,7 +109,7 @@
 
 <div class="wrap">
   <div class="head"><h1>Users</h1><p>Create users, set their role, and link them to the employers they may see.</p></div>
-  <section class="card" aria-labelledby="security-center-title">
+  <section id="security-center" class="card" aria-labelledby="security-center-title">
     <div class="card-hd"><div><h2 id="security-center-title">Security &amp; identity centre</h2><div class="muted" style="margin-top:4px;">Live sessions, sign-ins, device context and high-impact admin activity.</div></div><button class="btn btn-sm" type="button" onclick="loadSecurityCenter()">Refresh</button></div>
     <div class="card-bd">
       <div class="security-hero">
@@ -145,9 +146,9 @@
 
       <div class="security-panel" style="margin-top:16px;">
         <div class="security-panel-head">
-          <div><h3>Sensitive data access</h3><div class="security-panel-note">Top 20 most recent protected-API access events. The full security audit export includes admin actions, data access, sign-ins and security alerts.</div></div>
+          <div><h3>Sensitive data access</h3><div class="security-panel-note">Top 5 most critical protected-API access events. The full security audit export includes admin actions, data access, sign-ins and security alerts.</div></div>
           <div class="security-panel-actions">
-            <span class="chip">Top 20 recent events</span>
+            <span class="chip">Top 5 critical events</span>
             <button class="btn btn-sm" type="button" onclick="downloadSecurityAuditLog()">Download full audit log</button>
           </div>
         </div>
@@ -202,12 +203,21 @@
       </div>
       <div class="row2">
         <div>
-          <label>Role</label>
-          <select id="n-role" onchange="onRoleChange()">
-            <option value="EMPLOYER_VIEW">Employer view — sees linked employers' dashboards</option>
-            <option value="PORTFOLIO_VIEW">Portfolio view — compares linked employers</option>
-            <option value="ADMIN">Admin — full access incl. imports & users</option>
+          <label>Access</label>
+          <div class="radio-row" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;">
+            <label><input type="radio" name="n-role-choice" id="n-access-employer" value="EMPLOYER_MANAGER" checked onchange="syncRoleSelection()"> Employer Manager</label>
+            <label><input type="radio" name="n-role-choice" id="n-access-portfolio" value="PORTFOLIO_MANAGER" onchange="syncRoleSelection()"> Portfolio Manager</label>
+            <label><input type="radio" name="n-role-choice" id="n-access-viewer" value="VIEWER" onchange="syncRoleSelection()"> Viewer</label>
+            <span id="n-admin-access"></span>
+            <span id="n-superadmin-access"></span>
+          </div>
+          <select id="n-role" onchange="onRoleChange()" style="display:none" aria-hidden="true">
+            <option value="EMPLOYER_MANAGER">Employer Manager</option>
+            <option value="PORTFOLIO_MANAGER">Portfolio Manager</option>
+            <option value="VIEWER">Viewer</option>
+            <option value="ADMIN">Admin</option>
           </select>
+          <div class="muted" style="font-size:11px;margin-top:6px;">Admin includes the operational access above. Portfolio access includes employer dashboard access.</div>
         </div>
         <div>
           <label>How they get access</label>
@@ -232,7 +242,7 @@
     </div>
   </div>
 
-  <div class="card">
+  <div id="user-list-card" class="card">
     <div class="card-hd"><h2>Existing users</h2></div>
     <div class="card-bd" style="padding:6px 10px 12px;">
       <table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Employers</th><th>Partner</th><th>Status</th><th></th></tr></thead>
@@ -240,7 +250,7 @@
     </div>
   </div>
 
-  <div class="card" style="border-color:#f3c9c0;">
+  <div id="revoked-users-card" class="card" style="border-color:#f3c9c0;">
     <div class="card-hd" style="border-bottom-color:#fbe4df;"><h2 style="color:#b5391f;">Past users</h2><div class="note" style="margin-left:10px;color:#8497a7;font-size:12px;">Who once had access, and why it ended · admin-only</div></div>
     <div class="card-bd" style="padding:6px 10px 12px;">
       <table><thead><tr><th>User</th><th>Role</th><th>Reason</th><th>Revoked by</th><th>Date</th><th></th></tr></thead>
@@ -286,10 +296,11 @@ function showUsersLoadError(message){
 async function boot(){
   try{
     ME=await getJson('/api/auth/me');
-    if(!ME||ME.role!=='ADMIN'){ location.href='/login'; return; }
+    if(!ME||ME.role!=='ADMIN'&&ME.role!=='SUPERADMIN'){ location.href='/login'; return; }
     renderNav();
     EMPLOYERS=Array.isArray(ME.employers)?ME.employers:[];
     renderEmpPick();
+    installPrivilegedAccess();
     onRoleChange();
     onAccessChange();
     await Promise.allSettled([loadPartnersDropdown(),loadUsers(),loadRevokedUsers(),loadSecurityCenter()]);
@@ -305,10 +316,26 @@ function renderNav(){
     window.EmpowerPortalNav.render({me:ME,navSelector:'#portal-nav',accountSelector:'#portal-account',active:'users'});
   }
 }
+function installPrivilegedAccess(){
+  const adminHost=document.getElementById('n-admin-access');
+  const superHost=document.getElementById('n-superadmin-access');
+  if(ME?.role==='SUPERADMIN'){
+    if(adminHost) adminHost.innerHTML='<label><input type="radio" name="n-role-choice" id="n-access-admin" value="ADMIN" onchange="syncRoleSelection()"> Admin</label>';
+    if(superHost) superHost.innerHTML='<label><input type="radio" name="n-role-choice" id="n-access-superadmin" value="SUPERADMIN" onchange="syncRoleSelection()"> Superadmin</label>';
+  } else {
+    if(adminHost) adminHost.innerHTML='';
+    if(superHost) superHost.innerHTML='';
+  }
+}
+function syncRoleSelection(){
+  const selected=document.querySelector('input[name="n-role-choice"]:checked')?.value || 'VIEWER';
+  const select=document.getElementById('n-role'); if(select) select.value=selected;
+  onRoleChange();
+}
 function onRoleChange(){
   const role=$('#n-role').value;
   // admins see everything, so hide employer linking for admins
-  $('#emp-wrap').style.display = role==='ADMIN' ? 'none' : 'block';
+  $('#emp-wrap').style.display = (role==='ADMIN'||role==='SUPERADMIN') ? 'none' : 'block';
 }
 function onAccessChange(){
   const mode=document.querySelector('input[name=access]:checked').value;
@@ -320,7 +347,7 @@ async function addUser(){
   const role=$('#n-role').value;
   const mode=document.querySelector('input[name=access]:checked').value;
   const employerIds=[...document.querySelectorAll('#emp-pick input:checked')].map(c=>c.value);
-  const body={ name:$('#n-name').value, email:$('#n-email').value, role, employerIds:role==='ADMIN'?[]:employerIds };
+  const body={ name:$('#n-name').value, email:$('#n-email').value, role, employerIds:(role==='ADMIN'||role==='SUPERADMIN')?[]:employerIds };
   const pid=$('#n-partner').value; if(pid) body.partnerId=pid;
   if(mode==='temp'){ body.tempPassword=$('#n-pass').value; } else { body.sendSetupLink=true; }
   const r=await fetch('/api/users',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
@@ -374,7 +401,7 @@ async function loadUsers(){
     }
     if(rows) rows.innerHTML=USERS.map(u=>{
       const userEmployers=Array.isArray(u.employers)?u.employers:[];
-      const emps=u.role==='ADMIN'
+      const emps=(u.role==='ADMIN'||u.role==='SUPERADMIN')
         ? '<span class="muted">All</span>'
         : (userEmployers.map(e=>`<span class="chip">${escHtml(e.name)}</span>`).join('')||'<span class="muted">none</span>');
       const partner=u.partner?`<span class="chip">${escHtml(u.partner.name)}</span>`:'<span class="muted">—</span>';
@@ -408,7 +435,8 @@ function editUser(id){
     : '<span class="muted">No employers yet.</span>';
   const partnerOpts = '<option value="">None (standard branding)</option>'+
     PARTNERS_LIST.map(p=>`<option value="${esc(p.id)}" ${u.partner&&u.partner.id===p.id?'selected':''}>${p.displayName||p.name}</option>`).join('');
-  const roleOpts = ['EMPLOYER_VIEW','PORTFOLIO_VIEW','ADMIN'].map(r=>`<option value="${r}" ${u.role===r?'selected':''}>${r.replace('_',' ')}</option>`).join('');
+  const availableRoles = ME?.role==='SUPERADMIN' ? ['EMPLOYER_MANAGER','PORTFOLIO_MANAGER','VIEWER','ADMIN','SUPERADMIN'] : ['EMPLOYER_MANAGER','PORTFOLIO_MANAGER','VIEWER'];
+  const roleOpts = availableRoles.map(r=>`<option value="${r}" ${u.role===r?'selected':''}>${r.replace('_',' ')}</option>`).join('');
   const tr=document.createElement('tr');
   tr.id='editor-'+id;
   tr.innerHTML=`<td colspan="7" style="background:#eef3f8;padding:16px 14px;">
@@ -417,13 +445,13 @@ function editUser(id){
         <input id="e-name-${id}" value="${u.name.replace(/"/g,'&quot;')}" style="display:block;width:100%;margin-top:4px;padding:8px 11px;border:1px solid #e8e1f7;border-radius:8px;font:inherit;">
       </label>
       <label style="font-size:12px;font-weight:700;color:#5b6b7a;">Role
-        <select id="e-role-${id}" onchange="document.getElementById('e-emp-wrap-${id}').style.display=this.value==='ADMIN'?'none':'block'" style="display:block;width:100%;margin-top:4px;padding:8px 11px;border:1px solid #e8e1f7;border-radius:8px;font:inherit;">${roleOpts}</select>
+        <select id="e-role-${id}" onchange="document.getElementById('e-emp-wrap-${id}').style.display=(this.value==='ADMIN'||this.value==='SUPERADMIN')?'none':'block'" style="display:block;width:100%;margin-top:4px;padding:8px 11px;border:1px solid #e8e1f7;border-radius:8px;font:inherit;">${roleOpts}</select>
       </label>
       <label style="font-size:12px;font-weight:700;color:#5b6b7a;grid-column:span 2;">Channel partner
         <select id="e-partner-${id}" style="display:block;width:100%;margin-top:4px;padding:8px 11px;border:1px solid #e8e1f7;border-radius:8px;font:inherit;">${partnerOpts}</select>
       </label>
     </div>
-    <div id="e-emp-wrap-${id}" style="margin-top:12px;${u.role==='ADMIN'?'display:none;':''}">
+    <div id="e-emp-wrap-${id}" style="margin-top:12px;${(u.role==='ADMIN'||u.role==='SUPERADMIN')?'display:none;':''}">
       <div style="font-size:12px;font-weight:700;color:#5b6b7a;margin-bottom:5px;">Linked employers (which employers this user may see)</div>
       <div style="border:1px solid #e8e1f7;border-radius:9px;padding:10px;background:#fff;">${empBoxes}</div>
     </div>
@@ -443,7 +471,7 @@ async function saveUser(id){
     name: $('#e-name-'+id).value.trim(),
     role,
     partnerId: $('#e-partner-'+id).value || null,
-    employerIds: role==='ADMIN' ? [] : employerIds,
+    employerIds: (role==='ADMIN'||role==='SUPERADMIN') ? [] : employerIds,
   };
   const msg=$('#e-msg-'+id); msg.textContent='Saving…'; msg.style.color='#5b6b7a';
   try{
@@ -497,7 +525,20 @@ async function deleteUserForever(id,name){
   if(!r.ok){ const d=await r.json().catch(()=>({})); alert(d.error||'Could not delete this user.'); return; }
   loadRevokedUsers();
 }
+function installCompactCollapse(){
+  ['security-center','user-list-card','revoked-users-card'].forEach(function(id){
+    const card=document.getElementById(id); if(!card||card.dataset.collapsibleInstalled)return;
+    card.dataset.collapsibleInstalled='1';
+    if(id==='user-list-card'||id==='revoked-users-card') card.classList.add('compact-collapsed');
+    const head=card.querySelector('.card-hd'); if(!head)return;
+    const btn=document.createElement('button'); btn.type='button'; btn.className='btn btn-sm compact-toggle';
+    const set=function(){ const c=card.classList.contains('compact-collapsed'); btn.textContent=c?'Expand':'Collapse'; btn.setAttribute('aria-expanded',String(!c)); };
+    btn.onclick=function(){card.classList.toggle('compact-collapsed');set();};
+    head.appendChild(btn); set();
+  });
+}
 function show(el,t,m){ el.className='msg '+t; el.textContent=m; el.style.display='block'; }
+installCompactCollapse();
 boot();
 </script>
 <script>

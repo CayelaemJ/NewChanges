@@ -7,7 +7,7 @@
 
   const esc = (value) => String(value ?? '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
   const initials = (name) => String(name || 'User').trim().split(/\s+/).filter(Boolean).map(p=>p[0]).slice(0,2).join('').toUpperCase() || 'U';
-  const roleLabel = (role) => ({ADMIN:'Administrator',EMPLOYER_VIEW:'Employer access',PORTFOLIO_VIEW:'Portfolio access'}[role] || String(role || 'User').replaceAll('_',' '));
+  const roleLabel = (role) => ({ADMIN:'Administrator',EMPLOYER_MANAGER:'Employer Manager',PORTFOLIO_MANAGER:'Portfolio Manager',VIEWER:'Viewer'}[role] || String(role || 'User').replaceAll('_',' '));
   const THEME_KEY='empower-fin-theme';
 
   function isDark(){ return document.body?.classList.contains('portal-dark'); }

@@ -668,6 +668,49 @@ model SyncLog {
 
 // Per-report incremental cursor. A failed report does not advance its cursor,
 // so a partial sync cannot silently skip changes on the next run.
+// ──────────────────────── MLOps telemetry & governance ────────────────────────
+model MLOpsEvent {
+  id             String   @id @default(cuid())
+  eventType      String
+  modelKey       String
+  modelVersion   String
+  employerId     String?
+  period         String?
+  metric         String?
+  actualValue    Float?
+  predictedValue Float?
+  confidence     Float?
+  driftScore     Float?
+  anomalyScore   Float?
+  status         String?
+  feedback       String?
+  features       Json?
+  metadata       Json?
+  createdAt      DateTime @default(now())
+
+  @@index([modelKey, createdAt])
+  @@index([employerId, period])
+  @@index([eventType, createdAt])
+}
+
+model MLOpsModel {
+  id              String   @id @default(cuid())
+  modelKey        String
+  version         String
+  modelType       String
+  status          String   @default("SHADOW")
+  trainingVersion String?
+  metrics         Json?
+  featureSchema   Json?
+  promotedAt      DateTime?
+  retiredAt       DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([modelKey, version])
+  @@index([modelKey, status])
+}
+
 model IntegrationCursor {
   reportKey           String   @id
   lastAttemptAt       DateTime?
@@ -683,6 +726,17 @@ model IntegrationCursor {
 // A channel partner (broker / distributor) that manages a set of employers and
 // has its own users. Carries the white-label branding applied after login.
 
+model BrandLearningState {
+  id                 String   @id @default("global")
+  engineVersion      String
+  uploadCount        Int      @default(0)
+  labelledCount      Int      @default(0)
+  acceptedCount      Int      @default(0)
+  averageConfidence  Float    @default(0)
+  huePrior           Json?
+  updatedAt          DateTime @default(now()) @updatedAt
+}
+
 model Partner {
   id          String   @id @default(cuid())
   name        String   @unique // internal/display name, e.g. "Acme Financial"
@@ -694,6 +748,14 @@ model Partner {
   navyColor      String?  // hex deep tone
   logoDataUrl    String?  @db.Text // base64 data URL of the partner logo
   tagline        String?  // optional sub-line under the title
+  // Brand-engine telemetry makes colour recognition auditable and versioned.
+  brandEngineVersion        String?
+  brandDetectionStatus      String?  @default("UNREVIEWED") // AUTO_ACCEPTED | NEEDS_REVIEW | MANUAL | UNREVIEWED
+  brandDetectionConfidence Float?
+  brandDetectionWarnings    Json?
+  brandDetectionDiagnostics Json?
+  brandDetectedPalette      Json?
+  brandDetectedAt           DateTime?
   active         Boolean  @default(true)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @default(now()) @updatedAt
@@ -709,16 +771,18 @@ model Partner {
 // is what a future broker login will use.
 
 enum Role {
-  ADMIN          // everything: admin console, all dashboards, portfolio, user mgmt
-  EMPLOYER_VIEW  // dashboard for linked employers only
-  PORTFOLIO_VIEW // portfolio across linked employers only
+  ADMIN          // operational administration
+  SUPERADMIN     // platform owner and full control-plane access
+  EMPLOYER_MANAGER // dashboard access for linked employers
+  PORTFOLIO_MANAGER // portfolio access across linked employers
+  VIEWER         // read-only access to explicitly assigned dashboards
 }
 
 model User {
   id            String   @id @default(cuid())
   email         String   @unique
   name          String
-  role          Role     @default(EMPLOYER_VIEW)
+  role          Role     @default(EMPLOYER_MANAGER)
   passwordHash  String?  // null until a set-password link is used
   active        Boolean  @default(true)
   // one-time token for "send link to set password"
@@ -807,7 +871,7 @@ model DashboardSection {
   key          String   @id            // stable key referenced by the frontend, e.g. "voiceOfEmployee"
   label        String                  // human-readable name shown in the admin UI
   enabled      Boolean  @default(true) // master switch — set false while a feature is unfinished
-  allowedRoles String                  // comma-separated Role values, e.g. "ADMIN,EMPLOYER_VIEW,PORTFOLIO_VIEW"
+  allowedRoles String                  // comma-separated Role values
   updatedAt    DateTime @updatedAt
 
   overrides UserSectionAccess[]

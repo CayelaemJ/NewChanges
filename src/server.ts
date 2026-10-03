@@ -23,7 +23,7 @@ import { startSyncJob, getSyncJob } from "./services/syncJobs.js";
 import { startDailyRefresh, triggerRefreshNow } from "./services/dailyRefresh.js";
 import { getConfig as getSyncConfig, saveConfig as saveSyncConfig, publicConfig as publicSyncConfig, testConnection as testSyncConnection, runSync, recentSyncLogs } from "./services/syncService.js";
 import { listPartners, createPartner, updatePartner, deletePartner, assignUserToPartner, assignEmployerToPartner, themeForUser, themeForSlug } from "./services/partnerService.js";
-import { login, resolveSession, destroySession, destroySessionById, destroyAllSessionsForUser, canViewEmployer, canAccessModule, allowedEmployerIds, AuthUser } from "./services/authService.js";
+import { login, resolveSession, destroySession, destroySessionById, destroyAllSessionsForUser, canViewEmployer, canAccessModule, allowedEmployerIds, AuthUser, isAdminRole } from "./services/authService.js";
 import { createUser, listUsers, updateUser, resetPassword, completeSetup, deactivateSelf, listRevokedUsers, deleteUserPermanently, requestPasswordReset } from "./services/userService.js";
 import { recordEvent, engagementSummary } from "./services/analyticsService.js";
 import { notifyAdmins, notifyScoreChangeIfCurrentPeriod, runStaleAccountCheck, runWeeklyDigestIfDue } from "./services/automationService.js";
@@ -38,6 +38,8 @@ import { subscribeAdminEvents } from "./services/adminEventStream.js";
 import { ensureSectionDefaults, listSections, updateSection, grantUserSection, revokeUserSection, sectionsForUser } from "./services/sectionService.js";
 import { publicEmailConfig, saveEmailConfig, testEmailConnection, createReportSchedule, listReportSchedules, updateReportSchedule, deleteReportSchedule, sendReportNow, recentReportDeliveries, runDueReports } from "./services/reportScheduler.js";
 import type { ScheduleInput } from "./services/reportScheduler.js";
+import { runMLOpsAssessment, getMLOpsPortfolioAssessment, recordMLOpsFeedback, listMLOpsModels, registerMLOpsModel, promoteMLOpsModel, rollbackMLOpsModel, listMLOpsEvents } from "./services/mlopsService.js";
+import { getBrandLearningProfile, learnFromBrandUpload, recordBrandCorrection } from "./services/brandLearningService.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = [join(__dirname, "public"), join(__dirname, "..", "public")]
@@ -197,6 +199,19 @@ app.register(multipart, {
 });
 
 app.register(fastifyStatic, {
+  root: join(PUBLIC_DIR, "react"),
+  prefix: "/react/",
+  decorateReply: false,
+  setHeaders(res, filePath) {
+    if (/\\.(?:js|css|html)$/i.test(filePath)) {
+      res.header("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+      res.header("Pragma", "no-cache");
+      res.header("Expires", "0");
+    }
+  },
+});
+
+app.register(fastifyStatic, {
   root: PUBLIC_DIR,
   prefix: "/static/",
   // The portal HTML is deployed independently of browser cache state. UI assets
@@ -276,7 +291,7 @@ async function requireUser(req: FastifyRequest, reply: FastifyReply): Promise<Au
 async function requireAdmin(req: FastifyRequest, reply: FastifyReply): Promise<AuthUser | null> {
   const user = await requireUser(req, reply);
   if (!user) return null;
-  if (user.role !== "ADMIN") { reply.code(403).send({ error: "admin only" }); return null; }
+  if (user.role !== "ADMIN" && user.role !== "SUPERADMIN") { reply.code(403).send({ error: "admin only" }); return null; }
   return user;
 }
 function redactAuditDetail(value: unknown): unknown {
@@ -292,6 +307,32 @@ function redactAuditDetail(value: unknown): unknown {
 
 
 // ── public pages ──
+app.get("/react", async (_req, reply) => reply.redirect("/react/"));
+app.get("/react/", async (_req, reply) => {
+  try {
+    const html = await readFile(join(PUBLIC_DIR, "react", "index.html"), "utf-8");
+    return reply.type("text/html; charset=utf-8").header("Cache-Control", "no-store").send(html);
+  } catch {
+    return reply.code(503).send({ error: "React frontend has not been built yet" });
+  }
+});
+app.get("/react/admin", async (_req, reply) => {
+  try {
+    const html = await readFile(join(PUBLIC_DIR, "react", "index.html"), "utf-8");
+    return reply.type("text/html; charset=utf-8").header("Cache-Control", "no-store").send(html);
+  } catch {
+    return reply.code(503).send({ error: "React frontend has not been built yet" });
+  }
+});
+app.get("/react/dashboard", async (_req, reply) => {
+  try {
+    const html = await readFile(join(PUBLIC_DIR, "react", "index.html"), "utf-8");
+    return reply.type("text/html; charset=utf-8").header("Cache-Control", "no-store").send(html);
+  } catch {
+    return reply.code(503).send({ error: "React frontend has not been built yet" });
+  }
+});
+
 app.get("/favicon.ico", async (_req, reply) => reply.redirect("/static/favicon.ico"));
 app.get("/contact", async (_req, reply) => serveHtml(reply, "contact.html"));
 app.get("/thank-you", async (_req, reply) => serveHtml(reply, "thank-you.html"));
@@ -365,7 +406,7 @@ app.get("/admin", async (req, reply) => {
 });
 app.get("/users", async (req, reply) => {
   const user = await currentUser(req);
-  if (!user || user.role !== "ADMIN") return reply.redirect("/login");
+  if (!user || (user.role !== "ADMIN" && user.role !== "SUPERADMIN")) return reply.redirect("/login");
   return serveHtml(reply, "users.html");
 });
 
@@ -423,7 +464,7 @@ app.get("/api/auth/me", async (req, reply) => {
       admin: canAccessModule(user, "admin"),
       dashboard: canAccessModule(user, "dashboard"),
       portfolio: canAccessModule(user, "portfolio"),
-      users: user.role === "ADMIN",
+      users: isAdminRole(user),
     },
     sections: await sectionsForUser(user),
     employers,
@@ -652,13 +693,21 @@ app.post<{ Params: { id: string } }>("/api/admin/security/alerts/:id/resolve", a
 
 // ════════════════════ USER MANAGEMENT (admin only) ════════════════════
 app.get("/api/users", async (req, reply) => {
-  if (!(await requireAdmin(req, reply))) return;
-  return listUsers();
+  const admin = await requireAdmin(req, reply); if (!admin) return;
+  const users = await listUsers();
+  // Superadmin is an internal control-plane role. Ordinary admins must not
+  // discover that the role exists, including through the user-management API.
+  return admin.role === "SUPERADMIN" ? users : users.filter((u: any) => u.role !== "SUPERADMIN");
 });
 app.post<{ Body: { email: string; name: string; role: any; employerIds?: string[]; partnerId?: string; tempPassword?: string; sendSetupLink?: boolean } }>("/api/users", async (req, reply) => {
   const admin = await requireAdmin(req, reply); if (!admin) return;
   try {
     const b = req.body;
+    // Ordinary admins can manage normal users, but cannot create or discover
+    // the privileged control-plane role.
+    if (admin.role !== "SUPERADMIN" && (b.role === "SUPERADMIN" || b.role === "ADMIN")) {
+      return reply.code(400).send({ error: "invalid role" });
+    }
     const created = await createUser({
       email: b.email, name: b.name, role: b.role, employerIds: b.employerIds ?? [],
       partnerId: b.partnerId, tempPassword: b.tempPassword, sendSetupLink: b.sendSetupLink, createdBy: admin.email,
@@ -670,6 +719,12 @@ app.post<{ Body: { email: string; name: string; role: any; employerIds?: string[
 app.patch<{ Params: { id: string }; Body: any }>("/api/users/:id", async (req, reply) => {
   const admin = await requireAdmin(req, reply); if (!admin) return;
   const input: Record<string, any> = req.body && typeof req.body === "object" ? req.body : {};
+  // Ordinary admins must not be able to discover, edit or promote a user into
+  // the privileged control-plane role.
+  const target = await prisma.user.findUnique({ where: { id: req.params.id }, select: { role: true } });
+  if (!target) return reply.code(404).send({ error: "user not found" });
+  if (admin.role !== "SUPERADMIN" && target.role === "SUPERADMIN") return reply.code(404).send({ error: "user not found" });
+  if (admin.role !== "SUPERADMIN" && (input.role === "SUPERADMIN" || input.role === "ADMIN")) return reply.code(400).send({ error: "invalid role" });
   // Allow-list fields: never pass an arbitrary client object through to the DB layer.
   const body: Record<string, any> = {};
   if (input.name !== undefined) {
@@ -677,7 +732,7 @@ app.patch<{ Params: { id: string }; Body: any }>("/api/users/:id", async (req, r
     body.name = input.name.trim();
   }
   if (input.role !== undefined) {
-    if (!["ADMIN", "EMPLOYER_VIEW", "PORTFOLIO_VIEW"].includes(input.role)) return reply.code(400).send({ error: "invalid role" });
+    if (!["ADMIN", "SUPERADMIN", "EMPLOYER_MANAGER", "PORTFOLIO_MANAGER", "VIEWER"].includes(input.role)) return reply.code(400).send({ error: "invalid role" });
     body.role = input.role;
   }
   if (input.active !== undefined) {
@@ -690,7 +745,7 @@ app.patch<{ Params: { id: string }; Body: any }>("/api/users/:id", async (req, r
   }
   if ("partnerId" in input) body.partnerId = typeof input.partnerId === "string" ? input.partnerId : null;
   if (typeof input.reason === "string") body.reason = input.reason.slice(0, 300);
-  if (req.params.id === admin.id && (body.active === false || (body.role && body.role !== "ADMIN"))) {
+  if (req.params.id === admin.id && (body.active === false || (body.role && body.role !== "ADMIN" && body.role !== "SUPERADMIN"))) {
     return reply.code(400).send({ error: "you cannot deactivate or demote your own account" });
   }
   // when an admin flips a user inactive, capture who did it and why for the
@@ -730,6 +785,9 @@ app.post<{ Body: { reason?: string } }>("/api/users/me/deactivate", async (req, 
 // (defence in depth — nobody disappears without first going through revoke).
 app.delete<{ Params: { id: string } }>("/api/users/:id", async (req, reply) => {
   const admin = await requireAdmin(req, reply); if (!admin) return;
+  const target = await prisma.user.findUnique({ where: { id: req.params.id }, select: { role: true } });
+  if (!target) return reply.code(404).send({ error: "user not found" });
+  if (admin.role !== "SUPERADMIN" && target.role === "SUPERADMIN") return reply.code(404).send({ error: "user not found" });
   try {
     const result = await deleteUserPermanently(req.params.id);
     logAdminAction(admin, "user.delete", `Permanently deleted user ${req.params.id}`, { targetType: "User", targetId: req.params.id, impactCount: 1, context: requestSecurityContext(req) });
@@ -741,8 +799,10 @@ app.delete<{ Params: { id: string } }>("/api/users/:id", async (req, reply) => {
 // admin-only: "Past users" — everyone currently deactivated, with who revoked
 // access and why, so admins can see who once had access and why it ended.
 app.get("/api/admin/users/revoked", async (req, reply) => {
-  if (!(await requireAdmin(req, reply))) return;
-  return listRevokedUsers();
+  const admin = await requireAdmin(req, reply); if (!admin) return;
+  const users = await listRevokedUsers();
+  // Keep privileged control-plane accounts invisible to ordinary admins.
+  return admin.role === "SUPERADMIN" ? users : users.filter((u: any) => u.role !== "SUPERADMIN");
 });
 
 // ════════════════════ ENGAGEMENT ANALYTICS ════════════════════
@@ -1242,9 +1302,92 @@ app.post<{ Params: { id: string } }>("/api/report-schedules/:id/send-now", async
 });
 
 // ── channel partners (white-label) — admin only ──
+// ── MLOps governance — admin only ──
+app.get<{ Params: { employerId: string } }>("/api/admin/mlops/assessment/:employerId", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  try { return await runMLOpsAssessment(req.params.employerId); }
+  catch (e:any) { return reply.code(400).send({ error:e?.message||"MLOps assessment failed" }); }
+});
+app.get("/api/admin/mlops/models", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  return listMLOpsModels();
+});
+app.post<{Body:{modelKey:string;version:string;modelType:string;trainingVersion?:string;metrics?:any;featureSchema?:any}}>("/api/admin/mlops/models", async (req, reply) => {
+  const admin=await requireAdmin(req, reply); if(!admin) return;
+  try {
+    const result=await registerMLOpsModel(req.body);
+    logAdminAction(admin,"mlops.model_register",`Registered ${req.body.modelKey} ${req.body.version}`,{targetType:"MLOpsModel",targetId:result.id});
+    return result;
+  } catch(e:any) { return reply.code(400).send({error:e?.message||"Could not register model"}); }
+});
+app.post<{Params:{modelKey:string;version:string}}>("/api/admin/mlops/models/:modelKey/:version/promote", async (req, reply) => {
+  const admin=await requireAdmin(req, reply); if(!admin) return;
+  try {
+    const result=await promoteMLOpsModel(req.params.modelKey,req.params.version);
+    logAdminAction(admin,"mlops.model_promote",`Promoted ${req.params.modelKey} ${req.params.version}`,{targetType:"MLOpsModel",targetId:result?.id});
+    return result;
+  } catch(e:any) { return reply.code(400).send({error:e?.message||"Could not promote model"}); }
+});
+app.post<{Params:{modelKey:string;version:string}}>("/api/admin/mlops/models/:modelKey/:version/rollback", async (req, reply) => {
+  const admin=await requireAdmin(req, reply); if(!admin) return;
+  try {
+    const result=await rollbackMLOpsModel(req.params.modelKey,req.params.version);
+    logAdminAction(admin,"mlops.model_rollback",`Rolled back ${req.params.modelKey} ${req.params.version}`,{targetType:"MLOpsModel",targetId:result.id});
+    return result;
+  } catch(e:any) { return reply.code(400).send({error:e?.message||"Could not roll back model"}); }
+});
+app.get<{Querystring:{modelKey?:string;limit?:string}}>("/api/admin/mlops/events", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  return listMLOpsEvents(req.query.modelKey,Number(req.query.limit||100));
+});
+app.post<{Body:{modelKey:string;eventId?:string;employerId?:string;feedback:"CORRECT"|"INCORRECT"|"REVIEWED";actualValue?:number;notes?:string}}>("/api/admin/mlops/feedback", async (req, reply) => {
+  const admin=await requireAdmin(req, reply); if(!admin) return;
+  try {
+    const result=await recordMLOpsFeedback(req.body);
+    logAdminAction(admin,"mlops.feedback",`Recorded ${req.body.feedback} feedback for ${req.body.modelKey}`,{targetType:"MLOpsEvent",targetId:result.feedbackId});
+    return result;
+  } catch(e:any) { return reply.code(400).send({error:e?.message||"Could not record feedback"}); }
+});
+
 app.get("/api/admin/partners", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
   return listPartners();
+});
+
+app.get("/api/admin/brand-learning/profile", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  return getBrandLearningProfile();
+});
+
+app.post<{ Body: { engineVersion?: string; palette?: any[]; confidence?: number; accepted?: boolean } }>("/api/admin/brand-learning/observe", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  const b=req.body||{};
+  return learnFromBrandUpload({engineVersion:String(b.engineVersion||"1.1.0"), palette:Array.isArray(b.palette)?b.palette:[], confidence:Number(b.confidence||0), accepted:Boolean(b.accepted)});
+});
+
+app.post<{ Body: { engineVersion?: string; palette?: any[] } }>("/api/admin/brand-learning/correction", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  const b=req.body||{};
+  return recordBrandCorrection({engineVersion:String(b.engineVersion||"1.1.0"), palette:Array.isArray(b.palette)?b.palette:[]});
+});
+
+app.get("/api/admin/brand-recognition/overview", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  const rows = await prisma.partner.findMany({
+    where: { brandDetectionConfidence: { not: null } },
+    select: { brandDetectionStatus: true, brandDetectionConfidence: true, brandEngineVersion: true },
+  });
+  const confidence = rows.map((r: any) => Number(r.brandDetectionConfidence)).filter(Number.isFinite);
+  const averageConfidence = confidence.length ? confidence.reduce((a: number, b: number) => a + b, 0) / confidence.length : null;
+  return {
+    engineVersion: rows.map((r: any) => r.brandEngineVersion).filter(Boolean).sort().pop() || "1.1.0",
+    totalAnalysed: rows.length,
+    autoAccepted: rows.filter((r: any) => r.brandDetectionStatus === "AUTO_ACCEPTED").length,
+    needsReview: rows.filter((r: any) => r.brandDetectionStatus === "NEEDS_REVIEW").length,
+    manual: rows.filter((r: any) => r.brandDetectionStatus === "MANUAL").length,
+    averageConfidence: averageConfidence == null ? null : Math.round(averageConfidence * 100) / 100,
+    lowConfidence: confidence.filter((v: number) => v < 0.45).length,
+  };
 });
 app.post<{ Body: { name: string; displayName?: string } }>("/api/admin/partners", async (req, reply) => {
   const admin = await requireAdmin(req, reply); if (!admin) return;
@@ -1588,6 +1731,12 @@ app.get<{ Querystring: { period?: string; quarter?: string; range?: "30d" | "qua
 );
 
 // ── convenience: live dashboard of the first employer THIS USER can see ──
+app.get("/api/dashboard/version", async (req, reply) => {
+  const user = await requireUser(req, reply); if (!user) return;
+  const latest = await prisma.integrationCursor.aggregate({ _max: { lastSuccessAt: true } });
+  return { version: latest._max.lastSuccessAt?.toISOString() ?? null };
+});
+
 app.get<{ Querystring: { period?: string; quarter?: string; range?: "30d" | "quarter" | "all" | "month" | "30" | "q" | "latest"; site?: string; income?: string } }>(
   "/api/dashboard/first",
   async (req, reply) => {

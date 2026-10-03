@@ -26,10 +26,14 @@ jobs:
       - run: npm run check:scheduling
       - run: npm run test:score
       - run: npm run check:brand
+      - run: npm run check:mlops
+      - run: npm run check:mlops-data-quality
       - run: npm run check:accessibility
       - run: npm run check:performance
       - run: npm run check:security-identity
       - run: npm run check:security-operations
+      - run: npm run check:role-perspective
+      - run: npm run check:react
       - run: npm run check:security-governance
       - run: npm run check:south-africa-compliance
       - run: npm run check:period-comparison

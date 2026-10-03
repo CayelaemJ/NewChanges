@@ -9,9 +9,11 @@ import { PrismaClient, Prisma } from "@prisma/client";
 import { LOAD_ORDER, getFormat } from "./reportFormats.js";
 import { validate } from "./importParser.js";
 import { snapshotEmployer } from "./snapshotBuilder.js";
-import { notifyScoreChangeIfCurrentPeriod } from "./automationService.js";
+import { notifyAdmins, notifyScoreChangeIfCurrentPeriod } from "./automationService.js";
 import { commitBatch, commitSyncRows } from "./importService.js";
+import { assessIncomingRows } from "./dataQualityService.js";
 import { createSourceAdapter, configuredSourceMode, sourceIsConfigured } from "./sourceAdapter.js";
+import { runMLOpsAssessment } from "./mlopsService.js";
 
 const prisma = new PrismaClient();
 type Json = Prisma.InputJsonValue;
@@ -254,6 +256,44 @@ export async function runSync(trigger: "manual" | "scheduled" = "manual") {
           continue;
         }
 
+        // MLOps safety gate: external database/API rows must pass the same
+        // anomaly controls as file uploads before any live-table procedure runs.
+        const quality = await assessIncomingRows({ reportKey, rows: result.rows as Record<string, unknown>[] });
+        if (quality.status !== "PASS") {
+          const qualityErrors = quality.findings.map((f) => ({
+            row: f.row ?? 0,
+            column: f.field ?? "dataset",
+            value: null,
+            reason: `[MLOPS:${f.code}] ${f.message} Fix: ${f.action}`,
+          }));
+          const blockedBatch = await prisma.importBatch.create({
+            data: {
+              reportKey,
+              filename: `${adapter.mode.toLowerCase()}-sync:${reportKey}`,
+              fileFormat: adapter.mode.toLowerCase(),
+              status: "FAILED",
+              rowCount: result.rowCount,
+              errorCount: qualityErrors.length,
+              errors: ({ cellErrors: qualityErrors, missingColumns: [], unknownColumns: [] } as unknown as Json),
+              uploadedBy: `${adapter.mode.toLowerCase()}-sync (${trigger})`,
+              sourceSince: cursor.lastSourceUpdatedAt,
+              sourceThrough: throughAt,
+            },
+          });
+          const reason = quality.findings.slice(0, 3).map((f) => `${f.code}: ${f.message}`).join(" | ");
+          await prisma.integrationCursor.update({
+            where: { reportKey },
+            data: { lastStatus: "FAILED", lastNote: `MLOps data-quality gate blocked this sync. ${reason}` },
+          });
+          await notifyAdmins({
+            subject: `MLOps blocked live sync: ${reportKey}`,
+            html: `<p>An incoming sync for <strong>${reportKey}</strong> was blocked by the MLOps data-quality gate.</p><p>No rows were written to live tables. Review the MLOps event log and correct the source data before retrying.</p>`,
+            slackText: `:rotating_light: MLOps blocked live sync ${reportKey}. No rows were written to live tables; review the MLOps event log and correct the source data before retrying.`,
+          }).catch(() => {});
+          summary[reportKey] = { error: `MLOps data-quality gate blocked the sync: ${reason}`, source: pulled.location, pulled: result.rowCount, committed: 0, batchId: blockedBatch.id };
+          continue;
+        }
+
         // Fast sync path: keep a lightweight audit row, but do not copy the
         // validated rows into ImportBatch/ImportBatchRow only to read them back.
         // PostgreSQL performs the natural-key INSERT ... ON CONFLICT merge in
@@ -312,6 +352,7 @@ export async function runSync(trigger: "manual" | "scheduled" = "manual") {
           through: throughAt,
         };
 
+        const previousCursor = cursor.lastSourceUpdatedAt;
         await prisma.integrationCursor.update({
           where: { reportKey },
           data: {
@@ -321,6 +362,13 @@ export async function runSync(trigger: "manual" | "scheduled" = "manual") {
             lastNote: `${committed.inserted} inserted, ${committed.updated} updated, ${committed.deleted} deleted, ${committed.skipped} stale skipped via ${adapter.mode}.`,
           },
         });
+        if (previousCursor && (committed.inserted > 0 || committed.updated > 0 || committed.deleted > 0)) {
+          await notifyAdmins({
+            subject: `Source database changes detected: ${reportKey}`,
+            html: `<p>The connected source changed for <strong>${reportKey}</strong>.</p><p>${committed.inserted} inserted, ${committed.updated} updated and ${committed.deleted} deleted records were applied. Dashboard snapshots are being refreshed.</p>`,
+            slackText: `:information_source: Source DB changes detected for ${reportKey}: +${committed.inserted} / ~${committed.updated} / -${committed.deleted}. Dashboard refresh queued.`,
+          }).catch(() => {});
+        }
         anyOk = true;
       } catch (error: any) {
         const note = error?.message ?? String(error);
@@ -357,7 +405,7 @@ export async function runSync(trigger: "manual" | "scheduled" = "manual") {
             pendingSnapshotEmployers.delete(employerId);
             try {
               const r = await snapshotEmployer(employerId);
-              if (r.persisted) notifyScoreChangeIfCurrentPeriod(employerId, r.period, r.period).catch(() => {});
+              if (r.persisted) { notifyScoreChangeIfCurrentPeriod(employerId, r.period, r.period).catch(() => {}); runMLOpsAssessment(employerId).catch((error: any) => console.error(`[sync] MLOps assessment failed for ${employerId}:`, error?.message ?? error)); }
             } catch (error: any) {
               console.error(`[sync] background snapshot failed for ${employerId}:`, error?.message ?? error);
             }

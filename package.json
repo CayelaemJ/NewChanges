@@ -6,7 +6,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "build": "prisma generate && tsc",
+    "build": "prisma generate && tsc && npm run frontend:build",
     "start": "node dist/server.js",
     "dev": "tsx watch src/server.ts",
     "db:generate": "prisma generate",
@@ -27,7 +27,7 @@
     "check:all": "npm run check:admin-realtime && npm run check:admin-report-selector && npm run check:unified-data-ingestion && npm run check:enterprise-analytics-phase-2 && npm run build && npm run check:production && npm run check:security && npm run check:ui && npm run check:imports && npm run check:scheduling && npm run check:security-identity && npm run check:security-operations && npm run check:security-governance && npm run check:south-africa-compliance && npm run check:enterprise && npm run test:score && npm audit --audit-level=high",
     "check:accessibility": "node scripts/accessibility-regression-check.mjs",
     "check:performance": "node scripts/performance-regression-check.mjs",
-    "check:enterprise": "npm run check:period-comparison && npm run check:accessibility && npm run check:performance && npm run check:brand",
+    "check:enterprise": "npm run check:period-comparison && npm run check:accessibility && npm run check:performance && npm run check:brand && npm run check:mlops && npm run check:mlops-data-quality",
     "check:period-comparison": "node scripts/period-comparison-regression-check.mjs",
     "check:security-identity": "node scripts/security-identity-regression-check.mjs",
     "check:security-operations": "node scripts/security-operations-regression-check.mjs",
@@ -38,7 +38,13 @@
     "check:enterprise-analytics-phase-2": "node scripts/enterprise-analytics-phase-2-regression-check.mjs",
     "check:unified-data-ingestion": "node scripts/unified-data-ingestion-regression-check.mjs",
     "check:admin-report-selector": "node scripts/admin-report-selector-regression-check.mjs",
-    "check:admin-realtime": "node scripts/admin-realtime-regression-check.mjs"
+    "check:admin-realtime": "node scripts/admin-realtime-regression-check.mjs",
+    "check:mlops": "node scripts/mlops-regression-check.mjs",
+    "check:mlops-data-quality": "node scripts/mlops-data-quality-regression-check.mjs",
+    "check:role-perspective": "node scripts/role-perspective-regression-check.mjs",
+    "frontend:build": "npm install --prefix frontend --no-audit --no-fund && npm run build --prefix frontend",
+    "check:react": "npm run check:frontend:typecheck && node scripts/react-migration-regression-check.mjs",
+    "check:frontend:typecheck": "tsc -p frontend/tsconfig.json --noEmit"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.2",
@@ -63,5 +69,8 @@
     "@types/mssql": "^9.1.5",
     "@types/pg": "^8.11.10",
     "tsx": "^4.19.2"
+  },
+  "overrides": {
+    "@fastify/busboy": "3.2.1"
   }
 }

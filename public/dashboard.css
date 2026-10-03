@@ -13,8 +13,7 @@
 .topbar { position: sticky; top: 0; z-index: 40; }
 .topbar::after {
   content: ""; display: block; height: 2px;
-  background: linear-gradient(90deg, var(--blue, #b15be8) 0%, var(--brand-primary, #32217c) 55%, transparent 100%);
-  opacity: .55;
+  background: var(--brand-primary, #17212b); opacity: .55;
 }
 
 /* cards: crisper shadow + a soft lift on hover so the surface feels alive */
@@ -37,17 +36,17 @@
 }
 .btn:active:not(:disabled), button:active:not(:disabled) { transform: translateY(0); }
 .btn-primary, button.btn-primary {
-  box-shadow: 0 6px 18px rgba(50,33,124,.18);
+  box-shadow: 0 1px 3px rgba(13,20,27,.08);
 }
 .btn-primary:hover:not(:disabled), button.btn-primary:hover:not(:disabled) {
-  box-shadow: 0 10px 26px rgba(50,33,124,.26);
+  box-shadow: 0 2px 6px rgba(13,20,27,.10);
 }
 
 /* clearer, on-brand focus rings for keyboard users (better contrast than a default outline) */
 a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, .btn:focus-visible,
 [tabindex]:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(177,91,232,.35), 0 0 0 1px var(--blue, #b15be8);
+  box-shadow: 0 0 0 2px var(--brand-accent, #5f756d);
 }
 
 /* table rows: soft highlight on hover so scanning data is easier */
@@ -80,7 +79,7 @@ table tbody tr:hover { background: var(--ice-2, #f4f9fd); }
 .nav a { position: relative; }
 .nav a.on::after {
   content: ""; position: absolute; left: 13px; right: 13px; bottom: 2px; height: 2px;
-  background: linear-gradient(90deg, var(--blue, #b15be8), var(--brand-primary, #32217c)); border-radius: 2px;
+  background: var(--brand-primary, #17212b); border-radius: 2px;
 }
 
 /* primary CTA buttons get a subtle sheen sweep on hover */
@@ -89,8 +88,7 @@ table tbody tr:hover { background: var(--ice-2, #f4f9fd); }
 }
 .btn-primary::after, button.btn-primary::after {
   content: ""; position: absolute; top: 0; left: -60%; width: 40%; height: 100%;
-  background: linear-gradient(120deg, transparent, rgba(255,255,255,.35), transparent);
-  transform: skewX(-20deg); transition: left .5s ease;
+  background: var(--brand-primary, #17212b); transform: skewX(-20deg); transition: left .5s ease;
 }
 .btn-primary:hover::after, button.btn-primary:hover::after { left: 130%; }
 
@@ -130,68 +128,8 @@ table tbody tr:hover { background: var(--ice-2, #f4f9fd); }
 
 @media (prefers-reduced-motion: no-preference) {
 
-  /* ── cards: soft physical tilt toward the cursor + a light that tracks it ──
-     Driven by --mx/--my/--rx/--ry, set by ui-enhance-v2.js on pointer move.
-     Falls back to flat if the vars are unset (JS not loaded / touch).
-     perspective() is applied per-card inside `transform`, NOT on a shared
-     ancestor like <body> — putting `perspective` on an ancestor makes that
-     ancestor the containing block for every position:fixed descendant
-     (drawers, modals, backdrops), which pins them to the document instead
-     of the viewport. Keeping it scoped to each card avoids that entirely. */
-  .card {
-    --rx: 0deg; --ry: 0deg; --mx: 50%; --my: 50%;
-    transform-style: preserve-3d;
-    transform: perspective(1000px) rotateX(var(--rx)) rotateY(var(--ry)) translateZ(0);
-    transition: transform .35s cubic-bezier(.2,.7,.2,1), box-shadow .35s ease, border-color .22s ease;
-    isolation: isolate;
-  }
-  .card.tilting { transition: transform .06s linear, box-shadow .12s ease; }
-  .card:hover {
-    box-shadow:
-      0 2px 4px rgba(13,42,71,.06),
-      0 12px 28px rgba(13,42,71,.10),
-      0 32px 64px -12px rgba(50,33,124,.22);
-  }
-  .card::before {
-    content: ""; position: absolute; inset: 0; border-radius: inherit;
-    background: radial-gradient(480px circle at var(--mx) var(--my), rgba(255,255,255,.5), transparent 42%);
-    opacity: 0; transition: opacity .3s ease; pointer-events: none;
-    mix-blend-mode: soft-light; z-index: 1;
-  }
-  .card:hover::before { opacity: 1; }
-
-  /* pull real content above the sheen layer */
-  .card > * { position: relative; z-index: 2; }
-
-  /* KPI/stat numbers sit slightly "raised" off the card on hover — a subtle
-     parallax layer, not a bounce */
-  .kpi-value, .stat-value, .metric-value {
-    display: inline-block;
-    transition: transform .35s cubic-bezier(.2,.7,.2,1);
-  }
-  .card:hover .kpi-value, .card:hover .stat-value, .card:hover .metric-value {
-    transform: translateZ(18px);
-  }
-}
-
-/* touch/imprecise pointers never get the tilt tracking — hover is sticky
-   on touch devices and would leave cards permanently skewed */
-@media (hover: none), (pointer: coarse) {
-  .card { transform: none !important; }
-  .card::before { display: none; }
-}
-
-/* ── a value just changed on screen: a brief, deliberate pop + colour
-   pulse so the eye catches the update. Class is added/removed briefly by
-   ui-enhance-v2.js whenever a KPI's rendered text changes — it never fires
-   on first paint, only on a real value change, so it can't read as fake
-   "loading" motion over static numbers. ── */
-@keyframes ui-value-pop {
-  0%   { transform: scale(1);    color: var(--brand-primary, #32217c); }
-  35%  { transform: scale(1.09); color: var(--blue, #b15be8); }
-  100% { transform: scale(1);    color: inherit; }
-}
-.ui-value-changed { animation: ui-value-pop .5s cubic-bezier(.2,.7,.2,1); }
+  .card { transition: border-color .18s ease; }
+  .card:hover { border-color: var(--brand-line, #d7dbd8); }
 
 /* ── audience switch (Employer / Portfolio): a sliding capsule behind the
    active label instead of an instant background swap ── */
@@ -542,8 +480,7 @@ button, input, select, textarea { max-width: 100%; }
 .rating-star{display:inline-block;font-size:19px;line-height:1;color:#d8dee6;}
 .rating-star.full{color:var(--chart-mid);}
 .rating-star.half{
-  background:linear-gradient(90deg,var(--chart-mid) 50%,#d8dee6 50%);
-  -webkit-background-clip:text;background-clip:text;color:transparent;
+  background: var(--brand-primary, #17212b); -webkit-background-clip:text;background-clip:text;color:transparent;
 }
 .rating-response-count{font-size:11.5px;color:#8497a7;font-weight:700;margin-top:4px;white-space:nowrap;}
 .rating-bars{min-width:0;}
@@ -1041,8 +978,7 @@ table.ct th,table.ct td{vertical-align:middle;}
 .enterprise-insight{
   min-width:0;
   padding:13px 16px;
-  background:linear-gradient(135deg,var(--white),var(--brand-soft));
-  border:1px solid var(--line);
+  background: var(--brand-primary, #17212b); border:1px solid var(--line);
   border-radius:13px;
 }
 .enterprise-insight-eyebrow{

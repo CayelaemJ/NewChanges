@@ -886,7 +886,7 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
     avg: zar(advances.length ? Math.round(ewaTotal / advances.length) : 0),
     avgRaw: advances.length ? rand(Math.round(ewaTotal / advances.length)) : 0,
     perClient: ewaClients ? Number((advances.length / ewaClients).toFixed(1)) : 0,
-    trend: ewaMonths.map((key) => Math.round(rand(ewaByMonth.get(key) ?? 0) / 1_000)),
+    trend: ewaMonths.map((key) => Math.round(rand(ewaByMonth.get(key) ?? 0))),
     trendLabels: ewaMonths.map(monthLabel),
   };
 
@@ -900,7 +900,7 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
   const rangeMonth = filter.rangeStart ? monthKey(filter.rangeStart) : null;
   const savingsPairs = [...savingByMonth.keys()].sort().map((key) => {
     cumulative += savingByMonth.get(key) ?? 0;
-    return { key, value: Math.round(rand(cumulative) / 1_000) };
+    return { key, value: Math.round(rand(cumulative)) };
   }).filter((point) => !rangeMonth || point.key >= rangeMonth).slice(-12);
   const savings = savingsPairs.map((point) => point.value);
   const savingsLabels = savingsPairs.map((point) => monthLabel(point.key));
@@ -1250,6 +1250,8 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
         label: filter.label,
         savings: savings,
         savingsLabels: savingsLabels,
+        monthlySavingRand: Number(rand(cumulativeMonthlySaving)),
+        totalAdvancedRaw: Number(rand(ewaTotal)),
         ewa: ewa.trend,
         ewaLabels: ewa.trendLabels,
         outcomes: Object.fromEntries((Array.isArray(outcomes) ? outcomes : []).map((row: any) => [row.key, row.trend || []])),
