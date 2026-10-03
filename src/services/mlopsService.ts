@@ -32,11 +32,11 @@ function numericPaths(value: any, prefix = "", out: Record<string, number> = {})
 async function snapshots(employerId: string, limit = 18): Promise<Snapshot[]> {
   const rows = await prisma.scoreSnapshot.findMany({
     where: { employerId, payloadVersion: { gte: 4 } },
-    orderBy: { period: "asc" },
+    orderBy: { period: "desc" },
     take: limit,
     select: { period: true, optimiseScore: true, rawScore: true, payload: true },
   });
-  return rows.map((r: any) => ({ period: r.period, optimiseScore: finite(Number(r.optimiseScore)) ? Number(r.optimiseScore) : null, rawScore: finite(Number(r.rawScore)) ? Number(r.rawScore) : null, payload: r.payload }));
+  return rows.reverse().map((r: any) => ({ period: r.period, optimiseScore: finite(Number(r.optimiseScore)) ? Number(r.optimiseScore) : null, rawScore: finite(Number(r.rawScore)) ? Number(r.rawScore) : null, payload: r.payload }));
 }
 
 function seriesFor(rows: Snapshot[], metric = "optimiseScore") {
@@ -104,7 +104,10 @@ export async function runMLOpsAssessment(employerId: string) {
 
 export async function getMLOpsPortfolioAssessment(employerIds: string[]) {
   const results=[] as any[];
-  for(const id of employerIds) results.push({employerId:id,assessment:await runMLOpsAssessment(id)});
+  for(let i=0;i<employerIds.length;i+=4){
+    const batch=employerIds.slice(i,i+4);
+    results.push(...await Promise.all(batch.map(async id=>({employerId:id,assessment:await runMLOpsAssessment(id)}))));
+  }
   return {modelVersion:VERSION,employers:results};
 }
 
