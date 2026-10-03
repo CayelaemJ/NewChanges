@@ -129,14 +129,26 @@ function DashboardView({me}:{me:Me}) {
   const role=roleLabels[me.role??""]??me.role??"User";
   const maxIncome=Math.max(1,...(data.income??[]).map(x=>x.count));
 
-  const themeStyle: CSSProperties = { "--brand-primary": normaliseHex(me.theme?.primaryColor, "#2b1b68"), "--brand-navy": normaliseHex(me.theme?.navyColor, "#0d2a47"), "--brand-accent": normaliseHex(me.theme?.accentColor, "#7d2fa3") } as CSSProperties;
+  const brandPrimary = normaliseHex(me.theme?.primaryColor, "#2b1b68");
+  const brandNavy = normaliseHex(me.theme?.navyColor, "#0d2a47");
+  const brandAccent = normaliseHex(me.theme?.accentColor, "#7d2fa3");
+  const chartPalette = useMemo(() => window.BrandEngine?.deriveChartPalette({accentColor: brandAccent, primaryColor: brandPrimary, navyColor: brandNavy}) ?? {}, [brandAccent, brandPrimary, brandNavy]);
+  const themeStyle: CSSProperties = {
+    "--brand-primary": brandPrimary,
+    "--brand-primary-deep": brandNavy,
+    "--brand-navy": brandNavy,
+    "--brand-accent": brandAccent,
+    "--blue": brandAccent,
+    "--blue-d": brandAccent,
+    ...Object.fromEntries(Object.entries(chartPalette).map(([key,value]) => [`--${key.replace(/^--/,"")}`, value]))
+  } as CSSProperties;
   useEffect(()=>{
     document.documentElement.classList.toggle("portal-dark",darkMode);
   },[darkMode]);
   useEffect(()=>{
     const engine=window.BrandEngine?.themeController();
-    if(engine) engine.set({brand:{accentColor:me.theme?.accentColor,primaryColor:me.theme?.primaryColor,navyColor:me.theme?.navyColor},light:"engine"});
-  },[me.theme?.accentColor,me.theme?.primaryColor,me.theme?.navyColor]);
+    if(engine) engine.set({brand:{accentColor:brandAccent,primaryColor:brandPrimary,navyColor:brandNavy},light:"engine",charts:chartPalette});
+  },[brandAccent,brandPrimary,brandNavy,chartPalette]);
 
   return <main className="dashboard-shell" style={themeStyle}>
     <div className="topbar">
