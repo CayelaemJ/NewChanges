@@ -23,9 +23,9 @@
   --brand-surface: var(--white, #ffffff);
   --brand-line: var(--line, #d7dde4);
   --brand-muted: var(--grey-l, #617486);
-  --brand-accent: var(--brand-accent, #7d2fa3);
+  --brand-accent: #7d2fa3;
   --brand-accent-soft: var(--ice, #eee8fb);
-  --brand-focus: var(--brand-accent, #7d2fa3);
+  --brand-focus: #7d2fa3;
 }
 
 html {
