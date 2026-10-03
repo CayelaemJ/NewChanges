@@ -130,11 +130,11 @@ function DashboardView({me}:{me:Me}) {
 
       <section className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[
-          ["Employees enrolled",number(data.kpis?.takeUp?.enrolled),`${pct(data.kpis?.takeUp?.pct)} take-up`,Users],
-          ["Employees activated",number(data.kpis?.activated?.count),`${pct(data.kpis?.activated?.pct)} of workforce`,CheckCircle2],
-          ["Monthly cash freed up",money(data.kpis?.monthlySaving?.rand),savingDelta===0?"No prior comparison":`${savingDelta>=0?"+":""}${money(savingDelta)} vs prior`,WalletCards],
-          ["Employee rating",data.kpis?.avgRating?.val==null?"Not available":`${data.kpis.avgRating.val.toFixed(1)}/5`,`${number(data.kpis?.avgRating?.responses)} responses`,Star]
-        ].map(([label,value,sub,Icon])=><Card key={label as string}><CardContent className="p-5"><div className="flex items-center justify-between"><span className="text-xs font-semibold text-slate-500">{label as string}</span><Icon className="h-4 w-4 text-violet-600"/></div><p className="mt-3 break-words text-2xl font-bold tracking-tight text-violet-800 sm:text-3xl">{value as string}</p><p className="mt-1 text-[11px] text-slate-500">{sub as string}</p></CardContent></Card>)}
+          ["Employees enrolled",number(data.kpis?.takeUp?.enrolled),`${pct(data.kpis?.takeUp?.pct)} take-up`],
+          ["Employees activated",number(data.kpis?.activated?.count),`${pct(data.kpis?.activated?.pct)} of workforce`],
+          ["Monthly cash freed up",money(data.kpis?.monthlySaving?.rand),savingDelta===0?"No prior comparison":`${savingDelta>=0?"+":""}${money(savingDelta)} vs prior`],
+          ["Employee rating",data.kpis?.avgRating?.val==null?"Not available":`${data.kpis.avgRating.val.toFixed(1)}/5`,`${number(data.kpis?.avgRating?.responses)} responses`]
+        ].map(([label,value,sub])=><Card key={label as string}><CardContent className="p-5"><div className="flex items-center justify-between"><span className="text-xs font-semibold text-slate-500">{label as string}</span></div><p className="mt-3 break-words text-2xl font-bold tracking-tight text-violet-800 sm:text-3xl">{value as string}</p><p className="mt-1 text-[11px] text-slate-500">{sub as string}</p></CardContent></Card>)}
       </section>
 
       <section className="mt-4 grid gap-4 lg:grid-cols-2">
@@ -226,8 +226,8 @@ function AdminView({me}:{me:Me}) {
   const roleOptions=isSuper?["ADMIN","SUPERADMIN","EMPLOYER_MANAGER","PORTFOLIO_MANAGER","VIEWER"]:["EMPLOYER_MANAGER","PORTFOLIO_MANAGER","VIEWER"];
 
   const nav=[
-    ["overview","Overview",ShieldCheck],["users","Users & roles",Users],["integrations","Live integrations",Landmark],
-    ["imports","Data governance",Activity],["audit","Audit history",CircleAlert],["compliance","POPIA",ShieldCheck],["mlops","MLOps",TrendingUp]
+    ["overview","Overview"],["users","Users & roles"],["integrations","Live integrations"],
+    ["imports","Data governance"],["audit","Audit history"],["compliance","POPIA"],["mlops","MLOps"]
   ] as const;
 
   return <main className="min-h-screen bg-slate-50/70">
@@ -236,11 +236,11 @@ function AdminView({me}:{me:Me}) {
         <div><div className="text-[10px] font-extrabold uppercase tracking-[.16em] text-violet-700">EFS Optimise</div><h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Administration</h1><p className="mt-1 text-sm text-slate-500">Governed control plane for identity, integrations, data and compliance.</p></div>
         <div className="flex items-center gap-3"><Badge>{roleLabels[me.role||""]||me.role||"User"}</Badge><Button variant="outline" onClick={()=>window.location.assign("/react/dashboard")}>Dashboard</Button></div>
       </header>
-      <nav className="mt-4 -mx-1 overflow-x-auto pb-1" aria-label="Administration sections"><div className="flex min-w-max gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">{nav.map(([key,label,Icon])=><Button key={key} size="sm" variant={tab===key?"default":"ghost"} onClick={()=>setTab(key)}><Icon className="mr-1.5 h-3.5 w-3.5"/>{label}</Button>)}</div></nav>
+      <nav className="mt-4 -mx-1 overflow-x-auto pb-1" aria-label="Administration sections"><div className="flex min-w-max gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">{nav.map(([key,label])=><Button key={key} size="sm" variant={tab===key?"default":"ghost"} onClick={()=>setTab(key)}>{label}</Button>)}</div></nav>
       {error&&<div className="mt-4 flex gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"><span className="text-xs font-bold uppercase tracking-widest text-red-700">Error</span><span>{error}</span></div>}
       {loading?<Card className="mt-5"><CardContent className="py-14 text-center text-sm text-slate-500">Loading governed administration data...</CardContent></Card>:<>
         {tab==="overview"&&<section className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {[["Active sessions",number(security?.activeSessions),Users],["Failed logins, 24h",number(security?.failedLogins24h),CircleAlert],["Open security alerts",number(security?.openAlerts),ShieldCheck],["Open imports",number(ops?.imports?.open),Activity]].map(([label,value,Icon])=><Card key={label as string}><CardContent className="p-5"><div className="flex justify-between"><span className="text-xs font-semibold text-slate-500">{label as string}</span><Icon className="h-4 w-4 text-violet-600"/></div><strong className="mt-3 block break-words text-2xl font-bold text-violet-800">{value as string}</strong></CardContent></Card>)}
+          {[["Active sessions",number(security?.activeSessions)],["Failed logins, 24h",number(security?.failedLogins24h)],["Open security alerts",number(security?.openAlerts)],["Open imports",number(ops?.imports?.open)]].map(([label,value])=><Card key={label as string}><CardContent className="p-5"><div className="flex justify-between"><span className="text-xs font-semibold text-slate-500">{label as string}</span></div><strong className="mt-3 block break-words text-2xl font-bold text-violet-800">{value as string}</strong></CardContent></Card>)}
         </section>}
         {tab==="overview"&&<section className="mt-4 grid gap-4 lg:grid-cols-2">
           <Card><CardHeader><SectionHeading title="Security & identity" description="Live authentication and access posture."/></CardHeader><CardContent><div className="grid gap-3 sm:grid-cols-3"><div><b className="text-xl text-violet-800">{number(security?.successfulLogins24h)}</b><p className="text-[10px] text-slate-500">Successful logins</p></div><div><b className="text-xl text-violet-800">{number(security?.failedLogins24h)}</b><p className="text-[10px] text-slate-500">Failed logins</p></div><div><b className="text-xl text-violet-800">{number(security?.openAlerts)}</b><p className="text-[10px] text-slate-500">Open alerts</p></div></div><Button className="mt-4" onClick={()=>setTab("users")}>Open identity controls</Button></CardContent></Card>
