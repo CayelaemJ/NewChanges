@@ -135,8 +135,8 @@ function DashboardView({me}:{me:Me}) {
   },[me.theme?.accentColor,me.theme?.primaryColor,me.theme?.navyColor]);
 
   return <main className="dashboard-shell" style={themeStyle}>
-    <div className="mx-auto w-full max-w-[1440px] px-3 py-4 sm:px-5 lg:px-8">
-      <header className="portal-header flex flex-col gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-center sm:justify-between">
+    <div className="wrap">
+      <header className="head">
         <div><div className="head-eyebrow">Employer Insights · Financial Wellbeing Programme</div><h1 className="mt-1 font-display text-3xl font-bold tracking-tight text-[var(--brand-primary)] sm:text-4xl">Your workforce <span className="emp">{data.employer}</span></h1></div>
         <div className="flex items-center gap-3 rounded-md border border-slate-200 bg-white px-3 py-2 shadow-sm"><div className="hidden h-8 w-8 items-center justify-center rounded-sm bg-[var(--brand-accent-soft)] text-[var(--brand-accent)] sm:flex"><span className="text-[10px] font-bold uppercase tracking-widest">User</span></div><div><p className="text-sm font-semibold text-slate-900">{me.name||me.email}</p><p className="text-[11px] text-slate-500">{role}</p></div></div>
       </header>
@@ -185,7 +185,7 @@ function DashboardView({me}:{me:Me}) {
         <Card><CardHeader><SectionHeading title="Financial problems resolved" description="Completed fixes from governed journey data."/></CardHeader><CardContent><div className="divide-y divide-slate-100">{(data.outcomes||[]).map(row=><div className="grid grid-cols-[1fr_auto] gap-2 py-3" key={row.key}><div><b className="text-xs">{row.name}</b><small className="mt-1 block text-[10px] text-slate-500">{row.avgPerEmployee}</small></div><strong className="text-sm text-[var(--brand-ink-strong)]">{number(row.count)}</strong><span className="col-span-2 text-[9px] text-slate-400">{row.statL}</span></div>)}</div></CardContent></Card>
       </section>
 
-      <section className="mt-4 grid gap-4 lg:grid-cols-2">
+      <section className="grid g-12 section-gap">
         <Card><CardHeader><SectionHeading title="Workforce funnel"/></CardHeader><CardContent><div className="grid gap-4">{(data.funnel||[]).map(row=><div className="grid grid-cols-[minmax(105px,1fr)_minmax(70px,2fr)_55px] items-center gap-3" key={row.label}><div><b className="text-xs">{row.label}</b><small className="mt-1 block text-[9px] text-slate-500">{row.sub}</small></div><Progress value={row.pct??0}/><strong className="text-right text-xs text-[var(--brand-ink-strong)]">{number(row.n)}</strong></div>)}</div></CardContent></Card>
         <Card><CardHeader><SectionHeading title="Activated employees by income band"/></CardHeader><CardContent><div className="grid gap-4">{(data.income||[]).map(row=><div className="grid grid-cols-[minmax(100px,1fr)_minmax(70px,2fr)_45px] items-center gap-3" key={row.name}><span className="text-xs">{row.name}</span><Progress value={row.count/maxIncome*100}/><strong className="text-right text-xs text-[var(--brand-ink-strong)]">{number(row.count)}</strong></div>)}</div></CardContent></Card>
       </section>
