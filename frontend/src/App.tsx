@@ -77,7 +77,7 @@ function LineChart({values,labels,prefix="R "}:{values:number[];labels:string[];
   const max=Math.max(...values,1),min=Math.min(...values,0),span=Math.max(max-min,1);
   const points=values.map((v,i)=>`${values.length===1?50:i/(values.length-1)*100},${92-(v-min)/span*76}`).join(" ");
   return <div className="mt-3 min-w-0">
-    <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="Trend chart" role="img" className="h-44 w-full rounded-md bg-slate-50">
+    <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="Trend chart" role="img" className="dashboard-chart w-full">
       <line x1="0" y1="92" x2="100" y2="92" className="stroke-slate-200" strokeWidth=".7"/>
       <polyline points={points} fill="none" className="stroke-[var(--brand-accent)]" strokeWidth="2.5" vectorEffect="non-scaling-stroke"/>
     </svg>
@@ -128,7 +128,7 @@ function DashboardView({me}:{me:Me}) {
   const role=roleLabels[me.role??""]??me.role??"User";
   const maxIncome=Math.max(1,...(data.income??[]).map(x=>x.count));
 
-  const themeStyle: CSSProperties = { "--brand-ink": normaliseHex(me.theme?.primaryColor, "#17212b"), "--brand-ink-strong": normaliseHex(me.theme?.navyColor, "#0d141b"), "--brand-accent": normaliseHex(me.theme?.accentColor, "#5f756d") } as CSSProperties;
+  const themeStyle: CSSProperties = { "--brand-primary": normaliseHex(me.theme?.primaryColor, "#2b1b68"), "--brand-navy": normaliseHex(me.theme?.navyColor, "#0d2a47"), "--brand-accent": normaliseHex(me.theme?.accentColor, "#7d2fa3") } as CSSProperties;
   useEffect(()=>{
     const engine=window.BrandEngine?.themeController();
     if(engine) engine.set({brand:{accentColor:me.theme?.accentColor,primaryColor:me.theme?.primaryColor,navyColor:me.theme?.navyColor},light:"engine"});
@@ -159,6 +159,13 @@ function DashboardView({me}:{me:Me}) {
         {comparison?.current&&<div className="text-xs text-slate-500 lg:ml-auto">Comparing <span className="font-bold text-[var(--brand-accent)]">{comparison.current}</span>{comparison.previous&&<> with <span className="font-bold text-[var(--brand-accent)]">{comparison.previous}</span></>}</div>}
       </section>
 
+      <section className="card wellness-card section-gap">
+        <div className="card-hd"><div><div className="card-title">Workforce Financial Wellness Score</div><div className="card-note">The single number that tracks your people's financial health and its trajectory.</div></div><span className="card-tag">Index · modelled</span></div>
+        <div className="wellness-inner">
+          <div className="wellness-left"><div className="rating-big">{data.wellness?.score==null?"Not available":data.wellness.score.toFixed(0)}</div><div className="wellness-band">{data.wellness?.band||"Unavailable"}</div><div className="wellness-delta">{data.wellness?.prior==null?"":`${data.wellness.score!=null&&data.wellness.score>=data.wellness.prior?"+":""}${data.wellness.score!=null?(data.wellness.score-data.wellness.prior).toFixed(0):""} pts vs prior`}</div></div>
+          <div className="wellness-right">{(data.wellness?.drivers||[]).map(d=><div className="wd-row" key={d.name}><div className="wd-name">{d.name}<small>{Math.round(d.weight*100)}% weight</small></div><div className="wd-track"><div className="wd-fill" style={{width:`${Math.max(0,Math.min(100,d.score??0))}%`,background:"var(--brand-accent)"}}/></div><div className="wd-val">{d.score==null?"N/A":d.score.toFixed(0)}</div></div>)}</div>
+        </div>
+      </section>
       <section className="grid g-4 section-gap">
         {[
           ["Employees enrolled",number(data.kpis?.takeUp?.enrolled),`${pct(data.kpis?.takeUp?.pct)} take-up`],
@@ -169,9 +176,8 @@ function DashboardView({me}:{me:Me}) {
       </section>
 
       <section className="grid g-12 section-gap">
-        <Card><CardHeader><SectionHeading title="Employee voice" description="Average rating and response coverage from employee feedback."/></CardHeader><CardContent><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><div className="flex flex-wrap items-center gap-3"><strong className="portal-number text-4xl font-bold tracking-tight text-[var(--brand-ink-strong)]">{data.ratings?.avg==null?"Not available":data.ratings.avg.toFixed(1)}</strong><div className="flex gap-0.5" aria-label={data.ratings?.avg==null?"Rating unavailable":data.ratings.avg.toFixed(1)+" out of 5 stars"}>{Array.from({length:5},(_,i)=><span aria-hidden="true" className="text-[var(--brand-accent)]">★</span>)}</div></div><p className="mt-1 text-xs text-slate-500">{number(data.ratings?.responses)} employee responses</p></div><div className="min-w-0 sm:w-52"><div className="mb-1 flex justify-between text-[10px] font-semibold text-slate-500"><span>Five-star responses</span><span>{pct(data.ratings?.fiveStarPct)}</span></div><Progress value={data.ratings?.fiveStarPct??0}/></div></div></CardContent></Card>
-        <Card><CardHeader><SectionHeading title="Optimise Score" description="Current governed wellbeing score and weighted drivers."/></CardHeader><CardContent><div className="flex items-baseline gap-3"><strong className="portal-number text-5xl font-bold tracking-tight text-[var(--brand-ink-strong)]">{data.wellness?.score==null?"Not available":data.wellness.score.toFixed(1)}</strong><Badge>{data.wellness?.band||"Unavailable"}</Badge></div><div className="mt-5 grid gap-4">{(data.wellness?.drivers||[]).map(d=><div key={d.name}><div className="mb-1 flex justify-between text-xs font-semibold"><span>{d.name}</span><b className="text-[var(--brand-accent)]">{d.score==null?"Not available":d.score.toFixed(1)}</b></div><Progress value={d.score??0}/></div>)}</div></CardContent></Card>
-        <Card><CardHeader><SectionHeading title="Monthly cash freed up" description="Line trend respects the selected reporting period and comparison window."/></CardHeader><CardContent><LineChart values={trend} labels={trendLabels}/></CardContent></Card>
+        <Card style={{gridColumn:"span 7"}}><CardHeader><SectionHeading title="From enrolled to better off" description="The journey every employee can take and where they are on it."/></CardHeader><CardContent><div className="funnel">{(data.funnel||[]).map(row=><div className="funnel-row" key={row.label}><div className="funnel-lbl">{row.label}<small>{row.sub}</small></div><div className="funnel-bar-bg"><div className="funnel-bar" style={{width:`${row.pct??0}%`,background:"var(--brand-accent)"}}>{row.pct!=null?`${row.pct}%`:""}</div></div><div className="funnel-val">{number(row.n)}</div></div>)}</div></CardContent></Card>
+        <Card style={{gridColumn:"span 5"}}><CardHeader><SectionHeading title="Financial problems resolved" description="Completed fixes and the value created."/></CardHeader><CardContent><div>{(data.outcomes||[]).slice(0,6).map(row=><div className="outcome" key={row.key}><div className="outcome-ico">{row.name.slice(0,1)}</div><div><div className="outcome-name">{row.name}</div><div className="outcome-meta">{row.avgPerEmployee||row.statL}</div></div><div className="outcome-stat"><div className="v">{number(row.count)}</div><div className="l">{row.statL}</div></div></div>)}</div></CardContent></Card>
       </section>
 
       <section className="grid g-12 section-gap">
