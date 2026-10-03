@@ -85,7 +85,7 @@ function LineChart({values,labels,previous=[],previousLabels=[],currentLabel="Se
   const min=Math.min(...all,0), max=Math.max(...all,1), span=Math.max(max-min,1);
   const w=720,h=230,left=42,right=16,top=18,bottom=38;
   const point=(v:number|null,i:number)=>v===null?null:[left+(n===1?(w-left-right)/2:i/(n-1)*(w-left-right)),top+(1-(v-min)/span)*(h-top-bottom)];
-  const path=(arr:Array<number|null>)=>arr.map((v,i)=>{const p=point(v,i);return p?\`\${i?"L":"M"} \${p[0].toFixed(1)} \${p[1].toFixed(1)}\`:null}).filter(Boolean).join(" ");
+  const path=(arr:Array<number|null>)=>arr.map((v,i)=>{const p=point(v,i);return p ? `${i ? "L" : "M"} ${p[0].toFixed(1)} ${p[1].toFixed(1)}` : null}).filter(Boolean).join(" ");
   const currentPath=path(a), priorPath=path(b);
   const labelsForChart=labels.length?labels:previousLabels;
   return <div className="comparison-chart">
