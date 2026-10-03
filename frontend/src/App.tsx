@@ -55,8 +55,8 @@ const roleLabels: Record<string,string> = {
 const money = (n:number|null|undefined) => n == null ? "Not available" : new Intl.NumberFormat("en-ZA",{style:"currency",currency:"ZAR",maximumFractionDigits:0}).format(n);
 const number = (n:number|null|undefined) => n == null ? "Not available" : new Intl.NumberFormat("en-ZA").format(n);
 const pct = (n:number|null|undefined) => n == null ? "Not available" : `${n.toFixed(1)}%`;
-const api = async <T,>(url:string):Promise<T> => {
-  const r=await fetch(url,{credentials:"same-origin",cache:"no-store"});
+const api = async <T,>(url:string, init?:RequestInit):Promise<T> => {
+  const r=await fetch(url,{credentials:"same-origin",cache:"no-store",...init});
   if(!r.ok) throw new Error((await r.json().catch(()=>({}))).error || "Request failed");
   return r.json();
 };
