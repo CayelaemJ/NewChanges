@@ -13,8 +13,7 @@
 .topbar { position: sticky; top: 0; z-index: 40; }
 .topbar::after {
   content: ""; display: block; height: 2px;
-  background: linear-gradient(90deg, var(--blue, #b15be8) 0%, var(--brand-primary, #32217c) 55%, transparent 100%);
-  opacity: .55;
+  background: var(--brand-primary, #17212b); opacity: .55;
 }
 
 /* cards: crisper shadow + a soft lift on hover so the surface feels alive */
@@ -37,17 +36,17 @@
 }
 .btn:active:not(:disabled), button:active:not(:disabled) { transform: translateY(0); }
 .btn-primary, button.btn-primary {
-  box-shadow: 0 6px 18px rgba(50,33,124,.18);
+  box-shadow: 0 1px 3px rgba(13,20,27,.08);
 }
 .btn-primary:hover:not(:disabled), button.btn-primary:hover:not(:disabled) {
-  box-shadow: 0 10px 26px rgba(50,33,124,.26);
+  box-shadow: 0 2px 6px rgba(13,20,27,.10);
 }
 
 /* clearer, on-brand focus rings for keyboard users (better contrast than a default outline) */
 a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, .btn:focus-visible,
 [tabindex]:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(177,91,232,.35), 0 0 0 1px var(--blue, #b15be8);
+  box-shadow: 0 0 0 2px var(--brand-accent, #5f756d);
 }
 
 /* table rows: soft highlight on hover so scanning data is easier */
@@ -80,7 +79,7 @@ table tbody tr:hover { background: var(--ice-2, #f4f9fd); }
 .nav a { position: relative; }
 .nav a.on::after {
   content: ""; position: absolute; left: 13px; right: 13px; bottom: 2px; height: 2px;
-  background: linear-gradient(90deg, var(--blue, #b15be8), var(--brand-primary, #32217c)); border-radius: 2px;
+  background: var(--brand-primary, #17212b); border-radius: 2px;
 }
 
 /* primary CTA buttons get a subtle sheen sweep on hover */
@@ -89,8 +88,7 @@ table tbody tr:hover { background: var(--ice-2, #f4f9fd); }
 }
 .btn-primary::after, button.btn-primary::after {
   content: ""; position: absolute; top: 0; left: -60%; width: 40%; height: 100%;
-  background: linear-gradient(120deg, transparent, rgba(255,255,255,.35), transparent);
-  transform: skewX(-20deg); transition: left .5s ease;
+  background: var(--brand-primary, #17212b); transform: skewX(-20deg); transition: left .5s ease;
 }
 .btn-primary:hover::after, button.btn-primary:hover::after { left: 130%; }
 
@@ -154,8 +152,7 @@ table tbody tr:hover { background: var(--ice-2, #f4f9fd); }
   }
   .card::before {
     content: ""; position: absolute; inset: 0; border-radius: inherit;
-    background: radial-gradient(480px circle at var(--mx) var(--my), rgba(255,255,255,.5), transparent 42%);
-    opacity: 0; transition: opacity .3s ease; pointer-events: none;
+    background: transparent; opacity: 0; transition: opacity .3s ease; pointer-events: none;
     mix-blend-mode: soft-light; z-index: 1;
   }
   .card:hover::before { opacity: 1; }
@@ -542,8 +539,7 @@ button, input, select, textarea { max-width: 100%; }
 .rating-star{display:inline-block;font-size:19px;line-height:1;color:#d8dee6;}
 .rating-star.full{color:var(--chart-mid);}
 .rating-star.half{
-  background:linear-gradient(90deg,var(--chart-mid) 50%,#d8dee6 50%);
-  -webkit-background-clip:text;background-clip:text;color:transparent;
+  background: var(--brand-primary, #17212b); -webkit-background-clip:text;background-clip:text;color:transparent;
 }
 .rating-response-count{font-size:11.5px;color:#8497a7;font-weight:700;margin-top:4px;white-space:nowrap;}
 .rating-bars{min-width:0;}
@@ -1041,8 +1037,7 @@ table.ct th,table.ct td{vertical-align:middle;}
 .enterprise-insight{
   min-width:0;
   padding:13px 16px;
-  background:linear-gradient(135deg,var(--white),var(--brand-soft));
-  border:1px solid var(--line);
+  background: var(--brand-primary, #17212b); border:1px solid var(--line);
   border-radius:13px;
 }
 .enterprise-insight-eyebrow{
