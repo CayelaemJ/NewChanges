@@ -261,7 +261,7 @@
    */
   function themeTokens(theme, mode) {
     theme = theme || {};
-    var accent = String(theme.accentColor || theme.primaryColor || '5F756D').replace(/^#/, '');
+    var accent = String(theme.accentColor || theme.primaryColor || 'B15BE8').replace(/^#/, '');
     var navy = String(theme.navyColor || theme.primaryColor || accent).replace(/^#/, '');
     var second = String(theme.primaryColor || accent).replace(/^#/, '');
     if (!parseHex(accent)) accent = '5F756D'; if (!parseHex(navy)) navy = '17212B'; if (!parseHex(second)) second = accent;
