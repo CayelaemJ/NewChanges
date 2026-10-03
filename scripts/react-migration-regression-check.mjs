@@ -31,6 +31,11 @@ const checks = [
   ["Period comparison points exposed", read("src/services/snapshotBuilder.ts").includes("monthlySavingRand: Number(rand(cumulativeMonthlySaving))") && read("src/services/snapshotBuilder.ts").includes("totalAdvancedRaw: Number(rand(ewaTotal))")],
   ["Governed period filter endpoint used", app.includes("/api/employers/") && app.includes("/periods") && app.includes("periodOptions")],
   ["Site filter is wired to dashboard query", app.includes('p.set("site",site)') && app.includes("filterOptions?.sites")],
+  ["Editorial visual system is active", styles.includes("--font-display") && styles.includes("--brand-accent") && styles.includes("Georgia")],
+  ["No generic icon library in React dashboard", !app.includes("lucide-react") && !app.includes("<Icon ")],
+  ["No decorative gradient treatment in React dashboard", !app.includes("gradient")],
+  ["Neutral-first palette replaces saturated violet utility classes", !/violet-(50|100|200|300|400|500|600|700|800|900|950)/.test(app)],
+  ["Full-value typography remains intact", app.includes("Intl.NumberFormat("en-ZA"") && !app.includes("/ 1_000")],
 ];
 
 let failed = 0;
