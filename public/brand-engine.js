@@ -273,8 +273,7 @@
       t['--blue'] = pound(a); t['--blue-d'] = pound(lch(aL.L - 0.08, aL.C, aL.h));
       t['--brand-primary'] = pound(n); t['--brand-primary-deep'] = pound(lch(hexToLch(n).L - 0.07, hexToLch(n).C, hexToLch(n).h));
       t['--ice'] = pound(lch(0.955, Math.min(A.C * 0.22, 0.04), A.h)); t['--brand-soft'] = pound(lch(0.972, Math.min(A.C * 0.16, 0.03), A.h));
-      t['--brand-grad-1'] = pound(n); t['--brand-grad-2'] = pound(mixHex(n, a, 0.45)); t['--brand-grad-3'] = pound(a);
-      t['--brand-grad-4'] = pound(lch(Math.min(aL.L + 0.1, 0.9), aL.C * 0.85, aL.h)); t['--brand-grad-5'] = pound(lch(Math.min(aL.L + 0.2, 0.93), aL.C * 0.6, aL.h));
+      t['--brand-grad-1'] = pound(n); t['--brand-grad-2'] = pound(n); t['--brand-grad-3'] = pound(a); t['--brand-grad-4'] = pound(a); t['--brand-grad-5'] = pound(a);
       t['--bar-bg'] = pound(n); t['--ent-paper'] = '#f6f4fb'; t['--brand-vivid'] = pound(accent);
       Object.keys(LIGHT_STATIC).forEach(function (k) { t[k] = LIGHT_STATIC[k]; });
       return t;
@@ -294,8 +293,7 @@
     t['--blue'] = pound(acc); t['--blue-d'] = pound(lch(Math.min(accL.L + 0.07, 0.92), accL.C, accL.h));
     t['--brand-primary'] = pound(head); t['--brand-primary-deep'] = pound(bar); t['--bar-bg'] = pound(bar); t['--brand-vivid'] = pound(ensureContrast(accent, bar, 3));
     t['--dm-on-accent'] = contrast('FFFFFF', accent) >= 4.5 ? '#ffffff' : '#0b0f19';
-    t['--brand-grad-1'] = pound(bar); t['--brand-grad-2'] = pound(mixHex(bar, acc, 0.4)); t['--brand-grad-3'] = pound(acc);
-    t['--brand-grad-4'] = pound(lch(Math.min(accL.L + 0.08, 0.9), accL.C * 0.8, accL.h)); t['--brand-grad-5'] = pound(lch(Math.min(accL.L + 0.16, 0.93), accL.C * 0.55, accL.h));
+    t['--brand-grad-1'] = pound(bar); t['--brand-grad-2'] = pound(bar); t['--brand-grad-3'] = pound(acc); t['--brand-grad-4'] = pound(acc); t['--brand-grad-5'] = pound(acc);
     t['--green-soft'] = '#153d2e'; t['--amber-soft'] = '#41321a'; t['--red-soft'] = '#45262a';
     return t;
   }
