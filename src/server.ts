@@ -316,7 +316,15 @@ app.get("/react/", async (_req, reply) => {
     return reply.code(503).send({ error: "React frontend has not been built yet" });
   }
 });
-app.get("/react/admin", async (_req, reply) => {\n  try {\n    const html = await readFile(join(PUBLIC_DIR, "react", "index.html"), "utf-8");\n    return reply.type("text/html; charset=utf-8").header("Cache-Control", "no-store").send(html);\n  } catch {\n    return reply.code(503).send({ error: "React frontend has not been built yet" });\n  }\n});\napp.get("/react/dashboard", async (_req, reply) => {
+app.get("/react/admin", async (_req, reply) => {
+  try {
+    const html = await readFile(join(PUBLIC_DIR, "react", "index.html"), "utf-8");
+    return reply.type("text/html; charset=utf-8").header("Cache-Control", "no-store").send(html);
+  } catch {
+    return reply.code(503).send({ error: "React frontend has not been built yet" });
+  }
+});
+app.get("/react/dashboard", async (_req, reply) => {
   try {
     const html = await readFile(join(PUBLIC_DIR, "react", "index.html"), "utf-8");
     return reply.type("text/html; charset=utf-8").header("Cache-Control", "no-store").send(html);
