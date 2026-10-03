@@ -331,6 +331,54 @@
   .dashboard-shell .topbar-inner,.dashboard-shell .wrap{padding-left:12px;padding-right:12px}
 }
 
+/* Main visual token bridge. Brand Engine owns these values; React components consume them consistently. */
+:root{
+  --blue:var(--brand-accent,#7d2fa3);
+  --blue-d:color-mix(in srgb,var(--blue) 82%,#2b1b68);
+  --brand-primary:var(--brand-primary,#2b1b68);
+  --brand-primary-deep:var(--brand-navy,#0d2a47);
+  --ice:color-mix(in srgb,var(--blue) 12%,#fff);
+  --ice-2:#edf4fa;
+  --line:color-mix(in srgb,var(--blue) 18%,#d7dde4);
+  --line-soft:color-mix(in srgb,var(--blue) 10%,#e8edf2);
+  --ink:#0f2438;
+  --grey:#425466;
+  --grey-l:#617486;
+  --green:#187a4d;
+  --green-soft:#dff3e8;
+  --white:#fff;
+  --shadow:0 1px 2px rgba(13,42,71,.04),0 8px 24px rgba(13,42,71,.06);
+  --shadow-lg:0 2px 4px rgba(13,42,71,.05),0 20px 48px rgba(13,42,71,.10);
+}
+
+/* Tailwind utility text/background classes must not erase the branded dashboard palette. */
+.dashboard-shell .text-slate-900{color:var(--portal-ink)!important}
+.dashboard-shell .text-slate-700{color:var(--portal-grey)!important}
+.dashboard-shell .text-slate-600,.dashboard-shell .text-slate-500{color:var(--portal-grey-light)!important}
+.dashboard-shell .text-slate-400{color:color-mix(in srgb,var(--portal-grey-light) 72%,#fff)!important}
+.dashboard-shell .text-slate-300{color:var(--portal-line)!important}
+.dashboard-shell .border-slate-200{border-color:var(--portal-line)!important}
+.dashboard-shell .bg-white{background:#fff!important}
+.dashboard-shell .bg-slate-50{background:var(--portal-ice-2)!important}
+.dashboard-shell .text-red-700{color:var(--portal-red)!important}
+.dashboard-shell .text-emerald-700{color:var(--portal-green)!important}
+
+/* Main-style branded chart tracks and values. */
+.dashboard-shell .dashboard-chart{background:linear-gradient(to bottom,transparent 0%,transparent 92%,var(--portal-line-soft) 92%,var(--portal-line-soft) 92.4%,transparent 92.4%)}
+.dashboard-shell .dashboard-chart + div span:last-child{color:var(--portal-primary)}
+.dashboard-shell .recharts-line path,.dashboard-shell .recharts-line-curve{stroke:var(--portal-blue)!important}
+.dashboard-shell .recharts-cartesian-axis-tick-value{fill:var(--portal-grey-light)!important}
+.dashboard-shell .recharts-cartesian-grid line{stroke:var(--portal-line-soft)!important}
+.dashboard-shell .kpi-value,.dashboard-shell .stat-cell .v,.dashboard-shell .num,.dashboard-shell .hbar-val,.dashboard-shell .wd-val{font-variant-numeric:tabular-nums;font-feature-settings:"tnum";}
+
+/* Keep the PDF/reference hierarchy: dark text on light surfaces and clear branded accents. */
+.dashboard-shell :is(p,span,div,td,th,label){text-rendering:optimizeLegibility}
+.dashboard-shell .card-description{color:var(--portal-grey)!important}
+.dashboard-shell .portal-header h1{color:var(--portal-primary)!important}
+.dashboard-shell .portal-header .emp{color:var(--portal-ink)!important}
+.dashboard-shell .portal-theme-quick{border-color:var(--portal-line)!important;background:var(--portal-ice)!important;color:var(--portal-primary)!important}
+.dashboard-shell .portal-theme-quick:hover{border-color:var(--portal-blue)!important;color:var(--portal-blue)!important}
+
 /* Main-branch dark mode contract for the React dashboard. */
 html.portal-dark body{background:var(--dm-bg,#15171f)!important;color:var(--ink,#eceef4)!important}
 html.portal-dark .dashboard-shell{background:var(--dm-bg,#15171f)!important;color:var(--ink,#eceef4)!important}
