@@ -150,7 +150,7 @@ function DashboardView({me}:{me:Me}) {
       </section>
 
       <section className="filters">
-        <div className="flex flex-wrap gap-1 rounded-md bg-slate-100 p-1">
+        <div className="seg">
           {([["latest","Latest"],["quarter","Quarter"],["all","Programme"]] as const).map(([key,label])=><Button key={key} size="sm" variant={!period&&range===key?"default":"ghost"} onClick={()=>{setPeriod("");setRange(key)}}>{label}</Button>)}
         </div>
         <Select label="Month" value={period} onChange={e=>{setPeriod(e.target.value);if(e.target.value)setRange("latest")}}><option value="">Select month</option>{periodOptions.map(m=><option key={m} value={m}>{new Date(m+"-01T00:00:00Z").toLocaleDateString("en-ZA",{month:"long",year:"numeric",timeZone:"UTC"})}</option>)}</Select>
