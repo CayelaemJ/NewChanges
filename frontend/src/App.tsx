@@ -112,11 +112,10 @@ function SectionHeading({title,description}:{title:string;description?:string}) 
 function WellnessGauge({score}:{score:number|null|undefined}) {
   if(score==null || !Number.isFinite(Number(score))) return <div className="wellness-gauge-empty">Not available</div>;
   const value=Math.max(0,Math.min(100,Number(score)));
-  const r=64, circumference=Math.PI*r, dash=(circumference*(value/100)).toFixed(1);
   return <svg viewBox="0 0 160 96" width="180" className="wellness-gauge" role="img" aria-label={`Workforce Financial Wellness Score ${value} out of 100`}>
     <defs><linearGradient id="wellnessGaugeGradient" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stopColor="var(--brand-grad-1)"/><stop offset=".5" stopColor="var(--brand-grad-3)"/><stop offset="1" stopColor="var(--brand-grad-5)"/></linearGradient></defs>
     <path d="M16 88 A64 64 0 0 1 144 88" fill="none" stroke="var(--ice-2)" strokeWidth="13" strokeLinecap="round"/>
-    <path d="M16 88 A64 64 0 0 1 144 88" fill="none" stroke="url(#wellnessGaugeGradient)" strokeWidth="13" strokeLinecap="round" strokeDasharray={`${dash} ${circumference.toFixed(1)}`}/>
+    <path d="M16 88 A64 64 0 0 1 144 88" fill="none" stroke="url(#wellnessGaugeGradient)" strokeWidth="13" strokeLinecap="round" pathLength="100" strokeDasharray={`${value} ${100-value}`} strokeDashoffset="0"/>
     <text x="80" y="74" textAnchor="middle" fontFamily="Fraunces,serif" fontSize="34" fontWeight="600" fill="var(--brand-primary)">{value.toFixed(0)}</text>
     <text x="80" y="90" textAnchor="middle" fontSize="9.5" fontWeight="700" fill="var(--grey-l)">/ 100</text>
   </svg>;
