@@ -3005,8 +3005,22 @@ async function loadLiveData({refreshOnly=false}={}){
     const fl=document.getElementById('data-fresh-label');
     document.querySelector('.data-fresh')?.classList.remove('is-error');
     if(fl){
-      if(live.sourceDataUpdatedAt||live.dataAsOf){ const d=new Date(live.sourceDataUpdatedAt||live.dataAsOf); fl.textContent='Source updated '+d.toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'}); }
-      else fl.textContent='Live data';
+      const syncAt=live.syncStatus?.lastSuccessfulSyncAt;
+      const sourceAt=live.sourceDataUpdatedAt||live.dataAsOf;
+      if(syncAt){
+        const d=new Date(syncAt);
+        fl.textContent='Last synced '+d.toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'});
+      }else if(sourceAt){
+        const d=new Date(sourceAt);
+        fl.textContent='Source updated '+d.toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'});
+      }else{
+        fl.textContent='Live data';
+      }
+      if(fl.title='') fl.removeAttribute('title');
+      if(syncAt && sourceAt){
+        const sd=new Date(sourceAt);
+        fl.title='Source data updated '+sd.toLocaleString('en-ZA',{dateStyle:'medium',timeStyle:'short'});
+      }
     }
     renderMonthActivity(live.monthActivity,live.filterContext); renderDataQuality(live.dataQuality); setLiveFootnote(live.filterContext);
     document.getElementById('demo-banner')?.remove();
