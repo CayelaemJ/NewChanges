@@ -141,7 +141,64 @@ export function publicConfig(config: Awaited<ReturnType<typeof getConfig>>) {
   };
 }
 
+const FULL_REFRESH_LOCK_A = 0x454653; // must match dailyRefresh.ts
+const FULL_REFRESH_LOCK_B = 78;
+
+async function openIncrementalSyncLease() {
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) throw new Error("DATABASE_URL is required for source-sync coordination.");
+  const client = new Client({ connectionString });
+  await client.connect();
+  try {
+    const result = await client.query(
+      "SELECT pg_try_advisory_lock_shared($1, $2) AS acquired",
+      [FULL_REFRESH_LOCK_A, FULL_REFRESH_LOCK_B],
+    );
+    if (!Boolean(result.rows?.[0]?.acquired)) {
+      await client.end();
+      return null;
+    }
+    return client;
+  } catch (error) {
+    await client.end().catch(() => {});
+    throw error;
+  }
+}
+
+async function closeIncrementalSyncLease(client: Client | null) {
+  if (!client) return;
+  try {
+    await client.query(
+      "SELECT pg_advisory_unlock_shared($1, $2)",
+      [FULL_REFRESH_LOCK_A, FULL_REFRESH_LOCK_B],
+    );
+  } finally {
+    await client.end().catch(() => {});
+  }
+}
+
 export async function runSync(trigger: "manual" | "scheduled" | "full-refresh" = "manual") {
+  // dailyRefresh.ts already owns the exclusive database lease while it calls
+  // the full-refresh path. Every other sync takes a shared lease so an ordinary
+  // sync can never overlap the purge/reload phase on another Railway replica.
+  if (trigger === "full-refresh") return runSyncUnlocked(trigger);
+
+  const lease = await openIncrementalSyncLease();
+  if (!lease) {
+    return {
+      ok: false,
+      status: "REBUILDING",
+      error: "An authoritative full refresh currently owns the source-sync lease. Try again after it completes.",
+    };
+  }
+  try {
+    return await runSyncUnlocked(trigger);
+  } finally {
+    await closeIncrementalSyncLease(lease);
+  }
+}
+
+async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" = "manual") {
   const config = await getConfig();
   if (config.lastSyncStatus === "REBUILDING" && trigger !== "full-refresh") {
     return { ok: false, status: "REBUILDING", error: "A full source refresh is already rebuilding the dashboard. Try again after it completes." };
