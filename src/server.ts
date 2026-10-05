@@ -1156,8 +1156,9 @@ app.get<{ Params: { jobId: string } }>(
   },
 );
 
-// Manual run of the scheduled daily live refresh (app pipeline by default;
-// set DAILY_REFRESH_MODE=sqlproc to run refresh_all_reports() in the DB).
+// Manual run of the same authoritative purge-and-overwrite pipeline used by
+// the 00:00 Africa/Johannesburg refresh. The validated app pipeline is always
+// used because the legacy SQL procedure does not reload every canonical feed.
 app.post("/api/admin/integration/refresh", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
   const result = await triggerRefreshNow();
@@ -1165,13 +1166,11 @@ app.post("/api/admin/integration/refresh", async (req, reply) => {
   return result;
 });
 
-// ── DANGER: wipe every synced row and pull a fresh full copy from the
-//    connected API/SQL source in one action. Cursor-based "Sync now" only
-//    ever pulls what's changed since the last cursor, so rows the source
-//    deleted (or a bad prior sync left half-committed) can linger forever.
-//    This is the explicit "throw it all away and reload from scratch"
-//    button for that — admin only, and confirm: "RESET" is required so it
-//    can never fire from a stray click. ──
+// ── DANGER: purge source-derived dashboard facts/caches and pull a fresh
+//    authoritative copy from the connected API/SQL source in one action.
+//    Identity/configuration anchors and separately sourced chat history are
+//    preserved. Admin only; confirm: "RESET" is required so this cannot fire
+//    from a stray click. ──
 app.post<{ Body: { confirm?: string } }>("/api/admin/integration/full-resync", async (req, reply) => {
   const admin = await requireAdmin(req, reply); if (!admin) return;
   if ((req.body?.confirm) !== "RESET") {
