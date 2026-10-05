@@ -112,6 +112,9 @@
   .data-fresh.is-error{color:var(--red);}
   .data-fresh.is-error .dot{background:var(--red);}
   .avatar{width:34px;height:34px;border-radius:50%;background:var(--brand-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;}
+  .role-indicator{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--line);border-radius:999px;background:var(--ice);color:var(--brand-primary);font:800 10.5px/1 'Manrope',sans-serif;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;}
+  .role-indicator.superadmin{background:#eef2ff;border-color:#c7d2fe;color:#3730a3;}
+  .role-indicator.admin{background:#edf7ff;border-color:#c7e4f7;color:#005e9e;}
 
   /* ── header block ──────────────────────────────────── */
   .head{padding:34px 0 22px;display:flex;align-items:flex-end;justify-content:space-between;gap:30px;flex-wrap:wrap;}
@@ -721,6 +724,7 @@
     <div class="topbar-spacer"></div>
     <div class="topbar-meta">
       <div class="data-fresh"><span class="dot"></span> <span id="data-fresh-label">Loading…</span></div>
+      <div id="role-indicator" class="role-indicator" aria-label="Current access role"></div>
       <div id="portal-account"></div>
     </div>
   </div>
@@ -3364,6 +3368,19 @@ function handleWelcomeSplash(me){
 }
 
 function addAuthBar(me){
+  const roleIndicator=document.getElementById('role-indicator');
+  if(roleIndicator){
+    const role=String(me?.role||'').toUpperCase();
+    if(role==='SUPERADMIN'){
+      roleIndicator.textContent='★ SUPER ADMIN';
+      roleIndicator.className='role-indicator superadmin';
+    }else if(role==='ADMIN'){
+      roleIndicator.textContent='ADMIN';
+      roleIndicator.className='role-indicator admin';
+    }else{
+      roleIndicator.remove();
+    }
+  }
   const meta=document.querySelector('.topbar-meta');
   if(!meta) return;
   if(!me.modules.portfolio){
