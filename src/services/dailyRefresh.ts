@@ -14,7 +14,7 @@
 // ════════════════════════════════════════════════════════════════════
 
 import cron from "node-cron";
-import { runSync } from "./syncService.js";
+import { runSync, testConnection } from "./syncService.js";
 import { purgeDashboardDataForFullRefresh } from "./importService.js";
 import { prisma } from "./snapshotBuilder.js";
 
@@ -58,18 +58,28 @@ async function runAuthoritativeFullRefresh(reason: "scheduled" | "manual") {
 
   activeFullRefresh = (async () => {
     const startedAt = new Date();
-    await setRefreshState(
-      "REBUILDING",
-      `Full refresh started (${reason}). Existing dashboard facts are being purged before the authoritative source is reloaded.`,
-      startedAt,
-    );
-
-    console.log(
-      `[${startedAt.toISOString()}] Full dashboard refresh starting (${reason}, timezone: ${REFRESH_TIMEZONE})...`,
-    );
-
     let purgeResult: any = null;
+
     try {
+      // Never destroy the currently published dashboard merely because the
+      // source is unreachable or its canonical SQL views are malformed.
+      // SQL preflight validates every LOAD_ORDER view; API preflight verifies
+      // the configured source endpoint before the destructive phase begins.
+      const preflight: any = await testConnection();
+      if (!preflight?.ok) {
+        throw new Error(preflight?.error ?? preflight?.note ?? "Source preflight failed.");
+      }
+
+      await setRefreshState(
+        "REBUILDING",
+        `Full refresh started (${reason}). Source preflight passed; existing dashboard facts are being purged before the authoritative source is reloaded.`,
+        startedAt,
+      );
+
+      console.log(
+        `[${startedAt.toISOString()}] Full dashboard refresh starting (${reason}, timezone: ${REFRESH_TIMEZONE})...`,
+      );
+
       purgeResult = await purgeDashboardDataForFullRefresh();
       const syncResult: any = await runSync("full-refresh");
 
@@ -113,9 +123,10 @@ async function runAuthoritativeFullRefresh(reason: "scheduled" | "manual") {
       const message = error?.message ?? String(error);
       const note = purgeResult
         ? `Full refresh failed after purging ${purged} source-derived dashboard rows: ${message}`
-        : `Full refresh failed before the purge completed: ${message}`;
+        : `Full refresh preflight failed before any dashboard data was purged: ${message}`;
+      const failureStatus = purgeResult ? "FULL_REFRESH_FAILED" : "FULL_REFRESH_PRECHECK_FAILED";
 
-      await setRefreshState("FULL_REFRESH_FAILED", note, finishedAt, false).catch(() => {});
+      await setRefreshState(failureStatus, note, finishedAt, false).catch(() => {});
       console.error(`[${finishedAt.toISOString()}] ${note}`);
       throw error;
     } finally {
