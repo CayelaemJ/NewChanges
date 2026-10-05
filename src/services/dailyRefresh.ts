@@ -26,7 +26,8 @@ let activeFullRefresh: Promise<any> | null = null;
 // two app instances receiving the same midnight cron tick could both purge and
 // reload the live dataset. Keep this key stable for this one global operation.
 const FULL_REFRESH_LOCK_A = 0x454653; // "EFS"
-const FULL_REFRESH_LOCK_B = 78;
+const FULL_REFRESH_LEADER_LOCK_B = 78;
+const SOURCE_SYNC_COORDINATION_LOCK_B = 79;
 
 async function openFullRefreshLease() {
   const connectionString = process.env.DATABASE_URL;
@@ -37,7 +38,7 @@ async function openFullRefreshLease() {
   try {
     const result = await client.query(
       "SELECT pg_try_advisory_lock($1, $2) AS acquired",
-      [FULL_REFRESH_LOCK_A, FULL_REFRESH_LOCK_B],
+      [FULL_REFRESH_LOCK_A, FULL_REFRESH_LEADER_LOCK_B],
     );
     const acquired = Boolean(result.rows?.[0]?.acquired);
     if (!acquired) {
@@ -51,10 +52,32 @@ async function openFullRefreshLease() {
   }
 }
 
+async function acquireSourceSyncExclusiveLease(client: Client) {
+  // REBUILDING is set before this wait, so no new normal sync can progress.
+  // Poll instead of waiting forever: a wedged source sync must fail the
+  // pre-purge stage rather than leave the dashboard permanently rebuilding.
+  for (let attempt = 0; attempt < 120; attempt++) {
+    const result = await client.query(
+      "SELECT pg_try_advisory_lock($1, $2) AS acquired",
+      [FULL_REFRESH_LOCK_A, SOURCE_SYNC_COORDINATION_LOCK_B],
+    );
+    if (Boolean(result.rows?.[0]?.acquired)) return;
+    await new Promise((resolve) => setTimeout(resolve, 5_000));
+  }
+  throw new Error("Timed out waiting for an existing source sync to release the full-refresh coordination lease.");
+}
+
 async function closeFullRefreshLease(client: Client | null) {
   if (!client) return;
   try {
-    await client.query("SELECT pg_advisory_unlock($1, $2)", [FULL_REFRESH_LOCK_A, FULL_REFRESH_LOCK_B]);
+    await client.query(
+      "SELECT pg_advisory_unlock($1, $2)",
+      [FULL_REFRESH_LOCK_A, SOURCE_SYNC_COORDINATION_LOCK_B],
+    ).catch(() => {});
+    await client.query(
+      "SELECT pg_advisory_unlock($1, $2)",
+      [FULL_REFRESH_LOCK_A, FULL_REFRESH_LEADER_LOCK_B],
+    ).catch(() => {});
   } finally {
     await client.end().catch(() => {});
   }
@@ -122,6 +145,12 @@ async function runAuthoritativeFullRefresh(reason: "scheduled" | "manual") {
         throw new Error(preflight?.error ?? preflight?.note ?? "Source preflight failed.");
       }
 
+      await setRefreshState(
+        "REBUILDING",
+        `Full refresh started (${reason}). Source preflight passed; waiting for any active source sync before the purge/reload begins.`,
+        startedAt,
+      );
+      await acquireSourceSyncExclusiveLease(lease);
       await setRefreshState(
         "REBUILDING",
         `Full refresh started (${reason}). Source preflight passed; existing dashboard facts are being purged before the authoritative source is reloaded.`,
