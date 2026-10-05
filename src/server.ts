@@ -1160,7 +1160,9 @@ app.get<{ Params: { jobId: string } }>(
 // set DAILY_REFRESH_MODE=sqlproc to run refresh_all_reports() in the DB).
 app.post("/api/admin/integration/refresh", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
-  return triggerRefreshNow();
+  const result = await triggerRefreshNow();
+  if (!result?.ok) return reply.code(500).send(result);
+  return result;
 });
 
 // ── DANGER: wipe every synced row and pull a fresh full copy from the
@@ -1176,10 +1178,10 @@ app.post<{ Body: { confirm?: string } }>("/api/admin/integration/full-resync", a
     return reply.code(400).send({ error: 'confirmation phrase missing — expected confirm: "RESET"' });
   }
   try {
-    const wiped = await resetAllData();
-    logAdminAction(admin, "data.reset_all", `Wiped all imported data (full resync)`, { detail: wiped });
-    const synced = await runSync("manual");
-    return { wiped, synced };
+    const refreshed = await triggerRefreshNow();
+    logAdminAction(admin, "data.full_refresh", "Purged and overwrote dashboard data from the authoritative source", { detail: refreshed });
+    if (!refreshed?.ok) return reply.code(500).send(refreshed);
+    return refreshed;
   } catch (e: any) {
     req.log.error({ err: e }, "full resync failed");
     return reply.code(500).send({ error: e?.message || "Full resync failed." });
@@ -1430,6 +1432,38 @@ app.get<{ Params: { slug: string } }>("/api/partner-theme/:slug", async (req) =>
   return themeForSlug(req.params.slug);
 });
 
+async function dashboardSyncState() {
+  const syncConfig = await prisma.integrationConfig.findUnique({
+    where: { id: "default" },
+    select: {
+      lastSuccessfulSyncAt: true,
+      lastSyncAt: true,
+      lastSyncStatus: true,
+      lastSyncNote: true,
+    },
+  });
+  return {
+    lastSuccessfulSyncAt: syncConfig?.lastSuccessfulSyncAt?.toISOString() ?? null,
+    lastSyncAt: syncConfig?.lastSyncAt?.toISOString() ?? null,
+    lastSyncStatus: syncConfig?.lastSyncStatus ?? null,
+    lastSyncNote: syncConfig?.lastSyncNote ?? null,
+  };
+}
+
+function dashboardRefreshBlocked(syncStatus: Awaited<ReturnType<typeof dashboardSyncState>>) {
+  return syncStatus.lastSyncStatus === "REBUILDING" || syncStatus.lastSyncStatus === "FULL_REFRESH_FAILED";
+}
+
+function sendDashboardRefreshUnavailable(reply: FastifyReply, syncStatus: Awaited<ReturnType<typeof dashboardSyncState>>) {
+  reply.header("Retry-After", "60");
+  return reply.code(503).send({
+    error: syncStatus.lastSyncStatus === "REBUILDING"
+      ? "Dashboard data is being purged and overwritten from the authoritative source. The refreshed dashboard will publish when the rebuild is complete."
+      : "The last full dashboard refresh failed after the purge. Partial rebuilt data is being withheld until a complete source refresh succeeds.",
+    syncStatus,
+  });
+}
+
 // ── dashboard: real stock/as-at + flow/in-window filtering ──
 app.get<{
   Params: { employerId: string };
@@ -1443,6 +1477,8 @@ app.get<{
     if (!canViewEmployer(user, employerId)) return reply.code(403).send({ error: "no access to this employer" });
     const queryError = dashboardQueryError(req.query);
     if (queryError) return reply.code(400).send({ error: queryError });
+    const syncStatus = await dashboardSyncState();
+    if (dashboardRefreshBlocked(syncStatus)) return sendDashboardRefreshUnavailable(reply, syncStatus);
     const payload: any = await getDashboardPayload(employerId, {
       period: req.query.period,
       quarter: req.query.quarter,
@@ -1452,15 +1488,7 @@ app.get<{
     });
     const sections = await sectionsForUser(user);
     if (!sections.voiceOfEmployee) payload.chat = { available: false };
-    const syncConfig = await prisma.integrationConfig.findUnique({
-      where: { id: "default" },
-      select: { lastSuccessfulSyncAt: true, lastSyncAt: true, lastSyncStatus: true },
-    });
-    payload.syncStatus = {
-      lastSuccessfulSyncAt: syncConfig?.lastSuccessfulSyncAt?.toISOString() ?? null,
-      lastSyncAt: syncConfig?.lastSyncAt?.toISOString() ?? null,
-      lastSyncStatus: syncConfig?.lastSyncStatus ?? null,
-    };
+    payload.syncStatus = syncStatus;
     return payload;
   },
 );
@@ -1471,6 +1499,8 @@ app.get<{ Params: { employerId: string }; Querystring: { site?: string; income?:
   async (req, reply) => {
     const user = await requireUser(req, reply); if (!user) return;
     if (!canViewEmployer(user, req.params.employerId)) return reply.code(403).send({ error: "no access" });
+    const syncStatus = await dashboardSyncState();
+    if (dashboardRefreshBlocked(syncStatus)) return sendDashboardRefreshUnavailable(reply, syncStatus);
 
     // Keep this endpoint cheap. The previous implementation read date columns
     // from six large tables and then ran the full dashboard builder once per
@@ -1723,6 +1753,8 @@ app.get<{ Querystring: { period?: string; quarter?: string; range?: "30d" | "qua
   async (req, reply) => {
     const user = await requireUser(req, reply); if (!user) return;
     if (!canAccessModule(user, "portfolio")) return reply.code(403).send({ error: "no portfolio access" });
+    const syncStatus = await dashboardSyncState();
+    if (dashboardRefreshBlocked(syncStatus)) return sendDashboardRefreshUnavailable(reply, syncStatus);
     const queryError = dashboardQueryError(req.query);
     if (queryError) return reply.code(400).send({ error: queryError });
     const ids = allowedEmployerIds(user);
@@ -1745,8 +1777,9 @@ app.get<{ Querystring: { period?: string; quarter?: string; range?: "30d" | "qua
 // ── convenience: live dashboard of the first employer THIS USER can see ──
 app.get("/api/dashboard/version", async (req, reply) => {
   const user = await requireUser(req, reply); if (!user) return;
+  const syncStatus = await dashboardSyncState();
   const latest = await prisma.integrationCursor.aggregate({ _max: { lastSuccessAt: true } });
-  return { version: latest._max.lastSuccessAt?.toISOString() ?? null };
+  return { version: latest._max.lastSuccessAt?.toISOString() ?? null, syncStatus };
 });
 
 app.get<{ Querystring: { period?: string; quarter?: string; range?: "30d" | "quarter" | "all" | "month" | "30" | "q" | "latest"; site?: string; income?: string } }>(
@@ -1756,6 +1789,8 @@ app.get<{ Querystring: { period?: string; quarter?: string; range?: "30d" | "qua
     if (!user) return;
     const queryError = dashboardQueryError(req.query);
     if (queryError) return reply.code(400).send({ error: queryError });
+    const syncStatus = await dashboardSyncState();
+    if (dashboardRefreshBlocked(syncStatus)) return sendDashboardRefreshUnavailable(reply, syncStatus);
     const ids = allowedEmployerIds(user);
     const employer = await prisma.employer.findFirst({
       where: ids === null ? { sourceDeletedAt: null } : { id: { in: ids }, sourceDeletedAt: null },
@@ -1766,6 +1801,7 @@ app.get<{ Querystring: { period?: string; quarter?: string; range?: "30d" | "qua
     const payload: any = await getDashboardPayload(employer.id, req.query);
     const sections = await sectionsForUser(user);
     if (!sections.voiceOfEmployee) payload.chat = { available: false };
+    payload.syncStatus = syncStatus;
     return payload;
   },
 );
