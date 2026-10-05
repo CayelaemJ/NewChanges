@@ -142,7 +142,7 @@ export function publicConfig(config: Awaited<ReturnType<typeof getConfig>>) {
 }
 
 const FULL_REFRESH_LOCK_A = 0x454653; // must match dailyRefresh.ts
-const FULL_REFRESH_LOCK_B = 78;
+const SOURCE_SYNC_COORDINATION_LOCK_B = 79;
 
 async function openIncrementalSyncLease() {
   const connectionString = process.env.DATABASE_URL;
@@ -152,7 +152,7 @@ async function openIncrementalSyncLease() {
   try {
     const result = await client.query(
       "SELECT pg_try_advisory_lock_shared($1, $2) AS acquired",
-      [FULL_REFRESH_LOCK_A, FULL_REFRESH_LOCK_B],
+      [FULL_REFRESH_LOCK_A, SOURCE_SYNC_COORDINATION_LOCK_B],
     );
     if (!Boolean(result.rows?.[0]?.acquired)) {
       await client.end();
@@ -170,7 +170,7 @@ async function closeIncrementalSyncLease(client: Client | null) {
   try {
     await client.query(
       "SELECT pg_advisory_unlock_shared($1, $2)",
-      [FULL_REFRESH_LOCK_A, FULL_REFRESH_LOCK_B],
+      [FULL_REFRESH_LOCK_A, SOURCE_SYNC_COORDINATION_LOCK_B],
     );
   } finally {
     await client.end().catch(() => {});
