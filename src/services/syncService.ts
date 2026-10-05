@@ -141,8 +141,11 @@ export function publicConfig(config: Awaited<ReturnType<typeof getConfig>>) {
   };
 }
 
-export async function runSync(trigger: "manual" | "scheduled" = "manual") {
+export async function runSync(trigger: "manual" | "scheduled" | "full-refresh" = "manual") {
   const config = await getConfig();
+  if (config.lastSyncStatus === "REBUILDING" && trigger !== "full-refresh") {
+    return { ok: false, status: "REBUILDING", error: "A full source refresh is already rebuilding the dashboard. Try again after it completes." };
+  }
   let configured = false;
   try { configured = sourceIsConfigured(config); }
   catch (error: any) { return { ok: false, error: error?.message ?? String(error) }; }
@@ -390,37 +393,54 @@ export async function runSync(trigger: "manual" | "scheduled" = "manual") {
     }
   }
 
-  // Snapshot calculation is deliberately off the sync critical path. The
-  // source tables are authoritative once the feed commits; rebuilding the
-  // read model can therefore happen once per changed employer in the
-  // background without keeping the sync transaction/request open.
-  for (const employerId of touchedEmployers) pendingSnapshotEmployers.add(employerId);
-  if (touchedEmployers.size && !snapshotDrainScheduled) {
-    snapshotDrainScheduled = true;
-    setImmediate(() => {
-      void (async () => {
-        try {
-          while (pendingSnapshotEmployers.size) {
-            const employerId = pendingSnapshotEmployers.values().next().value as string;
-            pendingSnapshotEmployers.delete(employerId);
-            try {
-              const r = await snapshotEmployer(employerId);
-              if (r.persisted) { notifyScoreChangeIfCurrentPeriod(employerId, r.period, r.period).catch(() => {}); runMLOpsAssessment(employerId).catch((error: any) => console.error(`[sync] MLOps assessment failed for ${employerId}:`, error?.message ?? error)); }
-            } catch (error: any) {
-              console.error(`[sync] background snapshot failed for ${employerId}:`, error?.message ?? error);
-            }
-          }
-        } finally {
-          snapshotDrainScheduled = false;
+  // A full refresh is not complete until the read model has been rebuilt.
+  // Normal incremental syncs keep snapshot work off the critical path.
+  if (trigger === "full-refresh") {
+    for (const employerId of touchedEmployers) {
+      try {
+        const r = await snapshotEmployer(employerId);
+        if (r.persisted) {
+          notifyScoreChangeIfCurrentPeriod(employerId, r.period, r.period).catch(() => {});
+          runMLOpsAssessment(employerId).catch((error: any) => console.error(`[sync] MLOps assessment failed for ${employerId}:`, error?.message ?? error));
         }
-      })();
-    });
+      } catch (error: any) {
+        anyFailed = true;
+        summary.snapshots ??= {};
+        summary.snapshots[employerId] = { error: error?.message ?? String(error) };
+        console.error(`[sync] full-refresh snapshot failed for ${employerId}:`, error?.message ?? error);
+      }
+    }
+  } else {
+    for (const employerId of touchedEmployers) pendingSnapshotEmployers.add(employerId);
+    if (touchedEmployers.size && !snapshotDrainScheduled) {
+      snapshotDrainScheduled = true;
+      setImmediate(() => {
+        void (async () => {
+          try {
+            while (pendingSnapshotEmployers.size) {
+              const employerId = pendingSnapshotEmployers.values().next().value as string;
+              pendingSnapshotEmployers.delete(employerId);
+              try {
+                const r = await snapshotEmployer(employerId);
+                if (r.persisted) { notifyScoreChangeIfCurrentPeriod(employerId, r.period, r.period).catch(() => {}); runMLOpsAssessment(employerId).catch((error: any) => console.error(`[sync] MLOps assessment failed for ${employerId}:`, error?.message ?? error)); }
+              } catch (error: any) {
+                console.error(`[sync] background snapshot failed for ${employerId}:`, error?.message ?? error);
+              }
+            }
+          } finally {
+            snapshotDrainScheduled = false;
+          }
+        })();
+      });
+    }
   }
 
   const status = anyFailed ? (anyOk ? "PARTIAL" : "FAILED") : "OK";
   const mode = configuredSourceMode(config);
   const note = status === "OK"
-    ? `All reports synced successfully from ${mode}; changed employer snapshots were queued in the background.`
+    ? trigger === "full-refresh"
+      ? `All reports synced successfully from ${mode}; dashboard snapshots were rebuilt before completion.`
+      : `All reports synced successfully from ${mode}; changed employer snapshots were queued in the background.`
     : status === "PARTIAL"
       ? `Some ${mode} reports synced. Failed report cursors were not advanced; see details.`
       : `${mode} sync failed; no report cursor was advanced for failed feeds.`;
