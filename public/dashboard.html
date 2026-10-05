@@ -111,6 +111,8 @@
   .data-fresh .dot{width:7px;height:7px;border-radius:50%;background:var(--green);}
   .data-fresh.is-error{color:var(--red);}
   .data-fresh.is-error .dot{background:var(--red);}
+  .data-fresh.is-rebuilding{color:#8a5a10;}
+  .data-fresh.is-rebuilding .dot{background:#b9852f;}
   .avatar{width:34px;height:34px;border-radius:50%;background:var(--brand-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;}
   .role-indicator{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--line);border-radius:999px;background:var(--ice);color:var(--brand-primary);font:800 10.5px/1 'Manrope',sans-serif;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;}
   .role-indicator.superadmin{background:#eef2ff;border-color:#c7d2fe;color:#3730a3;}
@@ -3089,19 +3091,29 @@ async function loadLiveData({refreshOnly=false}={}){
     // Mobile users get the actual visual payload as soon as it arrives.
     const periodsPromise=id ? populateMonthSelect(id,period,quarter).catch(()=>{}) : Promise.resolve();
     const dashboardPromise=fetch(url,{cache:'no-store'}).then(async r=>{
-      if(!r.ok) throw new Error((await r.json().catch(()=>({}))).error||'no data');
-      return r.json();
+      const body=await r.json().catch(()=>({}));
+      if(!r.ok){
+        const error=new Error(body.error||'no data');
+        error.syncStatus=body.syncStatus||null;
+        throw error;
+      }
+      return body;
     });
     const live=await dashboardPromise;
     if(requestSeq!==LIVE_REQUEST_SEQ) return;
     DATA=live; BASE=JSON.parse(JSON.stringify(DATA)); window.__LIVE__=true;
     if(live.employer){ const h1=document.querySelector('.head h1'); if(h1) h1.firstChild.textContent=live.employer+' '; }
     const fl=document.getElementById('data-fresh-label');
-    document.querySelector('.data-fresh')?.classList.remove('is-error');
+    const freshness=document.querySelector('.data-fresh');
+    freshness?.classList.remove('is-error','is-rebuilding');
     if(fl){
       const syncAt=live.syncStatus?.lastSuccessfulSyncAt;
+      const syncNote=String(live.syncStatus?.lastSyncNote||'');
       const sourceAt=live.sourceDataUpdatedAt||live.dataAsOf;
-      if(syncAt){
+      if(syncAt && syncNote.startsWith('Full refresh completed:')){
+        const d=new Date(syncAt);
+        fl.textContent='Purged & overwritten '+d.toLocaleString('en-ZA',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+      }else if(syncAt){
         const d=new Date(syncAt);
         fl.textContent='Last synced '+d.toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'});
       }else if(sourceAt){
@@ -3111,10 +3123,13 @@ async function loadLiveData({refreshOnly=false}={}){
         fl.textContent='Live data';
       }
       fl.removeAttribute('title');
-      if(syncAt && sourceAt){
+      const titleParts=[];
+      if(syncNote) titleParts.push(syncNote);
+      if(sourceAt){
         const sd=new Date(sourceAt);
-        fl.title='Source data updated '+sd.toLocaleString('en-ZA',{dateStyle:'medium',timeStyle:'short'});
+        titleParts.push('Source data updated '+sd.toLocaleString('en-ZA',{dateStyle:'medium',timeStyle:'short'}));
       }
+      if(titleParts.length) fl.title=titleParts.join(' ');
     }
     renderMonthActivity(live.monthActivity,live.filterContext); renderDataQuality(live.dataQuality); setLiveFootnote(live.filterContext);
     document.getElementById('demo-banner')?.remove();
@@ -3521,14 +3536,31 @@ function addAuthBar(me){
 }
 
 function showLiveError(error){
+  const status=error?.syncStatus?.lastSyncStatus||null;
+  const rebuilding=status==='REBUILDING';
+  const failed=status==='FULL_REFRESH_FAILED';
+  const title=rebuilding ? 'Dashboard refresh in progress' : failed ? 'Full refresh failed — partial data withheld' : 'Live dashboard data is unavailable';
+  const copy=rebuilding
+    ? 'The midnight source refresh is purging the previous dashboard dataset and rebuilding it from the authoritative source. The new dashboard will publish only when the complete rebuild succeeds.'
+    : failed
+      ? 'The previous dataset was purged, but the authoritative reload did not complete successfully. Partial rebuilt figures are deliberately hidden until a complete refresh succeeds.'
+      : 'The portal has not substituted demonstration figures. Check the latest sync/import status in Administration, then reload this page.';
   const view=document.getElementById('employer-view');
   if(view) view.innerHTML=`<div class="card" style="max-width:760px;margin:48px auto;padding:34px">
-    <div style="font:800 23px Manrope,sans-serif;color:var(--brand-primary)">Live dashboard data is unavailable</div>
-    <p style="margin:12px 0 0;color:#5b6b7a;line-height:1.65">The portal has not substituted demonstration figures. Check the latest sync/import status in Administration, then reload this page.</p>
+    <div style="font:800 23px Manrope,sans-serif;color:var(--brand-primary)">${title}</div>
+    <p style="margin:12px 0 0;color:#5b6b7a;line-height:1.65">${copy}</p>
     <div style="margin-top:16px;padding:10px 12px;background:#f7f9fb;border-radius:8px;color:#7b8792;font:600 12px Manrope,sans-serif">${String(error?.message||error||'Unknown data error').replace(/[<>&]/g,'')}</div>
   </div>`;
-  const fl=document.getElementById('data-fresh-label'); if(fl) fl.textContent='Data unavailable';
-  document.querySelector('.data-fresh')?.classList.add('is-error');
+  const fl=document.getElementById('data-fresh-label');
+  const freshness=document.querySelector('.data-fresh');
+  freshness?.classList.remove('is-error','is-rebuilding');
+  if(rebuilding){
+    if(fl) fl.textContent='Purging & rebuilding';
+    freshness?.classList.add('is-rebuilding');
+  }else{
+    if(fl) fl.textContent=failed?'Refresh failed — data withheld':'Data unavailable';
+    freshness?.classList.add('is-error');
+  }
 }
 
 function applySyntheticDataNotice(me){
@@ -3563,6 +3595,22 @@ async function checkSourceVersion(){
     const r=await fetch('/api/dashboard/version',{cache:'no-store'});
     if(!r.ok) return;
     const d=await r.json();
+    const status=d.syncStatus?.lastSyncStatus||null;
+    const freshness=document.querySelector('.data-fresh');
+    const fl=document.getElementById('data-fresh-label');
+    if(status==='REBUILDING'){
+      freshness?.classList.remove('is-error');
+      freshness?.classList.add('is-rebuilding');
+      if(fl) fl.textContent='Purging & rebuilding';
+      return;
+    }
+    if(status==='FULL_REFRESH_FAILED'){
+      freshness?.classList.remove('is-rebuilding');
+      freshness?.classList.add('is-error');
+      if(fl) fl.textContent='Refresh failed — data withheld';
+      return;
+    }
+    freshness?.classList.remove('is-error','is-rebuilding');
     if(!__SOURCE_VERSION__) { __SOURCE_VERSION__=d.version||null; return; }
     if(d.version && d.version !== __SOURCE_VERSION__){
       __SOURCE_VERSION__=d.version;
