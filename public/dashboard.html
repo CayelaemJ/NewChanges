@@ -3189,29 +3189,37 @@ function applyTheme(theme, user){
   // Admins retain the portal's original dashboard palette. Employer branding is
   // applied only inside an authenticated employer session.
   if(user && ['ADMIN','SUPERADMIN'].includes(String(user.role||'').toUpperCase())){
-    // Preserve a vivid, multi-hue original portal palette for admins. Do not
-    // clear these variables: all charts now consume semantic CSS variables.
-    const adminPalette={
-      '--blue':'#7d2fa3','--blue-d':'#682487','--brand-primary':'#2b1b68',
-      '--brand-primary-deep':'#0d2a47','--ice':'#eaf3fc','--brand-soft':'#f0ecfb',
-      '--brand-grad-1':'#2b1b68','--brand-grad-2':'#682487','--brand-grad-3':'#7d2fa3',
-      '--brand-grad-4':'#28a6b8','--brand-grad-5':'#68c5d0',
-      '--chart-engagement':'#7d2fa3','--chart-cashflow':'#159b68',
-      '--chart-debt':'#65758b','--chart-insurance':'#8753c7',
-      '--chart-workforce':'#20a6b2','--chart-low':'#159b68',
-      '--chart-mid':'#e59a18','--chart-high':'#d94b45',
-      '--engagement-color':'#2878c7','--cashflow-color':'#159b68',
-      '--debt-risk-color':'#65758b','--insurance-color':'#8753c7',
-      '--eligible-workforce-color':'#20a6b2','--stress-low-color':'#159b68',
-      '--stress-mid-color':'#e59a18','--stress-high-color':'#d94b45'
-    };
+    // Super Admin and Admin use the standard empower-fin dashboard brand.
+    // Partner/employer branding is intentionally not applied to privileged roles.
+    const accent='#B15BE8';
+    const primary='#32217C';
+    const navy='#330A36';
+    const chartPalette=complementaryPalette(accent,navy);
     if(BrandTheme){
-      // original admin palette in light mode; brand-derived tokens (and lifted chart colours) in dark mode
-      const charts={}; Object.entries(adminPalette).forEach(([k,v])=>{ if(/^--chart-|-color$/.test(k)) charts[k]=v; });
-      BrandTheme.set({ brand:{ accentColor:'7D2FA3', primaryColor:'B15BE8', navyColor:'2B1B68' }, light:adminPalette, charts });
+      const charts={}; Object.entries(chartPalette).forEach(([k,v])=>{ charts['--chart-'+k]=v; });
+      BrandTheme.set({ brand:{ accentColor:accent, primaryColor:primary, navyColor:navy }, light:'engine', charts });
     } else {
-      Object.entries(adminPalette).forEach(([k,v])=>root.setProperty(k,v));
+      root.setProperty('--blue',accent);
+      root.setProperty('--blue-d',shade(accent,-18));
+      root.setProperty('--brand-primary',navy);
+      root.setProperty('--brand-primary-deep',shade(navy,-22));
+      root.setProperty('--ice',tint(accent,92));
+      root.setProperty('--brand-soft',tint(accent,94));
+      root.setProperty('--brand-grad-1',primary);
+      root.setProperty('--brand-grad-2',mix(primary,accent,.45));
+      root.setProperty('--brand-grad-3',accent);
+      root.setProperty('--brand-grad-4',mix(accent,'#ffffff',.28));
+      root.setProperty('--brand-grad-5',mix(accent,'#ffffff',.55));
+      Object.entries(chartPalette).forEach(([key,value])=>root.setProperty('--chart-'+key,value));
     }
+    root.setProperty('--engagement-color','var(--chart-engagement)');
+    root.setProperty('--cashflow-color','var(--chart-cashflow)');
+    root.setProperty('--debt-risk-color','var(--chart-debt)');
+    root.setProperty('--insurance-color','var(--chart-insurance)');
+    root.setProperty('--eligible-workforce-color','var(--chart-workforce)');
+    root.setProperty('--stress-low-color','var(--chart-low)');
+    root.setProperty('--stress-mid-color','var(--chart-mid)');
+    root.setProperty('--stress-high-color','var(--chart-high)');
     return;
   }
   if(!theme) return;
