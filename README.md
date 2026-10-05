@@ -1,66 +1,147 @@
-## v0.10.0 metric help
-
-Employer view now uses the same accessible information icons as Portfolio view. Hover, focus or click an **i** icon to see a plain-language definition and calculation for the measure. The glossary covers the executive summary, score and drivers, KPIs, funnel, outcomes, value, debt, EWA, stress, ratings, risk, opportunities and separate chat metrics.
-
-Portfolio view retains employer multi-select filtering, metric-definition tooltips, null-safe rankings and scale-aware currency formatting.
-
 # empower-fin Dashboard Portal
 
-Version 0.10.0 / source contract 2.6
+> Multi-tenant financial-wellness dashboard with employer, portfolio, administration, channel-partner and governed MLOps capabilities.
 
-The empower-fin Dashboard Portal is the core multi-tenant financial-wellness dashboard. Channel partners are configured inside the portal and can have their own name, logo, colours, users and employer assignments. Optimise is a channel partner configuration; it is not the product name.
+**Current version:** `0.10.0`  
+**Source contract:** `2.6`  
+**Runtime:** Node.js 22+ / TypeScript / Fastify / PostgreSQL / Prisma  
+**Deployment:** Railway  
+**Production dashboard:** `/dashboard`  
+**React workspace:** `/react/dashboard`
 
-## Data sources
+---
 
-The core employer data integration supports the same 10 canonical datasets through:
+## What this repository contains
 
-- HTTPS API pull
-- Direct read-only SQL views (PostgreSQL, Microsoft SQL Server, MySQL/MariaDB)
-- CSV/XLSX/JSON file import
+The empower-fin Dashboard Portal is a production-oriented web application for presenting financial-wellness information across multiple employers and channel partners.
 
-Core datasets:
+The repository currently contains two dashboard implementations:
 
-1. employers
-2. workforce_snapshots
-3. employees
-4. platform_users
-5. journeys
-6. debt_accounts
-7. policies
-8. ratings
-9. referrals
-10. salary_advances
+- **Canonical production dashboard — `/dashboard`**: the established dashboard in `public/dashboard.html`. This remains the visual source of truth while the React implementation continues to mature.
+- **React dashboard — `/react/dashboard`**: the active React/Tailwind/MUI implementation and migration workspace. It is intentionally separate from the canonical production route.
 
-Chat/voice-of-employee data is intentionally excluded from the core source contract because it is supplied by a separate system.
+The backend remains Node.js/TypeScript. The application uses PostgreSQL through Prisma and runs as a single Railway service; the React build is produced as part of the application build.
 
-## Railway deployment
+## Core capabilities
 
-Railway uses the checked-in `railway.json` and Railpack. The deployment runs in three stages:
+### Employer and portfolio analytics
 
-1. Build: `npm run build`
-2. Pre-deploy database schema step: `npm run db:deploy`
-3. Start: `npm start`
+- Employer financial-wellness dashboard
+- Portfolio view for authorised empower-fin and channel-partner users
+- Date-aware stock and flow calculations
+- Monthly, rolling and programme-to-date reporting
+- Site and income-band filtering
+- Financial comparisons and drill-downs
+- Null-safe rankings and scale-aware currency formatting
+- Accessible metric definitions and calculation help
 
-The web start command no longer runs `prisma db push`. This prevents the application healthcheck from waiting behind a database schema operation.
+### Administration
 
-The current schema is migration-compatible with the earlier pre-live database: newly introduced `updatedAt` fields have database defaults and legacy employee links on cached chat/EWA rows are nullable. New EWA imports still resolve and store the employee relation.
+- User and role administration
+- Employer and portfolio access controls
+- Channel-partner configuration
+- White-label partner branding
+- Live data integration configuration
+- Imports and data-quality visibility
+- Audit/security information
+- System email and scheduled reporting
+- Synthetic test-data mode
+- MLOps governance and telemetry
 
-## First deployment variables
+### Brand Engine
 
-Required:
+The existing BrandEngine remains part of the product. It provides deterministic colour analysis and theme control rather than relying on an external ML service.
 
-```env
-DATABASE_URL=postgresql://...
-ADMIN_EMAIL=you@company.com
-ADMIN_PASSWORD=choose-a-strong-password
-COOKIE_SECURE=true
+It supports:
+
+- OKLab/OKLCH colour analysis
+- Dominant/secondary brand-colour detection
+- Contrast enforcement
+- Chart palette derivation
+- Confidence and warning metadata
+- Partner-specific light/dark theme tokens
+- Admin correction/feedback
+- Versioned brand-learning telemetry
+
+### MLOps and data guardrails
+
+The MLOps layer is designed as a governed application capability, not a separate Railway ML service.
+
+It includes:
+
+- data-quality assessment
+- anomaly and distribution-shift detection
+- KPI anomaly detection
+- forecasting/assessment support
+- append-only telemetry
+- model/version lifecycle tracking
+- human feedback
+- promotion/rollback controls
+- sync-triggered assessments
+- incoming-data guardrails before live-table writes
+
+Abnormal import/sync data can be quarantined before it reaches live tables, with the decision recorded for administrator review.
+
+---
+
+## Architecture at a glance
+
+```text
+Browser
+  |
+  +--> Public landing / legal / login
+  |
+  +--> /dashboard --------------------> canonical production dashboard
+  |
+  +--> /react/dashboard --------------> React migration workspace
+  |
+  +--> /admin, /users -----------------> administration surfaces
+  |
+  v
+Fastify / TypeScript server
+  |
+  +--> authentication + authorisation
+  +--> dashboard/report APIs
+  +--> imports + validation
+  +--> SQL/API sync
+  +--> scheduled reporting
+  +--> BrandEngine / theme services
+  +--> MLOps governance
+  |
+  v
+Prisma
+  |
+  v
+PostgreSQL
+
+External source options
+  +--> HTTPS API
+  +--> PostgreSQL / SQL Server / MySQL/MariaDB read-only views
+  +--> CSV / XLSX / JSON imports
 ```
 
-Railway supplies `PORT` automatically.
+The detailed architecture and data-flow notes live in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-## External SQL source
+---
 
-Configure from **Administration > Live Data Integration** or environment variables. The source database account must be read-only and expose the 10 canonical views:
+## Canonical data contract
+
+The core integration contract contains 10 datasets:
+
+1. `employers`
+2. `workforce_snapshots`
+3. `employees`
+4. `platform_users`
+5. `journeys`
+6. `debt_accounts`
+7. `policies`
+8. `ratings`
+9. `referrals`
+10. `salary_advances`
+
+Chat/voice-of-employee data is intentionally outside the core source contract because it is supplied by a separate system.
+
+External SQL integrations expose the corresponding canonical views:
 
 ```text
 v_employers
@@ -75,48 +156,266 @@ v_referrals
 v_salary_advances
 ```
 
-The browser never receives source SQL credentials. The server queries each view using `source_updated_at` incremental windows and passes all rows through the same contract validation and commit path used by API/file imports.
+The browser never receives source SQL credentials. Server-side imports and syncs pass through the same contract validation and data-quality path before data is committed.
 
-## System email and scheduled reports
+---
 
-Administrators configure outbound email under **Administration > System Email & Scheduled Reports**. The SMTP connection can be saved in the portal or overridden by the `SMTP_*` environment variables documented in `.env.example`. Use **Send test email** before enabling scheduled reporting.
+## Reporting semantics
 
-From an employer dashboard, **Schedule report** captures the selected reporting window, site and income filters plus a once/daily/weekly/monthly frequency, send time and timezone. Schedules and delivery logs are stored in PostgreSQL and survive deployments/restarts. Rolling windows are recalculated at send time. Scheduled emails use the employer's channel-partner branding when configured.
+The portal distinguishes three different dates:
 
-See `SCHEDULED_REPORTS.md` for setup and operating details.
+1. **Business event date** — when an event happened.
+2. **Business effective/observation date** — the state that was true at a selected point in time.
+3. **Technical change timestamp** — when a source record changed and belongs in an incremental sync.
 
-## Channel partners
+This distinction is essential for historical reporting. Current employee, debt or policy state must not silently be projected backwards into earlier reporting periods.
 
-Administrators can create channel partners and configure:
+The full model is documented in [docs/DATE_FILTER_SEMANTICS.md](docs/DATE_FILTER_SEMANTICS.md) and [docs/ALIGNMENT_REVIEW.md](docs/ALIGNMENT_REVIEW.md).
+
+---
+
+## Getting started
+
+### Requirements
+
+- Node.js 22+
+- npm
+- PostgreSQL
+- A configured `DATABASE_URL`
+
+### Install
+
+```bash
+npm ci
+```
+
+### Configure
+
+Copy the example environment file:
+
+```bash
+cp .env.example .env
+```
+
+At minimum, configure the application database and initial administrator credentials. Production secrets belong in Railway or the approved secret store, not in Git.
+
+### Development
+
+```bash
+npm run dev
+```
+
+### Build
+
+```bash
+npm run build
+```
+
+The build generates Prisma client code, compiles the TypeScript backend and builds the React workspace.
+
+---
+
+## Quality gates
+
+The repository has extensive regression checks. The main aggregate gate is:
+
+```bash
+npm run check:all
+```
+
+Important individual checks include:
+
+```bash
+npm run check:production
+npm run check:security
+npm run check:ui
+npm run check:imports
+npm run check:scheduling
+npm run check:brand
+npm run check:mlops
+npm run check:mlops-data-quality
+npm run check:accessibility
+npm run check:performance
+npm run check:enterprise
+npm run check:react
+npm audit --audit-level=high
+```
+
+CI runs the repository's release checks automatically. A successful deployment is not a substitute for passing the application and security gates.
+
+See [docs/TESTING.md](docs/TESTING.md) for the testing model and [docs/PRODUCTION_RELEASE_RUNBOOK.md](docs/PRODUCTION_RELEASE_RUNBOOK.md) for the release process.
+
+---
+
+## Deployment
+
+Railway uses the checked-in `railway.json` and Railpack.
+
+The deployment sequence is:
+
+1. **Build** — `npm run build`
+2. **Pre-deploy database step** — `npm run db:deploy`
+3. **Start** — `npm start`
+
+The web start command does not run a database schema operation. Database deployment is kept as an explicit pre-deploy step so application health checks are not blocked by schema work.
+
+A Dockerfile is also available for other container platforms.
+
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) and [docs/PRODUCTION_RELEASE_RUNBOOK.md](docs/PRODUCTION_RELEASE_RUNBOOK.md).
+
+---
+
+## Important route model
+
+| Route | Purpose | Status |
+|---|---|---|
+| `/` | Public enterprise landing page | Current |
+| `/login` | Authentication | Current |
+| `/dashboard` | Canonical production dashboard | Current visual source of truth |
+| `/react/dashboard` | React migration dashboard | Migration workspace |
+| `/admin` | Administration console | Current |
+| `/users` | User administration | Current |
+| `/health` | Deployment health check | Current |
+| `/version` | Application/version metadata | Current |
+
+The React route is deliberately documented separately. It should not be described as the production dashboard until visual, functional, responsive and regression checks establish parity with the canonical dashboard.
+
+---
+
+## Channel partners and branding
+
+Channel partners are configured inside the portal and can have their own:
 
 - display name
 - logo
 - primary colour
 - accent colour
-- deep/navy colour
+- navy/deep brand colour
 - tagline
 - assigned users
 - assigned employers
 
-Users without a partner use the default empower-fin brand. Users assigned to a partner receive the partner theme after login. A partner-branded login can also use `/login?partner=<partner-slug>`.
+Users without a partner receive the default empower-fin theme. Partner users receive the configured partner theme.
 
-## Useful endpoints
+Partner branding is implemented through the existing BrandEngine and theme-token model. It is not a reason to replace the established dashboard visual language with a generic dashboard design.
+
+---
+
+## Scheduled reports
+
+Administrators configure SMTP and reporting under **Administration > System Email & Scheduled Reports**.
+
+Employer users can schedule reports with:
+
+- reporting window
+- site and income filters
+- once/daily/weekly/monthly frequency
+- send time
+- timezone
+- saved delivery state
+- send-now support
+
+Schedules and delivery logs are stored in PostgreSQL and survive application restarts and deployments.
+
+See [docs/SCHEDULED_REPORTS.md](docs/SCHEDULED_REPORTS.md).
+
+---
+
+## Synthetic test data
+
+The application has an administrator-controlled synthetic-data mode.
+
+When enabled, the dashboard visibly identifies its figures as synthetic test data. This is intended for controlled testing and demonstration; synthetic figures must not be treated as factual customer, financial or operational data.
+
+The setting defaults to **off**.
+
+---
+
+## Documentation
+
+Start with the documentation index:
+
+**[Documentation home →](docs/README.md)**
+
+Key documents:
+
+- [Architecture](docs/ARCHITECTURE.md)
+- [Deployment](docs/DEPLOYMENT.md)
+- [Testing and quality gates](docs/TESTING.md)
+- [Scheduled reports](docs/SCHEDULED_REPORTS.md)
+- [Date/filter semantics](docs/DATE_FILTER_SEMANTICS.md)
+- [Production release runbook](docs/PRODUCTION_RELEASE_RUNBOOK.md)
+- [Security policy](SECURITY.md)
+- [Security assessment](SECURITY_ASSESSMENT.md)
+- [Production readiness](PRODUCTION_READINESS.md)
+- [South Africa compliance notes](SOUTH_AFRICA_COMPLIANCE.md)
+- [Enterprise portal standard](docs/ENTERPRISE_PORTAL_STANDARD.md)
+- [Optimise integration specification](docs/OPTIMISE_INTEGRATION_SPEC_V2.md)
+
+---
+
+## Repository structure
 
 ```text
-GET /health
-GET /version
-GET /dashboard
-GET /admin
-GET /users
+.
+├── frontend/        React migration workspace
+├── public/          canonical web pages and dashboard assets
+├── src/             Fastify server and application services
+├── prisma/          schema and database migrations
+├── scripts/         deployment and regression checks
+├── tests/           contract and service tests
+├── docs/            architecture, operations and integration documentation
+├── deploy/          alternate container deployment assets
+├── .github/         CI and repository automation
+├── railway.json     Railway deployment configuration
+├── package.json     application scripts and dependencies
+└── README.md        repository landing page
 ```
 
-`/version` should report `empower-fin Dashboard Portal`, version `0.5.3`, contract `2.6`, `coreSourceFeeds: 10`, and channel-partner support.
+---
 
-## Optional Docker deployment
+## Release discipline
 
-A Dockerfile is included at `deploy/Dockerfile`. It is deliberately not at the repository root so Railway uses the Railpack configuration above. For another container platform, build it with `docker build -f deploy/Dockerfile .`. Run `npm run db:deploy` as a release/pre-deploy step before starting the container.
+Production changes should be made through a pull request branch.
 
+Before merge:
 
-### Instant dashboard read model
+1. Review the diff and affected routes.
+2. Run the relevant regression checks.
+3. Run the complete release gate when the change is production-facing.
+4. Test desktop, tablet, phone portrait and phone landscape for UI changes.
+5. Verify real data behaviour separately from synthetic/demo data.
+6. Confirm Railway deployment and post-deploy health.
+7. Retain release evidence for important reporting, security and recovery checks.
 
-Version 0.6.0 adds a persistent `DashboardCohortCache` read model. Interactive monthly Company/Region/Income slicer requests read indexed precomputed payloads instead of recalculating the raw workforce, journey, debt and insurance tables. Snapshot/import work invalidates and warms the cohort read model so the expensive work stays outside the user request path.
+Do not merge a migration or visual replacement merely because the code compiles. The canonical dashboard's established visual behaviour remains a protected reference while the React migration is developed.
+
+---
+
+## Security
+
+Never commit:
+
+- production credentials
+- database passwords
+- API tokens
+- session cookies
+- customer personal data
+- private source-system credentials
+
+Use [SECURITY.md](SECURITY.md) for vulnerability reporting and the production security baseline.
+
+---
+
+## Current documentation principle
+
+Documentation should describe the repository **as it exists**, not as a proposed future architecture.
+
+When behaviour changes:
+
+- update the relevant document in the same pull request;
+- update the repository README when the change affects how users/developers understand the system;
+- remove stale claims rather than adding another contradictory note;
+- record release-critical changes in the appropriate operational document.
+
+This keeps the GitHub repository itself useful as the project's source of truth.
