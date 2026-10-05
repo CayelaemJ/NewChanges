@@ -3196,9 +3196,9 @@ function applyTheme(theme, user){
   if(user && ['ADMIN','SUPERADMIN'].includes(String(user.role||'').toUpperCase())){
     // Super Admin and Admin use the standard empower-fin dashboard brand.
     // Partner/employer branding is intentionally not applied to privileged roles.
-    const accent='#0078C7';
-    const primary='#0D2A47';
-    const navy='#0D2A47';
+    const accent='#B15BE8';
+    const primary='#32217C';
+    const navy='#2B1B68';
     const chartPalette=complementaryPalette(accent,navy);
     if(BrandTheme){
       const charts={}; Object.entries(chartPalette).forEach(([k,v])=>{ charts['--chart-'+k]=v; });
