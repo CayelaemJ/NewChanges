@@ -1,41 +1,129 @@
 // ════════════════════════════════════════════════════════════════════
-//  DAILY LIVE REFRESH — keeps the portal a live mirror of the source DB.
+//  AUTHORITATIVE DAILY REFRESH
 //
-//  Default mode reuses the app's own validated sync pipeline
-//  (runSync("scheduled")) — pull every report from the configured
-//  API/SQL source and commit through the normal import path.
+//  Every day at 00:00 Africa/Johannesburg the portal:
+//    1. marks the dashboard as REBUILDING,
+//    2. purges source-derived dashboard facts/caches,
+//    3. clears integration cursors so every report reloads from since=null,
+//    4. runs the normal validated/MLOps-protected source pipeline,
+//    5. rebuilds dashboard snapshots before publishing the new dataset.
 //
-//  Optional mode DAILY_REFRESH_MODE=sqlproc instead calls the server-side
-//  PostgreSQL procedure refresh_all_reports() every night
-//  (src/migrations/004-daily-refresh.sql) — an in-database truncate +
-//  reload from FDW-mounted source views. Use that only when the source
-//  views are mounted in the `source` schema of the portal database.
+//  Identity/configuration anchors (users, employer links, partner branding,
+//  report schedules, score configuration and separately sourced chat history)
+//  are deliberately preserved by purgeDashboardDataForFullRefresh().
 // ════════════════════════════════════════════════════════════════════
 
 import cron from "node-cron";
 import { runSync } from "./syncService.js";
+import { purgeDashboardDataForFullRefresh } from "./importService.js";
 import { prisma } from "./snapshotBuilder.js";
 
-async function refreshViaAppPipeline() {
-  console.log(`[${new Date().toISOString()}] Daily refresh (app pipeline) starting...`);
-  const result = await runSync("scheduled");
-  console.log(`[${new Date().toISOString()}] Daily refresh finished: ${result.status} — ${result.note}`);
-  return result;
+const REFRESH_TIMEZONE = process.env.DAILY_REFRESH_TIMEZONE ?? "Africa/Johannesburg";
+let activeFullRefresh: Promise<any> | null = null;
+
+function sumCounts(counts: Record<string, number> | undefined, includeShells = false) {
+  if (!counts) return 0;
+  return Object.entries(counts).reduce((total, [key, value]) => {
+    if (!includeShells && key.endsWith("Shells")) return total;
+    return total + (Number(value) || 0);
+  }, 0);
 }
 
-async function refreshViaDbProcedure() {
-  const found = await prisma.$queryRawUnsafe(
-    `SELECT to_regprocedure('refresh_all_reports(text,text)') AS p`,
-  );
-  if (!(found as any[])?.[0]?.p) {
-    throw new Error("refresh_all_reports(text,text) not found — run: node scripts/apply-sync-migrations.mjs");
-  }
-  await prisma.$executeRawUnsafe(
-    `CALL refresh_all_reports($1, $2)`,
-    process.env.SOURCE_FDW_SCHEMA ?? "source",
-    process.env.SOURCE_SQL_VIEW_PREFIX ?? "v_",
-  );
-  return { ok: true, status: "OK", note: "refresh_all_reports() completed" };
+function committedRows(summary: Record<string, any> | undefined) {
+  if (!summary) return 0;
+  return Object.values(summary).reduce((total, item: any) => total + (Number(item?.committed) || 0), 0);
+}
+
+async function setRefreshState(status: string, note: string, at = new Date(), successful = false) {
+  await prisma.integrationConfig.upsert({
+    where: { id: "default" },
+    create: {
+      id: "default",
+      lastSyncAt: at,
+      lastSyncStatus: status,
+      lastSyncNote: note,
+      ...(successful ? { lastSuccessfulSyncAt: at } : {}),
+    },
+    update: {
+      lastSyncAt: at,
+      lastSyncStatus: status,
+      lastSyncNote: note,
+      ...(successful ? { lastSuccessfulSyncAt: at } : {}),
+    },
+  });
+}
+
+async function runAuthoritativeFullRefresh(reason: "scheduled" | "manual") {
+  if (activeFullRefresh) return activeFullRefresh;
+
+  activeFullRefresh = (async () => {
+    const startedAt = new Date();
+    await setRefreshState(
+      "REBUILDING",
+      `Full refresh started (${reason}). Existing dashboard facts are being purged before the authoritative source is reloaded.`,
+      startedAt,
+    );
+
+    console.log(
+      `[${startedAt.toISOString()}] Full dashboard refresh starting (${reason}, timezone: ${REFRESH_TIMEZONE})...`,
+    );
+
+    let purgeResult: any = null;
+    try {
+      purgeResult = await purgeDashboardDataForFullRefresh();
+      const syncResult: any = await runSync("full-refresh");
+
+      if (!syncResult || syncResult.status !== "OK") {
+        throw new Error(
+          syncResult?.error
+            ?? syncResult?.note
+            ?? `Full source reload finished with status ${syncResult?.status ?? "UNKNOWN"}.`,
+        );
+      }
+
+      const finishedAt = new Date();
+      const purged = sumCounts(purgeResult?.cleared);
+      const overwritten = committedRows(syncResult?.summary);
+      const rebuilt = Array.isArray(syncResult?.touchedEmployers) ? syncResult.touchedEmployers.length : 0;
+      const note =
+        `Full refresh completed: purged ${purged} source-derived dashboard rows, ` +
+        `overwrote them from the authoritative source (${overwritten} rows committed), ` +
+        `and rebuilt ${rebuilt} employer dashboard${rebuilt === 1 ? "" : "s"}.`;
+
+      await setRefreshState("OK", note, finishedAt, true);
+      console.log(`[${finishedAt.toISOString()}] ${note}`);
+
+      return {
+        ...syncResult,
+        ok: true,
+        fullRefresh: true,
+        refreshType: "PURGE_AND_OVERWRITE",
+        timezone: REFRESH_TIMEZONE,
+        startedAt,
+        finishedAt,
+        purgedRows: purged,
+        overwrittenRows: overwritten,
+        rebuiltEmployers: rebuilt,
+        purge: purgeResult,
+        note,
+      };
+    } catch (error: any) {
+      const finishedAt = new Date();
+      const purged = sumCounts(purgeResult?.cleared);
+      const message = error?.message ?? String(error);
+      const note = purgeResult
+        ? `Full refresh failed after purging ${purged} source-derived dashboard rows: ${message}`
+        : `Full refresh failed before the purge completed: ${message}`;
+
+      await setRefreshState("FULL_REFRESH_FAILED", note, finishedAt, false).catch(() => {});
+      console.error(`[${finishedAt.toISOString()}] ${note}`);
+      throw error;
+    } finally {
+      activeFullRefresh = null;
+    }
+  })();
+
+  return activeFullRefresh;
 }
 
 async function refreshWithRetry(label: string, fn: () => Promise<any>) {
@@ -58,33 +146,39 @@ async function refreshWithRetry(label: string, fn: () => Promise<any>) {
 }
 
 export function startDailyRefresh() {
-  const schedule = process.env.DAILY_REFRESH_CRON ?? "0 0 * * *"; // 00:00 server time, daily
-  const useSqlProc = (process.env.DAILY_REFRESH_MODE ?? "app") === "sqlproc";
+  const schedule = process.env.DAILY_REFRESH_CRON ?? "0 0 * * *";
+  if ((process.env.DAILY_REFRESH_MODE ?? "app").toLowerCase() === "sqlproc") {
+    console.warn(
+      "DAILY_REFRESH_MODE=sqlproc is ignored for the authoritative daily refresh; the validated app pipeline is required so every configured report is reloaded.",
+    );
+  }
 
-  cron.schedule(schedule, async () => {
-    try {
-      if (useSqlProc) {
-        await refreshWithRetry("Daily DB refresh", refreshViaDbProcedure);
-      } else {
-        await refreshWithRetry("Daily source sync", refreshViaAppPipeline);
+  cron.schedule(
+    schedule,
+    async () => {
+      try {
+        await refreshWithRetry("Daily full source refresh", () => runAuthoritativeFullRefresh("scheduled"));
+      } catch (error: any) {
+        console.error(
+          `[${new Date().toISOString()}] Daily full refresh failed after retries:`,
+          error?.message ?? error,
+        );
       }
-    } catch (error: any) {
-      console.error(`[${new Date().toISOString()}] Daily refresh failed:`, error?.message ?? error);
-    }
-  });
+    },
+    { timezone: REFRESH_TIMEZONE },
+  );
 
-  console.log(`Daily live refresh scheduled (${schedule}, mode: ${useSqlProc ? "sqlproc" : "app"})`);
+  console.log(`Daily authoritative refresh scheduled (${schedule}, timezone: ${REFRESH_TIMEZONE}, mode: purge+overwrite)`);
 }
 
 // Manual trigger — wired to POST /api/admin/integration/refresh (admin only).
+// It deliberately runs the exact same purge+overwrite path as the midnight job.
 export async function triggerRefreshNow() {
   try {
-    const useSqlProc = (process.env.DAILY_REFRESH_MODE ?? "app") === "sqlproc";
-    const result = useSqlProc ? await refreshViaDbProcedure() : await refreshViaAppPipeline();
-    return { ...result };
+    return await runAuthoritativeFullRefresh("manual");
   } catch (error: any) {
     const message = error?.message ?? String(error);
-    console.error("Manual refresh failed:", message);
-    return { ok: false, error: message };
+    console.error("Manual full refresh failed:", message);
+    return { ok: false, status: "FULL_REFRESH_FAILED", error: message };
   }
 }
