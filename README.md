@@ -337,20 +337,34 @@ Start with the documentation index:
 
 **[Documentation home →](docs/README.md)**
 
-Key documents:
+### Current-state documents
 
+- [Current repository status](docs/CURRENT_STATUS.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Deployment](docs/DEPLOYMENT.md)
 - [Testing and quality gates](docs/TESTING.md)
 - [Scheduled reports](docs/SCHEDULED_REPORTS.md)
+
+### Product, integration and operations
+
 - [Date/filter semantics](docs/DATE_FILTER_SEMANTICS.md)
 - [Production release runbook](docs/PRODUCTION_RELEASE_RUNBOOK.md)
+- [Enterprise portal standard](docs/ENTERPRISE_PORTAL_STANDARD.md)
+- [Optimise integration specification](docs/OPTIMISE_INTEGRATION_SPEC_V2.md)
+- [Alignment review](docs/ALIGNMENT_REVIEW.md)
+- [Performance notes](docs/PERFORMANCE_100K.md)
+
+### Security and compliance
+
 - [Security policy](SECURITY.md)
 - [Security assessment](SECURITY_ASSESSMENT.md)
 - [Production readiness](PRODUCTION_READINESS.md)
 - [South Africa compliance notes](SOUTH_AFRICA_COMPLIANCE.md)
-- [Enterprise portal standard](docs/ENTERPRISE_PORTAL_STANDARD.md)
-- [Optimise integration specification](docs/OPTIMISE_INTEGRATION_SPEC_V2.md)
+- [Security hardening review](docs/HARDENING_REVIEW.md)
+
+### History
+
+- [Changelog](CHANGELOG.md)
 
 ---
 
