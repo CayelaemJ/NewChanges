@@ -5,7 +5,7 @@
 // ════════════════════════════════════════════════════════════════════
 
 import { PrismaClient } from "@prisma/client";
-import { getFormat } from "./reportFormats.js";
+import { getFormat, LOAD_ORDER } from "./reportFormats.js";
 import { compareDateValues, dateMillis, rehydrateStagedRows } from "./stagedRows.js";
 import { validateRecordDeferred } from "./validationStrategies.js";
 import { parseFile, validate, detectFormat, parseAndValidateCsvStreaming, parseAndValidateXlsxJsonStreaming, CellError } from "./importParser.js";
@@ -877,6 +877,83 @@ export async function revertBatch(batchId: string) {
   const period = currentPeriod();
   for (const employerId of touchedEmployers) await snapshotEmployer(employerId, period);
   return { reverted: true, touchedEmployers, period };
+}
+
+export async function purgeDashboardDataForFullRefresh() {
+  const counts: Record<string, number> = {};
+  const tombstoneAt = new Date();
+  const epoch = new Date(0);
+
+  await prisma.$transaction(async (tx: any) => {
+    // Purge every dashboard fact that is rebuilt from the authoritative source.
+    // Chat is a separate integration and is intentionally preserved.
+    counts.ratings = (await tx.rating.deleteMany({})).count;
+    counts.referrals = (await tx.referral.deleteMany({})).count;
+    counts.salaryAdvances = (await tx.salaryAdvance.deleteMany({})).count;
+    counts.policyVersions = (await tx.insurancePolicyVersion.deleteMany({})).count;
+    counts.policies = (await tx.insurancePolicy.deleteMany({})).count;
+    counts.debtVersions = (await tx.debtAccountVersion.deleteMany({})).count;
+    counts.debtAccounts = (await tx.debtAccount.deleteMany({})).count;
+    counts.journeyEvents = (await tx.journeyEvent.deleteMany({})).count;
+    counts.journeys = (await tx.journey.deleteMany({})).count;
+    counts.platformUsers = (await tx.platformUser.deleteMany({})).count;
+    counts.employeeVersions = (await tx.employeeVersion.deleteMany({})).count;
+    counts.headcountSnapshots = (await tx.employerHeadcountSnapshot.deleteMany({})).count;
+    counts.scoreSnapshots = (await tx.scoreSnapshot.deleteMany({})).count;
+    counts.dashboardCaches = (await tx.dashboardCohortCache.deleteMany({})).count;
+
+    // Employee IDs are identity anchors for the separately sourced chat history.
+    // Keep the shells so those foreign keys survive, but make every shell an
+    // inactive tombstone until the full source reload overwrites it.
+    counts.employeeShells = (await tx.employee.updateMany({
+      data: {
+        siteId: null,
+        incomeBand: null,
+        active: false,
+        observedAt: epoch,
+        eligibleFrom: null,
+        eligibleTo: null,
+        sourceUpdatedAt: epoch,
+        sourceDeletedAt: tombstoneAt,
+        importBatchId: null,
+      },
+    })).count;
+    counts.sites = (await tx.site.deleteMany({})).count;
+
+    // Employers also anchor user access, partner branding, score settings and
+    // scheduled reports. Preserve those relationships and reset only source data.
+    counts.employerShells = (await tx.employer.updateMany({
+      data: {
+        eligibleCount: 0,
+        eligibleCountAsAt: null,
+        sourceUpdatedAt: epoch,
+        sourceDeletedAt: tombstoneAt,
+      },
+    })).count;
+
+    // Only source-sync batches are replaced here. Separate integrations retain
+    // their own history. Clearing cursors forces every report to request since=null.
+    counts.batches = (await tx.importBatch.deleteMany({
+      where: { reportKey: { in: LOAD_ORDER } },
+    })).count;
+    counts.cursors = (await tx.integrationCursor.deleteMany({})).count;
+  }, { timeout: 120000 });
+
+  return {
+    reset: true,
+    mode: "authoritative-full-refresh",
+    purgedAt: tombstoneAt,
+    cleared: counts,
+    preserved: {
+      chatSessions: true,
+      employeeIdentityShells: true,
+      employerIdentityShells: true,
+      userEmployerAccess: true,
+      partnerBranding: true,
+      scoreConfiguration: true,
+      reportSchedules: true,
+    },
+  };
 }
 
 export async function resetAllData() {
