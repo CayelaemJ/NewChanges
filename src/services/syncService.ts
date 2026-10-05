@@ -224,7 +224,7 @@ export async function runSync(trigger: "manual" | "scheduled" | "full-refresh" =
         }
 
         if (result.rowCount === 0) {
-          if (isFirstSync) {
+          if (isFirstSync && trigger !== "full-refresh") {
             // A first sync that returns nothing is almost always a wrong
             // database/view, not "no data". Report exactly what was queried
             // instead of a false "OK", and leave the cursor unset.
@@ -251,7 +251,7 @@ export async function runSync(trigger: "manual" | "scheduled" | "full-refresh" =
               lastSuccessAt: new Date(),
               lastSourceUpdatedAt: throughAt,
               lastStatus: "OK",
-              lastNote: `No changed records in the requested window via ${adapter.mode}.`,
+              lastNote: trigger === "full-refresh" ? `Authoritative full refresh confirmed 0 source rows via ${adapter.mode}.` : `No changed records in the requested window via ${adapter.mode}.`,
             },
           });
           summary[reportKey] = { source: pulled.location, pulled: 0, committed: 0, since: requestSince, through: throughAt };
