@@ -1452,6 +1452,15 @@ app.get<{
     });
     const sections = await sectionsForUser(user);
     if (!sections.voiceOfEmployee) payload.chat = { available: false };
+    const syncConfig = await prisma.integrationConfig.findUnique({
+      where: { id: "default" },
+      select: { lastSuccessfulSyncAt: true, lastSyncAt: true, lastSyncStatus: true },
+    });
+    payload.syncStatus = {
+      lastSuccessfulSyncAt: syncConfig?.lastSuccessfulSyncAt?.toISOString() ?? null,
+      lastSyncAt: syncConfig?.lastSyncAt?.toISOString() ?? null,
+      lastSyncStatus: syncConfig?.lastSyncStatus ?? null,
+    };
     return payload;
   },
 );
