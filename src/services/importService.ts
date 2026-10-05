@@ -936,7 +936,7 @@ export async function purgeDashboardDataForFullRefresh() {
     counts.batches = (await tx.importBatch.deleteMany({
       where: { reportKey: { in: LOAD_ORDER } },
     })).count;
-    counts.cursors = (await tx.integrationCursor.deleteMany({})).count;
+    counts.cursors = (await tx.integrationCursor.deleteMany({ where: { reportKey: { in: LOAD_ORDER } } })).count;
   }, { timeout: 120000 });
 
   return {
