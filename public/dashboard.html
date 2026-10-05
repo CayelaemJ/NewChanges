@@ -3110,7 +3110,7 @@ async function loadLiveData({refreshOnly=false}={}){
       }else{
         fl.textContent='Live data';
       }
-      if(fl.title='') fl.removeAttribute('title');
+      fl.removeAttribute('title');
       if(syncAt && sourceAt){
         const sd=new Date(sourceAt);
         fl.title='Source data updated '+sd.toLocaleString('en-ZA',{dateStyle:'medium',timeStyle:'short'});
