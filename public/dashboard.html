@@ -692,6 +692,10 @@
   @keyframes welcome-spin{to{transform:rotate(360deg);}}
   .welcome-splash-greeting{font-family:'Fraunces',serif;font-weight:600;font-size:26px;color:var(--brand-primary);}
   .welcome-splash-sub{margin-top:6px;font-size:13.5px;color:var(--grey);font-weight:600;}
+
+  /* Executive insight uses a neutral surface for reliable text contrast. */
+  .enterprise-insight{background:#fff!important;color:#1d2740!important;border:1px solid #e5e7eb!important;}
+  .enterprise-insight .enterprise-insight-eyebrow,.enterprise-insight .enterprise-insight-copy{color:#1d2740!important;}
 </style>
 <link rel="stylesheet" href="/static/enterprise.css?v=2">
   <link rel="stylesheet" href="/static/enterprise-v3.css?v=3">
@@ -2173,9 +2177,6 @@ function randMoney(v,f){
   return 'R '+Math.round(abs).toLocaleString('en-ZA');
 }
 
-/* Executive insight uses a neutral surface for reliable text contrast. */
-.enterprise-insight{background:#fff!important;color:#1d2740!important;border:1px solid #e5e7eb!important;}
-.enterprise-insight .enterprise-insight-eyebrow,.enterprise-insight .enterprise-insight-copy{color:#1d2740!important;}
 function renderExecutiveInsight(){
   const host=document.getElementById('executive-insight'); if(!host) return;
   const w=DATA.wellness||{}, pc=DATA.periodComparison;
