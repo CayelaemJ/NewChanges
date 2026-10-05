@@ -14,12 +14,51 @@
 // ════════════════════════════════════════════════════════════════════
 
 import cron from "node-cron";
+import { Client } from "pg";
 import { runSync, testConnection } from "./syncService.js";
 import { purgeDashboardDataForFullRefresh } from "./importService.js";
 import { prisma } from "./snapshotBuilder.js";
 
 const REFRESH_TIMEZONE = process.env.DAILY_REFRESH_TIMEZONE ?? "Africa/Johannesburg";
 let activeFullRefresh: Promise<any> | null = null;
+
+// PostgreSQL advisory locks are shared across Railway replicas. Without this,
+// two app instances receiving the same midnight cron tick could both purge and
+// reload the live dataset. Keep this key stable for this one global operation.
+const FULL_REFRESH_LOCK_A = 0x454653; // "EFS"
+const FULL_REFRESH_LOCK_B = 78;
+
+async function openFullRefreshLease() {
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) throw new Error("DATABASE_URL is required for the full-refresh database lease.");
+
+  const client = new Client({ connectionString });
+  await client.connect();
+  try {
+    const result = await client.query(
+      "SELECT pg_try_advisory_lock($1, $2) AS acquired",
+      [FULL_REFRESH_LOCK_A, FULL_REFRESH_LOCK_B],
+    );
+    const acquired = Boolean(result.rows?.[0]?.acquired);
+    if (!acquired) {
+      await client.end();
+      return null;
+    }
+    return client;
+  } catch (error) {
+    await client.end().catch(() => {});
+    throw error;
+  }
+}
+
+async function closeFullRefreshLease(client: Client | null) {
+  if (!client) return;
+  try {
+    await client.query("SELECT pg_advisory_unlock($1, $2)", [FULL_REFRESH_LOCK_A, FULL_REFRESH_LOCK_B]);
+  } finally {
+    await client.end().catch(() => {});
+  }
+}
 
 function sumCounts(counts: Record<string, number> | undefined, includeShells = false) {
   if (!counts) return 0;
@@ -59,8 +98,21 @@ async function runAuthoritativeFullRefresh(reason: "scheduled" | "manual") {
   activeFullRefresh = (async () => {
     const startedAt = new Date();
     let purgeResult: any = null;
+    let lease: Client | null = null;
 
     try {
+      lease = await openFullRefreshLease();
+      if (!lease) {
+        return {
+          ok: true,
+          status: "ALREADY_RUNNING",
+          skipped: true,
+          fullRefresh: true,
+          refreshType: "PURGE_AND_OVERWRITE",
+          timezone: REFRESH_TIMEZONE,
+          note: "Another application replica already owns the authoritative full-refresh lease.",
+        };
+      }
       // Never destroy the currently published dashboard merely because the
       // source is unreachable or its canonical SQL views are malformed.
       // SQL preflight validates every LOAD_ORDER view; API preflight verifies
@@ -130,6 +182,7 @@ async function runAuthoritativeFullRefresh(reason: "scheduled" | "manual") {
       console.error(`[${finishedAt.toISOString()}] ${note}`);
       throw error;
     } finally {
+      await closeFullRefreshLease(lease);
       activeFullRefresh = null;
     }
   })();
