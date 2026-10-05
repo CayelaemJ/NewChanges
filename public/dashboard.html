@@ -1570,11 +1570,12 @@ function renderWellness(){
     return;
   }
   const delta=hasValue(w.prior)?w.score-w.prior:null;
-  const R=64, C=Math.PI*R, frac=(Number(w.score)||0)/100;
-  const gauge=`<svg viewBox="0 0 160 96" width="180" style="display:block;margin:0 auto">
-    <path d="M16 88 A64 64 0 0 1 144 88" fill="none" stroke="#f7f4ff" stroke-width="13" stroke-linecap="round"/>
-    <path d="M16 88 A64 64 0 0 1 144 88" fill="none" stroke="url(#wg)" stroke-width="13" stroke-linecap="round" stroke-dasharray="${(C*frac).toFixed(1)} ${C.toFixed(1)}"/>
-    <text x="80" y="74" text-anchor="middle" font-family="Fraunces,serif" font-size="34" font-weight="600" fill="var(--brand-primary)">${w.score}</text><text x="80" y="90" text-anchor="middle" font-size="9.5" font-weight="700" fill="#8497a7">/ 100</text></svg>`;
+  const value=Math.max(0,Math.min(100,Number(w.score)||0));
+  const gauge=`<svg viewBox="0 0 160 96" width="180" style="display:block;margin:0 auto" role="img" aria-label="Workforce Financial Wellness Score ${value} out of 100">
+    <defs><linearGradient id="wellnessGaugeGradient" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="var(--brand-grad-1)"/><stop offset=".5" stop-color="var(--brand-grad-3)"/><stop offset="1" stop-color="var(--brand-grad-5)"/></linearGradient></defs>
+    <path d="M16 88 A64 64 0 0 1 144 88" fill="none" stroke="var(--ice-2)" stroke-width="13" stroke-linecap="round"/>
+    <path d="M16 88 A64 64 0 0 1 144 88" fill="none" stroke="url(#wellnessGaugeGradient)" stroke-width="13" stroke-linecap="round" pathLength="100" stroke-dasharray="${value} ${100-value}" stroke-dashoffset="0"/>
+    <text x="80" y="74" text-anchor="middle" font-family="Fraunces,serif" font-size="34" font-weight="600" fill="var(--brand-primary)">${value.toFixed(0)}</text><text x="80" y="90" text-anchor="middle" font-size="9.5" font-weight="700" fill="#8497a7">/ 100</text></svg>`;
   const drivers=(w.drivers||[]).map(d=>{ const available=d.available!==false&&hasValue(d.score); const score=available?Number(d.score):0; const col=available?bandTone(score).c:'var(--chart-mid)'; const mk=employerMetricKey(d.name); return `<div class="wd-row"><div class="wd-name">${esc(d.name)} ${employerInfoButton(mk)}<small>${d.note||''}</small></div><div class="wd-track"><div class="wd-fill" style="width:0;background:${available?col:'var(--brand-soft)'}" data-w="${available?score:0}"></div></div><div class="wd-val">${available?score:'Not available'}</div></div>`; }).join('');
   const bt=bandTone(Number(w.score)||0);
   wrap.appendChild(el(`<div class="wellness-inner"><div class="wellness-left">${gauge}<div class="wellness-band" style="color:${bt.c};background:${bt.bg};border-color:${bt.border}">${ragLights(bt.rag)}${w.band||'Index'}</div><div class="wellness-delta">${delta===null?'No prior period':(delta>0?'▲ +'+delta:'▼ '+delta)+' pts vs. '+(DATA.filterContext?.comparison?.label||'previous period')}</div><div class="wellness-note">A composite of four weighted drivers. Use it to track workforce financial health over time.</div></div><div class="wellness-right">${drivers}</div></div>`));
