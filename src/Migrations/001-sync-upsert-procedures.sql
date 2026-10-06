@@ -87,9 +87,13 @@ RETURNS TABLE (inserted BIGINT, updated BIGINT, deleted BIGINT) AS $$
 DECLARE v_ins BIGINT := 0; v_upd BIGINT := 0;
 BEGIN
   INSERT INTO "Site" ("id","employerId","name")
-  SELECT DISTINCT md5(employer_ref || '|' || site_name), employer_ref, site_name
+  SELECT DISTINCT
+         md5((r->>'employer_ref') || '|' || (r->>'site_name')),
+         (r->>'employer_ref')::VARCHAR(64),
+         (r->>'site_name')::VARCHAR(150)
   FROM jsonb_array_elements(COALESCE(p_rows, '[]'::JSONB)) r
-  WHERE r->>'employer_ref' IS NOT NULL AND r->>'site_name' IS NOT NULL
+  WHERE r->>'employer_ref' IS NOT NULL
+    AND NULLIF(r->>'site_name','') IS NOT NULL
   ON CONFLICT ("employerId","name") DO NOTHING;
 
   WITH src AS (
@@ -97,7 +101,7 @@ BEGIN
            (r->>'payroll_ref')::VARCHAR(64) AS payroll_ref,
            (r->>'observed_at')::DATE AS observed_at,
            NULLIF(r->>'site_name','')::VARCHAR(150) AS site_name,
-           NULLIF(r->>'income_band','')::VARCHAR(30) AS income_band,
+           NULLIF(r->>'income_band','')::"IncomeBand" AS income_band,
            (r->>'eligible_from')::DATE AS eligible_from,
            (r->>'eligible_to')::DATE AS eligible_to,
            (r->>'active')::BOOLEAN AS active,
@@ -132,22 +136,23 @@ BEGIN
   INTO v_ins, v_upd FROM ups;
 
   INSERT INTO "EmployeeVersion"
-    ("id","employeeId","observedAt","siteName","active","eligibleFrom","eligibleTo",
+    ("id","employeeId","observedAt","siteName","incomeBand","active","eligibleFrom","eligibleTo",
      "isDeleted","sourceUpdatedAt","createdAt")
-  SELECT md5(e."id" || '|' || s.observed_at::TEXT), e."id", s.observed_at, s.site_name,
+  SELECT md5(e."id" || '|' || s.observed_at::TEXT), e."id", s.observed_at, s.site_name, s.income_band,
          CASE WHEN s.is_deleted THEN FALSE ELSE COALESCE(s.active, s.eligible_to IS NULL) END,
          s.eligible_from, s.eligible_to, s.is_deleted, s.source_updated_at, NOW()
   FROM jsonb_array_elements(COALESCE(p_rows, '[]'::JSONB)) r
   JOIN "Employee" e ON e."employerId" = r->>'employer_ref' AND e."payrollRef" = r->>'payroll_ref'
   CROSS JOIN LATERAL (SELECT (r->>'observed_at')::DATE AS observed_at,
                              NULLIF(r->>'site_name','')::VARCHAR(150) AS site_name,
+                             NULLIF(r->>'income_band','')::"IncomeBand" AS income_band,
                              (r->>'eligible_from')::DATE AS eligible_from,
                              (r->>'eligible_to')::DATE AS eligible_to,
                              (r->>'active')::BOOLEAN AS active,
                              COALESCE((r->>'is_deleted')::BOOLEAN, FALSE) AS is_deleted,
                              (r->>'source_updated_at')::TIMESTAMP AS source_updated_at) s
   ON CONFLICT ("employeeId","observedAt") DO UPDATE SET
-    "siteName"=EXCLUDED."siteName", "active"=EXCLUDED."active",
+    "siteName"=EXCLUDED."siteName", "incomeBand"=EXCLUDED."incomeBand", "active"=EXCLUDED."active",
     "eligibleFrom"=EXCLUDED."eligibleFrom", "eligibleTo"=EXCLUDED."eligibleTo",
     "isDeleted"=EXCLUDED."isDeleted", "sourceUpdatedAt"=EXCLUDED."sourceUpdatedAt"
   WHERE EXCLUDED."sourceUpdatedAt" >= "EmployeeVersion"."sourceUpdatedAt";
@@ -207,12 +212,12 @@ BEGIN
     SELECT (r->>'journey_ref')::VARCHAR(64) AS journey_ref,
            (r->>'employer_ref')::VARCHAR(64) AS employer_ref,
            (r->>'payroll_ref')::VARCHAR(64) AS payroll_ref,
-           (r->>'type')::VARCHAR(30) AS type,
-           (r->>'status')::VARCHAR(30) AS status,
+           (r->>'type')::"JourneyType" AS type,
+           (r->>'status')::"JourneyStatus" AS status,
            (r->>'started_at')::DATE AS started_at,
            (r->>'completed_at')::DATE AS completed_at,
-           ROUND((r->>'monthly_saving_rand')::NUMERIC * 100)::INT AS monthly_saving_cents,
-           ROUND((r->>'balance_impact_rand')::NUMERIC * 100)::INT AS balance_impact_cents,
+           (r->>'monthly_saving_rand')::INT AS monthly_saving_cents,
+           (r->>'balance_impact_rand')::INT AS balance_impact_cents,
            (r->>'source_updated_at')::TIMESTAMP AS source_updated_at,
            COALESCE((r->>'is_deleted')::BOOLEAN, FALSE) AS is_deleted
     FROM jsonb_array_elements(COALESCE(p_rows, '[]'::JSONB)) r
@@ -260,11 +265,11 @@ BEGIN
            (r->>'observed_at')::DATE AS observed_at,
            (r->>'closed_at')::DATE AS closed_at,
            (r->>'creditor_name')::VARCHAR(150) AS creditor_name,
-           (r->>'credit_type')::VARCHAR(30) AS credit_type,
-           ROUND((r->>'balance_rand')::NUMERIC * 100)::INT AS balance_cents,
+           (r->>'credit_type')::"CreditType" AS credit_type,
+           (r->>'balance_rand')::INT AS balance_cents,
            COALESCE((r->>'in_arrears')::BOOLEAN, FALSE) AS in_arrears,
-           COALESCE(NULLIF(r->>'state','')::VARCHAR(30), 'NONE') AS state,
-           NULLIF(r->>'challenge_status','')::VARCHAR(30) AS challenge_status,
+           COALESCE(NULLIF(r->>'state','')::"DebtState", 'NONE'::"DebtState") AS state,
+           NULLIF(r->>'challenge_status','')::"ChallengeStatus" AS challenge_status,
            NULLIF(r->>'journey_ref','')::VARCHAR(64) AS journey_ref,
            (r->>'source_updated_at')::TIMESTAMP AS source_updated_at,
            COALESCE((r->>'is_deleted')::BOOLEAN, FALSE) AS is_deleted
@@ -311,7 +316,7 @@ BEGIN
                              (r->>'observed_at')::DATE AS observed_at,
                              (r->>'creditor_name')::VARCHAR(150) AS creditor_name,
                              (r->>'credit_type')::VARCHAR(30) AS credit_type,
-                             ROUND((r->>'balance_rand')::NUMERIC * 100)::INT AS balance_cents,
+                             (r->>'balance_rand')::INT AS balance_cents,
                              COALESCE((r->>'in_arrears')::BOOLEAN, FALSE) AS in_arrears,
                              COALESCE(NULLIF(r->>'state','')::VARCHAR(30), 'NONE') AS state,
                              NULLIF(r->>'challenge_status','')::VARCHAR(30) AS challenge_status,
@@ -346,8 +351,8 @@ BEGIN
            (r->>'effective_from')::DATE AS effective_from,
            (r->>'effective_to')::DATE AS effective_to,
            (r->>'resolved_at')::DATE AS resolved_at,
-           (r->>'type')::VARCHAR(30) AS type,
-           ROUND((r->>'premium_rand')::NUMERIC * 100)::INT AS premium_cents,
+           (r->>'type')::"PolicyType" AS type,
+           (r->>'premium_rand')::INT AS premium_cents,
            COALESCE((r->>'is_wasteful')::BOOLEAN, FALSE) AS is_wasteful,
            COALESCE((r->>'is_resolved')::BOOLEAN, FALSE) AS is_resolved,
            (r->>'source_updated_at')::TIMESTAMP AS source_updated_at,
@@ -385,15 +390,16 @@ BEGIN
   INTO v_ins, v_upd FROM ups;
 
   INSERT INTO "InsurancePolicyVersion"
-    ("id","policyId","observedAt","premiumCents","isWasteful","isResolved",
+    ("id","policyId","observedAt","type","premiumCents","isWasteful","isResolved",
      "effectiveFrom","effectiveTo","resolvedAt","isDeleted","sourceUpdatedAt","createdAt")
   SELECT md5(p."id" || '|' || s.observed_at::TEXT), p."id", s.observed_at,
-         s.premium_cents, s.is_wasteful, s.is_resolved, s.effective_from,
+         s.type, s.premium_cents, s.is_wasteful, s.is_resolved, s.effective_from,
          s.effective_to, s.resolved_at, s.is_deleted, s.source_updated_at, NOW()
   FROM jsonb_array_elements(COALESCE(p_rows, '[]'::JSONB)) r
   CROSS JOIN LATERAL (SELECT (r->>'policy_ref')::VARCHAR(64) AS policy_ref,
                              (r->>'observed_at')::DATE AS observed_at,
-                             ROUND((r->>'premium_rand')::NUMERIC * 100)::INT AS premium_cents,
+                             (r->>'type')::"PolicyType" AS type,
+                             (r->>'premium_rand')::INT AS premium_cents,
                              COALESCE((r->>'is_wasteful')::BOOLEAN, FALSE) AS is_wasteful,
                              COALESCE((r->>'is_resolved')::BOOLEAN, FALSE) AS is_resolved,
                              (r->>'effective_from')::DATE AS effective_from,
@@ -403,7 +409,7 @@ BEGIN
                              (r->>'source_updated_at')::TIMESTAMP AS source_updated_at) s
   JOIN "InsurancePolicy" p ON p."id" = s.policy_ref
   ON CONFLICT ("policyId","observedAt") DO UPDATE SET
-    "premiumCents"=EXCLUDED."premiumCents", "isWasteful"=EXCLUDED."isWasteful",
+    "type"=EXCLUDED."type", "premiumCents"=EXCLUDED."premiumCents", "isWasteful"=EXCLUDED."isWasteful",
     "isResolved"=EXCLUDED."isResolved", "effectiveFrom"=EXCLUDED."effectiveFrom",
     "effectiveTo"=EXCLUDED."effectiveTo", "resolvedAt"=EXCLUDED."resolvedAt",
     "isDeleted"=EXCLUDED."isDeleted", "sourceUpdatedAt"=EXCLUDED."sourceUpdatedAt"
@@ -422,7 +428,7 @@ BEGIN
     SELECT (r->>'rating_ref')::VARCHAR(64) AS rating_ref,
            (r->>'employer_ref')::VARCHAR(64) AS employer_ref,
            (r->>'payroll_ref')::VARCHAR(64) AS payroll_ref,
-           NULLIF(r->>'journey_type','')::VARCHAR(30) AS journey_type,
+           NULLIF(r->>'journey_type','')::"JourneyType" AS journey_type,
            (r->>'stars')::INT AS stars,
            (r->>'created_at')::DATE AS created_at,
            (r->>'source_updated_at')::TIMESTAMP AS source_updated_at,
@@ -514,8 +520,8 @@ BEGIN
            (r->>'employer_ref')::VARCHAR(64) AS employer_ref,
            (r->>'client_id')::VARCHAR(64) AS client_id,
            (r->>'payroll_ref')::VARCHAR(64) AS payroll_ref,
-           ROUND((r->>'amount')::NUMERIC * 100)::INT AS amount_cents,
-           (r->>'salary_advance_status')::VARCHAR(30) AS status,
+           (r->>'amount')::INT AS amount_cents,
+           (r->>'salary_advance_status')::"AdvanceStatus" AS status,
            NULLIF(r->>'bank_account_verification_status','')::VARCHAR(30) AS bank_status,
            COALESCE((r->>'blacklisted')::BOOLEAN, FALSE) AS blacklisted,
            (r->>'advanced_at')::DATE AS advanced_at,
