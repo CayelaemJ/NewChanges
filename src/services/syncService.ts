@@ -444,8 +444,53 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
           },
         });
         let committed;
+        const reportProgress = async (p: CommitProgress) => {
+          await prisma.importBatch.update({
+            where: { id: batch.id },
+            data: {
+              insertedCount: p.inserted,
+              updatedCount: p.updated,
+              deletedCount: p.deleted,
+            },
+          });
+          const fraction = p.total > 0 ? p.processed / p.total : 1;
+          await emitSyncProgress(options, {
+            phase: "COMMITTING",
+            progress: Math.min(92, Math.round(feedStart + 2 + fraction * (80 / Math.max(1, LOAD_ORDER.length)))),
+            message: `${reportKey}: ${p.processed.toLocaleString("en-ZA")} / ${p.total.toLocaleString("en-ZA")} rows processed into live tables`,
+            reportKey,
+            feedIndex: reportIndex + 1,
+            feedCount: LOAD_ORDER.length,
+            sourceTotalRows,
+            pulledRows: pulled.records.length,
+            validatedRows: result.rowCount,
+            committedRows: p.processed,
+            inserted: p.inserted,
+            updated: p.updated,
+            deleted: p.deleted,
+            skipped: p.skipped,
+            batchId: batch.id,
+          });
+        };
+        await emitSyncProgress(options, {
+          phase: "COMMITTING",
+          progress: Math.round(feedStart + 2),
+          message: `${reportKey}: 0 / ${result.rowCount.toLocaleString("en-ZA")} rows processed into live tables`,
+          reportKey,
+          feedIndex: reportIndex + 1,
+          feedCount: LOAD_ORDER.length,
+          sourceTotalRows,
+          pulledRows: pulled.records.length,
+          validatedRows: result.rowCount,
+          committedRows: 0,
+          inserted: 0,
+          updated: 0,
+          deleted: 0,
+          skipped: 0,
+          batchId: batch.id,
+        });
         try {
-          committed = await commitSyncRows(reportKey, result.rows as Record<string, any>[]);
+          committed = await commitSyncRows(reportKey, result.rows as Record<string, any>[], reportProgress);
         } catch (error: any) {
           // Keep older deployments functional until the idempotent server-side
           // procedures are applied. New deployments should set
@@ -453,7 +498,7 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
           const message = error?.message ?? String(error);
           if (!/function sync_upsert_.* does not exist/i.test(message)) throw error;
           await prisma.importBatch.update({ where: { id: batch.id }, data: { stagedRows: result.rows as Json } });
-          committed = await commitBatch(batch.id, { recompute: false });
+          committed = await commitBatch(batch.id, { recompute: false, onProgress: reportProgress });
         }
         await prisma.importBatch.update({
           where: { id: batch.id },
@@ -477,6 +522,23 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
           since: requestSince,
           through: throughAt,
         };
+        await emitSyncProgress(options, {
+          phase: "FEED_COMPLETE",
+          progress: Math.min(92, Math.round(5 + ((reportIndex + 1) / Math.max(1, LOAD_ORDER.length)) * 82)),
+          message: `${reportKey} complete: ${result.rowCount.toLocaleString("en-ZA")} rows processed`,
+          reportKey,
+          feedIndex: reportIndex + 1,
+          feedCount: LOAD_ORDER.length,
+          sourceTotalRows,
+          pulledRows: pulled.records.length,
+          validatedRows: result.rowCount,
+          committedRows: result.rowCount,
+          inserted: committed.inserted,
+          updated: committed.updated,
+          deleted: committed.deleted,
+          skipped: committed.skipped,
+          batchId: batch.id,
+        });
 
         const previousCursor = cursor.lastSourceUpdatedAt;
         await prisma.integrationCursor.update({
