@@ -267,9 +267,10 @@ const $=s=>document.querySelector(s);
 const escHtml=value=>String(value??'').replace(/[&<>\"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[ch]));
 let EMPLOYERS=[], ME=null;
 const UsersBrandTheme=window.BrandEngine?BrandEngine.themeController():null;
-function applyUsersBrandTheme(theme){
+const DEFAULT_PORTAL_BRAND={accentColor:'7D2FA3',primaryColor:'B15BE8',navyColor:'2B1B68'};
+function applyUsersBrandTheme(){
   if(!UsersBrandTheme) return;
-  UsersBrandTheme.set({brand:theme||{accentColor:'B15BE8',primaryColor:'32217C',navyColor:'2B1B68'},light:null});
+  UsersBrandTheme.set({brand:DEFAULT_PORTAL_BRAND,light:null});
 }
 
 async function getJson(url, options){
@@ -302,7 +303,7 @@ async function boot(){
   try{
     ME=await getJson('/api/auth/me');
     if(!ME||ME.role!=='ADMIN'&&ME.role!=='SUPERADMIN'){ location.href='/login'; return; }
-    applyUsersBrandTheme(ME.theme);
+    applyUsersBrandTheme();
     renderNav();
     EMPLOYERS=Array.isArray(ME.employers)?ME.employers:[];
     renderEmpPick();
