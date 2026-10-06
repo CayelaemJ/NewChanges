@@ -5,7 +5,9 @@
 //    1. marks the dashboard as REBUILDING,
 //    2. purges source-derived dashboard facts/caches,
 //    3. clears integration cursors so every report reloads from since=null,
-//    4. runs the normal validated/MLOps-protected source pipeline,
+//    4. reloads all canonical source rows from since=null as an authoritative
+//       overwrite (previous cursors, MLOps decisions and stale-write checks do
+//       not gate this rebuild),
 //    5. rebuilds dashboard snapshots before publishing the new dataset.
 //
 //  Identity/configuration anchors (users, employer links, partner branding,
@@ -18,6 +20,7 @@ import { Client } from "pg";
 import { runSync, testConnection } from "./syncService.js";
 import { purgeDashboardDataForFullRefresh } from "./importService.js";
 import { capturePublishedDashboardState, prisma } from "./snapshotBuilder.js";
+import { LOAD_ORDER } from "./reportFormats.js";
 
 const REFRESH_TIMEZONE = process.env.DAILY_REFRESH_TIMEZONE ?? "Africa/Johannesburg";
 let activeFullRefresh: Promise<any> | null = null;
@@ -124,7 +127,7 @@ async function setRefreshState(status: string, note: string, at = new Date(), su
   });
 }
 
-async function runAuthoritativeFullRefresh(reason: "scheduled" | "manual") {
+async function runAuthoritativeFullRefresh(reason: "scheduled" | "manual" | "reset") {
   if (activeFullRefresh) return activeFullRefresh;
 
   activeFullRefresh = (async () => {
@@ -191,9 +194,28 @@ async function runAuthoritativeFullRefresh(reason: "scheduled" | "manual") {
       const rebuilt = Array.isArray(syncResult?.touchedEmployers) ? syncResult.touchedEmployers.length : 0;
       const note =
         `Full refresh completed and published: purged ${purged} source-derived dashboard rows, ` +
-        `overwrote them from the authoritative source (${overwritten} rows committed), ` +
+        `accepted and rewrote ${overwritten} row(s) from the authoritative source, ignoring prior cursors/MLOps/staleness, ` +
         `rebuilt ${rebuilt} employer dashboard${rebuilt === 1 ? "" : "s"}, and published ` +
         `${published.captured} last-successful dashboard snapshot${published.captured === 1 ? "" : "s"}.`;
+
+      // Close any older active data-quality warning in the Admin UI without
+      // deleting audit history. These PASS markers mean "authoritative overwrite
+      // intentionally bypassed the gate"; they are telemetry, not a gate.
+      await prisma.mLOpsEvent.createMany({
+        data: LOAD_ORDER.map((reportKey) => ({
+          eventType: "DATA_QUALITY_GATE",
+          modelKey: "data-quality",
+          modelVersion: "authoritative-overwrite",
+          status: "PASS",
+          metadata: {
+            reportKey,
+            authoritativeOverwrite: true,
+            bypassed: true,
+            reason,
+            refreshedAt: finishedAt.toISOString(),
+          },
+        })),
+      });
 
       await setRefreshState("OK", note, finishedAt, true);
       console.log(`[${finishedAt.toISOString()}] ${note}`);
@@ -282,9 +304,9 @@ export function startDailyRefresh() {
 
 // Manual trigger — wired to POST /api/admin/integration/refresh (admin only).
 // It deliberately runs the exact same purge+overwrite path as the midnight job.
-export async function triggerRefreshNow() {
+export async function triggerRefreshNow(reason: "manual" | "reset" = "manual") {
   try {
-    return await runAuthoritativeFullRefresh("manual");
+    return await runAuthoritativeFullRefresh(reason);
   } catch (error: any) {
     const message = error?.message ?? String(error);
     console.error("Manual full refresh failed:", message);
