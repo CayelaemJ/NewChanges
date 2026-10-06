@@ -46,10 +46,10 @@ must(sync.includes('if (trigger === "full-refresh")') && sync.includes("await sn
 must(sync.includes('if (trigger !== "full-refresh")') && sync.includes("The authoritative full-refresh wrapper owns publication state"), "low-level full sync must not publish raw rebuild state before the dashboard barrier succeeds");
 must(sync.includes("pg_try_advisory_lock_shared") && sync.includes("SOURCE_SYNC_COORDINATION_LOCK_B"), "ordinary source syncs must share the database coordination lock");
 
-must(reports.includes('state?.lastSyncStatus === "REBUILDING"') && reports.includes('state?.lastSyncStatus === "FULL_REFRESH_FAILED"'), "scheduled/manual report delivery must reject unpublished refresh data");
+must(reports.includes('"REBUILDING", "PARTIAL", "FAILED", "FULL_REFRESH_FAILED", "FULL_REFRESH_PRECHECK_FAILED"'), "scheduled/manual report delivery must reject rebuilding, partial or failed source data");
 must(reports.includes("scheduled reports deferred until dashboard data is publishable"), "due schedules must be deferred without being claimed while refresh data is unpublished");
 
-must(server.includes('syncStatus.lastSyncStatus === "REBUILDING"') && server.includes('syncStatus.lastSyncStatus === "FULL_REFRESH_FAILED"'), "dashboard API must detect rebuilding or failed post-purge states");
+must(server.includes('"REBUILDING", "PARTIAL", "FAILED", "FULL_REFRESH_FAILED", "FULL_REFRESH_PRECHECK_FAILED"'), "dashboard API must fall back to the last successful publish for rebuilding, partial and failed source states");
 must(server.includes("getPublishedDashboardPayload") && server.includes("servingLastSuccessful: true"), "dashboard API must serve the last-successful published snapshot instead of replacing the dashboard on refresh failure");
 must(server.includes("sendPublishedDashboardUnavailable") && server.includes('reply.code(503)'), "a 503 is allowed only when no published fallback exists");
 must(dashboard.includes("Purging & rebuilding") && dashboard.includes("Purged & overwritten"), "dashboard must visibly distinguish rebuilding from a completed purge-and-overwrite refresh");
