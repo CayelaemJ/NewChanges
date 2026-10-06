@@ -22,7 +22,7 @@ import { startUploadJob, getUploadJob, startCommitJob, getCommitJob } from "./se
 import { startSyncJob, getSyncJob } from "./services/syncJobs.js";
 import { startDailyRefresh, triggerRefreshNow } from "./services/dailyRefresh.js";
 import { getConfig as getSyncConfig, saveConfig as saveSyncConfig, publicConfig as publicSyncConfig, testConnection as testSyncConnection, runSync, recentSyncLogs } from "./services/syncService.js";
-import { listPartners, createPartner, updatePartner, deletePartner, assignUserToPartner, assignEmployerToPartner, themeForUser, themeForSlug } from "./services/partnerService.js";
+import { listPartners, createPartner, updatePartner, deletePartner, assignUserToPartner, assignEmployerToPartner, themeForUser, themeForEmployer, themeForSlug } from "./services/partnerService.js";
 import { login, resolveSession, destroySession, destroySessionById, destroyAllSessionsForUser, canViewEmployer, canAccessModule, allowedEmployerIds, AuthUser, isAdminRole } from "./services/authService.js";
 import { createUser, listUsers, updateUser, resetPassword, completeSetup, deactivateSelf, listRevokedUsers, deleteUserPermanently, requestPasswordReset } from "./services/userService.js";
 import { recordEvent, engagementSummary } from "./services/analyticsService.js";
@@ -1507,6 +1507,7 @@ app.get<{
     if (!payload) return sendPublishedDashboardUnavailable(reply, syncStatus);
     const sections = await sectionsForUser(user);
     if (!sections.voiceOfEmployee) payload.chat = { available: false };
+    payload.theme = await themeForEmployer(employerId);
     payload.syncStatus = usePublished
       ? syncStatusForPublishedSnapshot(syncStatus, published?.capturedAt ?? null)
       : syncStatus;
@@ -1853,6 +1854,7 @@ app.get<{ Querystring: { period?: string; quarter?: string; range?: "30d" | "qua
     if (!payload) return sendPublishedDashboardUnavailable(reply, syncStatus);
     const sections = await sectionsForUser(user);
     if (!sections.voiceOfEmployee) payload.chat = { available: false };
+    payload.theme = await themeForEmployer(employer.id);
     payload.syncStatus = usePublished
       ? syncStatusForPublishedSnapshot(syncStatus, published?.capturedAt ?? null)
       : syncStatus;
