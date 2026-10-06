@@ -30,6 +30,7 @@ must((bulkSql.match(/SELECT DISTINCT ON/g)||[]).length >= 3 && bulkSql.includes(
 must(migrationRunner.includes("dated multi-observation projection/history semantics") && migrationRunner.includes("EmployeeVersion") && migrationRunner.includes("DebtAccountVersion") && migrationRunner.includes("InsurancePolicyVersion"), "deployment smoke tests must exercise duplicate projection keys with multiple dated history rows");
 must(syncService.includes('cardinalityConflict') && syncService.includes('CHUNKED_COMPATIBILITY') && syncService.includes('ON CONFLICT DO UPDATE command cannot affect row a second time'), "source sync must preserve the old chunked importer as a correctness fallback for SQLSTATE 21000 bulk conflicts");
 must(bulkSql.includes('ON CONFLICT ("advanceRef") DO UPDATE') && !bulkSql.includes('ON CONFLICT ("id") DO UPDATE SET\n      "employeeId"=EXCLUDED."employeeId", "clientId"=EXCLUDED."clientId"'), "salary advance bulk sync must upsert by unique advanceRef so previously imported rows cannot collide on the secondary unique key");
+must(bulkSql.includes("md5('salary-advance|' || salary_advance_id)") && bulkSql.includes('("id","advanceRef","employerId"'), "salary advance bulk sync must provide a deterministic internal id because Prisma cuid defaults are application-side and PostgreSQL has no id default");
 
 if (failures.length) {
   console.error("Import regression check failed:\n- " + failures.join("\n- "));
