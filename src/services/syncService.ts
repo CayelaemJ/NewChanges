@@ -411,6 +411,11 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
         result.rows = result.rows.map((row: any) =>
           row.source_updated_at > throughAt ? { ...row, source_updated_at: throughAt } : row
         );
+        const newestPulledAt = result.rows.reduce<Date | null>((latest: Date | null, row: any) => {
+          const value = row.source_updated_at instanceof Date ? row.source_updated_at : new Date(row.source_updated_at);
+          if (!Number.isFinite(value.getTime())) return latest;
+          return !latest || value > latest ? value : latest;
+        }, null);
 
         if (!result.ok) {
           const note = `Validation failed: ${result.errors.length} cell error(s), ${result.missingColumns.length} required column(s) missing.`;
@@ -454,16 +459,30 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
             anyFailed = true;
             continue;
           }
+          let rebasedCursor = cursor.lastSourceUpdatedAt;
+          if (adapter.mode === "SQL" && adapter.watermark && cursor.lastSourceUpdatedAt) {
+            try {
+              const watermark = await adapter.watermark(reportKey);
+              const newestMs = sourceWatermarkMillis(watermark.newest);
+              if (newestMs != null && newestMs < cursor.lastSourceUpdatedAt.getTime()) {
+                rebasedCursor = new Date(newestMs);
+              }
+            } catch {}
+          }
           await prisma.integrationCursor.update({
             where: { reportKey },
             data: {
               lastSuccessAt: new Date(),
-              lastSourceUpdatedAt: throughAt,
+              ...(rebasedCursor && rebasedCursor.getTime() !== cursor.lastSourceUpdatedAt?.getTime()
+                ? { lastSourceUpdatedAt: rebasedCursor }
+                : {}),
               lastStatus: "OK",
-              lastNote: trigger === "full-refresh" ? `Authoritative full refresh confirmed 0 source rows via ${adapter.mode}.` : `No changed records in the requested window via ${adapter.mode}.`,
+              lastNote: rebasedCursor && rebasedCursor.getTime() !== cursor.lastSourceUpdatedAt?.getTime()
+                ? `No changed records via ${adapter.mode}; corrected the legacy cursor to the source watermark ${rebasedCursor.toISOString()}.`
+                : (trigger === "full-refresh" ? `Authoritative full refresh confirmed 0 source rows via ${adapter.mode}.` : `No changed records in the requested window via ${adapter.mode}.`),
             },
           });
-          summary[reportKey] = { source: pulled.location, pulled: 0, committed: 0, since: requestSince, through: throughAt };
+          summary[reportKey] = { source: pulled.location, pulled: 0, committed: 0, since: requestSince, through: throughAt, sourceWatermark: rebasedCursor };
           anyOk = true;
           continue;
         }
@@ -631,7 +650,7 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
           where: { reportKey },
           data: {
             lastSuccessAt: new Date(),
-            lastSourceUpdatedAt: throughAt,
+            lastSourceUpdatedAt: newestPulledAt ?? cursor.lastSourceUpdatedAt ?? throughAt,
             lastStatus: "OK",
             lastNote: `${committed.inserted} inserted, ${committed.updated} updated, ${committed.deleted} deleted, ${committed.skipped} stale skipped via ${adapter.mode}.`,
           },
