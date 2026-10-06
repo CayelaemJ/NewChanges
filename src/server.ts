@@ -961,8 +961,17 @@ app.get<{ Params: { jobId: string } }>(
     if (!(await requireAdmin(req, reply))) return;
     const job = getUploadJob(req.params.jobId);
     if (!job) return reply.code(404).send({ error: "unknown upload job" });
-    if (job.status === "PENDING") return { status: "PROCESSING" };
-    if (job.status === "FAILED") return { status: "FAILED", error: job.error };
+    if (job.status === "PENDING" || job.status === "PROCESSING") {
+      return {
+        status: "PROCESSING",
+        phase: job.phase,
+        progress: job.progress,
+        message: job.message,
+        detail: job.detail ?? null,
+        updatedAt: job.updatedAt,
+      };
+    }
+    if (job.status === "FAILED") return { status: "FAILED", error: job.error, phase: job.phase, progress: job.progress, detail: job.detail ?? null };
     return { status: "DONE", ...job.result };
   },
 );
@@ -994,8 +1003,17 @@ app.get<{ Params: { jobId: string } }>(
     if (!(await requireAdmin(req, reply))) return;
     const job = getCommitJob(req.params.jobId);
     if (!job) return reply.code(404).send({ error: "unknown commit job" });
-    if (job.status === "PENDING") return { status: "PROCESSING" };
-    if (job.status === "FAILED") return { status: "FAILED", error: job.error };
+    if (job.status === "PENDING" || job.status === "PROCESSING") {
+      return {
+        status: "PROCESSING",
+        phase: job.phase,
+        progress: job.progress,
+        message: job.message,
+        detail: job.detail ?? null,
+        updatedAt: job.updatedAt,
+      };
+    }
+    if (job.status === "FAILED") return { status: "FAILED", error: job.error, phase: job.phase, progress: job.progress, detail: job.detail ?? null };
     return { status: "DONE", ...job.result };
   },
 );
@@ -1156,8 +1174,17 @@ app.get<{ Params: { jobId: string } }>(
     if (!(await requireAdmin(req, reply))) return;
     const job = getSyncJob(req.params.jobId);
     if (!job) return reply.code(404).send({ error: "unknown sync job" });
-    if (job.status === "PENDING") return { status: "PROCESSING" };
-    if (job.status === "FAILED") return { status: "FAILED", error: job.error };
+    if (job.status === "PENDING" || job.status === "PROCESSING") {
+      return {
+        status: "PROCESSING",
+        phase: job.phase,
+        progress: job.progress,
+        message: job.message,
+        detail: job.detail ?? null,
+        updatedAt: job.updatedAt,
+      };
+    }
+    if (job.status === "FAILED") return { status: "FAILED", error: job.error, phase: job.phase, progress: job.progress, detail: job.detail ?? null };
     return { status: "DONE", ...job.result };
   },
 );
