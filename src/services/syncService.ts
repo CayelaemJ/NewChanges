@@ -11,7 +11,7 @@ import { LOAD_ORDER, getFormat } from "./reportFormats.js";
 import { validate } from "./importParser.js";
 import { snapshotEmployer } from "./snapshotBuilder.js";
 import { notifyAdmins, notifyScoreChangeIfCurrentPeriod } from "./automationService.js";
-import { commitBatch, commitSyncRows, type CommitProgress } from "./importService.js";
+import { commitBatch, commitSyncRows, SYNC_BULK_CHUNK_SIZE, type CommitProgress } from "./importService.js";
 import { assessIncomingRows } from "./dataQualityService.js";
 import { createSourceAdapter, configuredSourceMode, sourceIsConfigured } from "./sourceAdapter.js";
 import { runMLOpsAssessment } from "./mlopsService.js";
@@ -20,6 +20,7 @@ const prisma = new PrismaClient();
 type Json = Prisma.InputJsonValue;
 const CURSOR_OVERLAP_MS = 5 * 60 * 1000;
 const CLOCK_SKEW_TOLERANCE_MS = 5 * 60 * 1000;
+export const SOURCE_CHANGE_POLL_SECONDS = Math.max(15, Math.min(3600, Number(process.env.SOURCE_CHANGE_POLL_SECONDS ?? 30) || 30));
 const pendingSnapshotEmployers = new Set<string>();
 let snapshotDrainScheduled = false;
 
@@ -161,6 +162,10 @@ export function publicConfig(config: Awaited<ReturnType<typeof getConfig>>) {
     ...safe,
     effectiveSourceMode,
     configured,
+    changeDetectionSupported: effectiveSourceMode === "SQL",
+    changeDetectionEnabled: configured && effectiveSourceMode === "SQL" && Boolean((config as any).enabled),
+    sourceChangePollSeconds: SOURCE_CHANGE_POLL_SECONDS,
+    syncBulkChunkSize: SYNC_BULK_CHUNK_SIZE,
     hasToken: Boolean(process.env.SOURCE_API_TOKEN || authToken),
     hasSqlPassword: Boolean(process.env.SOURCE_SQL_PASSWORD || sqlPassword),
     sqlPasswordFromEnvironment: Boolean(process.env.SOURCE_SQL_PASSWORD),
@@ -168,8 +173,72 @@ export function publicConfig(config: Awaited<ReturnType<typeof getConfig>>) {
   };
 }
 
+function sourceWatermarkMillis(value: string | null | undefined): number | null {
+  if (!value) return null;
+  const raw = String(value).trim();
+  // The integration contract defines source_updated_at as UTC. Some SQL
+  // drivers return a timezone-less string, so normalise it to UTC before
+  // comparing with the portal cursor.
+  const hasZone = /(?:z|[+-]\d{2}:?\d{2})$/i.test(raw);
+  const normalized = hasZone ? raw : raw.replace(" ", "T") + "Z";
+  const ms = Date.parse(normalized);
+  return Number.isFinite(ms) ? ms : null;
+}
+
+export async function detectSourceChanges() {
+  const config = await getConfig();
+  if (!config.enabled) return { supported: false, changed: false, reports: [], reason: "integration disabled" };
+  let configured = false;
+  try { configured = sourceIsConfigured(config); }
+  catch (error: any) { return { supported: false, changed: false, reports: [], reason: error?.message ?? String(error) }; }
+  if (!configured) return { supported: false, changed: false, reports: [], reason: "source not configured" };
+  if (configuredSourceMode(config) !== "SQL") {
+    return { supported: false, changed: false, reports: [], reason: "API sources use scheduled polling; SQL watermark detection is not available." };
+  }
+
+  let adapter: Awaited<ReturnType<typeof createSourceAdapter>> | null = null;
+  try {
+    adapter = await createSourceAdapter(config);
+    if (!adapter.watermark) return { supported: false, changed: false, reports: [], reason: "source adapter does not expose watermarks" };
+    const cursors = await prisma.integrationCursor.findMany({
+      where: { reportKey: { in: LOAD_ORDER } },
+      select: { reportKey: true, lastSourceUpdatedAt: true },
+    });
+    const byReport = new Map(cursors.map((cursor) => [cursor.reportKey, cursor.lastSourceUpdatedAt]));
+    const reports: Array<{ reportKey: string; newest: string | null; cursor: string | null; location: string }> = [];
+
+    for (const reportKey of LOAD_ORDER) {
+      const watermark = await adapter.watermark(reportKey);
+      const newestMs = sourceWatermarkMillis(watermark.newest);
+      const cursor = byReport.get(reportKey) ?? null;
+      const cursorMs = cursor?.getTime() ?? null;
+      if (newestMs != null && (cursorMs == null || newestMs > cursorMs)) {
+        reports.push({
+          reportKey,
+          newest: watermark.newest,
+          cursor: cursor?.toISOString() ?? null,
+          location: watermark.location,
+        });
+      }
+    }
+    return {
+      supported: true,
+      changed: reports.length > 0,
+      reports,
+      checkedAt: new Date().toISOString(),
+      pollSeconds: SOURCE_CHANGE_POLL_SECONDS,
+      strategy: "MAX(source_updated_at)",
+    };
+  } finally {
+    if (adapter) {
+      try { await adapter.close(); } catch {}
+    }
+  }
+}
+
 const FULL_REFRESH_LOCK_A = 0x454653; // must match dailyRefresh.ts
 const SOURCE_SYNC_COORDINATION_LOCK_B = 79;
+const SOURCE_INCREMENTAL_MUTEX_B = 80;
 
 async function openIncrementalSyncLease() {
   const connectionString = process.env.DATABASE_URL;
@@ -185,6 +254,18 @@ async function openIncrementalSyncLease() {
       await client.end();
       return null;
     }
+    const incremental = await client.query(
+      "SELECT pg_try_advisory_lock($1, $2) AS acquired",
+      [FULL_REFRESH_LOCK_A, SOURCE_INCREMENTAL_MUTEX_B],
+    );
+    if (!Boolean(incremental.rows?.[0]?.acquired)) {
+      await client.query(
+        "SELECT pg_advisory_unlock_shared($1, $2)",
+        [FULL_REFRESH_LOCK_A, SOURCE_SYNC_COORDINATION_LOCK_B],
+      ).catch(() => {});
+      await client.end();
+      return null;
+    }
     return client;
   } catch (error) {
     await client.end().catch(() => {});
@@ -196,9 +277,13 @@ async function closeIncrementalSyncLease(client: Client | null) {
   if (!client) return;
   try {
     await client.query(
+      "SELECT pg_advisory_unlock($1, $2)",
+      [FULL_REFRESH_LOCK_A, SOURCE_INCREMENTAL_MUTEX_B],
+    ).catch(() => {});
+    await client.query(
       "SELECT pg_advisory_unlock_shared($1, $2)",
       [FULL_REFRESH_LOCK_A, SOURCE_SYNC_COORDINATION_LOCK_B],
-    );
+    ).catch(() => {});
   } finally {
     await client.end().catch(() => {});
   }
@@ -215,7 +300,7 @@ export async function runSync(trigger: "manual" | "scheduled" | "full-refresh" =
     return {
       ok: false,
       status: "REBUILDING",
-      error: "An authoritative full refresh currently owns the source-sync lease. Try again after it completes.",
+      error: "Another source sync or authoritative full refresh is already running. Try again after it completes.",
     };
   }
   try {
@@ -493,9 +578,9 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
         try {
           committed = await commitSyncRows(reportKey, result.rows as Record<string, any>[], reportProgress);
         } catch (error: any) {
-          // Keep older deployments functional until the idempotent server-side
-          // procedures are applied. New deployments should set
-          // APPLY_SYNC_MIGRATIONS=true so the fast path is always used.
+          // Emergency compatibility fallback only. Deployments now install the
+          // idempotent server-side bulk procedures automatically; seeing this
+          // path means the database procedure installation needs attention.
           const message = error?.message ?? String(error);
           if (!/function sync_upsert_.* does not exist/i.test(message)) throw error;
           await prisma.importBatch.update({ where: { id: batch.id }, data: { stagedRows: result.rows as Json } });
