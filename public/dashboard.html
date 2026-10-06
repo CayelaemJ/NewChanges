@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="/static/portal-nav-v080.css?v=0.10.0">
-<link rel="stylesheet" href="/static/dashboard.css?v=0.11.0">
+<link rel="stylesheet" href="/static/dashboard.css?v=0.11.1">
 <script src="/static/safe.js?v=1"></script>
 <script src="/static/brand-engine.js?v=1"></script>
 <title>Financial Wellbeing Dashboard | empower-fin</title>
@@ -1782,7 +1782,15 @@ function renderPeriodLineChart(current=[], previous=[], currentLabel='Selected p
   const w=760,h=240,axisLeft=112,plotLeft=132,right=22,top=22,bottom=46,plotRight=w-right;
   const ticks=niceTicks(values,5),max=ticks[ticks.length-1]||1;
   const px=i=>plotLeft+i*(plotRight-plotLeft)/Math.max(1,n-1), py=v=>h-bottom-(v/max)*(h-bottom-top);
-  const lineOf=(series)=>series.map((v,i)=>v==null?'':(i?'L':'M')+px(i).toFixed(1)+' '+py(v).toFixed(1)).filter(Boolean).join(' ');
+  const lineOf=(series)=>{
+    let started=false;
+    return series.map((v,i)=>{
+      if(v==null) return '';
+      const cmd=started?'L':'M';
+      started=true;
+      return cmd+px(i).toFixed(1)+' '+py(v).toFixed(1);
+    }).filter(Boolean).join(' ');
+  };
   const currentLine=lineOf(currentAligned), previousLine=lineOf(previousAligned);
   const yaxis=ticks.map(v=>{const y=py(v);return `<line x1="${plotLeft}" x2="${plotRight}" y1="${y}" y2="${y}" stroke="var(--line-soft)"/><text x="${axisLeft}" y="${y+3}" text-anchor="end" font-size="9.5" font-weight="700" fill="#8497a7">${valueFormatter(v)}</text>`}).join('');
   return `<div class="comparison-chart"><div class="comparison-legend"><span><i class="comparison-dot current"></i>${esc(currentLabel)}</span><span><i class="comparison-dot previous"></i>${esc(previousLabel)}</span></div><svg viewBox="0 0 ${w} ${h}" role="img" aria-label="${esc(currentLabel)} and ${esc(previousLabel)} trend"><path d="${currentLine}" fill="none" stroke="${colour}" stroke-width="3" stroke-linecap="round"/><path d="${previousLine}" fill="none" stroke="var(--chart-engagement)" stroke-width="2.2" stroke-dasharray="6 5" stroke-linecap="round"/>${yaxis}</svg></div>`;
