@@ -266,6 +266,11 @@
 const $=s=>document.querySelector(s);
 const escHtml=value=>String(value??'').replace(/[&<>\"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[ch]));
 let EMPLOYERS=[], ME=null;
+const UsersBrandTheme=window.BrandEngine?BrandEngine.themeController():null;
+function applyUsersBrandTheme(theme){
+  if(!UsersBrandTheme) return;
+  UsersBrandTheme.set({brand:theme||{accentColor:'B15BE8',primaryColor:'32217C',navyColor:'2B1B68'},light:null});
+}
 
 async function getJson(url, options){
   const response=await fetch(url,{cache:'no-store',...options});
@@ -297,6 +302,7 @@ async function boot(){
   try{
     ME=await getJson('/api/auth/me');
     if(!ME||ME.role!=='ADMIN'&&ME.role!=='SUPERADMIN'){ location.href='/login'; return; }
+    applyUsersBrandTheme(ME.theme);
     renderNav();
     EMPLOYERS=Array.isArray(ME.employers)?ME.employers:[];
     renderEmpPick();
@@ -540,10 +546,6 @@ function installCompactCollapse(){
 function show(el,t,m){ el.className='msg '+t; el.textContent=m; el.style.display='block'; }
 installCompactCollapse();
 boot();
-</script>
-<script>
-/* Dark mode for admin pages: same engine, default portal brand. Light mode stays on the page's original palette. */
-if(window.BrandEngine){ BrandEngine.themeController().set({ brand:{ accentColor:'7D2FA3', primaryColor:'B15BE8', navyColor:'2B1B68' }, light:null }); }
 </script>
 <script src="/static/shell.js?v=1"></script>
 </body>
