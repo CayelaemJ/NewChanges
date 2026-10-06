@@ -47,6 +47,8 @@ must(snapshots.includes("cacheKey: { not: PUBLISHED_DASHBOARD_CACHE_KEY }"), "sn
 must(sync.includes('trigger: "manual" | "scheduled" | "full-refresh"'), "sync pipeline must expose an explicit full-refresh trigger");
 must(sync.includes('const authoritativeOverwrite = trigger === "full-refresh"'), "full refresh must explicitly enter authoritative overwrite mode");
 must(sync.includes('const requestSince = authoritativeOverwrite ? null'), "authoritative overwrite must always read the source from the beginning, regardless of old cursors");
+must(sync.includes('through: authoritativeOverwrite ? undefined : throughAt'), "authoritative overwrite must remove the through timestamp too, so Reset rereads the entire connected source without any time-window filter");
+must(sync.includes('authoritativeOverwrite && sourceTotalRows != null && sourceTotalRows > 0 && pulled.records.length === 0'), "authoritative rebuild must reject a false 0-row extraction when the connected SQL source view actually contains rows");
 must(sync.includes('authoritativeOverwrite\n          ? { status: "PASS"') && sync.includes('BYPASSED_AUTHORITATIVE_OVERWRITE'), "authoritative overwrite must bypass MLOps gating rather than inherit prior decisions");
 must(sync.includes('commitSyncRows(reportKey, result.rows as Record<string, any>[], reportProgress, { authoritativeOverwrite })'), "bulk writes must receive authoritative overwrite semantics");
 must(sync.includes('authoritative: authoritativeOverwrite'), "authoritative source extraction must be explicitly requested");
