@@ -17,7 +17,7 @@ import { readFile } from "node:fs/promises";
 import { prisma, snapshotEmployer, getDashboardPayload, getPublishedDashboardPayload, getPublishedDashboardState, publishedDashboardEmployerIds, monthKey } from "./services/snapshotBuilder.js";
 import { REPORT_FORMATS, LOAD_ORDER, getFormat } from "./services/reportFormats.js";
 import { csvTemplate, xlsxTemplate, formatManifest } from "./services/templateGenerator.js";
-import { uploadAndValidate, commitBatch, revertBatch, resetAllData } from "./services/importService.js";
+import { uploadAndValidate, commitBatch, revertBatch } from "./services/importService.js";
 import { startUploadJob, getUploadJob, startCommitJob, getCommitJob } from "./services/asyncJobs.js";
 import { startSyncJob, getSyncJob } from "./services/syncJobs.js";
 import { startDailyRefresh, triggerRefreshNow } from "./services/dailyRefresh.js";
@@ -1086,20 +1086,29 @@ app.get<{ Params: { batchId: string } }>("/api/admin/batches/:batchId/csv", asyn
         return reply.code(400).send({ error: e?.message || "Could not export import data." });
     }
 });
-// ── DANGER: wipe ALL imported data (clean slate for go-live). Admin only,
-//    and the body must contain confirm: "RESET" so it can't fire by accident. ──
+// ── DANGER: authoritative reset + rebuild. Admin only.
+// RESET is deliberately one operation: preflight source, purge the source-derived
+// read model, ignore prior cursors/MLOps/staleness, reload all 10 feeds from the
+// connected source, rebuild snapshots, and publish only after a complete success.
+// This avoids leaving the portal empty after a raw reset.
 app.post<{ Body: { confirm?: string } }>("/api/admin/reset-all", async (req, reply) => {
   const admin = await requireAdmin(req, reply); if (!admin) return;
   if ((req.body?.confirm) !== "RESET") {
     return reply.code(400).send({ error: 'confirmation phrase missing — expected confirm: "RESET"' });
   }
   try {
-    const result = await resetAllData();
-    logAdminAction(admin, "data.reset_all", `Wiped all imported data (clean slate)`, { detail: result });
-    return result;
+    const result = await triggerRefreshNow();
+    logAdminAction(admin, "data.reset_all", "Authoritative reset and complete source rebuild", { detail: result });
+    if (!result?.ok) return reply.code(500).send(result);
+    return {
+      ...result,
+      reset: true,
+      reloaded: true,
+      cleared: result?.purge?.cleared ?? {},
+    };
   } catch (e: any) {
-    req.log.error({ err: e }, "reset all imported data failed");
-    return reply.code(500).send({ error: e?.message || "Reset failed." });
+    req.log.error({ err: e }, "authoritative reset and rebuild failed");
+    return reply.code(500).send({ error: e?.message || "Reset and rebuild failed." });
   }
 });
 
