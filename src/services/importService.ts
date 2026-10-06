@@ -900,7 +900,8 @@ export async function purgeDashboardDataForFullRefresh() {
     counts.employeeVersions = (await tx.employeeVersion.deleteMany({})).count;
     counts.headcountSnapshots = (await tx.employerHeadcountSnapshot.deleteMany({})).count;
     counts.scoreSnapshots = (await tx.scoreSnapshot.deleteMany({})).count;
-    counts.dashboardCaches = (await tx.dashboardCohortCache.deleteMany({})).count;
+    // Dashboard cache rows are the published/last-known-good read model. They
+    // stay intact until the new source load and snapshot rebuild have completed.
 
     // Employee IDs are identity anchors for the separately sourced chat history.
     // Keep the shells so those foreign keys survive, but make every shell an
@@ -952,6 +953,7 @@ export async function purgeDashboardDataForFullRefresh() {
       partnerBranding: true,
       scoreConfiguration: true,
       reportSchedules: true,
+      publishedDashboardCache: true,
     },
   };
 }
