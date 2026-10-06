@@ -495,7 +495,7 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
         // MLOps safety gate: external database/API rows must pass the same
         // anomaly controls as file uploads before any live-table procedure runs.
         const quality = await assessIncomingRows({ reportKey, rows: result.rows as Record<string, unknown>[] });
-        if (quality.status !== "PASS") {
+        if (quality.status === "QUARANTINE") {
           const qualityErrors = quality.findings.map((f) => ({
             row: f.row ?? 0,
             column: f.field ?? "dataset",
@@ -532,6 +532,12 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
           failedStep = { reportIndex, reportKey, title: format.title, reason: failureReason };
           console.error(`[sync] STEP ${reportIndex + 1} ${format.title} blocked by MLOps: ${reason}`);
           break;
+        }
+
+        if (quality.status === "REVIEW") {
+          const warning = quality.findings.filter((f) => f.severity === "WARNING").slice(0, 5)
+            .map((f) => `${f.code}${f.field ? `(${f.field})` : ""}: ${f.message}`).join(" | ");
+          console.warn(`[mlops] ${reportKey} allowed with REVIEW warnings: ${warning}`);
         }
 
         // Fast sync path: keep a lightweight audit row, but do not copy the
