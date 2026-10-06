@@ -336,7 +336,7 @@
 
       <!-- import history -->
       <div class="card section-gap">
-        <div class="card-hd"><h2>Import history</h2><div class="note">Most recent first · Revert is shown only when a batch can be safely rolled back</div></div>
+        <div class="card-hd"><h2>Import history</h2><div class="note">Live updates every 1.5s · Rows show validated totals and how many changes have actually reached live tables</div></div>
         <div class="card-bd" style="padding:6px 8px 12px;">
           <table class="hist"><thead><tr><th>Report</th><th>File</th><th>Rows</th><th>Status</th><th>When</th><th>Download</th><th></th></tr></thead>
           <tbody id="hist-body"><tr><td colspan="7" class="muted" style="padding:14px;">No imports yet.</td></tr></tbody></table>
@@ -1586,6 +1586,7 @@ async function doReset(){
 
 
 async function boot(){
+  installCompactCollapse();
   // Require an authenticated admin, then load the report contract independently
   // from the rest of the optional administration panels. A failure elsewhere
   // must never remove the report selector or its upload controls.
@@ -1986,7 +1987,7 @@ function installCompactCollapse(){
     head.appendChild(btn);
   });
 }
-window.addEventListener("load", () => { installCompactCollapse(); boot(); }, { once: true });
+window.addEventListener("load", () => boot(), { once: true });
 window.setInterval(() => {
   if(document.visibilityState !== 'visible') return;
   loadHistory();
