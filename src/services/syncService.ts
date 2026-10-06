@@ -508,15 +508,20 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
     where: { id: log.id },
     data: { status, finishedAt, summary: summary as Json, note },
   });
-  await prisma.integrationConfig.update({
-    where: { id: "default" },
-    data: {
-      lastSyncAt: finishedAt,
-      ...(status === "OK" ? { lastSuccessfulSyncAt: finishedAt } : {}),
-      lastSyncStatus: status,
-      lastSyncNote: note,
-    },
-  });
+  // The authoritative full-refresh wrapper owns publication state. Keep the
+  // portal in REBUILDING until it has captured a complete published dashboard;
+  // otherwise this lower-level sync would briefly expose in-progress raw data.
+  if (trigger !== "full-refresh") {
+    await prisma.integrationConfig.update({
+      where: { id: "default" },
+      data: {
+        lastSyncAt: finishedAt,
+        ...(status === "OK" ? { lastSuccessfulSyncAt: finishedAt } : {}),
+        lastSyncStatus: status,
+        lastSyncNote: note,
+      },
+    });
+  }
 
   return { ok: status !== "FAILED", status, sourceMode: mode, note, throughAt, touchedEmployers: [...touchedEmployers], summary };
 }
