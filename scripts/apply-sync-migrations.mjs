@@ -36,7 +36,7 @@ function splitSql(sql) {
       if (ch === "'") inSingle = false;
       i++; continue;
     }
-    const m = sql.slice(i).match(/^[A-Za-z_][A-Za-z0-9_]*\$|\$\$/);
+    const m = sql.slice(i).match(/^(?:\$[A-Za-z_][A-Za-z0-9_]*\$|\$\$)/);
     if (m) { dollarTag = m[0]; cur += dollarTag; i += dollarTag.length; continue; }
     if (ch === "-" && sql[i + 1] === "-") {
       const e = sql.indexOf("\n", i);
