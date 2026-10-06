@@ -557,9 +557,9 @@ BEGIN
   ),
   ups AS (
     INSERT INTO "SalaryAdvance"
-      ("advanceRef","employerId","employeeId","clientId","amountCents","status",
+      ("id","advanceRef","employerId","employeeId","clientId","amountCents","status",
        "bankVerified","blacklisted","advancedAt","sourceUpdatedAt","sourceDeletedAt","updatedAt")
-    SELECT salary_advance_id, employer_ref, employee_id, client_id,
+    SELECT md5('salary-advance|' || salary_advance_id), salary_advance_id, employer_ref, employee_id, client_id,
            amount_cents, status, (bank_status = 'PASSED'), blacklisted, advanced_at,
            source_updated_at,
            CASE WHEN is_deleted THEN source_updated_at ELSE NULL END, NOW()
