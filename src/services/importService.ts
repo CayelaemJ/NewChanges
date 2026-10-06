@@ -134,7 +134,7 @@ export async function uploadAndValidate(opts: {
   if (result.ok) {
     const staged = await loadStagedRows(batch);
     const quality = await assessIncomingRows({ reportKey: opts.reportKey, rows: staged });
-    if (quality.status !== "PASS") {
+    if (quality.status === "QUARANTINE") {
       result = {
         ...result,
         ok: false,
