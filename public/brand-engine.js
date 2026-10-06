@@ -287,7 +287,16 @@
     var acc = ensureContrast(accent, surf, 4.5), accL = hexToLch(acc);
     var head = ensureContrast(lch(0.90, Math.min(N.C, 0.05) || 0.03, hue), surf, 9);
     var bar = lch(Math.min(Math.max(N.L * 0.78, 0.25), 0.31), Math.min(N.C * 0.95, 0.10), N.C > 0.02 ? N.h : A.h);
+    // Loading is intentionally brighter than the application chrome. Full-screen
+    // near-black interstitials feel visually heavy and make partner colours muddy.
+    var loadingBg = lch(0.38, tint * 0.85, hue);
+    var loadingSurface = lch(0.46, tint * 0.72, hue);
+    var loadingLine = lch(0.56, tint * 0.60, hue);
+    var loadingInk = ensureContrast(lch(0.97, 0.008, hue), loadingSurface, 8);
+    var loadingMuted = ensureContrast(lch(0.84, 0.012, hue), loadingSurface, 5.5);
     t['--dm-bg'] = pound(bg); t['--dm-surface'] = pound(surf); t['--dm-surface-2'] = pound(surf2); t['--dm-line'] = pound(line);
+    t['--dm-loading-bg'] = pound(loadingBg); t['--dm-loading-surface'] = pound(loadingSurface); t['--dm-loading-line'] = pound(loadingLine);
+    t['--dm-loading-ink'] = pound(loadingInk); t['--dm-loading-muted'] = pound(loadingMuted);
     t['--white'] = pound(surf); t['--ent-paper'] = pound(bg); t['--ink'] = pound(ink); t['--grey'] = pound(grey); t['--grey-l'] = pound(greyL);
     t['--line'] = pound(line); t['--line-soft'] = pound(lineSoft); t['--ice'] = pound(ice); t['--ice-2'] = pound(surf2); t['--brand-soft'] = pound(surf2);
     t['--blue'] = pound(acc); t['--blue-d'] = pound(lch(Math.min(accL.L + 0.07, 0.92), accL.C, accL.h));
