@@ -354,7 +354,8 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
 
       try {
         const isFirstSync = cursor.lastSourceUpdatedAt === null && cursor.lastSuccessAt === null;
-        const requestSince = isFirstSync ? null : overlapCursor(cursor.lastSourceUpdatedAt);
+        const authoritativeOverwrite = trigger === "full-refresh";
+        const requestSince = authoritativeOverwrite ? null : (isFirstSync ? null : overlapCursor(cursor.lastSourceUpdatedAt));
         if (isFirstSync) {
           console.log(`[sync] ${reportKey}: first sync detected, loading all records without date filtering.`);
         }
@@ -406,7 +407,7 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
 
         const skewCeiling = new Date(throughAt.getTime() + CLOCK_SKEW_TOLERANCE_MS);
         const genuinelyFutureRows = result.rows.filter((row: any) => row.source_updated_at > skewCeiling);
-        if (genuinelyFutureRows.length) {
+        if (genuinelyFutureRows.length && !authoritativeOverwrite) {
           throw new Error(`${reportKey}: ${genuinelyFutureRows.length} record(s) had source_updated_at more than ${CLOCK_SKEW_TOLERANCE_MS / 60000} minute(s) later than the requested through timestamp — check the source database's clock/timezone settings.`);
         }
         result.rows = result.rows.map((row: any) =>
@@ -492,10 +493,13 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
           continue;
         }
 
-        // MLOps safety gate: external database/API rows must pass the same
-        // anomaly controls as file uploads before any live-table procedure runs.
-        const quality = await assessIncomingRows({ reportKey, rows: result.rows as Record<string, unknown>[] });
-        if (quality.status === "QUARANTINE") {
+        // Incremental syncs use the MLOps safety gate. An authoritative
+        // purge+overwrite deliberately does not: after Reset/Refresh the connected
+        // source is the truth and every structurally valid row must be rewritten.
+        const quality = authoritativeOverwrite
+          ? { status: "PASS" as const, findings: [] as any[], bypassed: true }
+          : await assessIncomingRows({ reportKey, rows: result.rows as Record<string, unknown>[] });
+        if (!authoritativeOverwrite && quality.status === "QUARANTINE") {
           const qualityErrors = quality.findings.map((f) => ({
             row: f.row ?? 0,
             column: f.field ?? "dataset",
@@ -534,7 +538,7 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
           break;
         }
 
-        if (quality.status === "REVIEW") {
+        if (!authoritativeOverwrite && quality.status === "REVIEW") {
           const warning = quality.findings.filter((f) => f.severity === "WARNING").slice(0, 5)
             .map((f) => `${f.code}${f.field ? `(${f.field})` : ""}: ${f.message}`).join(" | ");
           console.warn(`[mlops] ${reportKey} allowed with REVIEW warnings: ${warning}`);
@@ -611,7 +615,7 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
         });
         let usedCompatibilityFallback = false;
         try {
-          committed = await commitSyncRows(reportKey, result.rows as Record<string, any>[], reportProgress);
+          committed = await commitSyncRows(reportKey, result.rows as Record<string, any>[], reportProgress, { authoritativeOverwrite });
         } catch (error: any) {
           // Correctness-first compatibility path. Missing procedures are a deploy
           // problem; SQLSTATE 21000 means a set-based projection encountered more
@@ -651,6 +655,8 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
           deleted: committed.deleted,
           staleSkipped: committed.skipped,
           importMode: usedCompatibilityFallback ? "CHUNKED_COMPATIBILITY" : "BULK_SQL",
+          authoritativeOverwrite,
+          mlops: authoritativeOverwrite ? "BYPASSED_AUTHORITATIVE_OVERWRITE" : quality.status,
           since: requestSince,
           through: throughAt,
         };
@@ -679,7 +685,9 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
             lastSuccessAt: new Date(),
             lastSourceUpdatedAt: newestPulledAt ?? cursor.lastSourceUpdatedAt ?? throughAt,
             lastStatus: "OK",
-            lastNote: `${committed.inserted} inserted, ${committed.updated} updated, ${committed.deleted} deleted, ${committed.skipped} stale skipped via ${adapter.mode}${usedCompatibilityFallback ? " (chunked compatibility fallback)" : " bulk SQL"}.`,
+            lastNote: authoritativeOverwrite
+              ? `Authoritative overwrite accepted ${result.rowCount} source row(s) via ${adapter.mode}${usedCompatibilityFallback ? " (chunked compatibility fallback)" : " bulk SQL"}; prior cursors/MLOps/staleness were ignored.`
+              : `${committed.inserted} inserted, ${committed.updated} updated, ${committed.deleted} deleted, ${committed.skipped} stale skipped via ${adapter.mode}${usedCompatibilityFallback ? " (chunked compatibility fallback)" : " bulk SQL"}.`,
           },
         });
         if (previousCursor && (committed.inserted > 0 || committed.updated > 0 || committed.deleted > 0)) {
