@@ -11,7 +11,7 @@ import { LOAD_ORDER, getFormat } from "./reportFormats.js";
 import { validate } from "./importParser.js";
 import { snapshotEmployer } from "./snapshotBuilder.js";
 import { notifyAdmins, notifyScoreChangeIfCurrentPeriod } from "./automationService.js";
-import { commitBatch, commitSyncRows } from "./importService.js";
+import { commitBatch, commitSyncRows, type CommitProgress } from "./importService.js";
 import { assessIncomingRows } from "./dataQualityService.js";
 import { createSourceAdapter, configuredSourceMode, sourceIsConfigured } from "./sourceAdapter.js";
 import { runMLOpsAssessment } from "./mlopsService.js";
@@ -22,6 +22,32 @@ const CURSOR_OVERLAP_MS = 5 * 60 * 1000;
 const CLOCK_SKEW_TOLERANCE_MS = 5 * 60 * 1000;
 const pendingSnapshotEmployers = new Set<string>();
 let snapshotDrainScheduled = false;
+
+export interface SyncProgress {
+  phase: "CONNECTING" | "READING_SOURCE" | "VALIDATING" | "COMMITTING" | "FEED_COMPLETE" | "REBUILDING_DASHBOARD" | "COMPLETE" | "FAILED";
+  progress: number;
+  message: string;
+  reportKey?: string;
+  feedIndex?: number;
+  feedCount?: number;
+  sourceTotalRows?: number | null;
+  pulledRows?: number;
+  validatedRows?: number;
+  committedRows?: number;
+  inserted?: number;
+  updated?: number;
+  deleted?: number;
+  skipped?: number;
+  batchId?: string;
+}
+
+interface RunSyncOptions {
+  onProgress?: (progress: SyncProgress) => void | Promise<void>;
+}
+
+async function emitSyncProgress(options: RunSyncOptions, progress: SyncProgress) {
+  if (options.onProgress) await options.onProgress(progress);
+}
 
 function overlapCursor(value?: Date | null): Date | null {
   return value ? new Date(value.getTime() - CURSOR_OVERLAP_MS) : null;
@@ -178,11 +204,11 @@ async function closeIncrementalSyncLease(client: Client | null) {
   }
 }
 
-export async function runSync(trigger: "manual" | "scheduled" | "full-refresh" = "manual") {
+export async function runSync(trigger: "manual" | "scheduled" | "full-refresh" = "manual", options: RunSyncOptions = {}) {
   // dailyRefresh.ts already owns the exclusive database lease while it calls
   // the full-refresh path. Every other sync takes a shared lease so an ordinary
   // sync can never overlap the purge/reload phase on another Railway replica.
-  if (trigger === "full-refresh") return runSyncUnlocked(trigger);
+  if (trigger === "full-refresh") return runSyncUnlocked(trigger, options);
 
   const lease = await openIncrementalSyncLease();
   if (!lease) {
@@ -193,13 +219,13 @@ export async function runSync(trigger: "manual" | "scheduled" | "full-refresh" =
     };
   }
   try {
-    return await runSyncUnlocked(trigger);
+    return await runSyncUnlocked(trigger, options);
   } finally {
     await closeIncrementalSyncLease(lease);
   }
 }
 
-async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" = "manual") {
+async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" = "manual", options: RunSyncOptions = {}) {
   const config = await getConfig();
   if (config.lastSyncStatus === "REBUILDING" && trigger !== "full-refresh") {
     return { ok: false, status: "REBUILDING", error: "A full source refresh is already rebuilding the dashboard. Try again after it completes." };
