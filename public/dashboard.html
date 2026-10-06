@@ -2934,10 +2934,11 @@ async function scheduleSendNow(id){
 
 
 /* ─────── drill-down drawer ─────── */
-function openDrawer(title, sub, bodyHTML){
+function openDrawer(title, sub, bodyHTML, kind=''){
   closeDrawer();
   const back=el('<div class="drawer-backdrop"></div>');
-  const drawer=el(`<div class="drawer">
+  const drawerClass=kind==='outcome'?'drawer drawer-outcome':kind==='creditor'?'drawer drawer-creditor':'drawer';
+  const drawer=el(`<div class="${drawerClass}">
     <div class="drawer-hd">
       <div><div class="drawer-eyebrow">Drill-down</div><div class="drawer-title">${title}</div><div class="drawer-sub">${sub}</div></div>
       <button class="drawer-x" aria-label="Close">&times;</button>
@@ -2956,8 +2957,8 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeDrawer(); });
 
 function outcomeDrill(o){
   const prior = DATA.comparison?.previous?.outcomes?.[o.key] || [];
-  const currentLabels = DATA.comparison?.current?.savingsLabels || [];
-  const previousLabels = DATA.comparison?.previous?.savingsLabels || [];
+  const currentLabels = Array.isArray(o.trendLabels) ? o.trendLabels : (DATA.comparison?.current?.savingsLabels || []);
+  const previousLabels = DATA.comparison?.previous?.outcomeLabels || [];
   const body=`
     <div class="drawer-stat-grid">
       <div class="ds"><div class="dsl">Fixes completed</div><div class="dsv">${o.count.toLocaleString('en-ZA')}</div></div>
@@ -2980,23 +2981,45 @@ function alignSeries(current, previous){
     count:n,
   };
 }
+function countAxisTicks(maxValue,target=5){
+  const max=Math.max(1,Math.ceil(Number(maxValue)||0));
+  if(max<=target) return Array.from({length:max+1},(_,i)=>i);
+  const raw=max/target;
+  const magnitude=Math.pow(10,Math.floor(Math.log10(raw)));
+  const normalized=raw/magnitude;
+  const step=(normalized<=1?1:normalized<=2?2:normalized<=5?5:10)*magnitude;
+  const top=Math.ceil(max/step)*step;
+  const ticks=[];
+  for(let v=0;v<=top+step/2;v+=step) ticks.push(Math.round(v));
+  return ticks;
+}
+function shortTrendLabel(label){
+  const parts=String(label||'').trim().split(/\s+/);
+  if(parts.length>=2) return parts[0].slice(0,3)+' '+parts[parts.length-1].slice(-2);
+  return String(label||'');
+}
 function miniTrend(trend, prior=[], labels=[], priorLabels=[], comparisonLabel='previous period'){
   const aligned=alignSeries(trend,prior);
   const values=[...aligned.current,...aligned.previous].filter(v=>Number.isFinite(v));
   if(!values.length) return '<div class="muted" style="padding:10px 0;font-size:12.5px;">No trend data is available for this period.</div>';
-  const w=620,h=250,left=74,right=22,top=24,bottom=46,max=Math.max(1,...values),ticks=niceTicks(values,5).filter(v=>v>=0);
-  const py=v=>h-bottom-(v/max)*(h-bottom-top), px=i=>left+i*(w-left-right)/Math.max(1,aligned.count-1);
+  const w=700,h=260,left=58,right=22,top=24,bottom=44;
+  const ticks=countAxisTicks(Math.max(...values),5);
+  const yMax=Math.max(1,ticks[ticks.length-1]||1);
+  const py=v=>h-bottom-(v/yMax)*(h-bottom-top), px=i=>left+i*(w-left-right)/Math.max(1,aligned.count-1);
   const lineOf=(series)=>series.map((v,i)=>v==null?'':(i?'L':'M')+px(i).toFixed(1)+' '+py(v).toFixed(1)).filter(Boolean).join(' ');
   const line=lineOf(aligned.current), priorLine=lineOf(aligned.previous);
   const dots=aligned.current.map((v,i)=>v==null?'':`<circle cx="${px(i)}" cy="${py(v)}" r="3.8" fill="var(--chart-cashflow)" stroke="var(--white)" stroke-width="2"><title>${v.toLocaleString('en-ZA')}</title></circle>`).join('');
   const priorDots=aligned.previous.map((v,i)=>v==null?'':`<circle cx="${px(i)}" cy="${py(v)}" r="3.2" fill="var(--chart-engagement)" stroke="var(--white)" stroke-width="2"><title>${v.toLocaleString('en-ZA')}</title></circle>`).join('');
-  const yaxis=ticks.map(v=>`<line x1="${left}" x2="${w-right}" y1="${py(v)}" y2="${py(v)}" stroke="var(--line-soft)" stroke-width="1"/><text x="${left-10}" y="${py(v)+3}" text-anchor="end" font-size="10" font-weight="700" fill="var(--grey-l)">${Math.round(v).toLocaleString('en-ZA')}</text>`).join('');
+  const yaxis=ticks.map(v=>`<line x1="${left}" x2="${w-right}" y1="${py(v)}" y2="${py(v)}" stroke="var(--line-soft)" stroke-width="1"/><text x="${left-10}" y="${py(v)+3}" text-anchor="end" font-size="10" font-weight="700" fill="var(--grey-l)">${v.toLocaleString('en-ZA')}</text>`).join('');
+  const labelEvery=aligned.count>8?2:1;
   const xlabels=Array.from({length:aligned.count},(_,i)=>{
     const idx=labels.length?i-(aligned.count-labels.length):i;
-    return idx>=0&&labels[idx]?`<text x="${px(i)}" y="${h-14}" text-anchor="middle" font-size="9.5" font-weight="600" fill="var(--grey-l)">${labels[idx]}</text>`:'';
+    const label=idx>=0?labels[idx]:null;
+    const show=label && (i===0 || i===aligned.count-1 || i%labelEvery===0);
+    return show?`<text x="${px(i)}" y="${h-14}" text-anchor="middle" font-size="9.5" font-weight="600" fill="var(--grey-l)">${esc(shortTrendLabel(label))}</text>`:'';
   }).join('');
   return `<div class="comparison-legend"><span><i class="comparison-dot current"></i>${esc(DATA.filterContext?.label||'Selected period')}</span><span><i class="comparison-dot previous"></i>${esc(comparisonLabel||'Previous period')}</span></div>
-  <svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto" role="img" aria-label="Completion trend comparison"><line x1="${left}" x2="${left}" y1="${top}" y2="${h-bottom}" stroke="var(--line)"/>${yaxis}<path d="${line}" fill="none" stroke="var(--chart-cashflow)" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/><path d="${priorLine}" fill="none" stroke="var(--chart-engagement)" stroke-width="2.2" stroke-dasharray="6 5" stroke-linecap="round" stroke-linejoin="round"/>${dots}${priorDots}${xlabels}</svg>`;
+  <svg class="outcome-trend-chart" viewBox="0 0 ${w} ${h}" style="width:100%;height:auto" role="img" aria-label="Completion trend comparison"><line x1="${left}" x2="${left}" y1="${top}" y2="${h-bottom}" stroke="var(--line)"/>${yaxis}<path d="${line}" fill="none" stroke="var(--chart-cashflow)" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/><path d="${priorLine}" fill="none" stroke="var(--chart-engagement)" stroke-width="2.2" stroke-dasharray="6 5" stroke-linecap="round" stroke-linejoin="round"/>${dots}${priorDots}${xlabels}</svg>`;
 }
 
 function creditorDrill(c){
