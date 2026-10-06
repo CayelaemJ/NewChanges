@@ -21,7 +21,7 @@ import { uploadAndValidate, commitBatch, revertBatch, resetAllData } from "./ser
 import { startUploadJob, getUploadJob, startCommitJob, getCommitJob } from "./services/asyncJobs.js";
 import { startSyncJob, getSyncJob } from "./services/syncJobs.js";
 import { startDailyRefresh, triggerRefreshNow } from "./services/dailyRefresh.js";
-import { getConfig as getSyncConfig, saveConfig as saveSyncConfig, publicConfig as publicSyncConfig, testConnection as testSyncConnection, runSync, recentSyncLogs } from "./services/syncService.js";
+import { getConfig as getSyncConfig, saveConfig as saveSyncConfig, publicConfig as publicSyncConfig, testConnection as testSyncConnection, runSync, recentSyncLogs, detectSourceChanges, SOURCE_CHANGE_POLL_SECONDS } from "./services/syncService.js";
 import { listPartners, createPartner, updatePartner, deletePartner, assignUserToPartner, assignEmployerToPartner, themeForUser, themeForEmployer, themeForSlug } from "./services/partnerService.js";
 import { login, resolveSession, destroySession, destroySessionById, destroyAllSessionsForUser, canViewEmployer, canAccessModule, allowedEmployerIds, AuthUser, isAdminRole } from "./services/authService.js";
 import { createUser, listUsers, updateUser, resetPassword, completeSetup, deactivateSelf, listRevokedUsers, deleteUserPermanently, requestPasswordReset } from "./services/userService.js";
@@ -1751,32 +1751,69 @@ async function bootstrapAdmin() {
   } catch (e) { app.log.error(e); }
 }
 
-// ── scheduled-sync checker: every 15 min, run a sync if one is due ──
+// ── source-sync watcher ───────────────────────────────────────────────
+// SQL sources get lightweight change detection using indexed
+// MAX(source_updated_at) watermarks. The ordinary schedule remains a heartbeat
+// fallback, so API sources and any missed edge case still reconcile regularly.
 function startSyncScheduler(app: any) {
-  const CHECK_MS = 15 * 60 * 1000;
+  const CHECK_MS = SOURCE_CHANGE_POLL_SECONDS * 1000;
+  let tickRunning = false;
+
+  const reportFailure = (r: any) => {
+    if (r?.status !== "FAILED") return;
+    notifyAdmins({
+      subject: "Scheduled data sync failed",
+      html: `<div style="font-family:Arial,sans-serif;color:#241536"><h2 style="color:#b5391f">Sync failed</h2><p>The scheduled external data sync failed.</p><pre style="background:#f7fafd;padding:12px;border-radius:8px;font-size:12px;overflow:auto">${JSON.stringify(r.summary ?? r, null, 2).slice(0, 2000)}</pre></div>`,
+      slackText: `:rotating_light: Scheduled data sync failed — check Administration → Live Data Integration.`,
+    }).catch(() => {});
+  };
+
   const tick = async () => {
+    if (tickRunning) return;
+    tickRunning = true;
     try {
       const cfg = await getSyncConfig();
       if (!cfg.enabled) return;
-      const dueAfter = cfg.lastSyncAt ? new Date(cfg.lastSyncAt).getTime() + cfg.scheduleHours * 3600 * 1000 : 0;
+
+      // Direct SQL: use the indexed source watermark first. A changed
+      // source_updated_at triggers the normal cursor-based incremental sync;
+      // unchanged databases avoid re-reading the large views entirely.
+      const changes = await detectSourceChanges();
+      if (changes.supported && changes.changed) {
+        app.log.info(
+          { reports: changes.reports.map((x: any) => x.reportKey) },
+          "Source database changes detected; running incremental sync",
+        );
+        const r = await runSync("scheduled");
+        app.log.info(`Change-triggered sync: ${r.status ?? "done"}`);
+        reportFailure(r);
+        return;
+      }
+
+      // Heartbeat reconciliation. For SQL this is a safety net; for API it is
+      // the normal polling mechanism because a portable DB watermark is not
+      // available through an arbitrary HTTP API.
+      const dueAfter = cfg.lastSyncAt
+        ? new Date(cfg.lastSyncAt).getTime() + cfg.scheduleHours * 3600 * 1000
+        : 0;
       if (Date.now() >= dueAfter) {
-        app.log.info("Running scheduled external source sync…");
+        app.log.info(changes.supported
+          ? "No new SQL watermark detected; running scheduled heartbeat reconciliation…"
+          : "Running scheduled external source sync…");
         const r = await runSync("scheduled");
         app.log.info(`Scheduled sync: ${r.status ?? "done"}`);
-        if (r.status === "FAILED") {
-          notifyAdmins({
-            subject: "Scheduled data sync failed",
-            html: `<div style="font-family:Arial,sans-serif;color:#241536"><h2 style="color:#b5391f">Sync failed</h2><p>The scheduled external data sync failed.</p><pre style="background:#f7fafd;padding:12px;border-radius:8px;font-size:12px;overflow:auto">${JSON.stringify(r.summary ?? r, null, 2).slice(0, 2000)}</pre></div>`,
-            slackText: `:rotating_light: Scheduled data sync failed — check Administration → Live Data Integration.`,
-          }).catch(() => {});
-        }
+        reportFailure(r);
       }
-    } catch (e) { app.log.error(e); }
+    } catch (e) {
+      app.log.error(e);
+    } finally {
+      tickRunning = false;
+    }
   };
-  setInterval(tick, CHECK_MS);
-  setTimeout(tick, 30000); // also check shortly after boot
-}
 
+  setInterval(tick, CHECK_MS).unref();
+  setTimeout(tick, Math.min(30_000, CHECK_MS)).unref();
+}
 
 // ── automations checker: stale-account cleanup + weekly digest ──
 function startAutomationScheduler(app: any) {
