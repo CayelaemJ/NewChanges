@@ -18,6 +18,13 @@ const prisma = new PrismaClient();
 const DASHBOARD_CACHE_TTL_MS = 60_000;
 const DASHBOARD_CACHE_SCHEMA = "financial-comparison-v2";
 const dashboardCache = new Map<string, { expiresAt: number; payload: any }>();
+const PUBLISHED_DASHBOARD_CACHE_KEY = "__published_dashboard_v1__";
+
+export interface PublishedDashboardState {
+  dashboard: any;
+  periods: Array<{ period: string; optimiseScore: number | null }>;
+  capturedAt: string;
+}
 
 function dashboardCacheKey(employerId: string, query: DashboardQuery): string {
   return JSON.stringify([DASHBOARD_CACHE_SCHEMA, employerId, query.period ?? null, query.quarter ?? null, query.range ?? null, query.site ?? null, query.income ?? null, query.asAt ?? null]);
@@ -1434,6 +1441,101 @@ async function persistDashboardCache(employerId: string, query: DashboardQuery, 
   });
 }
 
+export async function getPublishedDashboardState(employerId: string): Promise<PublishedDashboardState | null> {
+  const row = await prisma.dashboardCohortCache.findUnique({
+    where: { employerId_cacheKey: { employerId, cacheKey: PUBLISHED_DASHBOARD_CACHE_KEY } },
+    select: { payload: true },
+  });
+  const payload: any = row?.payload;
+  if (!payload?.dashboard || !Array.isArray(payload?.periods) || !payload?.capturedAt) return null;
+  return payload as PublishedDashboardState;
+}
+
+export async function getPublishedDashboardPayload(employerId: string, query: DashboardQuery = {}): Promise<any | null> {
+  // If the exact historical cohort was cached before the refresh started, keep
+  // honoring it. Otherwise fall back to the last successfully published latest
+  // dashboard rather than touching partially rebuilt raw tables.
+  if (query.period && query.range == null) {
+    const exact = await readPersistentDashboardCache(employerId, query);
+    if (exact) return exact;
+  }
+  const published = await getPublishedDashboardState(employerId);
+  return published?.dashboard ?? null;
+}
+
+export async function publishedDashboardEmployerIds(): Promise<string[]> {
+  const rows = await prisma.dashboardCohortCache.findMany({
+    where: { cacheKey: PUBLISHED_DASHBOARD_CACHE_KEY },
+    select: { employerId: true },
+  });
+  return rows.map((row: any) => row.employerId);
+}
+
+export async function capturePublishedDashboardState(employerIds?: string[]): Promise<{ captured: number; capturedAt: string }> {
+  const ids = employerIds?.length
+    ? [...new Set(employerIds)]
+    : (await prisma.employer.findMany({
+        where: { sourceDeletedAt: null },
+        select: { id: true },
+      })).map((row: any) => row.id);
+
+  const capturedAt = new Date().toISOString();
+  let captured = 0;
+
+  for (const employerId of ids) {
+    const dashboard = await getDashboardPayload(employerId, { range: "latest" });
+    const snapshots = await prisma.scoreSnapshot.findMany({
+      where: { employerId, payloadVersion: { gte: 4 } },
+      select: { period: true, optimiseScore: true },
+      orderBy: { period: "desc" },
+      take: 12,
+    });
+    const periods = snapshots.map((row: any) => ({
+      period: row.period,
+      optimiseScore: Number.isFinite(Number(row.optimiseScore)) ? Math.round(Number(row.optimiseScore)) : null,
+    }));
+    const dashboardPeriod = dashboard?.filterContext?.period;
+    if (dashboardPeriod && !periods.some((row) => row.period === dashboardPeriod)) {
+      periods.unshift({
+        period: dashboardPeriod,
+        optimiseScore: Number.isFinite(Number(dashboard?.wellness?.score)) ? Math.round(Number(dashboard.wellness.score)) : null,
+      });
+    }
+
+    const state: PublishedDashboardState = {
+      dashboard,
+      periods: periods.slice(0, 12),
+      capturedAt,
+    };
+    const asAt = dashboard?.filterContext?.asAt ? new Date(dashboard.filterContext.asAt) : null;
+    await prisma.dashboardCohortCache.upsert({
+      where: { employerId_cacheKey: { employerId, cacheKey: PUBLISHED_DASHBOARD_CACHE_KEY } },
+      create: {
+        employerId,
+        cacheKey: PUBLISHED_DASHBOARD_CACHE_KEY,
+        period: dashboardPeriod ?? null,
+        range: "latest",
+        asAt: asAt && !Number.isNaN(asAt.getTime()) ? asAt : null,
+        optimiseScore: dashboard?.wellness?.score == null ? null : Number(dashboard.wellness.score),
+        payload: state as any,
+      },
+      update: {
+        period: dashboardPeriod ?? null,
+        range: "latest",
+        site: null,
+        income: null,
+        asAt: asAt && !Number.isNaN(asAt.getTime()) ? asAt : null,
+        optimiseScore: dashboard?.wellness?.score == null ? null : Number(dashboard.wellness.score),
+        payload: state as any,
+        computedAt: new Date(),
+      },
+    });
+    captured++;
+  }
+
+  return { captured, capturedAt };
+}
+
 export async function getDashboardPayload(employerId: string, query: DashboardQuery = {}) {
   // Resolve "latest" to the newest persisted monthly snapshot before cache
   // lookup. This makes the default landing page use the same fast read-model
@@ -1558,7 +1660,7 @@ export async function snapshotEmployer(employerId: string, period: string = curr
   if (!isValidPeriod(period) || period > currentPeriod()) throw new Error(`invalid or future period: ${period}`);
   // Imported data invalidates the persistent read model. The next snapshot
   // rebuilds it from the authoritative source tables.
-  await prisma.dashboardCohortCache.deleteMany({ where: { employerId } });
+  await prisma.dashboardCohortCache.deleteMany({ where: { employerId, cacheKey: { not: PUBLISHED_DASHBOARD_CACHE_KEY } } });
   for (const k of [...dashboardCache.keys()]) if (k.startsWith(`[\"${employerId}\"`)) dashboardCache.delete(k);
   const payload: any = await buildDashboardPayload(employerId, { period });
   const persisted = await persistScoreSnapshot(employerId, period, payload);
