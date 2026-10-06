@@ -11,6 +11,7 @@ export interface SyncJob {
   progress: number;
   message: string;
   updatedAt: string;
+  detail?: any;
   result?: any;
   error?: string;
   timer: NodeJS.Timeout;
@@ -27,6 +28,7 @@ function update(job: SyncJob, jobId: string, patch: Partial<SyncJob>) {
     progress: job.progress,
     message: job.message,
     jobType: "sync",
+    ...(job.detail !== undefined ? { detail: job.detail } : {}),
     ...(job.result !== undefined ? { result: job.result } : {}),
     ...(job.error ? { error: job.error } : {}),
   }, jobId);
@@ -60,12 +62,22 @@ export function startSyncJob(trigger: "manual" | "scheduled" = "manual"): string
         progress: 10,
         message: "Synchronising source data",
       });
-      job.result = await runSync(trigger);
+      job.result = await runSync(trigger, {
+        onProgress: async (detail) => {
+          job.detail = detail;
+          update(job, jobId, {
+            status: "PROCESSING",
+            phase: detail.phase,
+            progress: detail.progress,
+            message: detail.message,
+          });
+        },
+      });
       update(job, jobId, {
         status: "DONE",
         phase: "COMPLETE",
         progress: 100,
-        message: "Synchronisation complete",
+        message: job.result?.note || "Synchronisation complete",
       });
     } catch (e: any) {
       update(job, jobId, {
