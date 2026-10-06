@@ -892,14 +892,25 @@ async function syncNow(){
   }catch(e){ $('#integ-result').innerHTML = `<div class="banner err">✕ ${esc(e.message)}</div>`; }
 }
 async function refreshNow(btn){
-  if(!confirm('Run a full data refresh now?\n\nThis will preflight the source, purge the working source-derived dashboard data, reload all canonical feeds, rebuild snapshots, and publish only if the full refresh succeeds.\n\nDashboard users will continue seeing the last successful published dashboard while this runs.')) return;
+  if(!confirm('Run a full data refresh now?\n\nThis will save the current integration settings, preflight the source, purge the working source-derived dashboard data, reload all canonical feeds, rebuild snapshots, and publish only if the full refresh succeeds.\n\nDashboard users will continue seeing the last successful published dashboard while this runs.')) return;
   const original=btn?.textContent||'Refresh now';
   if(btn){ btn.disabled=true; btn.textContent='Refreshing…'; }
-  $('#integ-result').innerHTML = '<div class="banner ok">Full refresh started. The last successful dashboard remains published while source data is rebuilt…</div>';
+  $('#integ-result').innerHTML = '<div class="banner ok">Saving settings and preflighting the source…</div>';
   try{
+    const saveBody=integrationDraft();
+    const saveResp=await fetch(`${API}/api/admin/integration`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(saveBody)});
+    const saved=await saveResp.json().catch(()=>({}));
+    if(!saveResp.ok) throw new Error(saved.error||'Could not save settings before refresh');
+    $('#integ-token').value=''; $('#integ-sql-password').value='';
+
+    $('#integ-result').innerHTML = '<div class="banner ok">Full refresh started. The last successful dashboard remains published while source data is rebuilt…</div>';
     const r=await fetch(`${API}/api/admin/integration/refresh`,{method:'POST'});
     const d=await r.json().catch(()=>({}));
     if(!r.ok || !d.ok) throw new Error(d.error||d.note||'Full refresh failed');
+    if(d.status==='ALREADY_RUNNING'){
+      $('#integ-result').innerHTML = '<div class="banner ok">A full refresh is already running on another application instance. The last successful dashboard remains visible until it publishes.</div>';
+      return;
+    }
     const detail=[
       d.purgedRows!=null ? `${Number(d.purgedRows).toLocaleString('en-ZA')} source rows purged` : null,
       d.overwrittenRows!=null ? `${Number(d.overwrittenRows).toLocaleString('en-ZA')} rows committed` : null,
