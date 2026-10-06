@@ -29,6 +29,7 @@ must((migrationRunner.match(/SMOKE OK/g)||[]).length >= 1 && migrationRunner.inc
 must((bulkSql.match(/SELECT DISTINCT ON/g)||[]).length >= 3 && bulkSql.includes("ORDER BY employer_ref, payroll_ref, observed_at DESC, source_updated_at DESC") && bulkSql.includes("ORDER BY account_ref, observed_at DESC, source_updated_at DESC") && bulkSql.includes("ORDER BY policy_ref, observed_at DESC, source_updated_at DESC"), "dated bulk feeds must dedupe current projections while preserving observation history");
 must(migrationRunner.includes("dated multi-observation projection/history semantics") && migrationRunner.includes("EmployeeVersion") && migrationRunner.includes("DebtAccountVersion") && migrationRunner.includes("InsurancePolicyVersion"), "deployment smoke tests must exercise duplicate projection keys with multiple dated history rows");
 must(syncService.includes('cardinalityConflict') && syncService.includes('CHUNKED_COMPATIBILITY') && syncService.includes('ON CONFLICT DO UPDATE command cannot affect row a second time'), "source sync must preserve the old chunked importer as a correctness fallback for SQLSTATE 21000 bulk conflicts");
+must(bulkSql.includes('ON CONFLICT ("advanceRef") DO UPDATE') && !bulkSql.includes('ON CONFLICT ("id") DO UPDATE SET\n      "employeeId"=EXCLUDED."employeeId", "clientId"=EXCLUDED."clientId"'), "salary advance bulk sync must upsert by unique advanceRef so previously imported rows cannot collide on the secondary unique key");
 
 if (failures.length) {
   console.error("Import regression check failed:\n- " + failures.join("\n- "));
