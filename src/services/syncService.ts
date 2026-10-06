@@ -284,7 +284,8 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
             sourceTotalRows = Number.isFinite(Number(described.totalRows)) ? Number(described.totalRows) : null;
           } catch {}
         }
-        const feedStart = 5 + (reportIndex / Math.max(1, LOAD_ORDER.length)) * 82;
+        const feedSpan = 82 / Math.max(1, LOAD_ORDER.length);
+        const feedStart = 5 + reportIndex * feedSpan;
         await emitSyncProgress(options, {
           phase: "READING_SOURCE",
           progress: Math.round(feedStart),
@@ -456,7 +457,7 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
           const fraction = p.total > 0 ? p.processed / p.total : 1;
           await emitSyncProgress(options, {
             phase: "COMMITTING",
-            progress: Math.min(92, Math.round(feedStart + 2 + fraction * (80 / Math.max(1, LOAD_ORDER.length)))),
+            progress: Math.min(92, Math.round(feedStart + 2 + fraction * Math.max(0.5, feedSpan - 2))),
             message: `${reportKey}: ${p.processed.toLocaleString("en-ZA")} / ${p.total.toLocaleString("en-ZA")} rows processed into live tables`,
             reportKey,
             feedIndex: reportIndex + 1,
