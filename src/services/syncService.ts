@@ -603,14 +603,25 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
           skipped: 0,
           batchId: batch.id,
         });
+        let usedCompatibilityFallback = false;
         try {
           committed = await commitSyncRows(reportKey, result.rows as Record<string, any>[], reportProgress);
         } catch (error: any) {
-          // Emergency compatibility fallback only. Deployments now install the
-          // idempotent server-side bulk procedures automatically; seeing this
-          // path means the database procedure installation needs attention.
+          // Correctness-first compatibility path. Missing procedures are a deploy
+          // problem; SQLSTATE 21000 means a set-based projection encountered more
+          // than one source observation for the same current-state key. In either
+          // case, preserve the old proven importer instead of breaking Sync now /
+          // Refresh now. The fallback is slower but keeps the feed operational.
           const message = error?.message ?? String(error);
-          if (!/function sync_upsert_.* does not exist/i.test(message)) throw error;
+          const code = String(error?.code ?? error?.meta?.code ?? "");
+          const missingProcedure = /function sync_upsert_.* does not exist/i.test(message);
+          const cardinalityConflict = code === "21000"
+            || /ON CONFLICT DO UPDATE command cannot affect row a second time/i.test(message);
+          if (!missingProcedure && !cardinalityConflict) throw error;
+          usedCompatibilityFallback = true;
+          console.warn(
+            `[sync] ${reportKey} bulk path unavailable (${code || "compat"}); using proven chunked importer for this feed.`,
+          );
           await prisma.importBatch.update({ where: { id: batch.id }, data: { stagedRows: result.rows as Json } });
           committed = await commitBatch(batch.id, { recompute: false, onProgress: reportProgress });
         }
@@ -633,6 +644,7 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
           updated: committed.updated,
           deleted: committed.deleted,
           staleSkipped: committed.skipped,
+          importMode: usedCompatibilityFallback ? "CHUNKED_COMPATIBILITY" : "BULK_SQL",
           since: requestSince,
           through: throughAt,
         };
@@ -661,7 +673,7 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
             lastSuccessAt: new Date(),
             lastSourceUpdatedAt: newestPulledAt ?? cursor.lastSourceUpdatedAt ?? throughAt,
             lastStatus: "OK",
-            lastNote: `${committed.inserted} inserted, ${committed.updated} updated, ${committed.deleted} deleted, ${committed.skipped} stale skipped via ${adapter.mode}.`,
+            lastNote: `${committed.inserted} inserted, ${committed.updated} updated, ${committed.deleted} deleted, ${committed.skipped} stale skipped via ${adapter.mode}${usedCompatibilityFallback ? " (chunked compatibility fallback)" : " bulk SQL"}.`,
           },
         });
         if (previousCursor && (committed.inserted > 0 || committed.updated > 0 || committed.deleted > 0)) {
