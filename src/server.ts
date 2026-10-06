@@ -971,7 +971,7 @@ app.get<{ Params: { jobId: string } }>(
         updatedAt: job.updatedAt,
       };
     }
-    if (job.status === "FAILED") return { status: "FAILED", error: job.error, phase: job.phase, progress: job.progress, detail: job.detail ?? null };
+    if (job.status === "FAILED") return { status: "FAILED", error: job.error };
     return { status: "DONE", ...job.result };
   },
 );
@@ -1013,7 +1013,7 @@ app.get<{ Params: { jobId: string } }>(
         updatedAt: job.updatedAt,
       };
     }
-    if (job.status === "FAILED") return { status: "FAILED", error: job.error, phase: job.phase, progress: job.progress, detail: job.detail ?? null };
+    if (job.status === "FAILED") return { status: "FAILED", error: job.error };
     return { status: "DONE", ...job.result };
   },
 );
@@ -1184,7 +1184,7 @@ app.get<{ Params: { jobId: string } }>(
         updatedAt: job.updatedAt,
       };
     }
-    if (job.status === "FAILED") return { status: "FAILED", error: job.error, phase: job.phase, progress: job.progress, detail: job.detail ?? null };
+    if (job.status === "FAILED") return { status: "FAILED", error: job.error };
     return { status: "DONE", ...job.result };
   },
 );
