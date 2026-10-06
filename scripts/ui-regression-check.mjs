@@ -42,6 +42,7 @@ must(pages.users.includes('showUsersLoadError') && pages.users.includes('Could n
 must(pages.users.includes("const users=await getJson('/api/users')"), 'Users page must fetch the admin user list through the checked JSON helper');
 
 must(pages.admin.includes('function openReset()') && pages.admin.includes('async function doReset()') && pages.admin.includes('/api/admin/reset-all'), 'Administration reset control must have working open/reset handlers');
+must(pages.admin.includes('id="btn-refresh-now"') && pages.admin.includes('async function refreshNow(btn)') && pages.admin.includes('/api/admin/integration/refresh'), 'Administration must expose the governed full Refresh now control');
 must(pages.admin.includes('b.revertable') && pages.admin.includes('Could not revert this import'), 'Import history must expose safe revert controls and visible revert failures');
 must(server.includes('revertable') && server.includes('reply.code(409)') && imports.includes('batch.reportKey === "employers"'), 'Backend must publish revertability and safely support insert-only employer rollback');
 must(server.includes('X-Empower-Portal-Build') && server.includes('no-store, no-cache') && server.includes('version: "0.10.0"'), 'server must expose build identity and disable stale UI caching');
@@ -91,6 +92,10 @@ must(dashboardCss.includes('@media (max-width:900px) and (orientation:landscape)
 must(pages.dashboard.includes('data-label="Creditor"') && pages.dashboard.includes('data-label="Average per account"'), "creditor detail must expose mobile-readable row labels");
 must(dashboardCss.includes('table.ct tr.ct-row') && dashboardCss.includes('table.ct tr.ct-row td::before'), "creditor table must reflow into readable mobile cards");
 must(dashboardCss.includes('.drawer-outcome') && dashboardCss.includes('.drawer-creditor'), "drilldown drawers must have dedicated responsive layouts");
+must(pages.dashboard.includes("function openDrawer(title, sub, bodyHTML, kind='')") && pages.dashboard.includes("'drawer drawer-outcome'"), "outcome drilldowns must receive the drawer-outcome class");
+must(dashboardCss.includes('.drawer-outcome .drawer-stat-grid .dsv') && dashboardCss.includes('text-overflow:clip'), "outcome drilldown values must never be ellipsized");
+must(pages.dashboard.includes('function countAxisTicks(maxValue,target=5)') && pages.dashboard.includes('function shortTrendLabel(label)'), "outcome count charts must use integer ticks and compact month labels");
+must(pages.dashboard.includes('class="outcome-trend-chart"'), "outcome completion trend must use the dedicated responsive chart class");
 must(pages.dashboard.includes('function renderPeriodLineChart') && !pages.dashboard.includes('period-bar-chart'), "monthly and quarter comparisons must use line charts, not bar fallback cards");
 must((pages.dashboard.includes('pc.current.label') && pages.dashboard.includes('pc.previous.label')) || (pages.dashboard.includes('DATA.filterContext?.comparison?.current') && pages.dashboard.includes('DATA.filterContext?.comparison?.previous')), "comparison charts must use exact current and previous period labels");
 must(!pages.dashboard.includes('cumulative value drawn'), "monthly EWA chart copy must not describe a monthly series as cumulative");
