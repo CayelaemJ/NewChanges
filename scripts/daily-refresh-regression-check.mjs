@@ -8,6 +8,8 @@ const snapshots = read("src/services/snapshotBuilder.ts");
 const reports = read("src/services/reportScheduler.ts");
 const server = read("src/server.ts");
 const dashboard = read("public/dashboard.html");
+const sourceAdapter = read("src/services/sourceAdapter.ts");
+const admin = read("public/admin.html");
 
 const failures = [];
 const must = (ok, message) => { if (!ok) failures.push(message); };
@@ -45,6 +47,10 @@ must(sync.includes('const authoritativeOverwrite = trigger === "full-refresh"'),
 must(sync.includes('const requestSince = authoritativeOverwrite ? null'), "authoritative overwrite must always read the source from the beginning, regardless of old cursors");
 must(sync.includes('authoritativeOverwrite\n          ? { status: "PASS"') && sync.includes('BYPASSED_AUTHORITATIVE_OVERWRITE'), "authoritative overwrite must bypass MLOps gating rather than inherit prior decisions");
 must(sync.includes('commitSyncRows(reportKey, result.rows as Record<string, any>[], reportProgress, { authoritativeOverwrite })'), "bulk writes must receive authoritative overwrite semantics");
+must(sync.includes('authoritative: authoritativeOverwrite'), "authoritative source extraction must be explicitly requested");
+must(sourceAdapter.includes('const effectiveMaxRows = options?.authoritative ? null : maxRows'), "authoritative SQL rebuild must bypass the incremental per-feed row cap");
+must(sourceAdapter.includes('maxRows: number | null'), "SQL executors must support uncapped authoritative reads");
+must(admin.includes('Reset always reloads.') && !admin.includes('id="reset-then-sync"'), "Reset UI must always reload from source and must not offer an optional sync checkbox");
 must(imports.includes('options.authoritativeOverwrite || historicalObservationFeed ? 0 : projectionOnly'), "authoritative overwrite must not report source rows as stale skips");
 must(server.includes('triggerRefreshNow("reset")') && !server.includes('const result = await resetAllData()'), "Reset must be a single authoritative reset+reload operation, never a raw clear followed by optional sync");
 must(daily.includes('modelVersion: "authoritative-overwrite"') && daily.includes('bypassed: true'), "successful authoritative refresh must close older active MLOps warnings without deleting audit history");
