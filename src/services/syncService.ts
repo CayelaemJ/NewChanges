@@ -656,6 +656,7 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
           updated: committed.updated,
           deleted: committed.deleted,
           staleSkipped: committed.skipped,
+          historyRows: committed.historyRows ?? 0,
           importMode: usedCompatibilityFallback ? "CHUNKED_COMPATIBILITY" : "BULK_SQL",
           authoritativeOverwrite,
           mlops: authoritativeOverwrite ? "BYPASSED_AUTHORITATIVE_OVERWRITE" : quality.status,
