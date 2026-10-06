@@ -1191,16 +1191,17 @@ function renderPartners(){
     const logo = p.logoDataUrl
       ? `<img class="partner-preview-logo" src="${p.logoDataUrl}" alt="${esc(p.displayName||p.name)} logo">`
       : `<div class="partner-preview-logo partner-preview-fallback" style="background:${ac};">${(p.displayName||p.name||'?').slice(0,2).toUpperCase()}</div>`;
+    const pv=partnerPreviewTokens(p);
     return `<div class="card partner-card" style="margin-bottom:16px;padding:20px;border:1px solid #e8e1f7;">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
         <div style="width:34px;height:34px;border-radius:8px;background:${pc};box-shadow:inset 0 0 0 1px rgba(255,255,255,.35);"></div>
         <div style="font-weight:800;font-size:15px;color:#32217c;flex:1;">${esc(p.name)}</div>
         <span class="muted" style="font-size:12px;">${esc(p._count.users)} users · ${esc(p._count.employers)} employers · /p/${esc(p.slug)}</span>
       </div>
-      <div class="partner-preview" style="--preview-primary:${pc};--preview-accent:${ac};">
+      <div class="partner-preview" style="${pv.style}">
         ${logo}
-        <div class="partner-preview-copy"><strong style="color:${nv};">${p.displayName||p.name}</strong><span>${esc(p.tagline||'Your branded portal preview')}</span></div>
-        <span class="partner-preview-badge" style="color:${ac};">Live preview</span>
+        <div class="partner-preview-copy"><strong>${esc(p.displayName||p.name)}</strong><span>${esc(p.tagline||'Your branded portal preview')}</span></div>
+        <span class="partner-preview-badge">Live preview</span>
       </div>
       <button class="btn partner-preview-open" type="button" onclick="openClientPreview('${esc(p.id)}')">View client dashboard</button>
       <div style="display:grid;grid-template-columns:repeat(3,1fr) 2fr;gap:12px;align-items:end;margin-top:16px;">
@@ -1223,6 +1224,51 @@ function renderPartners(){
   }).join('');
 }
 function previewHex(value,fallback){ return '#'+String(value||fallback).replace(/^#/,''); }
+function partnerBrand(p){
+  return {
+    accentColor:String(p?.accentColor||p?.primaryColor||'B15BE8').replace(/^#/,''),
+    primaryColor:String(p?.primaryColor||p?.accentColor||'32217C').replace(/^#/,''),
+    navyColor:String(p?.navyColor||p?.primaryColor||'32217C').replace(/^#/,''),
+  };
+}
+function readableOn(background, preferred){
+  if(!window.BrandEngine) return '#ffffff';
+  const bg=String(background||'#17212b').replace(/^#/,'');
+  const pref=String(preferred||'FFFFFF').replace(/^#/,'');
+  return '#'+BrandEngine.ensureContrast(pref,bg,4.5);
+}
+function partnerPreviewTokens(p){
+  const brand=partnerBrand(p);
+  if(!window.BrandEngine){
+    const surface=previewHex(brand.navyColor,'32217C');
+    return {style:`--preview-surface:${surface};--preview-text:#fff;--preview-muted:#d7dee5;--preview-accent:${previewHex(brand.accentColor,'B15BE8')};--preview-on-accent:#fff;--preview-line:rgba(255,255,255,.24);--preview-logo-bg:#fff;`};
+  }
+  const t=BrandEngine.themeTokens(brand,'dark');
+  const surface=t['--bar-bg'];
+  const accent=readableOn(surface,brand.accentColor);
+  const text=readableOn(surface,t['--brand-primary']);
+  const muted=readableOn(surface,t['--grey']);
+  const onAccent=BrandEngine.contrast('FFFFFF',accent.replace(/^#/,''))>=4.5?'#fff':'#0b0f19';
+  return {style:`--preview-surface:${surface};--preview-text:${text};--preview-muted:${muted};--preview-accent:${accent};--preview-on-accent:${onAccent};--preview-line:${t['--dm-line']};--preview-logo-bg:${t['--white']};`};
+}
+function applyClientPreviewTheme(p){
+  const app=$('#client-preview-app'); if(!app) return;
+  const brand=partnerBrand(p);
+  const dark=document.documentElement.classList.contains('portal-dark');
+  const t=window.BrandEngine ? BrandEngine.themeTokens(brand,dark?'dark':'light') : null;
+  const surface=t?.['--white'] || '#fff';
+  const accent=t?.['--blue'] || previewHex(brand.accentColor,'B15BE8');
+  const onAccent=window.BrandEngine && BrandEngine.contrast('FFFFFF',accent.replace(/^#/,''))<4.5 ? '#0b0f19' : '#fff';
+  app.style.setProperty('--preview-bg',t?.['--dm-bg']||t?.['--ent-paper']||'#f6f4fb');
+  app.style.setProperty('--preview-surface',surface);
+  app.style.setProperty('--preview-surface-2',t?.['--ice']||'#f3efff');
+  app.style.setProperty('--preview-navy',t?.['--brand-primary']||previewHex(brand.navyColor,'32217C'));
+  app.style.setProperty('--preview-blue',accent);
+  app.style.setProperty('--preview-line',t?.['--line']||'#e8e1f7');
+  app.style.setProperty('--preview-ink',t?.['--ink']||'#0f2438');
+  app.style.setProperty('--preview-muted',t?.['--grey']||'#5b6b7a');
+  app.style.setProperty('--preview-on-accent',onAccent);
+}
 function previewLogo(p){
   return p.logoDataUrl
     ? `<img class="cp-logo" src="${p.logoDataUrl}" alt="${esc(p.displayName||p.name)} logo">`
@@ -1232,8 +1278,8 @@ function openClientPreview(id){
   const p=PARTNERS.find(x=>x.id===id); if(!p) return;
   const app=$('#client-preview-app');
   const name=p.displayName||p.name||'Client dashboard';
-  const accent=previewHex(p.accentColor,'B15BE8'), navy=previewHex(p.navyColor,'32217C'), primary=previewHex(p.primaryColor,'32217C');
-  app.style.setProperty('--preview-blue',accent); app.style.setProperty('--preview-navy',navy); app.style.setProperty('--preview-ice',`color-mix(in srgb, ${primary} 8%, white)`); app.style.setProperty('--preview-line',`color-mix(in srgb, ${primary} 18%, white)`);
+  app.dataset.partnerId=id;
+  applyClientPreviewTheme(p);
   app.innerHTML=`<div class="cp-topbar">${previewLogo(p)}<span class="cp-brand">${name}</span><span class="cp-user">AD</span></div>
     <div class="cp-body">
       <div class="cp-eyebrow">Employer insights · financial wellbeing programme</div>
@@ -1252,6 +1298,14 @@ function openClientPreview(id){
 function closeClientPreview(event){
   if(event && event.target!==$('#client-preview-overlay')) return;
   $('#client-preview-overlay').classList.remove('is-open'); document.body.style.overflow='';
+}
+if(typeof MutationObserver!=='undefined'){
+  new MutationObserver(()=>{
+    const overlay=$('#client-preview-overlay'), app=$('#client-preview-app');
+    if(!overlay?.classList.contains('is-open') || !app?.dataset.partnerId) return;
+    const p=PARTNERS.find(x=>x.id===app.dataset.partnerId);
+    if(p) applyClientPreviewTheme(p);
+  }).observe(document.documentElement,{attributes:true,attributeFilter:['class']});
 }
 document.addEventListener('keydown',event=>{ if(event.key==='Escape' && $('#client-preview-overlay').classList.contains('is-open')) closeClientPreview(); });
 async function editPartner(id,field,value){
