@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { prisma, snapshotEmployer, getDashboardPayload, monthKey } from "./services/snapshotBuilder.js";
+import { prisma, snapshotEmployer, getDashboardPayload, getPublishedDashboardPayload, getPublishedDashboardState, publishedDashboardEmployerIds, monthKey } from "./services/snapshotBuilder.js";
 import { REPORT_FORMATS, LOAD_ORDER, getFormat } from "./services/reportFormats.js";
 import { csvTemplate, xlsxTemplate, formatManifest } from "./services/templateGenerator.js";
 import { uploadAndValidate, commitBatch, revertBatch, resetAllData } from "./services/importService.js";
@@ -454,11 +454,17 @@ app.get("/api/auth/me", async (req, reply) => {
   const user = await currentUser(req);
   if (!user) return reply.code(401).send({ error: "not signed in" });
   const ids = allowedEmployerIds(user);
+  const syncStatus = await dashboardSyncState();
+  const publishedFallback = dashboardUsesPublishedSnapshot(syncStatus);
+  const publishedIds = publishedFallback ? await publishedDashboardEmployerIds() : null;
+  const visibleIds = ids === null
+    ? publishedIds
+    : (publishedIds ? ids.filter((id) => publishedIds.includes(id)) : ids);
   let employers;
-  if (ids === null) {
+  if (ids === null && !publishedFallback) {
     employers = await prisma.employer.findMany({ where: { sourceDeletedAt: null }, select: { id: true, name: true }, orderBy: { name: "asc" } });
   } else {
-    employers = await prisma.employer.findMany({ where: { id: { in: ids }, sourceDeletedAt: null }, select: { id: true, name: true }, orderBy: { name: "asc" } });
+    employers = await prisma.employer.findMany({ where: { id: { in: visibleIds ?? [] } }, select: { id: true, name: true }, orderBy: { name: "asc" } });
   }
   return {
     name: user.name, email: user.email, role: user.role,
@@ -1449,16 +1455,25 @@ async function dashboardSyncState() {
   };
 }
 
-function dashboardRefreshBlocked(syncStatus: Awaited<ReturnType<typeof dashboardSyncState>>) {
+function dashboardUsesPublishedSnapshot(syncStatus: Awaited<ReturnType<typeof dashboardSyncState>>) {
   return syncStatus.lastSyncStatus === "REBUILDING" || syncStatus.lastSyncStatus === "FULL_REFRESH_FAILED";
 }
 
-function sendDashboardRefreshUnavailable(reply: FastifyReply, syncStatus: Awaited<ReturnType<typeof dashboardSyncState>>) {
+function syncStatusForPublishedSnapshot(
+  syncStatus: Awaited<ReturnType<typeof dashboardSyncState>>,
+  publishedAt: string | null,
+) {
+  return {
+    ...syncStatus,
+    servingLastSuccessful: true,
+    publishedDataAt: publishedAt ?? syncStatus.lastSuccessfulSyncAt,
+  };
+}
+
+function sendPublishedDashboardUnavailable(reply: FastifyReply, syncStatus: Awaited<ReturnType<typeof dashboardSyncState>>) {
   reply.header("Retry-After", "60");
   return reply.code(503).send({
-    error: syncStatus.lastSyncStatus === "REBUILDING"
-      ? "Dashboard data is being purged and overwritten from the authoritative source. The refreshed dashboard will publish when the rebuild is complete."
-      : "The last full dashboard refresh failed after the purge. Partial rebuilt data is being withheld until a complete source refresh succeeds.",
+    error: "A refresh is in progress or failed, and no last-successful published dashboard snapshot is available yet.",
     syncStatus,
   });
 }
@@ -1477,17 +1492,24 @@ app.get<{
     const queryError = dashboardQueryError(req.query);
     if (queryError) return reply.code(400).send({ error: queryError });
     const syncStatus = await dashboardSyncState();
-    if (dashboardRefreshBlocked(syncStatus)) return sendDashboardRefreshUnavailable(reply, syncStatus);
-    const payload: any = await getDashboardPayload(employerId, {
+    const query = {
       period: req.query.period,
       quarter: req.query.quarter,
       range: req.query.range,
       site: req.query.site,
       income: req.query.income,
-    });
+    };
+    const usePublished = dashboardUsesPublishedSnapshot(syncStatus);
+    const published = usePublished ? await getPublishedDashboardState(employerId) : null;
+    const payload: any = usePublished
+      ? await getPublishedDashboardPayload(employerId, query)
+      : await getDashboardPayload(employerId, query);
+    if (!payload) return sendPublishedDashboardUnavailable(reply, syncStatus);
     const sections = await sectionsForUser(user);
     if (!sections.voiceOfEmployee) payload.chat = { available: false };
-    payload.syncStatus = syncStatus;
+    payload.syncStatus = usePublished
+      ? syncStatusForPublishedSnapshot(syncStatus, published?.capturedAt ?? null)
+      : syncStatus;
     return payload;
   },
 );
@@ -1499,7 +1521,11 @@ app.get<{ Params: { employerId: string }; Querystring: { site?: string; income?:
     const user = await requireUser(req, reply); if (!user) return;
     if (!canViewEmployer(user, req.params.employerId)) return reply.code(403).send({ error: "no access" });
     const syncStatus = await dashboardSyncState();
-    if (dashboardRefreshBlocked(syncStatus)) return sendDashboardRefreshUnavailable(reply, syncStatus);
+    if (dashboardUsesPublishedSnapshot(syncStatus)) {
+      const published = await getPublishedDashboardState(req.params.employerId);
+      if (!published) return sendPublishedDashboardUnavailable(reply, syncStatus);
+      return published.periods;
+    }
 
     // Keep this endpoint cheap. The previous implementation read date columns
     // from six large tables and then ran the full dashboard builder once per
@@ -1753,23 +1779,40 @@ app.get<{ Querystring: { period?: string; quarter?: string; range?: "30d" | "qua
     const user = await requireUser(req, reply); if (!user) return;
     if (!canAccessModule(user, "portfolio")) return reply.code(403).send({ error: "no portfolio access" });
     const syncStatus = await dashboardSyncState();
-    if (dashboardRefreshBlocked(syncStatus)) return sendDashboardRefreshUnavailable(reply, syncStatus);
+    const usePublished = dashboardUsesPublishedSnapshot(syncStatus);
     const queryError = dashboardQueryError(req.query);
     if (queryError) return reply.code(400).send({ error: queryError });
     const ids = allowedEmployerIds(user);
+    const publishedIds = usePublished ? await publishedDashboardEmployerIds() : null;
+    const visibleIds = ids === null
+      ? publishedIds
+      : (publishedIds ? ids.filter((id) => publishedIds.includes(id)) : ids);
     const employers = await prisma.employer.findMany({
-      where: ids === null ? { sourceDeletedAt: null } : { id: { in: ids }, sourceDeletedAt: null },
+      where: usePublished
+        ? { id: { in: visibleIds ?? [] } }
+        : (ids === null ? { sourceDeletedAt: null } : { id: { in: ids }, sourceDeletedAt: null }),
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     });
     const out = [];
     let filterContext: unknown = null;
+    let publishedAt: string | null = null;
     for (const employer of employers) {
-      const payload: any = await getDashboardPayload(employer.id, req.query);
+      const published = usePublished ? await getPublishedDashboardState(employer.id) : null;
+      const payload: any = usePublished
+        ? await getPublishedDashboardPayload(employer.id, req.query)
+        : await getDashboardPayload(employer.id, req.query);
+      if (!payload) continue;
+      publishedAt ??= published?.capturedAt ?? null;
       filterContext ??= payload.filterContext;
       out.push({ id: employer.id, name: employer.name, heads: payload.headcount, ...payload.portfolio });
     }
-    return { employers: out, filterContext, generatedAt: new Date().toISOString() };
+    return {
+      employers: out,
+      filterContext,
+      generatedAt: new Date().toISOString(),
+      syncStatus: usePublished ? syncStatusForPublishedSnapshot(syncStatus, publishedAt) : syncStatus,
+    };
   },
 );
 
@@ -1789,18 +1832,30 @@ app.get<{ Querystring: { period?: string; quarter?: string; range?: "30d" | "qua
     const queryError = dashboardQueryError(req.query);
     if (queryError) return reply.code(400).send({ error: queryError });
     const syncStatus = await dashboardSyncState();
-    if (dashboardRefreshBlocked(syncStatus)) return sendDashboardRefreshUnavailable(reply, syncStatus);
+    const usePublished = dashboardUsesPublishedSnapshot(syncStatus);
     const ids = allowedEmployerIds(user);
+    const publishedIds = usePublished ? await publishedDashboardEmployerIds() : null;
+    const visibleIds = ids === null
+      ? publishedIds
+      : (publishedIds ? ids.filter((id) => publishedIds.includes(id)) : ids);
     const employer = await prisma.employer.findFirst({
-      where: ids === null ? { sourceDeletedAt: null } : { id: { in: ids }, sourceDeletedAt: null },
+      where: usePublished
+        ? { id: { in: visibleIds ?? [] } }
+        : (ids === null ? { sourceDeletedAt: null } : { id: { in: ids }, sourceDeletedAt: null }),
       orderBy: { name: "asc" },
       select: { id: true },
     });
     if (!employer) return reply.code(404).send({ error: "no employer data available" });
-    const payload: any = await getDashboardPayload(employer.id, req.query);
+    const published = usePublished ? await getPublishedDashboardState(employer.id) : null;
+    const payload: any = usePublished
+      ? await getPublishedDashboardPayload(employer.id, req.query)
+      : await getDashboardPayload(employer.id, req.query);
+    if (!payload) return sendPublishedDashboardUnavailable(reply, syncStatus);
     const sections = await sectionsForUser(user);
     if (!sections.voiceOfEmployee) payload.chat = { available: false };
-    payload.syncStatus = syncStatus;
+    payload.syncStatus = usePublished
+      ? syncStatusForPublishedSnapshot(syncStatus, published?.capturedAt ?? null)
+      : syncStatus;
     return payload;
   },
 );
