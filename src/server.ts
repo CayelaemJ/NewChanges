@@ -1887,8 +1887,11 @@ app.get<{ Querystring: { period?: string; quarter?: string; range?: "30d" | "qua
 app.get("/api/dashboard/version", async (req, reply) => {
   const user = await requireUser(req, reply); if (!user) return;
   const syncStatus = await dashboardSyncState();
-  const latest = await prisma.integrationCursor.aggregate({ _max: { lastSuccessAt: true } });
-  return { version: latest._max.lastSuccessAt?.toISOString() ?? null, syncStatus };
+  // Version the browser by the source watermark, not by a no-op heartbeat.
+  // This avoids repainting dashboards when the scheduler merely confirms that
+  // nothing changed in the connected database.
+  const latest = await prisma.integrationCursor.aggregate({ _max: { lastSourceUpdatedAt: true } });
+  return { version: latest._max.lastSourceUpdatedAt?.toISOString() ?? null, syncStatus };
 });
 
 app.get<{ Querystring: { period?: string; quarter?: string; range?: "30d" | "quarter" | "all" | "month" | "30" | "q" | "latest"; site?: string; income?: string } }>(
