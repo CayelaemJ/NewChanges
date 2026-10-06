@@ -4,6 +4,7 @@ const read = (path) => readFileSync(path, "utf8");
 const daily = read("src/services/dailyRefresh.ts");
 const sync = read("src/services/syncService.ts");
 const imports = read("src/services/importService.ts");
+const snapshots = read("src/services/snapshotBuilder.ts");
 const reports = read("src/services/reportScheduler.ts");
 const server = read("src/server.ts");
 const dashboard = read("public/dashboard.html");
@@ -22,7 +23,7 @@ const reloadAt = daily.indexOf('await runSync("full-refresh")');
 must(preflightAt >= 0 && rebuildingAt > preflightAt && purgeAt > rebuildingAt && reloadAt > purgeAt, "full refresh order must be preflight -> rebuilding state -> purge -> authoritative reload");
 
 must(daily.includes("FULL_REFRESH_PRECHECK_FAILED"), "a failed preflight must be distinguishable from a post-purge failure");
-must(daily.includes("FULL_REFRESH_FAILED"), "a failure after purge must lock out unpublished dashboard data");
+must(daily.includes("FULL_REFRESH_FAILED"), "a failure after purge must preserve the last published dashboard while recording failure state");
 must(daily.includes("PURGE_AND_OVERWRITE"), "refresh result must identify purge-and-overwrite mode");
 must(daily.includes("pg_try_advisory_lock") && daily.includes("FULL_REFRESH_LEADER_LOCK_B"), "daily refresh must elect one database-backed leader across replicas");
 must(daily.includes("SOURCE_SYNC_COORDINATION_LOCK_B") && daily.includes("acquireSourceSyncExclusiveLease"), "daily refresh must exclude ordinary source syncs during purge/reload");
@@ -33,23 +34,29 @@ const purgeBody = purgeStart >= 0 && resetStart > purgeStart ? imports.slice(pur
 must(purgeBody.includes("tx.employee.updateMany") && purgeBody.includes("tx.employer.updateMany"), "authoritative purge must preserve employee/employer identity shells");
 must(!purgeBody.includes("tx.employee.deleteMany") && !purgeBody.includes("tx.employer.deleteMany"), "authoritative purge must not cascade-delete identity/configuration anchors");
 must(!purgeBody.includes("tx.chatSession.deleteMany"), "separate chat history must survive the core daily purge");
+must(!purgeBody.includes("tx.dashboardCohortCache.deleteMany"), "the published dashboard cache must survive destructive source refreshes");
 must(purgeBody.includes("reportKey: { in: LOAD_ORDER }"), "source batches/cursors must be scoped to canonical source feeds");
+must(snapshots.includes('PUBLISHED_DASHBOARD_CACHE_KEY = "__published_dashboard_v1__"'), "snapshot builder must persist a dedicated last-successful dashboard");
+must(snapshots.includes("capturePublishedDashboardState") && snapshots.includes("getPublishedDashboardPayload"), "snapshot builder must capture and serve the published dashboard layer");
+must(snapshots.includes("cacheKey: { not: PUBLISHED_DASHBOARD_CACHE_KEY }"), "snapshot rebuilds must invalidate working caches without deleting the published fallback");
 
 must(sync.includes('trigger: "manual" | "scheduled" | "full-refresh"'), "sync pipeline must expose an explicit full-refresh trigger");
 must(sync.includes('isFirstSync && trigger !== "full-refresh"'), "authoritative reload must accept a legitimately empty source feed");
 must(sync.includes('if (trigger === "full-refresh")') && sync.includes("await snapshotEmployer(employerId)"), "full refresh must rebuild snapshots before reporting success");
+must(sync.includes('if (trigger !== "full-refresh")') && sync.includes("The authoritative full-refresh wrapper owns publication state"), "low-level full sync must not publish raw rebuild state before the dashboard barrier succeeds");
 must(sync.includes("pg_try_advisory_lock_shared") && sync.includes("SOURCE_SYNC_COORDINATION_LOCK_B"), "ordinary source syncs must share the database coordination lock");
 
 must(reports.includes('state?.lastSyncStatus === "REBUILDING"') && reports.includes('state?.lastSyncStatus === "FULL_REFRESH_FAILED"'), "scheduled/manual report delivery must reject unpublished refresh data");
 must(reports.includes("scheduled reports deferred until dashboard data is publishable"), "due schedules must be deferred without being claimed while refresh data is unpublished");
 
-must(server.includes('syncStatus.lastSyncStatus === "REBUILDING"') && server.includes('syncStatus.lastSyncStatus === "FULL_REFRESH_FAILED"'), "dashboard API must withhold rebuilding or failed post-purge data");
-must(server.includes('reply.code(503)') && server.includes('reply.header("Retry-After", "60")'), "unpublished dashboard reads must return a retryable 503");
+must(server.includes('syncStatus.lastSyncStatus === "REBUILDING"') && server.includes('syncStatus.lastSyncStatus === "FULL_REFRESH_FAILED"'), "dashboard API must detect rebuilding or failed post-purge states");
+must(server.includes("getPublishedDashboardPayload") && server.includes("servingLastSuccessful: true"), "dashboard API must serve the last-successful published snapshot instead of replacing the dashboard on refresh failure");
+must(server.includes("sendPublishedDashboardUnavailable") && server.includes('reply.code(503)'), "a 503 is allowed only when no published fallback exists");
 must(dashboard.includes("Purging & rebuilding") && dashboard.includes("Purged & overwritten"), "dashboard must visibly distinguish rebuilding from a completed purge-and-overwrite refresh");
-must(dashboard.includes("Refresh failed — data withheld"), "dashboard must make a failed post-purge refresh explicit");
+must(dashboard.includes("still showing the last successful data") && dashboard.includes("Reason:"), "dashboard must preserve charts and surface the refresh failure reason");
 
 if (failures.length) {
   console.error("Daily refresh regression check failed:\n- " + failures.join("\n- "));
   process.exit(1);
 }
-console.log("Daily refresh regression check passed: midnight Johannesburg purge/overwrite, source preflight, Railway locking, publish gating and visible refresh status are wired.");
+console.log("Daily refresh regression check passed: midnight Johannesburg purge/overwrite, source preflight, Railway locking, Power BI-style last-successful publishing and visible refresh reasons are wired.");
