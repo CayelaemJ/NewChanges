@@ -3,13 +3,18 @@
 // CREATE OR REPLACE.
 //
 // Usage:  node scripts/apply-sync-migrations.mjs
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const dir = join(root, "src", "migrations");
+const dirCandidates = [join(root, "src", "Migrations"), join(root, "src", "migrations")];
+const dir = dirCandidates.find((candidate) => existsSync(candidate));
+if (!dir) {
+  console.error(`Sync migration directory not found. Checked: ${dirCandidates.join(", ")}`);
+  process.exit(1);
+}
 const url = process.env.DATABASE_URL;
 if (!url) { console.error("DATABASE_URL is required"); process.exit(1); }
 
@@ -50,7 +55,15 @@ function splitSql(sql) {
 const client = new pg.Client({ connectionString: url });
 await client.connect();
 
-const files = readdirSync(dir).filter((f) => f.endsWith(".sql")).sort();
+const requested = process.argv.slice(2).filter(Boolean);
+const available = readdirSync(dir).filter((f) => f.endsWith(".sql")).sort();
+const files = requested.length ? requested : available;
+for (const file of files) {
+  if (!available.includes(file)) {
+    console.error(`Unknown sync migration "${file}". Available: ${available.join(", ")}`);
+    process.exit(1);
+  }
+}
 for (const file of files) {
   const statements = splitSql(readFileSync(join(dir, file), "utf8"));
   for (const stmt of statements) await client.query(stmt);
