@@ -41,6 +41,13 @@ must(snapshots.includes("capturePublishedDashboardState") && snapshots.includes(
 must(snapshots.includes("cacheKey: { not: PUBLISHED_DASHBOARD_CACHE_KEY }"), "snapshot rebuilds must invalidate working caches without deleting the published fallback");
 
 must(sync.includes('trigger: "manual" | "scheduled" | "full-refresh"'), "sync pipeline must expose an explicit full-refresh trigger");
+must(sync.includes('const authoritativeOverwrite = trigger === "full-refresh"'), "full refresh must explicitly enter authoritative overwrite mode");
+must(sync.includes('const requestSince = authoritativeOverwrite ? null'), "authoritative overwrite must always read the source from the beginning, regardless of old cursors");
+must(sync.includes('authoritativeOverwrite\n          ? { status: "PASS"') && sync.includes('BYPASSED_AUTHORITATIVE_OVERWRITE'), "authoritative overwrite must bypass MLOps gating rather than inherit prior decisions");
+must(sync.includes('commitSyncRows(reportKey, result.rows as Record<string, any>[], reportProgress, { authoritativeOverwrite })'), "bulk writes must receive authoritative overwrite semantics");
+must(imports.includes('options.authoritativeOverwrite || historicalObservationFeed ? 0 : projectionOnly'), "authoritative overwrite must not report source rows as stale skips");
+must(server.includes('triggerRefreshNow("reset")') && !server.includes('const result = await resetAllData()'), "Reset must be a single authoritative reset+reload operation, never a raw clear followed by optional sync");
+must(daily.includes('modelVersion: "authoritative-overwrite"') && daily.includes('bypassed: true'), "successful authoritative refresh must close older active MLOps warnings without deleting audit history");
 must(sync.includes('isFirstSync && trigger !== "full-refresh"'), "authoritative reload must accept a legitimately empty source feed");
 must(sync.includes('if (trigger === "full-refresh")') && sync.includes("await snapshotEmployer(employerId)"), "full refresh must rebuild snapshots before reporting success");
 must(sync.includes('if (trigger !== "full-refresh")') && sync.includes("The authoritative full-refresh wrapper owns publication state"), "low-level full sync must not publish raw rebuild state before the dashboard barrier succeeds");
@@ -59,4 +66,4 @@ if (failures.length) {
   console.error("Daily refresh regression check failed:\n- " + failures.join("\n- "));
   process.exit(1);
 }
-console.log("Daily refresh regression check passed: midnight Johannesburg purge/overwrite, source preflight, Railway locking, Power BI-style last-successful publishing and visible refresh reasons are wired.");
+console.log("Daily refresh regression check passed: authoritative reset/refresh ignores prior cursors/MLOps/staleness, reloads from source truth, and preserves Power BI-style last-successful publishing.");
