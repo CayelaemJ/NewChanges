@@ -140,7 +140,14 @@ for (const page of ["dashboard", "admin", "users"]) {
 }
 must(read("public/dashboard.html").includes("BrandEngine.themeController()"), "dashboard theme must be applied through the brand engine controller");
 must(read("public/admin.html").includes("BrandEngine.extractFromImage"), "admin logo detection must use the brand engine");
-must(server.includes("themeForEmployer") && server.includes("payload.theme = await themeForEmployer(employerId)") && server.includes("payload.theme = await themeForEmployer(employer.id)"), "dashboard APIs must publish the selected employer's white-label theme");
+must(
+  server.includes("themeForEmployer") &&
+  server.includes("const userTheme = await themeForUser(user.id);") &&
+  server.includes("!isAdminRole(user) && userTheme.branded") &&
+  server.includes("await themeForEmployer(employerId)") &&
+  server.includes("payload.theme = await themeForEmployer(employer.id)"),
+  "dashboard APIs must preserve an assigned user's partner theme and otherwise publish the selected employer's white-label theme"
+);
 must(pages.dashboard.includes("applyTheme(live.theme, me)") && pages.dashboard.includes("theme.branded===false"), "dashboard must preserve the empower-fin palette for Admin/Superadmin while applying employer branding for normal branded users");
 must(pages.dashboard.includes("['ADMIN','SUPERADMIN'].includes") || pages.dashboard.includes('["ADMIN","SUPERADMIN"].includes'), "dashboard chart recolouring guard must protect both Admin and Superadmin from employer-brand overrides");
 must(read("src/services/partnerService.ts").includes('user?.role === "ADMIN" || user?.role === "SUPERADMIN"'), "Admin/Superadmin user theme resolution must always return the default empower-fin theme");
@@ -164,4 +171,3 @@ must(/background:var\(--white,#fff\)!important/.test(read("public/enterprise.css
 if(failures.length){ console.error('UI regression check failed:\n- '+failures.join('\n- ')); process.exit(1); }
 console.log('UI regression check passed: v0.10.0 navigation, SQL integration, users/import controls, live-data availability and demo-leak safeguards are present.');
 
-must(server.includes('const userTheme = await themeForUser(user.id);') && server.includes('!isAdminRole(user) && userTheme.branded') && server.includes('await themeForEmployer(employerId)'), 'viewer partner theme must win over employer fallback on dashboard payload');
