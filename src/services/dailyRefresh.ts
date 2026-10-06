@@ -17,7 +17,7 @@ import cron from "node-cron";
 import { Client } from "pg";
 import { runSync, testConnection } from "./syncService.js";
 import { purgeDashboardDataForFullRefresh } from "./importService.js";
-import { prisma } from "./snapshotBuilder.js";
+import { capturePublishedDashboardState, prisma } from "./snapshotBuilder.js";
 
 const REFRESH_TIMEZONE = process.env.DAILY_REFRESH_TIMEZONE ?? "Africa/Johannesburg";
 let activeFullRefresh: Promise<any> | null = null;
@@ -96,6 +96,15 @@ function committedRows(summary: Record<string, any> | undefined) {
   return Object.values(summary).reduce((total, item: any) => total + (Number(item?.committed) || 0), 0);
 }
 
+function syncFailureReason(syncResult: any): string {
+  const failures = Object.entries(syncResult?.summary ?? {})
+    .filter(([, value]: any) => value?.error)
+    .slice(0, 5)
+    .map(([reportKey, value]: any) => `${reportKey}: ${String(value.error)}`);
+  if (failures.length) return failures.join(" | ");
+  return String(syncResult?.error ?? syncResult?.note ?? `status ${syncResult?.status ?? "UNKNOWN"}`);
+}
+
 async function setRefreshState(status: string, note: string, at = new Date(), successful = false) {
   await prisma.integrationConfig.upsert({
     where: { id: "default" },
@@ -153,9 +162,13 @@ async function runAuthoritativeFullRefresh(reason: "scheduled" | "manual") {
       await acquireSourceSyncExclusiveLease(lease);
       await setRefreshState(
         "REBUILDING",
-        `Full refresh started (${reason}). Source preflight passed; existing dashboard facts are being purged before the authoritative source is reloaded.`,
+        `Full refresh started (${reason}). Source preflight passed. The last successful dashboard remains published while the source data is rebuilt.`,
         startedAt,
       );
+
+      // Power BI-style publish barrier: capture the current dashboard before
+      // any destructive work. If this cannot be captured, abort before purge.
+      await capturePublishedDashboardState();
 
       console.log(
         `[${startedAt.toISOString()}] Full dashboard refresh starting (${reason}, timezone: ${REFRESH_TIMEZONE})...`,
@@ -165,21 +178,22 @@ async function runAuthoritativeFullRefresh(reason: "scheduled" | "manual") {
       const syncResult: any = await runSync("full-refresh");
 
       if (!syncResult || syncResult.status !== "OK") {
-        throw new Error(
-          syncResult?.error
-            ?? syncResult?.note
-            ?? `Full source reload finished with status ${syncResult?.status ?? "UNKNOWN"}.`,
-        );
+        throw new Error(syncFailureReason(syncResult));
       }
+
+      // Do not publish the newly rebuilt source tables until a complete,
+      // renderable dashboard snapshot has been captured for every active employer.
+      const published = await capturePublishedDashboardState();
 
       const finishedAt = new Date();
       const purged = sumCounts(purgeResult?.cleared);
       const overwritten = committedRows(syncResult?.summary);
       const rebuilt = Array.isArray(syncResult?.touchedEmployers) ? syncResult.touchedEmployers.length : 0;
       const note =
-        `Full refresh completed: purged ${purged} source-derived dashboard rows, ` +
+        `Full refresh completed and published: purged ${purged} source-derived dashboard rows, ` +
         `overwrote them from the authoritative source (${overwritten} rows committed), ` +
-        `and rebuilt ${rebuilt} employer dashboard${rebuilt === 1 ? "" : "s"}.`;
+        `rebuilt ${rebuilt} employer dashboard${rebuilt === 1 ? "" : "s"}, and published ` +
+        `${published.captured} last-successful dashboard snapshot${published.captured === 1 ? "" : "s"}.`;
 
       await setRefreshState("OK", note, finishedAt, true);
       console.log(`[${finishedAt.toISOString()}] ${note}`);
@@ -195,6 +209,8 @@ async function runAuthoritativeFullRefresh(reason: "scheduled" | "manual") {
         purgedRows: purged,
         overwrittenRows: overwritten,
         rebuiltEmployers: rebuilt,
+        publishedDashboards: published.captured,
+        publishedAt: published.capturedAt,
         purge: purgeResult,
         note,
       };
@@ -203,8 +219,8 @@ async function runAuthoritativeFullRefresh(reason: "scheduled" | "manual") {
       const purged = sumCounts(purgeResult?.cleared);
       const message = error?.message ?? String(error);
       const note = purgeResult
-        ? `Full refresh failed after purging ${purged} source-derived dashboard rows: ${message}`
-        : `Full refresh preflight failed before any dashboard data was purged: ${message}`;
+        ? `Full refresh failed after purging ${purged} source-derived dashboard rows. The last successful dashboard remains published. Reason: ${message}`
+        : `Full refresh preflight failed before any dashboard data was purged. The current dashboard remains published. Reason: ${message}`;
       const failureStatus = purgeResult ? "FULL_REFRESH_FAILED" : "FULL_REFRESH_PRECHECK_FAILED";
 
       await setRefreshState(failureStatus, note, finishedAt, false).catch(() => {});
