@@ -1047,7 +1047,7 @@ app.get("/api/admin/batches", async (req, reply) => {
       id: true, reportKey: true, filename: true, fileFormat: true,
       status: true, rowCount: true, errorCount: true,
       insertedCount: true, updatedCount: true, deletedCount: true,
-      uploadedAt: true, committedAt: true, revertedAt: true,
+      uploadedAt: true, committedAt: true, revertedAt: true, uploadedBy: true,
     },
   });
   return batches.map((batch) => {
