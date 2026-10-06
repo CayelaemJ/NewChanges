@@ -19,8 +19,19 @@ type Json = any;
 const IMPORT_CHUNK_SIZE=Number(process.env.IMPORT_CHUNK_SIZE ?? 1000);
 const IMPORT_TX_TIMEOUT_MS=Number(process.env.IMPORT_TX_TIMEOUT_MS ?? 120_000);
 
+export interface CommitProgress {
+  reportKey: string;
+  processed: number;
+  total: number;
+  inserted: number;
+  updated: number;
+  deleted: number;
+  skipped: number;
+}
+
 interface CommitOptions {
   recompute?: boolean;
+  onProgress?: (progress: CommitProgress) => void | Promise<void>;
 }
 
 interface CommitStats {
@@ -680,6 +691,7 @@ const SYNC_FUNCTIONS: Record<string, string> = {
 export async function commitSyncRows(
   reportKey: string,
   rows: Record<string, any>[],
+  onProgress?: (progress: CommitProgress) => void | Promise<void>,
 ): Promise<CommitStats> {
   const functionName = SYNC_FUNCTIONS[reportKey];
   if (!functionName) throw new Error(`bulk sync handler not implemented for report ${reportKey}`);
@@ -695,12 +707,22 @@ export async function commitSyncRows(
     stats.inserted += Number(merged?.inserted ?? 0);
     stats.updated += Number(merged?.updated ?? 0);
     stats.deleted += Number(merged?.deleted ?? 0);
+    const processed = Math.min(rows.length, offset + chunk.length);
+    stats.skipped = Math.max(0, processed - stats.inserted - stats.updated - stats.deleted);
+    if (onProgress) {
+      await onProgress({
+        reportKey,
+        processed,
+        total: rows.length,
+        inserted: stats.inserted,
+        updated: stats.updated,
+        deleted: stats.deleted,
+        skipped: stats.skipped,
+      });
+    }
   }
 
-  // The SQL procedures intentionally do not report stale rows separately.
-  // They simply leave older records untouched, so this is the only useful
-  // aggregate available on the bulk path.
-  stats.skipped = Math.max(0, rows.length - stats.inserted - stats.updated);
+  stats.skipped = Math.max(0, rows.length - stats.inserted - stats.updated - stats.deleted);
   return stats;
 }
 
@@ -731,11 +753,35 @@ export async function commitBatch(batchId: string, options: CommitOptions = {}) 
   // once — e.g. to reject an unsupported report key the same way it always did.
   if (!chunks.length) chunks.push([]);
 
+  let processed = 0;
   for (const chunk of chunks) {
     await prisma.$transaction(
       async (tx: any) => await commitRowsChunk(tx, batch.reportKey, chunk, stats, batchId),
       { timeout: IMPORT_TX_TIMEOUT_MS, maxWait: 30000 },
     );
+    processed += chunk.length;
+    stats.skipped = Math.max(0, processed - stats.inserted - stats.updated - stats.deleted);
+    // Persist the live counts while the batch is still VALIDATED so Import
+    // history can show what has actually reached live tables without a page refresh.
+    await prisma.importBatch.update({
+      where: { id: batchId },
+      data: {
+        insertedCount: stats.inserted,
+        updatedCount: stats.updated,
+        deletedCount: stats.deleted,
+      },
+    });
+    if (options.onProgress) {
+      await options.onProgress({
+        reportKey: batch.reportKey,
+        processed,
+        total: rows.length,
+        inserted: stats.inserted,
+        updated: stats.updated,
+        deleted: stats.deleted,
+        skipped: stats.skipped,
+      });
+    }
   }
 
   // Refresh workforce denominator caches once per affected employer, rather
