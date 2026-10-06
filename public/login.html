@@ -65,20 +65,38 @@
   #cookie-banner .accept{background:var(--brand-primary);color:#fff;border:none;}
   #cookie-banner .accept:hover{background:var(--blue-d);}
   #cookie-banner .dismiss{background:#fff;color:var(--grey);border:1px solid var(--line);}
-  /* Login uses the saved/system theme directly. Do not apply the dashboard's
-     legacy whole-page inversion filter to this page. */
-  html[data-theme="dark"]{filter:none !important;background:#0b1420 !important;color:#eaf2f8;}
-  html[data-theme="dark"] body{background:#0b1420;color:#eaf2f8;}
-  html[data-theme="dark"] .card{background:#111e2c;border-color:#26384a;box-shadow:0 12px 40px rgba(0,0,0,.35);}
-  html[data-theme="dark"] h1,html[data-theme="dark"] label,html[data-theme="dark"] .logo{color:#eef6fb;}
-  html[data-theme="dark"] .sub,html[data-theme="dark"] label[style],html[data-theme="dark"] #cookie-banner p{color:#aebdca;}
-  html[data-theme="dark"] input{background:#0d1824;color:#eef6fb;border-color:#304458;}
-  html[data-theme="dark"] input:focus{background:#132131;}
-  html[data-theme="dark"] #cookie-banner{background:#111e2c;border-color:#26384a;}
-  html[data-theme="dark"] #cookie-banner .dismiss{background:#162535;color:#c8d5df;border-color:#304458;}
-  html[data-theme="dark"] #forgot-link,html[data-theme="dark"] .card a{color:#c89bea !important;}
+  /* Dark sign-in stays visibly dark without becoming a near-black blackout.
+     These surfaces are deliberately lighter than dashboard chrome and keep the
+     original empower-fin purple as the brand cue. Partner links still tint the
+     page through --brand-primary/--blue without changing the default palette. */
+  html[data-theme="dark"]{
+    filter:none !important;
+    --auth-dark-shell:#393440;
+    --auth-dark-surface:#4a4351;
+    --auth-dark-input:#39343f;
+    --auth-dark-line:#706679;
+    --auth-dark-muted:#d7cfdd;
+    --white:var(--auth-dark-surface);
+    --ink:#fbf9fc;
+    --grey:var(--auth-dark-muted);
+    --line:var(--auth-dark-line);
+    --line-soft:#5e5667;
+    background:var(--auth-dark-shell) !important;
+    color:#fbf9fc;
+  }
+  html[data-theme="dark"] body{
+    background:
+      radial-gradient(900px 520px at 78% -8%,color-mix(in srgb,var(--blue) 10%,transparent),transparent 62%),
+      linear-gradient(160deg,#403946 0%,var(--auth-dark-shell) 100%);
+    color:#fbf9fc;
+  }
+  html[data-theme="dark"] h1,html[data-theme="dark"] label,html[data-theme="dark"] .logo{color:#fbf9fc;}
+  html[data-theme="dark"] .sub,html[data-theme="dark"] label[style],html[data-theme="dark"] #cookie-banner p{color:var(--auth-dark-muted);}
+  html[data-theme="dark"] #cookie-banner{background:var(--auth-dark-surface);border-color:var(--auth-dark-line);}
+  html[data-theme="dark"] #cookie-banner .dismiss{background:#3b3542;color:#eee9f1;border-color:var(--auth-dark-line);}
+  html[data-theme="dark"] #forgot-link,html[data-theme="dark"] .card a{color:#d6afea !important;}
 </style>
-<link rel="stylesheet" href="/static/enterprise.css?v=2">
+<link rel="stylesheet" href="/static/enterprise.css?v=3">
   <link rel="stylesheet" href="/static/enterprise-v3.css?v=3">
 </head>
 <body class="auth has-sticky-cta">
