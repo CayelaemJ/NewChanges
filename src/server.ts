@@ -1097,7 +1097,7 @@ app.post<{ Body: { confirm?: string } }>("/api/admin/reset-all", async (req, rep
     return reply.code(400).send({ error: 'confirmation phrase missing — expected confirm: "RESET"' });
   }
   try {
-    const result = await triggerRefreshNow();
+    const result = await triggerRefreshNow("reset");
     logAdminAction(admin, "data.reset_all", "Authoritative reset and complete source rebuild", { detail: result });
     if (!result?.ok) return reply.code(500).send(result);
     return {
@@ -1219,7 +1219,7 @@ app.post<{ Body: { confirm?: string } }>("/api/admin/integration/full-resync", a
     return reply.code(400).send({ error: 'confirmation phrase missing — expected confirm: "RESET"' });
   }
   try {
-    const refreshed = await triggerRefreshNow();
+    const refreshed = await triggerRefreshNow("reset");
     logAdminAction(admin, "data.full_refresh", "Purged and overwrote dashboard data from the authoritative source", { detail: refreshed });
     if (!refreshed?.ok) return reply.code(500).send(refreshed);
     return refreshed;
