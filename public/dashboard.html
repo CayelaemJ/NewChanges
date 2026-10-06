@@ -111,8 +111,10 @@
   .data-fresh .dot{width:7px;height:7px;border-radius:50%;background:var(--green);}
   .data-fresh.is-error{color:var(--red);}
   .data-fresh.is-error .dot{background:var(--red);}
-  .data-fresh.is-rebuilding{color:#8a5a10;}
-  .data-fresh.is-rebuilding .dot{background:#b9852f;}
+  .data-fresh.is-rebuilding,.data-fresh.is-stale{color:#8a5a10;}
+  .data-fresh.is-rebuilding .dot,.data-fresh.is-stale .dot{background:#b9852f;}
+  .refresh-status-note{margin:0 0 18px;padding:11px 14px;border:1px solid #e7cf9f;border-radius:10px;background:#fffaf0;color:#6f5115;font:600 12px/1.55 Manrope,sans-serif;}
+  .refresh-status-note strong{font-weight:800;color:#5d4310;}
   .avatar{width:34px;height:34px;border-radius:50%;background:var(--brand-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;}
   .role-indicator{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--line);border-radius:999px;background:var(--ice);color:var(--brand-primary);font:800 10.5px/1 'Manrope',sans-serif;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;}
   .role-indicator.superadmin{background:#eef2ff;border-color:#c7d2fe;color:#3730a3;}
@@ -3102,34 +3104,8 @@ async function loadLiveData({refreshOnly=false}={}){
     if(requestSeq!==LIVE_REQUEST_SEQ) return;
     DATA=live; BASE=JSON.parse(JSON.stringify(DATA)); window.__LIVE__=true;
     if(live.employer){ const h1=document.querySelector('.head h1'); if(h1) h1.firstChild.textContent=live.employer+' '; }
-    const fl=document.getElementById('data-fresh-label');
-    const freshness=document.querySelector('.data-fresh');
-    freshness?.classList.remove('is-error','is-rebuilding');
-    if(fl){
-      const syncAt=live.syncStatus?.lastSuccessfulSyncAt;
-      const syncNote=String(live.syncStatus?.lastSyncNote||'');
-      const sourceAt=live.sourceDataUpdatedAt||live.dataAsOf;
-      if(syncAt && syncNote.startsWith('Full refresh completed:')){
-        const d=new Date(syncAt);
-        fl.textContent='Purged & overwritten '+d.toLocaleString('en-ZA',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
-      }else if(syncAt){
-        const d=new Date(syncAt);
-        fl.textContent='Last synced '+d.toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'});
-      }else if(sourceAt){
-        const d=new Date(sourceAt);
-        fl.textContent='Source updated '+d.toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'});
-      }else{
-        fl.textContent='Live data';
-      }
-      fl.removeAttribute('title');
-      const titleParts=[];
-      if(syncNote) titleParts.push(syncNote);
-      if(sourceAt){
-        const sd=new Date(sourceAt);
-        titleParts.push('Source data updated '+sd.toLocaleString('en-ZA',{dateStyle:'medium',timeStyle:'short'}));
-      }
-      if(titleParts.length) fl.title=titleParts.join(' ');
-    }
+    const sourceAt=live.sourceDataUpdatedAt||live.dataAsOf;
+    renderRefreshStatus(live.syncStatus,sourceAt);
     renderMonthActivity(live.monthActivity,live.filterContext); renderDataQuality(live.dataQuality); setLiveFootnote(live.filterContext);
     document.getElementById('demo-banner')?.remove();
     applyState(); updatePeriodControlTone(); syncPeriodControl(); wireFilters();
@@ -3534,15 +3510,67 @@ function addAuthBar(me){
   }
 }
 
+function renderRefreshStatus(status,sourceAt){
+  document.getElementById('refresh-status-note')?.remove();
+  const freshness=document.querySelector('.data-fresh');
+  const fl=document.getElementById('data-fresh-label');
+  if(!fl) return;
+
+  const state=String(status?.lastSyncStatus||'');
+  const syncAt=status?.lastSuccessfulSyncAt||status?.publishedDataAt||null;
+  const syncNote=String(status?.lastSyncNote||'');
+  const rebuilding=state==='REBUILDING';
+  const issue=['FULL_REFRESH_FAILED','FULL_REFRESH_PRECHECK_FAILED','FAILED','PARTIAL'].includes(state);
+  const showingPublished=Boolean(status?.servingLastSuccessful)||rebuilding||issue;
+  const fmt=d=>new Date(d).toLocaleString('en-ZA',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+
+  freshness?.classList.remove('is-error','is-rebuilding','is-stale');
+  if(rebuilding){
+    freshness?.classList.add('is-rebuilding');
+    fl.textContent=syncAt?'Purging & rebuilding · showing '+fmt(syncAt):'Purging & rebuilding';
+  }else if(issue){
+    freshness?.classList.add('is-stale');
+    fl.textContent=syncAt?'Refresh issue · showing '+fmt(syncAt):'Refresh issue';
+  }else if(syncAt && syncNote.startsWith('Full refresh completed')){
+    fl.textContent='Purged & overwritten '+fmt(syncAt);
+  }else if(syncAt){
+    fl.textContent='Last synced '+new Date(syncAt).toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'});
+  }else if(sourceAt){
+    fl.textContent='Source updated '+new Date(sourceAt).toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'});
+  }else{
+    fl.textContent='Live data';
+  }
+
+  const titleParts=[];
+  if(syncNote) titleParts.push(syncNote);
+  if(sourceAt) titleParts.push('Source data updated '+new Date(sourceAt).toLocaleString('en-ZA',{dateStyle:'medium',timeStyle:'short'}));
+  fl.removeAttribute('title');
+  if(titleParts.length) fl.title=titleParts.join(' ');
+
+  if((rebuilding||issue) && showingPublished){
+    const host=document.querySelector('.head');
+    if(host){
+      const note=document.createElement('div');
+      note.id='refresh-status-note';
+      note.className='refresh-status-note';
+      const reason=syncNote||'No additional refresh detail was recorded.';
+      note.textContent=rebuilding
+        ? 'Refresh in progress. The dashboard is staying on the last successful data until the new dataset is fully rebuilt. '+reason
+        : 'Refresh did not complete. The dashboard is still showing the last successful data. Reason: '+reason;
+      host.insertAdjacentElement('afterend',note);
+    }
+  }
+}
+
 function showLiveError(error){
   const status=error?.syncStatus?.lastSyncStatus||null;
   const rebuilding=status==='REBUILDING';
   const failed=status==='FULL_REFRESH_FAILED';
-  const title=rebuilding ? 'Dashboard refresh in progress' : failed ? 'Full refresh failed — partial data withheld' : 'Live dashboard data is unavailable';
+  const title=rebuilding ? 'Dashboard refresh in progress' : failed ? 'Full refresh failed — last published dashboard unavailable' : 'Live dashboard data is unavailable';
   const copy=rebuilding
-    ? 'The midnight source refresh is purging the previous dashboard dataset and rebuilding it from the authoritative source. The new dashboard will publish only when the complete rebuild succeeds.'
+    ? 'The refresh is rebuilding the source data. Normally the last successful dashboard remains visible; this fallback is shown only because no published snapshot could be loaded.'
     : failed
-      ? 'The previous dataset was purged, but the authoritative reload did not complete successfully. Partial rebuilt figures are deliberately hidden until a complete refresh succeeds.'
+      ? 'The authoritative reload did not complete, and no last-successful published dashboard snapshot could be loaded for this request.'
       : 'The portal has not substituted demonstration figures. Check the latest sync/import status in Administration, then reload this page.';
   const view=document.getElementById('employer-view');
   if(view) view.innerHTML=`<div class="card" style="max-width:760px;margin:48px auto;padding:34px">
@@ -3595,21 +3623,8 @@ async function checkSourceVersion(){
     if(!r.ok) return;
     const d=await r.json();
     const status=d.syncStatus?.lastSyncStatus||null;
-    const freshness=document.querySelector('.data-fresh');
-    const fl=document.getElementById('data-fresh-label');
-    if(status==='REBUILDING'){
-      freshness?.classList.remove('is-error');
-      freshness?.classList.add('is-rebuilding');
-      if(fl) fl.textContent='Purging & rebuilding';
-      return;
-    }
-    if(status==='FULL_REFRESH_FAILED'){
-      freshness?.classList.remove('is-rebuilding');
-      freshness?.classList.add('is-error');
-      if(fl) fl.textContent='Refresh failed — data withheld';
-      return;
-    }
-    freshness?.classList.remove('is-error','is-rebuilding');
+    renderRefreshStatus(d.syncStatus);
+    if(status==='REBUILDING' || status==='FULL_REFRESH_FAILED') return;
     if(!__SOURCE_VERSION__) { __SOURCE_VERSION__=d.version||null; return; }
     if(d.version && d.version !== __SOURCE_VERSION__){
       __SOURCE_VERSION__=d.version;
