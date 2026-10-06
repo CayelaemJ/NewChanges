@@ -39,6 +39,7 @@ export interface SyncProgress {
   updated?: number;
   deleted?: number;
   skipped?: number;
+  historyRows?: number;
   batchId?: string;
 }
 
@@ -593,6 +594,7 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
             updated: p.updated,
             deleted: p.deleted,
             skipped: p.skipped,
+            historyRows: p.historyRows,
             batchId: batch.id,
           });
         };
@@ -675,6 +677,7 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
           updated: committed.updated,
           deleted: committed.deleted,
           skipped: committed.skipped,
+          historyRows: committed.historyRows,
           batchId: batch.id,
         });
 
