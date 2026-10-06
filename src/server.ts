@@ -1774,6 +1774,8 @@ function startSyncScheduler(app: any) {
     try {
       const cfg = await getSyncConfig();
       if (!cfg.enabled) return;
+      const publicCfg = publicSyncConfig(cfg);
+      if (!publicCfg.configured) return;
 
       // Direct SQL: use the indexed source watermark first. A changed
       // source_updated_at triggers the normal cursor-based incremental sync;
