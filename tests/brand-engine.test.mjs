@@ -53,6 +53,7 @@ for (const th of [{ accentColor: "009DA5", primaryColor: "FF8000", navyColor: "0
   ok(BE.contrast(D["--grey"], D["--white"]) >= 7, "dark: secondary text >= 7:1");
   ok(BE.contrast(D["--grey-l"], D["--white"]) >= 4.5, "dark: muted text >= 4.5:1");
   ok(BE.contrast(D["--blue"], D["--white"]) >= 4.5, "dark: accent >= 4.5:1 on surface");
+  ok(BE.contrast(D["--dm-on-accent"], D["--blue"]) >= 4.5, "dark: text/icon foreground remains readable on the rendered accent");
   ok(BE.contrast(D["--brand-primary"], D["--white"]) >= 9, "dark: headings >= 9:1");
   ok(BE.contrast("FFFFFF", D["--bar-bg"]) >= 12, "dark: white text on brand bar >= 12:1");
   ok(BE.contrast(D["--brand-vivid"], D["--bar-bg"]) >= 3, "dark: brand accent rule stays visible on the bar");
