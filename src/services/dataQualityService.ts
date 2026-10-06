@@ -1,6 +1,7 @@
 import { prisma } from "./snapshotBuilder.js";
+import { getFormat } from "./reportFormats.js";
 
-const VERSION = "2.0.0";
+const VERSION = "2.1.0";
 const MAX_SCAN_ROWS = 50_000;
 const MIN_BASELINE_ROWS = 30;
 const ROBUST_Z_QUARANTINE = 12;
@@ -33,6 +34,8 @@ export async function assessIncomingRows(input:{reportKey:string; rows:Record<st
   const rows=input.rows.slice(0,MAX_SCAN_ROWS);
   const findings:Finding[]=[];
   const fields=new Map<string,NumericStats>();
+  const contract=getFormat(input.reportKey);
+  const requiredFields=new Set((contract?.fields||[]).filter((field:any)=>field.required).map((field:any)=>field.name));
 
 for (let i=0;i<rows.length;i++) {
     const row=rows[i];
@@ -65,7 +68,46 @@ for (let i=0;i<rows.length;i++) {
       findings.push({severity:"WARNING",code:"ROBUST_OUTLIER",field,message:`${extreme} extreme outlier detected in the incoming distribution.`,action:"Verify whether the outlier is a genuine business value or a source/data-entry error.",score:0.5});
     }
     const missingRate=s.missing/Math.max(rows.length,1);
-    if (missingRate >= 0.35) findings.push({severity:"QUARANTINE",code:"MISSINGNESS_SPIKE",field,message:`${Math.round(missingRate*100)}% of incoming rows have no value for this field.`,action:"Restore the missing source values or explicitly update the feed contract if the field is no longer supplied.",score:missingRate});
+    if (missingRate >= 0.35) {
+      if (requiredFields.has(field)) {
+        findings.push({
+          severity:"QUARANTINE",
+          code:"MISSINGNESS_SPIKE_REQUIRED",
+          field,
+          message:`${Math.round(missingRate*100)}% of incoming rows have no value for required field ${field}.`,
+          action:"Restore the required source values or correct the source mapping before reloading.",
+          score:missingRate,
+        });
+      } else {
+        findings.push({
+          severity:"WARNING",
+          code:"OPTIONAL_MISSINGNESS_HIGH",
+          field,
+          message:`${Math.round(missingRate*100)}% of incoming rows have no value for optional field ${field}; the feed contract allows this.`,
+          action:"No blocking action is required. Review only if this optional field was expected to be populated for this population.",
+          score:Math.min(0.5,missingRate),
+        });
+      }
+    }
+  }
+
+  // Contract-aware lifecycle semantics: optional fields remain optional globally,
+  // but can still become required for a specific business state.
+  if (input.reportKey === "journeys") {
+    for (let i=0;i<rows.length;i++) {
+      const row=rows[i] as Record<string,unknown>;
+      if (String(row.status||"").toUpperCase() === "COMPLETED" && !row.completed_at) {
+        findings.push({
+          severity:"QUARANTINE",
+          code:"COMPLETED_JOURNEY_MISSING_COMPLETED_AT",
+          field:"completed_at",
+          row:i+1,
+          message:"A COMPLETED journey has no completed_at date.",
+          action:"Supply completed_at for completed journeys or correct the journey status.",
+          score:1,
+        });
+      }
+    }
   }
 
   // Compare the new distribution with the most recent committed batch when available.

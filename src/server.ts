@@ -14,15 +14,15 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { prisma, snapshotEmployer, getDashboardPayload, monthKey } from "./services/snapshotBuilder.js";
+import { prisma, snapshotEmployer, getDashboardPayload, getPublishedDashboardPayload, getPublishedDashboardState, publishedDashboardEmployerIds, monthKey } from "./services/snapshotBuilder.js";
 import { REPORT_FORMATS, LOAD_ORDER, getFormat } from "./services/reportFormats.js";
 import { csvTemplate, xlsxTemplate, formatManifest } from "./services/templateGenerator.js";
-import { uploadAndValidate, commitBatch, revertBatch, resetAllData } from "./services/importService.js";
+import { uploadAndValidate, commitBatch, revertBatch } from "./services/importService.js";
 import { startUploadJob, getUploadJob, startCommitJob, getCommitJob } from "./services/asyncJobs.js";
 import { startSyncJob, getSyncJob } from "./services/syncJobs.js";
 import { startDailyRefresh, triggerRefreshNow } from "./services/dailyRefresh.js";
-import { getConfig as getSyncConfig, saveConfig as saveSyncConfig, publicConfig as publicSyncConfig, testConnection as testSyncConnection, runSync, recentSyncLogs } from "./services/syncService.js";
-import { listPartners, createPartner, updatePartner, deletePartner, assignUserToPartner, assignEmployerToPartner, themeForUser, themeForSlug } from "./services/partnerService.js";
+import { getConfig as getSyncConfig, saveConfig as saveSyncConfig, publicConfig as publicSyncConfig, testConnection as testSyncConnection, runSync, recentSyncLogs, detectSourceChanges, SOURCE_CHANGE_POLL_SECONDS } from "./services/syncService.js";
+import { listPartners, createPartner, updatePartner, deletePartner, assignUserToPartner, assignEmployerToPartner, themeForUser, themeForEmployer, themeForSlug } from "./services/partnerService.js";
 import { login, resolveSession, destroySession, destroySessionById, destroyAllSessionsForUser, canViewEmployer, canAccessModule, allowedEmployerIds, AuthUser, isAdminRole } from "./services/authService.js";
 import { createUser, listUsers, updateUser, resetPassword, completeSetup, deactivateSelf, listRevokedUsers, deleteUserPermanently, requestPasswordReset } from "./services/userService.js";
 import { recordEvent, engagementSummary } from "./services/analyticsService.js";
@@ -454,11 +454,17 @@ app.get("/api/auth/me", async (req, reply) => {
   const user = await currentUser(req);
   if (!user) return reply.code(401).send({ error: "not signed in" });
   const ids = allowedEmployerIds(user);
+  const syncStatus = await dashboardSyncState();
+  const publishedFallback = dashboardUsesPublishedSnapshot(syncStatus);
+  const publishedIds = publishedFallback ? await publishedDashboardEmployerIds() : null;
+  const visibleIds = ids === null
+    ? publishedIds
+    : (publishedIds ? ids.filter((id) => publishedIds.includes(id)) : ids);
   let employers;
-  if (ids === null) {
+  if (ids === null && !publishedFallback) {
     employers = await prisma.employer.findMany({ where: { sourceDeletedAt: null }, select: { id: true, name: true }, orderBy: { name: "asc" } });
   } else {
-    employers = await prisma.employer.findMany({ where: { id: { in: ids }, sourceDeletedAt: null }, select: { id: true, name: true }, orderBy: { name: "asc" } });
+    employers = await prisma.employer.findMany({ where: { id: { in: visibleIds ?? [] } }, select: { id: true, name: true }, orderBy: { name: "asc" } });
   }
   return {
     name: user.name, email: user.email, role: user.role,
@@ -955,7 +961,16 @@ app.get<{ Params: { jobId: string } }>(
     if (!(await requireAdmin(req, reply))) return;
     const job = getUploadJob(req.params.jobId);
     if (!job) return reply.code(404).send({ error: "unknown upload job" });
-    if (job.status === "PENDING") return { status: "PROCESSING" };
+    if (job.status === "PENDING" || job.status === "PROCESSING") {
+      return {
+        status: "PROCESSING",
+        phase: job.phase,
+        progress: job.progress,
+        message: job.message,
+        detail: job.detail ?? null,
+        updatedAt: job.updatedAt,
+      };
+    }
     if (job.status === "FAILED") return { status: "FAILED", error: job.error };
     return { status: "DONE", ...job.result };
   },
@@ -988,7 +1003,16 @@ app.get<{ Params: { jobId: string } }>(
     if (!(await requireAdmin(req, reply))) return;
     const job = getCommitJob(req.params.jobId);
     if (!job) return reply.code(404).send({ error: "unknown commit job" });
-    if (job.status === "PENDING") return { status: "PROCESSING" };
+    if (job.status === "PENDING" || job.status === "PROCESSING") {
+      return {
+        status: "PROCESSING",
+        phase: job.phase,
+        progress: job.progress,
+        message: job.message,
+        detail: job.detail ?? null,
+        updatedAt: job.updatedAt,
+      };
+    }
     if (job.status === "FAILED") return { status: "FAILED", error: job.error };
     return { status: "DONE", ...job.result };
   },
@@ -1023,7 +1047,7 @@ app.get("/api/admin/batches", async (req, reply) => {
       id: true, reportKey: true, filename: true, fileFormat: true,
       status: true, rowCount: true, errorCount: true,
       insertedCount: true, updatedCount: true, deletedCount: true,
-      uploadedAt: true, committedAt: true, revertedAt: true,
+      uploadedAt: true, committedAt: true, revertedAt: true, uploadedBy: true,
     },
   });
   return batches.map((batch) => {
@@ -1062,20 +1086,29 @@ app.get<{ Params: { batchId: string } }>("/api/admin/batches/:batchId/csv", asyn
         return reply.code(400).send({ error: e?.message || "Could not export import data." });
     }
 });
-// ── DANGER: wipe ALL imported data (clean slate for go-live). Admin only,
-//    and the body must contain confirm: "RESET" so it can't fire by accident. ──
+// ── DANGER: authoritative reset + rebuild. Admin only.
+// RESET is deliberately one operation: preflight source, purge the source-derived
+// read model, ignore prior cursors/MLOps/staleness, reload all 10 feeds from the
+// connected source, rebuild snapshots, and publish only after a complete success.
+// This avoids leaving the portal empty after a raw reset.
 app.post<{ Body: { confirm?: string } }>("/api/admin/reset-all", async (req, reply) => {
   const admin = await requireAdmin(req, reply); if (!admin) return;
   if ((req.body?.confirm) !== "RESET") {
     return reply.code(400).send({ error: 'confirmation phrase missing — expected confirm: "RESET"' });
   }
   try {
-    const result = await resetAllData();
-    logAdminAction(admin, "data.reset_all", `Wiped all imported data (clean slate)`, { detail: result });
-    return result;
+    const result = await triggerRefreshNow("reset");
+    logAdminAction(admin, "data.reset_all", "Authoritative reset and complete source rebuild", { detail: result });
+    if (!result?.ok) return reply.code(500).send(result);
+    return {
+      ...result,
+      reset: true,
+      reloaded: true,
+      cleared: result?.purge?.cleared ?? {},
+    };
   } catch (e: any) {
-    req.log.error({ err: e }, "reset all imported data failed");
-    return reply.code(500).send({ error: e?.message || "Reset failed." });
+    req.log.error({ err: e }, "authoritative reset and rebuild failed");
+    return reply.code(500).send({ error: e?.message || "Reset and rebuild failed." });
   }
 });
 
@@ -1150,36 +1183,46 @@ app.get<{ Params: { jobId: string } }>(
     if (!(await requireAdmin(req, reply))) return;
     const job = getSyncJob(req.params.jobId);
     if (!job) return reply.code(404).send({ error: "unknown sync job" });
-    if (job.status === "PENDING") return { status: "PROCESSING" };
+    if (job.status === "PENDING" || job.status === "PROCESSING") {
+      return {
+        status: "PROCESSING",
+        phase: job.phase,
+        progress: job.progress,
+        message: job.message,
+        detail: job.detail ?? null,
+        updatedAt: job.updatedAt,
+      };
+    }
     if (job.status === "FAILED") return { status: "FAILED", error: job.error };
     return { status: "DONE", ...job.result };
   },
 );
 
-// Manual run of the scheduled daily live refresh (app pipeline by default;
-// set DAILY_REFRESH_MODE=sqlproc to run refresh_all_reports() in the DB).
+// Manual run of the same authoritative purge-and-overwrite pipeline used by
+// the 00:00 Africa/Johannesburg refresh. The validated app pipeline is always
+// used because the legacy SQL procedure does not reload every canonical feed.
 app.post("/api/admin/integration/refresh", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
-  return triggerRefreshNow();
+  const result = await triggerRefreshNow();
+  if (!result?.ok) return reply.code(500).send(result);
+  return result;
 });
 
-// ── DANGER: wipe every synced row and pull a fresh full copy from the
-//    connected API/SQL source in one action. Cursor-based "Sync now" only
-//    ever pulls what's changed since the last cursor, so rows the source
-//    deleted (or a bad prior sync left half-committed) can linger forever.
-//    This is the explicit "throw it all away and reload from scratch"
-//    button for that — admin only, and confirm: "RESET" is required so it
-//    can never fire from a stray click. ──
+// ── DANGER: purge source-derived dashboard facts/caches and pull a fresh
+//    authoritative copy from the connected API/SQL source in one action.
+//    Identity/configuration anchors and separately sourced chat history are
+//    preserved. Admin only; confirm: "RESET" is required so this cannot fire
+//    from a stray click. ──
 app.post<{ Body: { confirm?: string } }>("/api/admin/integration/full-resync", async (req, reply) => {
   const admin = await requireAdmin(req, reply); if (!admin) return;
   if ((req.body?.confirm) !== "RESET") {
     return reply.code(400).send({ error: 'confirmation phrase missing — expected confirm: "RESET"' });
   }
   try {
-    const wiped = await resetAllData();
-    logAdminAction(admin, "data.reset_all", `Wiped all imported data (full resync)`, { detail: wiped });
-    const synced = await runSync("manual");
-    return { wiped, synced };
+    const refreshed = await triggerRefreshNow("reset");
+    logAdminAction(admin, "data.full_refresh", "Purged and overwrote dashboard data from the authoritative source", { detail: refreshed });
+    if (!refreshed?.ok) return reply.code(500).send(refreshed);
+    return refreshed;
   } catch (e: any) {
     req.log.error({ err: e }, "full resync failed");
     return reply.code(500).send({ error: e?.message || "Full resync failed." });
@@ -1430,6 +1473,47 @@ app.get<{ Params: { slug: string } }>("/api/partner-theme/:slug", async (req) =>
   return themeForSlug(req.params.slug);
 });
 
+async function dashboardSyncState() {
+  const syncConfig = await prisma.integrationConfig.findUnique({
+    where: { id: "default" },
+    select: {
+      lastSuccessfulSyncAt: true,
+      lastSyncAt: true,
+      lastSyncStatus: true,
+      lastSyncNote: true,
+    },
+  });
+  return {
+    lastSuccessfulSyncAt: syncConfig?.lastSuccessfulSyncAt?.toISOString() ?? null,
+    lastSyncAt: syncConfig?.lastSyncAt?.toISOString() ?? null,
+    lastSyncStatus: syncConfig?.lastSyncStatus ?? null,
+    lastSyncNote: syncConfig?.lastSyncNote ?? null,
+  };
+}
+
+function dashboardUsesPublishedSnapshot(syncStatus: Awaited<ReturnType<typeof dashboardSyncState>>) {
+  return ["REBUILDING", "PARTIAL", "FAILED", "FULL_REFRESH_FAILED", "FULL_REFRESH_PRECHECK_FAILED"].includes(String(syncStatus.lastSyncStatus || ""));
+}
+
+function syncStatusForPublishedSnapshot(
+  syncStatus: Awaited<ReturnType<typeof dashboardSyncState>>,
+  publishedAt: string | null,
+) {
+  return {
+    ...syncStatus,
+    servingLastSuccessful: true,
+    publishedDataAt: publishedAt ?? syncStatus.lastSuccessfulSyncAt,
+  };
+}
+
+function sendPublishedDashboardUnavailable(reply: FastifyReply, syncStatus: Awaited<ReturnType<typeof dashboardSyncState>>) {
+  reply.header("Retry-After", "60");
+  return reply.code(503).send({
+    error: "A refresh is in progress or failed, and no last-successful published dashboard snapshot is available yet.",
+    syncStatus,
+  });
+}
+
 // ── dashboard: real stock/as-at + flow/in-window filtering ──
 app.get<{
   Params: { employerId: string };
@@ -1443,15 +1527,26 @@ app.get<{
     if (!canViewEmployer(user, employerId)) return reply.code(403).send({ error: "no access to this employer" });
     const queryError = dashboardQueryError(req.query);
     if (queryError) return reply.code(400).send({ error: queryError });
-    const payload: any = await getDashboardPayload(employerId, {
+    const syncStatus = await dashboardSyncState();
+    const query = {
       period: req.query.period,
       quarter: req.query.quarter,
       range: req.query.range,
       site: req.query.site,
       income: req.query.income,
-    });
+    };
+    const usePublished = dashboardUsesPublishedSnapshot(syncStatus);
+    const published = usePublished ? await getPublishedDashboardState(employerId) : null;
+    const payload: any = usePublished
+      ? await getPublishedDashboardPayload(employerId, query)
+      : await getDashboardPayload(employerId, query);
+    if (!payload) return sendPublishedDashboardUnavailable(reply, syncStatus);
     const sections = await sectionsForUser(user);
     if (!sections.voiceOfEmployee) payload.chat = { available: false };
+    payload.theme = await themeForEmployer(employerId);
+    payload.syncStatus = usePublished
+      ? syncStatusForPublishedSnapshot(syncStatus, published?.capturedAt ?? null)
+      : syncStatus;
     return payload;
   },
 );
@@ -1462,6 +1557,12 @@ app.get<{ Params: { employerId: string }; Querystring: { site?: string; income?:
   async (req, reply) => {
     const user = await requireUser(req, reply); if (!user) return;
     if (!canViewEmployer(user, req.params.employerId)) return reply.code(403).send({ error: "no access" });
+    const syncStatus = await dashboardSyncState();
+    if (dashboardUsesPublishedSnapshot(syncStatus)) {
+      const published = await getPublishedDashboardState(req.params.employerId);
+      if (!published) return sendPublishedDashboardUnavailable(reply, syncStatus);
+      return published.periods;
+    }
 
     // Keep this endpoint cheap. The previous implementation read date columns
     // from six large tables and then ran the full dashboard builder once per
@@ -1659,32 +1760,71 @@ async function bootstrapAdmin() {
   } catch (e) { app.log.error(e); }
 }
 
-// ── scheduled-sync checker: every 15 min, run a sync if one is due ──
+// ── source-sync watcher ───────────────────────────────────────────────
+// SQL sources get lightweight change detection using indexed
+// MAX(source_updated_at) watermarks. The ordinary schedule remains a heartbeat
+// fallback, so API sources and any missed edge case still reconcile regularly.
 function startSyncScheduler(app: any) {
-  const CHECK_MS = 15 * 60 * 1000;
+  const CHECK_MS = SOURCE_CHANGE_POLL_SECONDS * 1000;
+  let tickRunning = false;
+
+  const reportFailure = (r: any) => {
+    if (r?.status !== "FAILED") return;
+    notifyAdmins({
+      subject: "Scheduled data sync failed",
+      html: `<div style="font-family:Arial,sans-serif;color:#241536"><h2 style="color:#b5391f">Sync failed</h2><p>The scheduled external data sync failed.</p><pre style="background:#f7fafd;padding:12px;border-radius:8px;font-size:12px;overflow:auto">${JSON.stringify(r.summary ?? r, null, 2).slice(0, 2000)}</pre></div>`,
+      slackText: `:rotating_light: Scheduled data sync failed — check Administration → Live Data Integration.`,
+    }).catch(() => {});
+  };
+
   const tick = async () => {
+    if (tickRunning) return;
+    tickRunning = true;
     try {
       const cfg = await getSyncConfig();
       if (!cfg.enabled) return;
-      const dueAfter = cfg.lastSyncAt ? new Date(cfg.lastSyncAt).getTime() + cfg.scheduleHours * 3600 * 1000 : 0;
+      const publicCfg = publicSyncConfig(cfg);
+      if (!publicCfg.configured) return;
+
+      // Direct SQL: use the indexed source watermark first. A changed
+      // source_updated_at triggers the normal cursor-based incremental sync;
+      // unchanged databases avoid re-reading the large views entirely.
+      const changes = await detectSourceChanges();
+      if (changes.supported && changes.changed) {
+        app.log.info(
+          { reports: changes.reports.map((x: any) => x.reportKey) },
+          "Source database changes detected; running incremental sync",
+        );
+        const r = await runSync("scheduled");
+        app.log.info(`Change-triggered sync: ${r.status ?? "done"}`);
+        reportFailure(r);
+        return;
+      }
+
+      // Heartbeat reconciliation. For SQL this is a safety net; for API it is
+      // the normal polling mechanism because a portable DB watermark is not
+      // available through an arbitrary HTTP API.
+      const dueAfter = cfg.lastSyncAt
+        ? new Date(cfg.lastSyncAt).getTime() + cfg.scheduleHours * 3600 * 1000
+        : 0;
       if (Date.now() >= dueAfter) {
-        app.log.info("Running scheduled external source sync…");
+        app.log.info(changes.supported
+          ? "No new SQL watermark detected; running scheduled heartbeat reconciliation…"
+          : "Running scheduled external source sync…");
         const r = await runSync("scheduled");
         app.log.info(`Scheduled sync: ${r.status ?? "done"}`);
-        if (r.status === "FAILED") {
-          notifyAdmins({
-            subject: "Scheduled data sync failed",
-            html: `<div style="font-family:Arial,sans-serif;color:#241536"><h2 style="color:#b5391f">Sync failed</h2><p>The scheduled external data sync failed.</p><pre style="background:#f7fafd;padding:12px;border-radius:8px;font-size:12px;overflow:auto">${JSON.stringify(r.summary ?? r, null, 2).slice(0, 2000)}</pre></div>`,
-            slackText: `:rotating_light: Scheduled data sync failed — check Administration → Live Data Integration.`,
-          }).catch(() => {});
-        }
+        reportFailure(r);
       }
-    } catch (e) { app.log.error(e); }
+    } catch (e) {
+      app.log.error(e);
+    } finally {
+      tickRunning = false;
+    }
   };
-  setInterval(tick, CHECK_MS);
-  setTimeout(tick, 30000); // also check shortly after boot
-}
 
+  setInterval(tick, CHECK_MS).unref();
+  setTimeout(tick, Math.min(30_000, CHECK_MS)).unref();
+}
 
 // ── automations checker: stale-account cleanup + weekly digest ──
 function startAutomationScheduler(app: any) {
@@ -1714,30 +1854,53 @@ app.get<{ Querystring: { period?: string; quarter?: string; range?: "30d" | "qua
   async (req, reply) => {
     const user = await requireUser(req, reply); if (!user) return;
     if (!canAccessModule(user, "portfolio")) return reply.code(403).send({ error: "no portfolio access" });
+    const syncStatus = await dashboardSyncState();
+    const usePublished = dashboardUsesPublishedSnapshot(syncStatus);
     const queryError = dashboardQueryError(req.query);
     if (queryError) return reply.code(400).send({ error: queryError });
     const ids = allowedEmployerIds(user);
+    const publishedIds = usePublished ? await publishedDashboardEmployerIds() : null;
+    const visibleIds = ids === null
+      ? publishedIds
+      : (publishedIds ? ids.filter((id) => publishedIds.includes(id)) : ids);
     const employers = await prisma.employer.findMany({
-      where: ids === null ? { sourceDeletedAt: null } : { id: { in: ids }, sourceDeletedAt: null },
+      where: usePublished
+        ? { id: { in: visibleIds ?? [] } }
+        : (ids === null ? { sourceDeletedAt: null } : { id: { in: ids }, sourceDeletedAt: null }),
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     });
     const out = [];
     let filterContext: unknown = null;
+    let publishedAt: string | null = null;
     for (const employer of employers) {
-      const payload: any = await getDashboardPayload(employer.id, req.query);
+      const published = usePublished ? await getPublishedDashboardState(employer.id) : null;
+      const payload: any = usePublished
+        ? await getPublishedDashboardPayload(employer.id, req.query)
+        : await getDashboardPayload(employer.id, req.query);
+      if (!payload) continue;
+      publishedAt ??= published?.capturedAt ?? null;
       filterContext ??= payload.filterContext;
       out.push({ id: employer.id, name: employer.name, heads: payload.headcount, ...payload.portfolio });
     }
-    return { employers: out, filterContext, generatedAt: new Date().toISOString() };
+    return {
+      employers: out,
+      filterContext,
+      generatedAt: new Date().toISOString(),
+      syncStatus: usePublished ? syncStatusForPublishedSnapshot(syncStatus, publishedAt) : syncStatus,
+    };
   },
 );
 
 // ── convenience: live dashboard of the first employer THIS USER can see ──
 app.get("/api/dashboard/version", async (req, reply) => {
   const user = await requireUser(req, reply); if (!user) return;
-  const latest = await prisma.integrationCursor.aggregate({ _max: { lastSuccessAt: true } });
-  return { version: latest._max.lastSuccessAt?.toISOString() ?? null };
+  const syncStatus = await dashboardSyncState();
+  // Version the browser by the source watermark, not by a no-op heartbeat.
+  // This avoids repainting dashboards when the scheduler merely confirms that
+  // nothing changed in the connected database.
+  const latest = await prisma.integrationCursor.aggregate({ _max: { lastSourceUpdatedAt: true } });
+  return { version: latest._max.lastSourceUpdatedAt?.toISOString() ?? null, syncStatus };
 });
 
 app.get<{ Querystring: { period?: string; quarter?: string; range?: "30d" | "quarter" | "all" | "month" | "30" | "q" | "latest"; site?: string; income?: string } }>(
@@ -1747,16 +1910,32 @@ app.get<{ Querystring: { period?: string; quarter?: string; range?: "30d" | "qua
     if (!user) return;
     const queryError = dashboardQueryError(req.query);
     if (queryError) return reply.code(400).send({ error: queryError });
+    const syncStatus = await dashboardSyncState();
+    const usePublished = dashboardUsesPublishedSnapshot(syncStatus);
     const ids = allowedEmployerIds(user);
+    const publishedIds = usePublished ? await publishedDashboardEmployerIds() : null;
+    const visibleIds = ids === null
+      ? publishedIds
+      : (publishedIds ? ids.filter((id) => publishedIds.includes(id)) : ids);
     const employer = await prisma.employer.findFirst({
-      where: ids === null ? { sourceDeletedAt: null } : { id: { in: ids }, sourceDeletedAt: null },
+      where: usePublished
+        ? { id: { in: visibleIds ?? [] } }
+        : (ids === null ? { sourceDeletedAt: null } : { id: { in: ids }, sourceDeletedAt: null }),
       orderBy: { name: "asc" },
       select: { id: true },
     });
     if (!employer) return reply.code(404).send({ error: "no employer data available" });
-    const payload: any = await getDashboardPayload(employer.id, req.query);
+    const published = usePublished ? await getPublishedDashboardState(employer.id) : null;
+    const payload: any = usePublished
+      ? await getPublishedDashboardPayload(employer.id, req.query)
+      : await getDashboardPayload(employer.id, req.query);
+    if (!payload) return sendPublishedDashboardUnavailable(reply, syncStatus);
     const sections = await sectionsForUser(user);
     if (!sections.voiceOfEmployee) payload.chat = { available: false };
+    payload.theme = await themeForEmployer(employer.id);
+    payload.syncStatus = usePublished
+      ? syncStatusForPublishedSnapshot(syncStatus, published?.capturedAt ?? null)
+      : syncStatus;
     return payload;
   },
 );

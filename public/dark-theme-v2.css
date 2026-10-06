@@ -16,15 +16,25 @@ html.portal-dark .topbar {
 }
 
 /* surfaces */
-html.portal-dark :is(.card, .panel, .kpi, .drawer, .schedule-modal, .portal-account-menu, .source-mode-card, .stat-strip, .opp-card, .ds-card, .portal-modal) {
+html.portal-dark :is(
+  .card, .panel, .kpi, .drawer, .schedule-modal, .portal-account-menu, .source-mode-card, .stat-strip, .opp-card, .ds-card, .portal-modal,
+  .security-stat, .security-panel, .security-drawer, .compliance-box, .job-progress, .ingestion-method, .mlops-alert,
+  .enterprise-insight, .data-trust-panel, .comparison-value-card,
+  #ops-architecture
+) {
   background: var(--dm-surface, #1d2029) !important;
   border-color: var(--dm-line, #343849) !important;
   color: var(--ink, #eceef4);
   box-shadow: 0 1px 0 rgba(255,255,255,.03) inset, 0 6px 20px rgba(0,0,0,.28) !important;
 }
 html.portal-dark .kpi { border-top-color: var(--brand-vivid, var(--blue)) !important; }
-html.portal-dark :is(.drawer-note, .ds, .pf-toolbar, .pf-filter-menu, .dropdown-menu) {
-  background: var(--dm-surface-2, #262a36) !important; border-color: var(--dm-line, #343849) !important;
+html.portal-dark :is(
+  .drawer-note, .ds, .pf-toolbar, .pf-filter-menu, .dropdown-menu,
+  .security-summary, .security-control, .security-detail, .mlops-detail, .ingestion-note, .job-progress-track
+) {
+  background: var(--dm-surface-2, #262a36) !important;
+  border-color: var(--dm-line, #343849) !important;
+  color: var(--ink, #eceef4) !important;
 }
 html.portal-dark :is(.dropdown-item, .pf-filter-option):hover { background: var(--ice); }
 
@@ -44,7 +54,11 @@ html.portal-dark .emp-pick label { color: var(--ink) !important; }
 html.portal-dark .emp-pick input { accent-color: var(--blue); }
 
 /* navigation + account */
-html.portal-dark .portal-nav-link.is-active { background: var(--dm-surface-2); color: var(--ink); border-color: var(--dm-line); }
+html.portal-dark .portal-nav-link.is-active { background: var(--dm-surface-2); color: var(--ink) !important; border-color: var(--dm-line); }
+html.portal-dark .topbar :is(.nav-link, .portal-nav-link, .topbar-meta, .nav-who, label) { color: var(--grey) !important; }
+html.portal-dark .topbar :is(.nav-link, .portal-nav-link):hover,
+html.portal-dark .topbar :is(.nav-link, .portal-nav-link).active,
+html.portal-dark .topbar .portal-nav-link.is-active { color: var(--ink) !important; }
 html.portal-dark .portal-account-avatar { background: linear-gradient(135deg, var(--blue), var(--bar-bg)); }
 html.portal-dark .metric-info { background: var(--ice); color: var(--ink); border-color: var(--blue); }
 
@@ -52,16 +66,51 @@ html.portal-dark .metric-info { background: var(--ice); color: var(--ink); borde
 html.portal-dark .source-mode-card:hover { background: var(--dm-surface-2) !important; border-color: var(--blue) !important; }
 html.portal-dark .source-mode-card.on { background: var(--ice) !important; border-color: var(--blue) !important; }
 html.portal-dark .source-mode-icon { background: var(--ice) !important; color: var(--blue) !important; }
+html.portal-dark .ingestion-method:hover { background: var(--dm-surface-2) !important; border-color: var(--blue) !important; }
+html.portal-dark .ingestion-method.on { background: var(--ice) !important; border-color: var(--blue) !important; }
+html.portal-dark .ingestion-method-icon { background: var(--ice) !important; color: var(--blue) !important; }
+html.portal-dark .security-summary { background-image:none !important; }
+html.portal-dark :is(.security-stat .v, .security-panel-head h3, .security-control strong, .compliance-box h3, .compliance-item strong, .job-progress-meta strong) { color: var(--brand-primary) !important; }
+html.portal-dark :is(.security-stat .k, .security-summary p, .security-panel-note, .security-control span, .compliance-box p, .compliance-item small, .ingestion-note, #ops-architecture) { color: var(--grey) !important; }
+html.portal-dark .client-preview-dialog { background: var(--dm-bg) !important; border-color: var(--dm-line) !important; }
+html.portal-dark .client-preview-toolbar { background: var(--dm-surface) !important; border-color: var(--dm-line) !important; }
+html.portal-dark .client-preview-close { background: var(--dm-surface-2) !important; border-color: var(--dm-line) !important; color: var(--ink) !important; }
+html.portal-dark .enterprise-insight-copy { color: var(--ink) !important; }
+html.portal-dark .enterprise-insight-eyebrow { color: var(--blue) !important; }
+html.portal-dark .portal-menu-action.portal-signout:hover { background: var(--red-soft) !important; color: #ffb0a2 !important; }
+html.portal-dark .filters { background: color-mix(in srgb, var(--dm-surface) 92%, transparent) !important; border-color: var(--dm-line) !important; }
 
 /* data-viz tracks, table rules */
 html.portal-dark :is(.funnel-bar-bg, .hbar-track, .rb-track, .wd-track, .theme-track, .chat-jbar-track) { background: var(--ice); border-color: var(--dm-line); }
-html.portal-dark :is(table.ct th, table.ct td, .outcome, .risk-row, .trend-row) { border-color: var(--dm-line); }
+html.portal-dark :is(table.ct th, table.ct td, .outcome, .risk-row, .trend-row, th, td) { border-color: var(--dm-line) !important; }
+html.portal-dark th { background: var(--dm-surface-2) !important; color: var(--grey-l) !important; }
+html.portal-dark tbody tr:hover td { background: var(--ice) !important; }
 html.portal-dark svg [stroke="#f7f4ff"] { stroke: var(--dm-line); }
 html.portal-dark svg [stroke="#fff"], html.portal-dark svg [stroke="#ffffff"] { stroke: var(--dm-surface); }
 
-/* welcome splash, tinted by the brand accent */
+/* Loading is a softer transition surface, not a near-black blackout. */
 html.portal-dark #welcome-splash {
-  background: radial-gradient(1200px 700px at 50% -10%, color-mix(in srgb, var(--blue) 22%, transparent), transparent 60%), linear-gradient(160deg, var(--dm-bg) 0%, var(--dm-surface) 100%) !important;
+  background: #3d404a !important;
+  background:
+    radial-gradient(900px 520px at 50% -8%, color-mix(in srgb, var(--brand-vivid, var(--blue)) 12%, transparent), transparent 62%),
+    linear-gradient(160deg, var(--dm-loading-bg, #3d404a) 0%, color-mix(in srgb, var(--dm-loading-surface, #50535d) 82%, var(--dm-loading-bg, #3d404a)) 100%) !important;
+}
+html.portal-dark #welcome-splash .welcome-splash-inner {
+  background: color-mix(in srgb, var(--dm-loading-surface, #50535d) 92%, white 8%) !important;
+  border-color: var(--dm-loading-line, #6b6e78) !important;
+  box-shadow: 0 20px 60px rgba(0,0,0,.18) !important;
+}
+html.portal-dark #welcome-splash .welcome-splash-greeting { color: var(--dm-loading-ink, #f7f8fb) !important; }
+html.portal-dark #welcome-splash .welcome-splash-sub { color: var(--dm-loading-muted, #dde0e8) !important; }
+html.portal-dark #welcome-splash .welcome-splash-spinner {
+  border-color: color-mix(in srgb, var(--dm-loading-line, #6b6e78) 72%, transparent) !important;
+  border-top-color: var(--brand-vivid, var(--blue)) !important;
+}
+html.portal-dark #welcome-splash .welcome-splash-logo {
+  background:#fff;
+  border-radius:10px;
+  padding:7px 12px;
+  box-shadow:0 8px 24px rgba(0,0,0,.10);
 }
 
 /* inline-styled legacy text/backgrounds (few remain; mapped to tokens, case-insensitive) */
@@ -77,6 +126,8 @@ html.portal-dark [style*="background:#fdf5f3" i] { background: var(--red-soft) !
 html.portal-dark :is([style*="border:1px solid #e8e1f7" i], [style*="border:1px solid #efd49b" i], [style*="border:1px solid #f3c9c0" i]) { border-color: var(--dm-line) !important; }
 html.portal-dark [id^="editor-"] td[style*="background:#eef3f8" i] { background: var(--dm-surface-2) !important; }
 html.portal-dark [id^="editor-"] div[style*="background:#fff" i] { background: var(--ice) !important; border-color: var(--dm-line) !important; }
+html.portal-dark :is([style*="background:#fbfaff" i], [style*="background:#f8f5ff" i], [style*="background:#fafcfe" i]) { background: var(--dm-surface-2) !important; border-color: var(--dm-line) !important; }
+html.portal-dark :is([style*="background:#fff;" i], [style*="background: #fff;" i]):not(.partner-preview-logo):not(.cp-logo):not(.cp-card):not(.cp-topbar):not(.cp-filter) { background: var(--dm-surface) !important; border-color: var(--dm-line) !important; }
 
 /* scrollbars + selection */
 html.portal-dark { scrollbar-color: var(--dm-line) var(--dm-bg); }

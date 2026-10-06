@@ -14,6 +14,11 @@ const server = read("src/server.ts");
 const snap = read("src/services/snapshotBuilder.ts");
 const score = read("src/services/scoreEngine.ts");
 const imports = read("src/services/importService.ts");
+const darkTheme = read("public/dark-theme-v2.css");
+const brandEngine = read("public/brand-engine.js");
+const partnerService = read("src/services/partnerService.ts");
+const login = read("public/login.html");
+const enterprise = read("public/enterprise.css");
 const failures=[];
 const must=(ok,msg)=>{ if(!ok) failures.push(msg); };
 const everyPage=(predicate)=>Object.entries(pages).every(([name,src])=>predicate(src,name));
@@ -42,6 +47,7 @@ must(pages.users.includes('showUsersLoadError') && pages.users.includes('Could n
 must(pages.users.includes("const users=await getJson('/api/users')"), 'Users page must fetch the admin user list through the checked JSON helper');
 
 must(pages.admin.includes('function openReset()') && pages.admin.includes('async function doReset()') && pages.admin.includes('/api/admin/reset-all'), 'Administration reset control must have working open/reset handlers');
+must(pages.admin.includes('id="btn-refresh-now"') && pages.admin.includes('async function refreshNow(btn)') && pages.admin.includes('/api/admin/integration/refresh'), 'Administration must expose the governed full Refresh now control');
 must(pages.admin.includes('b.revertable') && pages.admin.includes('Could not revert this import'), 'Import history must expose safe revert controls and visible revert failures');
 must(server.includes('revertable') && server.includes('reply.code(409)') && imports.includes('batch.reportKey === "employers"'), 'Backend must publish revertability and safely support insert-only employer rollback');
 must(server.includes('X-Empower-Portal-Build') && server.includes('no-store, no-cache') && server.includes('version: "0.10.0"'), 'server must expose build identity and disable stale UI caching');
@@ -91,12 +97,18 @@ must(dashboardCss.includes('@media (max-width:900px) and (orientation:landscape)
 must(pages.dashboard.includes('data-label="Creditor"') && pages.dashboard.includes('data-label="Average per account"'), "creditor detail must expose mobile-readable row labels");
 must(dashboardCss.includes('table.ct tr.ct-row') && dashboardCss.includes('table.ct tr.ct-row td::before'), "creditor table must reflow into readable mobile cards");
 must(dashboardCss.includes('.drawer-outcome') && dashboardCss.includes('.drawer-creditor'), "drilldown drawers must have dedicated responsive layouts");
+must(pages.dashboard.includes("function openDrawer(title, sub, bodyHTML, kind='')") && pages.dashboard.includes("'drawer drawer-outcome'"), "outcome drilldowns must receive their dedicated drawer class");
+must(dashboardCss.includes('.drawer-outcome .drawer-stat-grid .dsv') && dashboardCss.includes('text-overflow:clip'), "outcome drilldown values must never be ellipsized");
+must(pages.dashboard.includes('function countAxisTicks(maxValue,target=5)') && pages.dashboard.includes('function shortTrendLabel(label)'), "outcome completion trends must use integer ticks and compact month labels");
+must(pages.dashboard.includes('class="outcome-trend-chart"'), "outcome completion trend must use its responsive chart class");
+must(pages.dashboard.includes('/static/dashboard.css?v=0.11.1'), "dashboard must cache-bust the repaired drilldown stylesheet");
 must(pages.dashboard.includes('function renderPeriodLineChart') && !pages.dashboard.includes('period-bar-chart'), "monthly and quarter comparisons must use line charts, not bar fallback cards");
 must((pages.dashboard.includes('pc.current.label') && pages.dashboard.includes('pc.previous.label')) || (pages.dashboard.includes('DATA.filterContext?.comparison?.current') && pages.dashboard.includes('DATA.filterContext?.comparison?.previous')), "comparison charts must use exact current and previous period labels");
 must(!pages.dashboard.includes('cumulative value drawn'), "monthly EWA chart copy must not describe a monthly series as cumulative");
 
 must(pages.dashboard.includes('const rows=Array.isArray(DATA.income)?DATA.income:[]') && pages.dashboard.includes('brandSeries(i)'), "income reach must be robust and use the dashboard brand palette");
 must(snap.includes('INCOME_VALUES.map((band, index)') && snap.includes('incomeCounts.get(band) ?? 0'), "income reach data must preserve zero-count configured bands");
+must(snap.includes('const DASHBOARD_CACHE_SCHEMA = "financial-comparison-v3"') && snap.includes('trendLabels = trendMonths.map(monthLabel)'), "dashboard read-model cache must invalidate stale outcome drilldown payloads and include real trend labels");
 must(dashboardCss.includes('.drawer-outcome .drawer-stat-grid') && dashboardCss.includes('white-space:nowrap'), "drilldown financial values must not wrap within stat cards");
 
 must(snap.includes('comparisonPayload') && snap.includes('previous month') && snap.includes('previous quarter') && snap.includes('previous 30 days') && snap.includes('same period last year'), "server comparisons must use exact like-for-like reporting windows");
@@ -128,6 +140,24 @@ for (const page of ["dashboard", "admin", "users"]) {
 }
 must(read("public/dashboard.html").includes("BrandEngine.themeController()"), "dashboard theme must be applied through the brand engine controller");
 must(read("public/admin.html").includes("BrandEngine.extractFromImage"), "admin logo detection must use the brand engine");
+must(server.includes("themeForEmployer") && server.includes("payload.theme = await themeForEmployer(employerId)") && server.includes("payload.theme = await themeForEmployer(employer.id)"), "dashboard APIs must publish the selected employer's white-label theme");
+must(pages.dashboard.includes("applyTheme(live.theme, null)") && pages.dashboard.includes("theme.branded===false"), "dashboard must apply employer branding only when an employer is actually branded, otherwise preserve the portal default");
+must(pages.admin.includes("function partnerPreviewTokens(p)") && pages.admin.includes("BrandEngine.themeTokens(brand,'dark')"), "partner cards must derive their preview palette through Brand Engine");
+must(pages.admin.includes("background:var(--preview-surface,var(--brand-primary))") && pages.admin.includes("color:var(--preview-text,#fff)"), "partner preview must use its own contrast-safe surface and foreground");
+must(pages.admin.includes(".cp-user") && pages.admin.includes("background:var(--preview-blue);color:var(--preview-on-accent)") && pages.admin.includes(".cp-bars i") && pages.admin.includes("background:var(--preview-blue);animation:cpBarIn"), "client preview accents must come from the client brand, never the global portal brand");
+must(pages.admin.includes("const DEFAULT_PORTAL_BRAND = {accentColor:'7D2FA3',primaryColor:'B15BE8',navyColor:'2B1B68'}") && pages.admin.includes("applyAdminBrandTheme();"), "Administration must keep the canonical empower-fin palette regardless of partner assignments");
+must(pages.users.includes("const DEFAULT_PORTAL_BRAND={accentColor:'7D2FA3',primaryColor:'B15BE8',navyColor:'2B1B68'}") && pages.users.includes("applyUsersBrandTheme();"), "Users administration must keep the canonical empower-fin palette regardless of partner assignments");
+must(["dashboard","admin","users"].every(page=>pages[page].includes("/static/brand-engine.js?v=3") && pages[page].includes("/static/dark-theme-v2.css?v=4")), "protected pages must cache-bust the repaired Brand Engine and dark theme assets");
+must(darkTheme.includes(".security-stat") && darkTheme.includes(".security-panel") && darkTheme.includes(".compliance-box") && darkTheme.includes(".ingestion-method") && darkTheme.includes(".client-preview-dialog"), "dark mode must remap admin/users/security/client-preview surfaces instead of leaving white islands");
+must(pages.dashboard.includes("color-mix(in srgb,var(--blue) 12%,transparent)") && pages.admin.includes("color-mix(in srgb,var(--blue) 12%,transparent)"), "dashboard/admin loading screens must use a soft brand-tinted light surface rather than a solid dark brand fill");
+must(!pages.dashboard.includes("#welcome-splash{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:var(--brand-primary)") && !pages.admin.includes("#welcome-splash{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:var(--brand-primary)"), "full-screen loading must never be a solid brand-primary blackout");
+must(darkTheme.includes("--dm-loading-bg") && darkTheme.includes("--dm-loading-surface") && darkTheme.includes(".welcome-splash-inner") && darkTheme.includes(".welcome-splash-greeting"), "dark loading screens must use the dedicated brighter loading tokens and readable loading panel");
+must(brandEngine.includes("'--dm-loading-bg'") && brandEngine.includes("'--dm-loading-surface'") && brandEngine.includes("'--dm-loading-ink'"), "Brand Engine must derive dedicated loading-screen tokens from the active brand");
+must(partnerService.includes("branded: false as const") && (partnerService.match(/branded: true as const/g)||[]).length >= 3 && partnerService.includes("function hasPartnerBranding(p: any)") && partnerService.includes("!hasPartnerBranding(p)"), "server theme payloads must distinguish no-branding defaults from real partner branding, including partner records with no chosen brand fields");
+must(pages.dashboard.includes("BrandTheme.set({brand:DEFAULT_PORTAL_BRAND,light:null,charts:DEFAULT_PORTAL_CHARTS})"), "unbranded dashboards must preserve the original light palette and use the canonical default only for dark-mode derivation");
+must(login.includes("--auth-dark-shell:#393440") && login.includes("--auth-dark-surface:#4a4351") && !login.includes("#0b1420") && !login.includes("#111e2c"), "login dark mode must avoid near-black shell/card colours");
+must(login.includes("/static/enterprise.css?v=3") && enterprise.includes("var(--auth-dark-shell,#393440)") && enterprise.includes("var(--auth-dark-surface,#4a4351)"), "login must load the cache-busted enterprise auth rules and use the lighter dark auth tokens");
+must(brandEngine.includes("contrast('FFFFFF', acc) >= 4.5"), "dark-mode on-accent foreground must be chosen from the rendered contrast-adjusted accent");
 must(/background:var\(--white,#fff\)!important/.test(read("public/enterprise.css")), "enterprise surfaces must be token-driven so dark mode can restyle them");
 if(failures.length){ console.error('UI regression check failed:\n- '+failures.join('\n- ')); process.exit(1); }
 console.log('UI regression check passed: v0.10.0 navigation, SQL integration, users/import controls, live-data availability and demo-leak safeguards are present.');

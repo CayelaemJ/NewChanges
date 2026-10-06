@@ -424,12 +424,24 @@ function reportHtml(payload: any, schedule: any, theme: any) {
     </div></div></body></html>`;
 }
 
+async function assertDashboardPublishable() {
+  const state = await prisma.integrationConfig.findUnique({
+    where: { id: "default" },
+    select: { lastSyncStatus: true, lastSyncNote: true },
+  });
+  if (["REBUILDING", "PARTIAL", "FAILED", "FULL_REFRESH_FAILED", "FULL_REFRESH_PRECHECK_FAILED"].includes(String(state?.lastSyncStatus || ""))) {
+    throw new Error(`Dashboard source state is ${state?.lastSyncStatus}; scheduled/manual report delivery is deferred until a complete successful source sync publishes consistent data. ${state?.lastSyncNote || ""}`.trim());
+  }
+  return state;
+}
+
 async function sendSchedule(scheduleId: string, triggeredBy: "scheduled" | "manual") {
   const schedule = await prisma.reportSchedule.findUnique({
     where: { id: scheduleId },
     include: { employer: { select: { id: true, name: true } }, user: { select: { id: true, email: true, name: true } } },
   });
   if (!schedule) throw new Error("schedule not found");
+  await assertDashboardPublishable();
   const filters = (schedule.filters || {}) as ReportFilters;
   const payload = await getDashboardPayload(schedule.employerId, filters as any);
   const theme = await themeForEmployer(schedule.employerId);
@@ -468,6 +480,14 @@ export async function recentReportDeliveries(limit = 20) {
 }
 
 export async function runDueReports(logger?: { info?: Function; error?: Function }) {
+  const refresh = await prisma.integrationConfig.findUnique({
+    where: { id: "default" },
+    select: { lastSyncStatus: true },
+  });
+  if (refresh?.lastSyncStatus === "REBUILDING" || refresh?.lastSyncStatus === "FULL_REFRESH_FAILED") {
+    logger?.info?.({ refreshStatus: refresh.lastSyncStatus }, "scheduled reports deferred until dashboard data is publishable");
+    return { checked: 0, deferred: true, refreshStatus: refresh.lastSyncStatus };
+  }
   const now = new Date();
   const due = await prisma.reportSchedule.findMany({ where: { active: true, nextRunAt: { lte: now } }, orderBy: { nextRunAt: "asc" }, take: 25 });
   for (const row of due) {

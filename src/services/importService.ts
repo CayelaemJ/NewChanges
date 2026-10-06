@@ -5,7 +5,7 @@
 // ════════════════════════════════════════════════════════════════════
 
 import { PrismaClient } from "@prisma/client";
-import { getFormat } from "./reportFormats.js";
+import { getFormat, LOAD_ORDER } from "./reportFormats.js";
 import { compareDateValues, dateMillis, rehydrateStagedRows } from "./stagedRows.js";
 import { validateRecordDeferred } from "./validationStrategies.js";
 import { parseFile, validate, detectFormat, parseAndValidateCsvStreaming, parseAndValidateXlsxJsonStreaming, CellError } from "./importParser.js";
@@ -19,8 +19,20 @@ type Json = any;
 const IMPORT_CHUNK_SIZE=Number(process.env.IMPORT_CHUNK_SIZE ?? 1000);
 const IMPORT_TX_TIMEOUT_MS=Number(process.env.IMPORT_TX_TIMEOUT_MS ?? 120_000);
 
+export interface CommitProgress {
+  reportKey: string;
+  processed: number;
+  total: number;
+  inserted: number;
+  updated: number;
+  deleted: number;
+  skipped: number;
+  historyRows?: number;
+}
+
 interface CommitOptions {
   recompute?: boolean;
+  onProgress?: (progress: CommitProgress) => void | Promise<void>;
 }
 
 interface CommitStats {
@@ -28,6 +40,7 @@ interface CommitStats {
   updated: number;
   deleted: number;
   skipped: number;
+  historyRows?: number;
 }
 
 function currentPeriod(): string {
@@ -123,7 +136,7 @@ export async function uploadAndValidate(opts: {
   if (result.ok) {
     const staged = await loadStagedRows(batch);
     const quality = await assessIncomingRows({ reportKey: opts.reportKey, rows: staged });
-    if (quality.status !== "PASS") {
+    if (quality.status === "QUARANTINE") {
       result = {
         ...result,
         ok: false,
@@ -654,7 +667,7 @@ async function commitRowsChunk(
 }
 
 
-const SYNC_BULK_CHUNK_SIZE = Number(process.env.SYNC_BULK_CHUNK_SIZE ?? 5000);
+export const SYNC_BULK_CHUNK_SIZE = Math.max(1000, Math.min(50000, Number(process.env.SYNC_BULK_CHUNK_SIZE ?? 20000) || 20000));
 const SYNC_FUNCTIONS: Record<string, string> = {
   employers: "sync_upsert_employers",
   workforce_snapshots: "sync_upsert_workforce_snapshots",
@@ -680,11 +693,14 @@ const SYNC_FUNCTIONS: Record<string, string> = {
 export async function commitSyncRows(
   reportKey: string,
   rows: Record<string, any>[],
+  onProgress?: (progress: CommitProgress) => void | Promise<void>,
+  options: { authoritativeOverwrite?: boolean } = {},
 ): Promise<CommitStats> {
   const functionName = SYNC_FUNCTIONS[reportKey];
   if (!functionName) throw new Error(`bulk sync handler not implemented for report ${reportKey}`);
 
-  const stats: CommitStats = { inserted: 0, updated: 0, deleted: 0, skipped: 0 };
+  const stats: CommitStats = { inserted: 0, updated: 0, deleted: 0, skipped: 0, historyRows: 0 };
+  const historicalObservationFeed = new Set(["employees", "debt_accounts", "policies"]).has(reportKey);
   for (let offset = 0; offset < rows.length; offset += SYNC_BULK_CHUNK_SIZE) {
     const chunk = rows.slice(offset, offset + SYNC_BULK_CHUNK_SIZE);
     const result = await prisma.$queryRawUnsafe<any[]>(
@@ -695,12 +711,27 @@ export async function commitSyncRows(
     stats.inserted += Number(merged?.inserted ?? 0);
     stats.updated += Number(merged?.updated ?? 0);
     stats.deleted += Number(merged?.deleted ?? 0);
+    const processed = Math.min(rows.length, offset + chunk.length);
+    const projectionOnly = Math.max(0, processed - stats.inserted - stats.updated - stats.deleted);
+    stats.historyRows = historicalObservationFeed ? projectionOnly : 0;
+    stats.skipped = options.authoritativeOverwrite || historicalObservationFeed ? 0 : projectionOnly;
+    if (onProgress) {
+      await onProgress({
+        reportKey,
+        processed,
+        total: rows.length,
+        inserted: stats.inserted,
+        updated: stats.updated,
+        deleted: stats.deleted,
+        skipped: stats.skipped,
+        historyRows: stats.historyRows,
+      });
+    }
   }
 
-  // The SQL procedures intentionally do not report stale rows separately.
-  // They simply leave older records untouched, so this is the only useful
-  // aggregate available on the bulk path.
-  stats.skipped = Math.max(0, rows.length - stats.inserted - stats.updated);
+  const remainder = Math.max(0, rows.length - stats.inserted - stats.updated - stats.deleted);
+  stats.historyRows = historicalObservationFeed ? remainder : 0;
+  stats.skipped = options.authoritativeOverwrite || historicalObservationFeed ? 0 : remainder;
   return stats;
 }
 
@@ -731,11 +762,35 @@ export async function commitBatch(batchId: string, options: CommitOptions = {}) 
   // once — e.g. to reject an unsupported report key the same way it always did.
   if (!chunks.length) chunks.push([]);
 
+  let processed = 0;
   for (const chunk of chunks) {
     await prisma.$transaction(
       async (tx: any) => await commitRowsChunk(tx, batch.reportKey, chunk, stats, batchId),
       { timeout: IMPORT_TX_TIMEOUT_MS, maxWait: 30000 },
     );
+    processed += chunk.length;
+    stats.skipped = Math.max(0, processed - stats.inserted - stats.updated - stats.deleted);
+    // Persist the live counts while the batch is still VALIDATED so Import
+    // history can show what has actually reached live tables without a page refresh.
+    await prisma.importBatch.update({
+      where: { id: batchId },
+      data: {
+        insertedCount: stats.inserted,
+        updatedCount: stats.updated,
+        deletedCount: stats.deleted,
+      },
+    });
+    if (options.onProgress) {
+      await options.onProgress({
+        reportKey: batch.reportKey,
+        processed,
+        total: rows.length,
+        inserted: stats.inserted,
+        updated: stats.updated,
+        deleted: stats.deleted,
+        skipped: stats.skipped,
+      });
+    }
   }
 
   // Refresh workforce denominator caches once per affected employer, rather
@@ -877,6 +932,85 @@ export async function revertBatch(batchId: string) {
   const period = currentPeriod();
   for (const employerId of touchedEmployers) await snapshotEmployer(employerId, period);
   return { reverted: true, touchedEmployers, period };
+}
+
+export async function purgeDashboardDataForFullRefresh() {
+  const counts: Record<string, number> = {};
+  const tombstoneAt = new Date();
+  const epoch = new Date(0);
+
+  await prisma.$transaction(async (tx: any) => {
+    // Purge every dashboard fact that is rebuilt from the authoritative source.
+    // Chat is a separate integration and is intentionally preserved.
+    counts.ratings = (await tx.rating.deleteMany({})).count;
+    counts.referrals = (await tx.referral.deleteMany({})).count;
+    counts.salaryAdvances = (await tx.salaryAdvance.deleteMany({})).count;
+    counts.policyVersions = (await tx.insurancePolicyVersion.deleteMany({})).count;
+    counts.policies = (await tx.insurancePolicy.deleteMany({})).count;
+    counts.debtVersions = (await tx.debtAccountVersion.deleteMany({})).count;
+    counts.debtAccounts = (await tx.debtAccount.deleteMany({})).count;
+    counts.journeyEvents = (await tx.journeyEvent.deleteMany({})).count;
+    counts.journeys = (await tx.journey.deleteMany({})).count;
+    counts.platformUsers = (await tx.platformUser.deleteMany({})).count;
+    counts.employeeVersions = (await tx.employeeVersion.deleteMany({})).count;
+    counts.headcountSnapshots = (await tx.employerHeadcountSnapshot.deleteMany({})).count;
+    counts.scoreSnapshots = (await tx.scoreSnapshot.deleteMany({})).count;
+    // Dashboard cache rows are the published/last-known-good read model. They
+    // stay intact until the new source load and snapshot rebuild have completed.
+
+    // Employee IDs are identity anchors for the separately sourced chat history.
+    // Keep the shells so those foreign keys survive, but make every shell an
+    // inactive tombstone until the full source reload overwrites it.
+    counts.employeeShells = (await tx.employee.updateMany({
+      data: {
+        siteId: null,
+        incomeBand: null,
+        active: false,
+        observedAt: epoch,
+        eligibleFrom: null,
+        eligibleTo: null,
+        sourceUpdatedAt: epoch,
+        sourceDeletedAt: tombstoneAt,
+        importBatchId: null,
+      },
+    })).count;
+    counts.sites = (await tx.site.deleteMany({})).count;
+
+    // Employers also anchor user access, partner branding, score settings and
+    // scheduled reports. Preserve those relationships and reset only source data.
+    counts.employerShells = (await tx.employer.updateMany({
+      data: {
+        eligibleCount: 0,
+        eligibleCountAsAt: null,
+        sourceUpdatedAt: epoch,
+        sourceDeletedAt: tombstoneAt,
+      },
+    })).count;
+
+    // Only source-sync batches are replaced here. Separate integrations retain
+    // their own history. Clearing cursors forces every report to request since=null.
+    counts.batches = (await tx.importBatch.deleteMany({
+      where: { reportKey: { in: LOAD_ORDER } },
+    })).count;
+    counts.cursors = (await tx.integrationCursor.deleteMany({ where: { reportKey: { in: LOAD_ORDER } } })).count;
+  }, { timeout: 120000 });
+
+  return {
+    reset: true,
+    mode: "authoritative-full-refresh",
+    purgedAt: tombstoneAt,
+    cleared: counts,
+    preserved: {
+      chatSessions: true,
+      employeeIdentityShells: true,
+      employerIdentityShells: true,
+      userEmployerAccess: true,
+      partnerBranding: true,
+      scoreConfiguration: true,
+      reportSchedules: true,
+      publishedDashboardCache: true,
+    },
+  };
 }
 
 export async function resetAllData() {

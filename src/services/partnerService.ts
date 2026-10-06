@@ -17,6 +17,7 @@ export const DEFAULT_THEME = {
   navyColor: "330A36",
   logoDataUrl: null as string | null,
   tagline: null as string | null,
+  branded: false as const,
 };
 
 export async function listPartners() {
@@ -99,11 +100,21 @@ export async function assignEmployerToPartner(employerId: string, partnerId: str
   return prisma.employer.update({ where: { id: employerId }, data: { partnerId } });
 }
 
+function hasPartnerBranding(p: any) {
+  return Boolean(
+    p?.primaryColor ||
+    p?.accentColor ||
+    p?.navyColor ||
+    p?.logoDataUrl ||
+    p?.tagline
+  );
+}
+
 // resolve the theme that should apply for a given user
 export async function themeForUser(userId: string) {
   const user = await prisma.user.findUnique({ where: { id: userId }, include: { partner: true } });
   const p = user?.partner;
-  if (!p || !p.active) return { ...DEFAULT_THEME };
+  if (!p || !p.active || !hasPartnerBranding(p)) return { ...DEFAULT_THEME };
   return {
     name: p.displayName || p.name || DEFAULT_THEME.name,
     primaryColor: p.primaryColor || DEFAULT_THEME.primaryColor,
@@ -111,6 +122,7 @@ export async function themeForUser(userId: string) {
     navyColor: p.navyColor || DEFAULT_THEME.navyColor,
     logoDataUrl: p.logoDataUrl || null,
     tagline: p.tagline || null,
+    branded: true as const,
   };
 }
 
@@ -120,7 +132,7 @@ export async function themeForUser(userId: string) {
 export async function themeForEmployer(employerId: string) {
   const employer = await prisma.employer.findUnique({ where: { id: employerId }, include: { partner: true } });
   const p = employer?.partner;
-  if (!p || !p.active) return { ...DEFAULT_THEME };
+  if (!p || !p.active || !hasPartnerBranding(p)) return { ...DEFAULT_THEME };
   return {
     name: p.displayName || p.name || DEFAULT_THEME.name,
     primaryColor: p.primaryColor || DEFAULT_THEME.primaryColor,
@@ -128,13 +140,14 @@ export async function themeForEmployer(employerId: string) {
     navyColor: p.navyColor || DEFAULT_THEME.navyColor,
     logoDataUrl: p.logoDataUrl || null,
     tagline: p.tagline || null,
+    branded: true as const,
   };
 }
 
 // theme by partner slug (for the future branded login page)
 export async function themeForSlug(slug: string) {
   const p = await prisma.partner.findUnique({ where: { slug } });
-  if (!p || !p.active) return { ...DEFAULT_THEME };
+  if (!p || !p.active || !hasPartnerBranding(p)) return { ...DEFAULT_THEME };
   return {
     name: p.displayName || p.name,
     primaryColor: p.primaryColor || DEFAULT_THEME.primaryColor,
@@ -142,5 +155,6 @@ export async function themeForSlug(slug: string) {
     navyColor: p.navyColor || DEFAULT_THEME.navyColor,
     logoDataUrl: p.logoDataUrl || null,
     tagline: p.tagline || null,
+    branded: true as const,
   };
 }

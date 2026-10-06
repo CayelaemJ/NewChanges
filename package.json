@@ -44,7 +44,8 @@
     "check:role-perspective": "node scripts/role-perspective-regression-check.mjs",
     "frontend:build": "npm install --prefix frontend --no-audit --no-fund && npm run build --prefix frontend",
     "check:react": "npm run check:frontend:typecheck && node scripts/react-migration-regression-check.mjs",
-    "check:frontend:typecheck": "tsc -p frontend/tsconfig.json --noEmit"
+    "check:frontend:typecheck": "tsc -p frontend/tsconfig.json --noEmit",
+    "check:daily-refresh": "node scripts/daily-refresh-regression-check.mjs"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.2",

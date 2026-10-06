@@ -58,9 +58,10 @@ export interface IntegrationSourceConfig {
 export interface SourceAdapter {
   mode: SourceMode;
   label: string;
-  fetchReport(reportKey: string, window?: SourceWindow, sourceViewOverride?: string | null, options?: { useReplica?: boolean }): Promise<SourceFetchResult>;
+  fetchReport(reportKey: string, window?: SourceWindow, sourceViewOverride?: string | null, options?: { useReplica?: boolean; authoritative?: boolean }): Promise<SourceFetchResult>;
   test(): Promise<{ ok: true; note: string; details?: unknown }>;
   describe?(reportKey: string): Promise<{ database: string | null; totalRows: number; newest: string | null; location: string }>;
+  watermark?(reportKey: string): Promise<{ newest: string | null; location: string }>;
   close(): Promise<void>;
 }
 
@@ -85,33 +86,57 @@ function numberEnv(name: string): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
-function withEnvironment(config: IntegrationSourceConfig): IntegrationSourceConfig {
+export function sourceEnvironmentLocked(): boolean {
+  const raw = String(process.env.SOURCE_CONFIG_LOCKED ?? "").trim().toLowerCase();
+  return ["1", "true", "yes", "on"].includes(raw);
+}
+
+function chooseSourceSetting<T>(
+  envName: string,
+  saved: T | null | undefined,
+  parse: (raw: string) => T,
+  options: { allowEmptySaved?: boolean } = {},
+): T | null | undefined {
+  const raw = process.env[envName];
+  const envPresent = raw != null && raw !== "";
+  const savedPresent = saved !== null && saved !== undefined &&
+    (options.allowEmptySaved || typeof saved !== "string" || saved.trim() !== "");
+  if (sourceEnvironmentLocked()) return envPresent ? parse(raw!) : saved;
+  return savedPresent ? saved : (envPresent ? parse(raw!) : saved);
+}
+
+export function effectiveSourceConfig(config: IntegrationSourceConfig): IntegrationSourceConfig {
+  const text = (raw: string) => raw;
+  const integer = (raw: string) => Number(raw);
+  const bool = (raw: string) => !["0", "false", "no", "off"].includes(raw.toLowerCase());
+
   return {
     ...config,
-    baseUrl: process.env.SOURCE_API_BASE_URL || config.baseUrl,
-    authToken: process.env.SOURCE_API_TOKEN || config.authToken,
-    sqlDialect: process.env.SOURCE_SQL_DIALECT || config.sqlDialect,
-    sqlHost: process.env.SOURCE_SQL_HOST || config.sqlHost,
-    sqlPort: numberEnv("SOURCE_SQL_PORT") ?? config.sqlPort,
-    sqlDatabase: process.env.SOURCE_SQL_DATABASE || config.sqlDatabase,
-    sqlSchema: process.env.SOURCE_SQL_SCHEMA ?? config.sqlSchema,
-    sqlUsername: process.env.SOURCE_SQL_USERNAME || config.sqlUsername,
-    sqlPassword: process.env.SOURCE_SQL_PASSWORD || config.sqlPassword,
-    sqlSsl: boolEnv("SOURCE_SQL_SSL") ?? config.sqlSsl,
-    sqlTrustServerCertificate: boolEnv("SOURCE_SQL_TRUST_SERVER_CERTIFICATE") ?? config.sqlTrustServerCertificate,
-    sqlViewPrefix: process.env.SOURCE_SQL_VIEW_PREFIX || config.sqlViewPrefix,
-    sqlQueryTimeoutMs: numberEnv("SOURCE_SQL_QUERY_TIMEOUT_MS") ?? config.sqlQueryTimeoutMs,
-    sqlMaxRowsPerReport: numberEnv("SOURCE_SQL_MAX_ROWS_PER_REPORT") ?? config.sqlMaxRowsPerReport,
-    sqlReplicaEnabled: boolEnv("SOURCE_SQL_REPLICA_ENABLED") ?? config.sqlReplicaEnabled,
-    sqlReplicaHost: process.env.SOURCE_SQL_REPLICA_HOST || config.sqlReplicaHost,
-    sqlReplicaPort: numberEnv("SOURCE_SQL_REPLICA_PORT") ?? config.sqlReplicaPort,
-    sqlReplicaDatabase: process.env.SOURCE_SQL_REPLICA_DATABASE || config.sqlReplicaDatabase,
-    sqlReplicaSchema: process.env.SOURCE_SQL_REPLICA_SCHEMA ?? config.sqlReplicaSchema,
-    sqlReplicaUsername: process.env.SOURCE_SQL_REPLICA_USERNAME || config.sqlReplicaUsername,
-    sqlReplicaPassword: process.env.SOURCE_SQL_REPLICA_PASSWORD || config.sqlReplicaPassword,
-    sqlReplicaSsl: boolEnv("SOURCE_SQL_REPLICA_SSL") ?? config.sqlReplicaSsl,
-    sqlReplicaTrustServerCertificate: boolEnv("SOURCE_SQL_REPLICA_TRUST_SERVER_CERTIFICATE") ?? config.sqlReplicaTrustServerCertificate,
-    sqlReplicaMaxLagSeconds: numberEnv("SOURCE_SQL_REPLICA_MAX_LAG_SECONDS") ?? config.sqlReplicaMaxLagSeconds,
+    sourceMode: chooseSourceSetting("SOURCE_MODE", config.sourceMode, text),
+    baseUrl: chooseSourceSetting("SOURCE_API_BASE_URL", config.baseUrl, text),
+    authToken: chooseSourceSetting("SOURCE_API_TOKEN", config.authToken, text),
+    sqlDialect: chooseSourceSetting("SOURCE_SQL_DIALECT", config.sqlDialect, text),
+    sqlHost: chooseSourceSetting("SOURCE_SQL_HOST", config.sqlHost, text),
+    sqlPort: chooseSourceSetting("SOURCE_SQL_PORT", config.sqlPort, integer),
+    sqlDatabase: chooseSourceSetting("SOURCE_SQL_DATABASE", config.sqlDatabase, text),
+    sqlSchema: chooseSourceSetting("SOURCE_SQL_SCHEMA", config.sqlSchema, text, { allowEmptySaved: true }),
+    sqlUsername: chooseSourceSetting("SOURCE_SQL_USERNAME", config.sqlUsername, text),
+    sqlPassword: chooseSourceSetting("SOURCE_SQL_PASSWORD", config.sqlPassword, text),
+    sqlSsl: chooseSourceSetting("SOURCE_SQL_SSL", config.sqlSsl, bool),
+    sqlTrustServerCertificate: chooseSourceSetting("SOURCE_SQL_TRUST_SERVER_CERTIFICATE", config.sqlTrustServerCertificate, bool),
+    sqlViewPrefix: chooseSourceSetting("SOURCE_SQL_VIEW_PREFIX", config.sqlViewPrefix, text),
+    sqlQueryTimeoutMs: chooseSourceSetting("SOURCE_SQL_QUERY_TIMEOUT_MS", config.sqlQueryTimeoutMs, integer),
+    sqlMaxRowsPerReport: chooseSourceSetting("SOURCE_SQL_MAX_ROWS_PER_REPORT", config.sqlMaxRowsPerReport, integer),
+    sqlReplicaEnabled: chooseSourceSetting("SOURCE_SQL_REPLICA_ENABLED", config.sqlReplicaEnabled, bool),
+    sqlReplicaHost: chooseSourceSetting("SOURCE_SQL_REPLICA_HOST", config.sqlReplicaHost, text),
+    sqlReplicaPort: chooseSourceSetting("SOURCE_SQL_REPLICA_PORT", config.sqlReplicaPort, integer),
+    sqlReplicaDatabase: chooseSourceSetting("SOURCE_SQL_REPLICA_DATABASE", config.sqlReplicaDatabase, text),
+    sqlReplicaSchema: chooseSourceSetting("SOURCE_SQL_REPLICA_SCHEMA", config.sqlReplicaSchema, text, { allowEmptySaved: true }),
+    sqlReplicaUsername: chooseSourceSetting("SOURCE_SQL_REPLICA_USERNAME", config.sqlReplicaUsername, text),
+    sqlReplicaPassword: chooseSourceSetting("SOURCE_SQL_REPLICA_PASSWORD", config.sqlReplicaPassword, text),
+    sqlReplicaSsl: chooseSourceSetting("SOURCE_SQL_REPLICA_SSL", config.sqlReplicaSsl, bool),
+    sqlReplicaTrustServerCertificate: chooseSourceSetting("SOURCE_SQL_REPLICA_TRUST_SERVER_CERTIFICATE", config.sqlReplicaTrustServerCertificate, bool),
+    sqlReplicaMaxLagSeconds: chooseSourceSetting("SOURCE_SQL_REPLICA_MAX_LAG_SECONDS", config.sqlReplicaMaxLagSeconds, integer),
   };
 }
 
@@ -123,14 +148,14 @@ function cleanIdentifier(value: string | null | undefined, label: string, allowB
 }
 
 export function configuredSourceMode(config: IntegrationSourceConfig): SourceMode {
-  const raw = String(process.env.SOURCE_MODE ?? config.sourceMode ?? "API").trim().toUpperCase();
+  const raw = String(effectiveSourceConfig(config).sourceMode ?? "API").trim().toUpperCase();
   if (raw !== "API" && raw !== "SQL") throw new Error(`Unsupported source mode "${raw}". Use API or SQL.`);
   return raw;
 }
 
 export function sourceIsConfigured(config: IntegrationSourceConfig): boolean {
   const mode = configuredSourceMode(config);
-  const effective = withEnvironment(config);
+  const effective = effectiveSourceConfig(config);
   if (mode === "API") return Boolean(effective.baseUrl);
   return Boolean(effective.sqlHost && effective.sqlDatabase && effective.sqlUsername && effective.sqlPassword);
 }
@@ -273,9 +298,10 @@ interface SqlQueryResult {
 
 interface SqlExecutor {
   dialect: SqlDialect;
-  queryReport(reportKey: string, window: SourceWindow, maxRows: number, sourceViewOverride?: string | null): Promise<SqlQueryResult>;
+  queryReport(reportKey: string, window: SourceWindow, maxRows: number | null, sourceViewOverride?: string | null): Promise<SqlQueryResult>;
   probe(reportKey: string): Promise<string[]>;
   describe(reportKey: string): Promise<{ database: string | null; totalRows: number; newest: string | null }>;
+  watermark(reportKey: string): Promise<{ newest: string | null }>;
   close(): Promise<void>;
 }
 
@@ -326,8 +352,12 @@ async function openPostgresExecutor(config: IntegrationSourceConfig): Promise<Sq
       const where: string[] = [];
       if (window.since) { params.push(window.since); where.push(`source_updated_at > $${params.length}`); }
       if (window.through) { params.push(window.through); where.push(`source_updated_at <= $${params.length}`); }
-      params.push(maxRows + 1);
-      const sql = `SELECT * FROM ${view}${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY source_updated_at ASC LIMIT $${params.length}`;
+      let limitSql = "";
+      if (maxRows != null) {
+        params.push(maxRows + 1);
+        limitSql = ` LIMIT ${params.length}`;
+      }
+      const sql = `SELECT * FROM ${view}${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY source_updated_at ASC${limitSql}`;
       const result = await client.query(sql, params);
       return { rows: result.rows, columns: result.fields?.map((f: any) => String(f.name)) ?? [] };
     },
@@ -341,6 +371,11 @@ async function openPostgresExecutor(config: IntegrationSourceConfig): Promise<Sq
       const r = await client.query(`SELECT current_database() AS db, COUNT(*)::text AS n, MAX(source_updated_at)::text AS newest FROM ${view}`);
       const row = r.rows[0] ?? {};
       return { database: row.db ?? null, totalRows: Number(row.n ?? 0), newest: row.newest ?? null };
+    },
+    async watermark(reportKey) {
+      const view = qualifiedView("POSTGRESQL", config, reportKey);
+      const r = await client.query(`SELECT MAX(source_updated_at)::text AS newest FROM ${view}`);
+      return { newest: r.rows?.[0]?.newest ?? null };
     },
     async close() { await client.end(); },
   };
@@ -374,8 +409,12 @@ async function openMysqlExecutor(config: IntegrationSourceConfig): Promise<SqlEx
       const where: string[] = [];
       if (window.since) { params.push(window.since); where.push("source_updated_at > ?"); }
       if (window.through) { params.push(window.through); where.push("source_updated_at <= ?"); }
-      params.push(maxRows + 1);
-      const sql = `SELECT * FROM ${view}${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY source_updated_at ASC LIMIT ?`;
+      let limitSql = "";
+      if (maxRows != null) {
+        params.push(maxRows + 1);
+        limitSql = " LIMIT ?";
+      }
+      const sql = `SELECT * FROM ${view}${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY source_updated_at ASC${limitSql}`;
       const [rows, fields] = await connection.query({ sql, timeout: queryTimeout }, params);
       return {
         rows: Array.isArray(rows) ? rows as Record<string, unknown>[] : [],
@@ -392,6 +431,12 @@ async function openMysqlExecutor(config: IntegrationSourceConfig): Promise<SqlEx
       const [rows]: any = await connection.query({ sql: `SELECT DATABASE() AS db, COUNT(*) AS n, CAST(MAX(source_updated_at) AS CHAR) AS newest FROM ${view}`, timeout: queryTimeout });
       const row = Array.isArray(rows) ? rows[0] ?? {} : {};
       return { database: row.db ?? null, totalRows: Number(row.n ?? 0), newest: row.newest ?? null };
+    },
+    async watermark(reportKey) {
+      const view = qualifiedView("MYSQL", config, reportKey);
+      const [rows]: any = await connection.query({ sql: `SELECT CAST(MAX(source_updated_at) AS CHAR) AS newest FROM ${view}`, timeout: queryTimeout });
+      const row = Array.isArray(rows) ? rows[0] ?? {} : {};
+      return { newest: row.newest ?? null };
     },
     async close() { await connection.end(); },
   };
@@ -422,11 +467,12 @@ async function openMssqlExecutor(config: IntegrationSourceConfig): Promise<SqlEx
     async queryReport(reportKey, window, maxRows, sourceViewOverride) {
       const view = qualifiedView("MSSQL", config, reportKey, sourceViewOverride);
       const request = pool.request();
-      request.input("limit", mssql.Int, maxRows + 1);
+      if (maxRows != null) request.input("limit", mssql.Int, maxRows + 1);
       const where: string[] = [];
       if (window.since) { request.input("since", mssql.DateTimeOffset, window.since); where.push("source_updated_at > @since"); }
       if (window.through) { request.input("through", mssql.DateTimeOffset, window.through); where.push("source_updated_at <= @through"); }
-      const sql = `SELECT TOP (@limit) * FROM ${view}${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY source_updated_at ASC`;
+      const top = maxRows == null ? "" : "TOP (@limit) ";
+      const sql = `SELECT ${top}* FROM ${view}${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY source_updated_at ASC`;
       const result = await request.query(sql);
       const rows = Array.isArray(result.recordset) ? result.recordset as Record<string, unknown>[] : [];
       const columns = result.recordset?.columns ? Object.keys(result.recordset.columns) : (rows[0] ? Object.keys(rows[0]) : []);
@@ -444,6 +490,12 @@ async function openMssqlExecutor(config: IntegrationSourceConfig): Promise<SqlEx
       const row: any = r.recordset?.[0] ?? {};
       return { database: row.db ?? null, totalRows: Number(row.n ?? 0), newest: row.newest ?? null };
     },
+    async watermark(reportKey) {
+      const view = qualifiedView("MSSQL", config, reportKey);
+      const r = await pool.request().query(`SELECT CONVERT(varchar(40), MAX(source_updated_at), 127) AS newest FROM ${view}`);
+      const row: any = r.recordset?.[0] ?? {};
+      return { newest: row.newest ?? null };
+    },
     async close() { await pool.close(); },
   };
 }
@@ -453,7 +505,7 @@ function effectiveReplicaEnabled(config: IntegrationSourceConfig): boolean {
 }
 
 export async function checkMysqlReadReplica(config: IntegrationSourceConfig): Promise<{ configured: boolean; reachable: boolean; readOnly: boolean | null; lagSeconds: number | null; lagWithinThreshold: boolean | null; host: string | null; database: string | null; note: string }> {
-  const effective = withEnvironment(config);
+  const effective = effectiveSourceConfig(config);
   if (!effective.sqlReplicaHost || !effective.sqlReplicaUsername || !(process.env.SOURCE_SQL_REPLICA_PASSWORD || effective.sqlReplicaPassword)) {
     return { configured: false, reachable: false, readOnly: null, lagSeconds: null, lagWithinThreshold: null, host: effective.sqlReplicaHost ?? null, database: effective.sqlReplicaDatabase ?? effective.sqlDatabase ?? null, note: "No read replica is configured." };
   }
@@ -536,12 +588,13 @@ async function createSqlAdapter(config: IntegrationSourceConfig): Promise<Source
     throw new Error(`Could not open a ${dialect} connection to ${config.sqlHost}:${config.sqlPort ?? "(default port)"} — ${note}. If this looks like a protocol/handshake error rather than an auth or network error, double-check that "SQL platform" in Admin is actually set to the database engine you're running (and that Save settings was clicked after changing it), then re-test.`);
   }
 
-  async function fetchReport(reportKey: string, window: SourceWindow = {}, sourceViewOverride?: string | null, options?: { useReplica?: boolean }): Promise<SourceFetchResult> {
+  async function fetchReport(reportKey: string, window: SourceWindow = {}, sourceViewOverride?: string | null, options?: { useReplica?: boolean; authoritative?: boolean }): Promise<SourceFetchResult> {
     const selectedExecutor = options?.useReplica ? replicaExecutor : executor;
     if (options?.useReplica && !selectedExecutor) throw new Error("Read replica is required for " + reportKey + ", but no approved replica is configured.");
-    const result = await (selectedExecutor ?? executor).queryReport(reportKey, window, maxRows, sourceViewOverride);
-    if (result.rows.length > maxRows) {
-      throw new Error(`${reportKey}: SQL extraction exceeded the configured ${maxRows.toLocaleString("en-ZA")} row safety limit for one sync window. Increase sync frequency or sqlMaxRowsPerReport.`);
+    const effectiveMaxRows = options?.authoritative ? null : maxRows;
+    const result = await (selectedExecutor ?? executor).queryReport(reportKey, window, effectiveMaxRows, sourceViewOverride);
+    if (effectiveMaxRows != null && result.rows.length > effectiveMaxRows) {
+      throw new Error(`${reportKey}: SQL extraction exceeded the configured ${effectiveMaxRows.toLocaleString("en-ZA")} row safety limit for one sync window. Increase sync frequency or sqlMaxRowsPerReport.`);
     }
     return {
       records: normalizeSqlRows(reportKey, result.rows),
@@ -556,6 +609,10 @@ async function createSqlAdapter(config: IntegrationSourceConfig): Promise<Source
     async describe(reportKey: string) {
       const d = await executor.describe(reportKey);
       return { ...d, location: `${dialect}:${config.sqlHost}:${config.sqlPort ?? "default"}/${d.database ?? config.sqlDatabase}.${formatSqlLocation(config, reportKey)}` };
+    },
+    async watermark(reportKey: string) {
+      const d = await executor.watermark(reportKey);
+      return { ...d, location: `${dialect}:${config.sqlHost}:${config.sqlPort ?? "default"}/${config.sqlDatabase}.${formatSqlLocation(config, reportKey)}` };
     },
     async test() {
       const details: Record<string, unknown> = {};
@@ -581,6 +638,6 @@ async function createSqlAdapter(config: IntegrationSourceConfig): Promise<Source
 
 export async function createSourceAdapter(config: IntegrationSourceConfig): Promise<SourceAdapter> {
   const mode = configuredSourceMode(config);
-  const effective = withEnvironment(config);
+  const effective = effectiveSourceConfig(config);
   return mode === "SQL" ? createSqlAdapter(effective) : createApiAdapter(effective);
 }

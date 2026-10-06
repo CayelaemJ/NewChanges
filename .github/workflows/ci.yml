@@ -24,6 +24,7 @@ jobs:
       - run: npm run check:ui
       - run: npm run check:imports
       - run: npm run check:scheduling
+      - run: npm run check:daily-refresh
       - run: npm run test:score
       - run: npm run check:brand
       - run: npm run check:mlops

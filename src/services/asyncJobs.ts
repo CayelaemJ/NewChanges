@@ -44,6 +44,7 @@ function updateJob(job: any, jobId: string, jobType: string, patch: Record<strin
     progress: job.progress,
     message: job.message,
     jobType,
+    ...(job.detail !== undefined ? { detail: job.detail } : {}),
     ...(job.result !== undefined ? { result: job.result } : {}),
     ...(job.error ? { error: job.error } : {}),
   }, jobId);
@@ -98,7 +99,17 @@ export function startUploadJob(opts: any) {
         message: "Committing and recomputing scores",
       });
 
-      const commit = await commitBatch(batch.id);
+      const commit = await commitBatch(batch.id, {
+        onProgress: async (detail) => {
+          job.detail = { ...detail, batchId: batch.id };
+          updateJob(job, jobId, "upload", {
+            status: "PROCESSING",
+            phase: "COMMITTING",
+            progress: detail.total > 0 ? 80 + Math.round((detail.processed / detail.total) * 18) : 98,
+            message: `${detail.reportKey}: ${detail.processed.toLocaleString("en-ZA")} / ${detail.total.toLocaleString("en-ZA")} rows processed into live tables`,
+          });
+        },
+      });
       job.result = {
         ...job.result,
         status: "COMMITTED",
@@ -156,7 +167,17 @@ export function startCommitJob(batchId: string) {
         message: "Committing and recomputing scores",
       });
 
-      const result = await commitBatch(batchId);
+      const result = await commitBatch(batchId, {
+        onProgress: async (detail) => {
+          job.detail = { ...detail, batchId };
+          updateJob(job, jobId, "commit", {
+            status: "PROCESSING",
+            phase: "COMMITTING",
+            progress: detail.total > 0 ? 20 + Math.round((detail.processed / detail.total) * 75) : 95,
+            message: `${detail.reportKey}: ${detail.processed.toLocaleString("en-ZA")} / ${detail.total.toLocaleString("en-ZA")} rows processed into live tables`,
+          });
+        },
+      });
       job.status = "DONE";
       job.result = { ...result, period: currentPeriod() };
       updateJob(job, jobId, "commit", {
@@ -196,7 +217,17 @@ export function startSyncJob(trigger: "manual" | "scheduled" = "manual") {
         message: "Synchronising source data",
       });
 
-      const result = await runSync(trigger);
+      const result = await runSync(trigger, {
+        onProgress: async (detail) => {
+          job.detail = detail;
+          updateJob(job, jobId, "sync", {
+            status: "PROCESSING",
+            phase: detail.phase,
+            progress: detail.progress,
+            message: detail.message,
+          });
+        },
+      });
       job.status = "DONE";
       job.result = result;
       updateJob(job, jobId, "sync", {

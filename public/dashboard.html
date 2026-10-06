@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="/static/portal-nav-v080.css?v=0.10.0">
-<link rel="stylesheet" href="/static/dashboard.css?v=0.11.0">
+<link rel="stylesheet" href="/static/dashboard.css?v=0.11.1">
 <script src="/static/safe.js?v=1"></script>
-<script src="/static/brand-engine.js?v=1"></script>
+<script src="/static/brand-engine.js?v=3"></script>
 <title>Financial Wellbeing Dashboard | empower-fin</title>
 <meta name="description" content="Workforce financial-wellbeing scores, drivers and trends for your organisation.">
 <meta name="robots" content="noindex,nofollow">
@@ -111,6 +111,10 @@
   .data-fresh .dot{width:7px;height:7px;border-radius:50%;background:var(--green);}
   .data-fresh.is-error{color:var(--red);}
   .data-fresh.is-error .dot{background:var(--red);}
+  .data-fresh.is-rebuilding,.data-fresh.is-stale{color:#8a5a10;}
+  .data-fresh.is-rebuilding .dot,.data-fresh.is-stale .dot{background:#b9852f;}
+  .refresh-status-note{margin:0 0 18px;padding:11px 14px;border:1px solid #e7cf9f;border-radius:10px;background:#fffaf0;color:#6f5115;font:600 12px/1.55 Manrope,sans-serif;}
+  .refresh-status-note strong{font-weight:800;color:#5d4310;}
   .avatar{width:34px;height:34px;border-radius:50%;background:var(--brand-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;}
   .role-indicator{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--line);border-radius:999px;background:var(--ice);color:var(--brand-primary);font:800 10.5px/1 'Manrope',sans-serif;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;}
   .role-indicator.superadmin{background:#eef2ff;border-color:#c7d2fe;color:#3730a3;}
@@ -684,10 +688,10 @@
   @media(max-width:1080px){ .theme-grid{grid-template-columns:1fr;} .chat-jrow{grid-template-columns:150px 1fr 90px;} }
 
   /* ── welcome splash (shown briefly right after sign-in) ── */
-  #welcome-splash{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:var(--brand-primary);transition:opacity .45s ease, visibility .45s ease;}
+  #welcome-splash{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:#f3f7fb;background:radial-gradient(900px 520px at 50% -8%,color-mix(in srgb,var(--blue) 12%,transparent),transparent 62%),linear-gradient(160deg,color-mix(in srgb,var(--ice) 42%,#fff) 0%,color-mix(in srgb,var(--brand-soft) 68%,#f3f7fb) 100%);transition:opacity .45s ease, visibility .45s ease;}
   #welcome-splash.hide{opacity:0;visibility:hidden;pointer-events:none;}
-  .welcome-splash-inner{text-align:center;}
-  .welcome-splash-logo{height:40px;width:auto;margin-bottom:22px;opacity:.94;}
+  .welcome-splash-inner{text-align:center;padding:30px 36px;border:1px solid color-mix(in srgb,var(--line) 76%,transparent);border-radius:18px;background:color-mix(in srgb,#fff 88%,var(--ice));box-shadow:0 18px 55px rgba(15,36,56,.10);min-width:min(360px,calc(100vw - 36px));}
+  .welcome-splash-logo{height:40px;width:auto;max-width:220px;object-fit:contain;margin-bottom:22px;opacity:.98;}
   .welcome-splash-spinner{width:32px;height:32px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--blue);margin:0 auto 20px;animation:welcome-spin .8s linear infinite;}
   @keyframes welcome-spin{to{transform:rotate(360deg);}}
   .welcome-splash-greeting{font-family:'Fraunces',serif;font-weight:600;font-size:26px;color:var(--brand-primary);}
@@ -696,10 +700,103 @@
   /* Executive insight uses a neutral surface for reliable text contrast. */
   .enterprise-insight{background:#fff!important;color:#1d2740!important;border:1px solid #e5e7eb!important;}
   .enterprise-insight .enterprise-insight-eyebrow,.enterprise-insight .enterprise-insight-copy{color:#1d2740!important;}
+
+  /* Final responsive contract for the live dashboard. */
+  @media (max-width: 900px) {
+    .wrap,.topbar-inner{width:100%;max-width:100%;box-sizing:border-box;}
+    .wrap{padding-left:18px;padding-right:18px;}
+    .topbar-inner{padding-left:18px;padding-right:18px;gap:10px;min-width:0;}
+    .topbar{overflow:hidden;}
+    .topbar-inner > *{min-width:0;}
+    .topbar-meta{margin-left:auto;min-width:0;overflow:hidden;}
+    .topbar-meta > *{min-width:0;}
+    .nav-inline,.portal-primary-nav{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+    .nav-inline::-webkit-scrollbar,.portal-primary-nav::-webkit-scrollbar{display:none;}
+    .head{align-items:flex-start;padding:24px 0 16px;gap:16px;}
+    .head h1{font-size:clamp(28px,5vw,36px);}
+    .head-actions{width:100%;flex-wrap:wrap;}
+    .head-actions .btn{min-height:42px;}
+    .filters{align-items:stretch;gap:8px;}
+    .filters > *{max-width:100%;}
+    .filter-tag,.filter-emp,.seg{min-height:40px;}
+    .g-4{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .g-3{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .g-2{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .g-12{grid-template-columns:1fr;}
+    .g-12 > *{grid-column:1 / -1 !important;min-width:0;}
+    .card{min-width:0;max-width:100%;overflow:hidden;padding:18px;}
+    .card-bd{min-width:0;max-width:100%;}
+    .wellness-inner{grid-template-columns:1fr;gap:18px;}
+    .wellness-left{border-right:0;border-bottom:1px solid var(--line-soft);padding:0 0 18px;}
+    .wd-row{grid-template-columns:minmax(110px,150px) minmax(0,1fr) 36px;gap:9px;}
+    .enterprise-toolbar{grid-template-columns:1fr;}
+    .enterprise-toolbar-actions{justify-content:flex-start;flex-wrap:wrap;}
+    .table-wrap,.table-scroll,.chart-wrap{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    table{max-width:none;}
+  }
+
+  @media (max-width:640px) {
+    html,body{width:100%;max-width:100%;overflow-x:hidden;}
+    .wrap{padding:0 12px 36px;}
+    .topbar-inner{height:58px;padding:0 12px;}
+    .topbar-divider,.audience-switch,.nav-inline{display:none;}
+    .logo{min-width:0;}
+    .logo-text{font-size:15px;white-space:nowrap;}
+    .topbar-meta{font-size:11px;white-space:nowrap;}
+    .head{padding:18px 0 12px;}
+    .head h1{font-size:28px;line-height:1.08;}
+    .head-sub{font-size:12.5px;line-height:1.5;}
+    .head-actions{display:grid;grid-template-columns:1fr 1fr;width:100%;}
+    .head-actions .btn{width:100%;padding:10px 8px;}
+    .filters{display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:14px;}
+    .filters > *,.filter-tag,.filter-emp,.seg{width:100%;max-width:100%;box-sizing:border-box;}
+    .seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));}
+    .seg button{min-height:38px;padding:7px 5px;font-size:11px;}
+    .g-4,.g-3,.g-2,.g-12{grid-template-columns:1fr !important;}
+    .g-4 > *,.g-3 > *,.g-2 > *,.g-12 > *{grid-column:1 / -1 !important;width:100%;min-width:0;}
+    .card{padding:15px;border-radius:14px;}
+    .card-hd{flex-wrap:wrap;align-items:flex-start;}
+    .card-title{font-size:13px;}
+    .card-note{font-size:10.5px;}
+    .kpi-value{font-size:clamp(26px,9vw,36px);}
+    .wd-row{grid-template-columns:minmax(95px,1fr) minmax(0,1fr) 32px;gap:7px;}
+    .wd-name{font-size:11px;}
+    .wd-val{font-size:12px;}
+    .enterprise-insight{padding:12px 13px;}
+    .enterprise-insight-copy{font-size:12px;line-height:1.5;}
+    .enterprise-toolbar-actions{display:grid;grid-template-columns:1fr 1fr;width:100%;}
+    .enterprise-toolbar-actions .btn{width:100%;}
+    .data-trust-pill{width:100%;}
+    .data-trust-grid{grid-template-columns:1fr 1fr;}
+    .drawer{width:100%;max-width:100vw;}
+    .drawer-hd{padding:18px 16px 14px;}
+    .drawer-body{padding:16px !important;}
+    .period-bar-col{min-width:80px;}
+    .period-bar{width:42px;}
+    .comparison-value-row{grid-template-columns:1fr 1fr;}
+    .comparison-value-card{padding:8px;}
+    .comparison-value-card strong{font-size:16px;}
+    .stat-strip{grid-template-columns:1fr !important;}
+    .stat-cell{min-width:0;}
+    .stat-cell .v{font-size:clamp(18px,6vw,25px);white-space:nowrap;}
+    img,svg,canvas,video{max-width:100%;}
+  }
+
+  @media (max-width:380px) {
+    .wrap{padding-left:10px;padding-right:10px;}
+    .topbar-inner{padding-left:10px;padding-right:10px;}
+    .head h1{font-size:25px;}
+    .head-actions{grid-template-columns:1fr;}
+    .seg button{font-size:10px;}
+    .card{padding:13px;}
+    .wd-row{grid-template-columns:1fr 1fr 30px;}
+    .wd-name{font-size:10.5px;}
+    .stat-cell .v{font-size:17px;}
+  }
 </style>
 <link rel="stylesheet" href="/static/enterprise.css?v=2">
   <link rel="stylesheet" href="/static/enterprise-v3.css?v=3">
-<link rel="stylesheet" href="/static/dark-theme-v2.css?v=1">
+<link rel="stylesheet" href="/static/dark-theme-v2.css?v=4">
 </head>
 <body data-portal-build="0.10.0">
 
@@ -1685,7 +1782,15 @@ function renderPeriodLineChart(current=[], previous=[], currentLabel='Selected p
   const w=760,h=240,axisLeft=112,plotLeft=132,right=22,top=22,bottom=46,plotRight=w-right;
   const ticks=niceTicks(values,5),max=ticks[ticks.length-1]||1;
   const px=i=>plotLeft+i*(plotRight-plotLeft)/Math.max(1,n-1), py=v=>h-bottom-(v/max)*(h-bottom-top);
-  const lineOf=(series)=>series.map((v,i)=>v==null?'':(i?'L':'M')+px(i).toFixed(1)+' '+py(v).toFixed(1)).filter(Boolean).join(' ');
+  const lineOf=(series)=>{
+    let started=false;
+    return series.map((v,i)=>{
+      if(v==null) return '';
+      const cmd=started?'L':'M';
+      started=true;
+      return cmd+px(i).toFixed(1)+' '+py(v).toFixed(1);
+    }).filter(Boolean).join(' ');
+  };
   const currentLine=lineOf(currentAligned), previousLine=lineOf(previousAligned);
   const yaxis=ticks.map(v=>{const y=py(v);return `<line x1="${plotLeft}" x2="${plotRight}" y1="${y}" y2="${y}" stroke="var(--line-soft)"/><text x="${axisLeft}" y="${y+3}" text-anchor="end" font-size="9.5" font-weight="700" fill="#8497a7">${valueFormatter(v)}</text>`}).join('');
   return `<div class="comparison-chart"><div class="comparison-legend"><span><i class="comparison-dot current"></i>${esc(currentLabel)}</span><span><i class="comparison-dot previous"></i>${esc(previousLabel)}</span></div><svg viewBox="0 0 ${w} ${h}" role="img" aria-label="${esc(currentLabel)} and ${esc(previousLabel)} trend"><path d="${currentLine}" fill="none" stroke="${colour}" stroke-width="3" stroke-linecap="round"/><path d="${previousLine}" fill="none" stroke="var(--chart-engagement)" stroke-width="2.2" stroke-dasharray="6 5" stroke-linecap="round"/>${yaxis}</svg></div>`;
@@ -2837,10 +2942,11 @@ async function scheduleSendNow(id){
 
 
 /* ─────── drill-down drawer ─────── */
-function openDrawer(title, sub, bodyHTML){
+function openDrawer(title, sub, bodyHTML, kind=''){
   closeDrawer();
   const back=el('<div class="drawer-backdrop"></div>');
-  const drawer=el(`<div class="drawer">
+  const drawerClass=kind==='outcome'?'drawer drawer-outcome':kind==='creditor'?'drawer drawer-creditor':'drawer';
+  const drawer=el(`<div class="${drawerClass}">
     <div class="drawer-hd">
       <div><div class="drawer-eyebrow">Drill-down</div><div class="drawer-title">${title}</div><div class="drawer-sub">${sub}</div></div>
       <button class="drawer-x" aria-label="Close">&times;</button>
@@ -2859,8 +2965,8 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeDrawer(); });
 
 function outcomeDrill(o){
   const prior = DATA.comparison?.previous?.outcomes?.[o.key] || [];
-  const currentLabels = DATA.comparison?.current?.savingsLabels || [];
-  const previousLabels = DATA.comparison?.previous?.savingsLabels || [];
+  const currentLabels = Array.isArray(o.trendLabels) ? o.trendLabels : (DATA.comparison?.current?.savingsLabels || []);
+  const previousLabels = DATA.comparison?.previous?.outcomeLabels || [];
   const body=`
     <div class="drawer-stat-grid">
       <div class="ds"><div class="dsl">Fixes completed</div><div class="dsv">${o.count.toLocaleString('en-ZA')}</div></div>
@@ -2883,23 +2989,45 @@ function alignSeries(current, previous){
     count:n,
   };
 }
+function countAxisTicks(maxValue,target=5){
+  const max=Math.max(1,Math.ceil(Number(maxValue)||0));
+  if(max<=target) return Array.from({length:max+1},(_,i)=>i);
+  const raw=max/target;
+  const magnitude=Math.pow(10,Math.floor(Math.log10(raw)));
+  const normalized=raw/magnitude;
+  const step=(normalized<=1?1:normalized<=2?2:normalized<=5?5:10)*magnitude;
+  const top=Math.ceil(max/step)*step;
+  const ticks=[];
+  for(let v=0;v<=top+step/2;v+=step) ticks.push(Math.round(v));
+  return ticks;
+}
+function shortTrendLabel(label){
+  const parts=String(label||'').trim().split(/\s+/);
+  if(parts.length>=2) return parts[0].slice(0,3)+' '+parts[parts.length-1].slice(-2);
+  return String(label||'');
+}
 function miniTrend(trend, prior=[], labels=[], priorLabels=[], comparisonLabel='previous period'){
   const aligned=alignSeries(trend,prior);
   const values=[...aligned.current,...aligned.previous].filter(v=>Number.isFinite(v));
   if(!values.length) return '<div class="muted" style="padding:10px 0;font-size:12.5px;">No trend data is available for this period.</div>';
-  const w=620,h=250,left=74,right=22,top=24,bottom=46,max=Math.max(1,...values),ticks=niceTicks(values,5).filter(v=>v>=0);
-  const py=v=>h-bottom-(v/max)*(h-bottom-top), px=i=>left+i*(w-left-right)/Math.max(1,aligned.count-1);
+  const w=700,h=260,left=58,right=22,top=24,bottom=44;
+  const ticks=countAxisTicks(Math.max(...values),5);
+  const yMax=Math.max(1,ticks[ticks.length-1]||1);
+  const py=v=>h-bottom-(v/yMax)*(h-bottom-top), px=i=>left+i*(w-left-right)/Math.max(1,aligned.count-1);
   const lineOf=(series)=>series.map((v,i)=>v==null?'':(i?'L':'M')+px(i).toFixed(1)+' '+py(v).toFixed(1)).filter(Boolean).join(' ');
   const line=lineOf(aligned.current), priorLine=lineOf(aligned.previous);
   const dots=aligned.current.map((v,i)=>v==null?'':`<circle cx="${px(i)}" cy="${py(v)}" r="3.8" fill="var(--chart-cashflow)" stroke="var(--white)" stroke-width="2"><title>${v.toLocaleString('en-ZA')}</title></circle>`).join('');
   const priorDots=aligned.previous.map((v,i)=>v==null?'':`<circle cx="${px(i)}" cy="${py(v)}" r="3.2" fill="var(--chart-engagement)" stroke="var(--white)" stroke-width="2"><title>${v.toLocaleString('en-ZA')}</title></circle>`).join('');
-  const yaxis=ticks.map(v=>`<line x1="${left}" x2="${w-right}" y1="${py(v)}" y2="${py(v)}" stroke="var(--line-soft)" stroke-width="1"/><text x="${left-10}" y="${py(v)+3}" text-anchor="end" font-size="10" font-weight="700" fill="var(--grey-l)">${Math.round(v).toLocaleString('en-ZA')}</text>`).join('');
+  const yaxis=ticks.map(v=>`<line x1="${left}" x2="${w-right}" y1="${py(v)}" y2="${py(v)}" stroke="var(--line-soft)" stroke-width="1"/><text x="${left-10}" y="${py(v)+3}" text-anchor="end" font-size="10" font-weight="700" fill="var(--grey-l)">${v.toLocaleString('en-ZA')}</text>`).join('');
+  const labelEvery=aligned.count>8?2:1;
   const xlabels=Array.from({length:aligned.count},(_,i)=>{
     const idx=labels.length?i-(aligned.count-labels.length):i;
-    return idx>=0&&labels[idx]?`<text x="${px(i)}" y="${h-14}" text-anchor="middle" font-size="9.5" font-weight="600" fill="var(--grey-l)">${labels[idx]}</text>`:'';
+    const label=idx>=0?labels[idx]:null;
+    const show=label && (i===0 || i===aligned.count-1 || i%labelEvery===0);
+    return show?`<text x="${px(i)}" y="${h-14}" text-anchor="middle" font-size="9.5" font-weight="600" fill="var(--grey-l)">${esc(shortTrendLabel(label))}</text>`:'';
   }).join('');
   return `<div class="comparison-legend"><span><i class="comparison-dot current"></i>${esc(DATA.filterContext?.label||'Selected period')}</span><span><i class="comparison-dot previous"></i>${esc(comparisonLabel||'Previous period')}</span></div>
-  <svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto" role="img" aria-label="Completion trend comparison"><line x1="${left}" x2="${left}" y1="${top}" y2="${h-bottom}" stroke="var(--line)"/>${yaxis}<path d="${line}" fill="none" stroke="var(--chart-cashflow)" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/><path d="${priorLine}" fill="none" stroke="var(--chart-engagement)" stroke-width="2.2" stroke-dasharray="6 5" stroke-linecap="round" stroke-linejoin="round"/>${dots}${priorDots}${xlabels}</svg>`;
+  <svg class="outcome-trend-chart" viewBox="0 0 ${w} ${h}" style="width:100%;height:auto" role="img" aria-label="Completion trend comparison"><line x1="${left}" x2="${left}" y1="${top}" y2="${h-bottom}" stroke="var(--line)"/>${yaxis}<path d="${line}" fill="none" stroke="var(--chart-cashflow)" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/><path d="${priorLine}" fill="none" stroke="var(--chart-engagement)" stroke-width="2.2" stroke-dasharray="6 5" stroke-linecap="round" stroke-linejoin="round"/>${dots}${priorDots}${xlabels}</svg>`;
 }
 
 function creditorDrill(c){
@@ -2995,19 +3123,23 @@ async function loadLiveData({refreshOnly=false}={}){
     // Mobile users get the actual visual payload as soon as it arrives.
     const periodsPromise=id ? populateMonthSelect(id,period,quarter).catch(()=>{}) : Promise.resolve();
     const dashboardPromise=fetch(url,{cache:'no-store'}).then(async r=>{
-      if(!r.ok) throw new Error((await r.json().catch(()=>({}))).error||'no data');
-      return r.json();
+      const body=await r.json().catch(()=>({}));
+      if(!r.ok){
+        const error=new Error(body.error||'no data');
+        error.syncStatus=body.syncStatus||null;
+        throw error;
+      }
+      return body;
     });
     const live=await dashboardPromise;
     if(requestSeq!==LIVE_REQUEST_SEQ) return;
+    // The employer being viewed owns the visual brand. This is also true when
+    // an internal Admin/Superadmin is previewing a client dashboard.
+    applyTheme(live.theme, null);
     DATA=live; BASE=JSON.parse(JSON.stringify(DATA)); window.__LIVE__=true;
     if(live.employer){ const h1=document.querySelector('.head h1'); if(h1) h1.firstChild.textContent=live.employer+' '; }
-    const fl=document.getElementById('data-fresh-label');
-    document.querySelector('.data-fresh')?.classList.remove('is-error');
-    if(fl){
-      if(live.sourceDataUpdatedAt||live.dataAsOf){ const d=new Date(live.sourceDataUpdatedAt||live.dataAsOf); fl.textContent='Source updated '+d.toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'}); }
-      else fl.textContent='Live data';
-    }
+    const sourceAt=live.sourceDataUpdatedAt||live.dataAsOf;
+    renderRefreshStatus(live.syncStatus,sourceAt);
     renderMonthActivity(live.monthActivity,live.filterContext); renderDataQuality(live.dataQuality); setLiveFootnote(live.filterContext);
     document.getElementById('demo-banner')?.remove();
     applyState(); updatePeriodControlTone(); syncPeriodControl(); wireFilters();
@@ -3193,65 +3325,70 @@ function applySectionVisibility(me){
 }
 
 const BrandTheme = window.BrandEngine ? BrandEngine.themeController() : null; // owns light/dark brand tokens
+const DEFAULT_PORTAL_BRAND = {accentColor:'7D2FA3',primaryColor:'B15BE8',navyColor:'2B1B68'};
+const DEFAULT_PORTAL_CHARTS = {
+  '--chart-engagement':'#3a93d2','--chart-cashflow':'#1fa463','--chart-debt':'#607486',
+  '--chart-insurance':'#8a4fc4','--chart-workforce':'#4ea3da','--chart-low':'#1fa463',
+  '--chart-mid':'#e8910c','--chart-high':'#e0492f'
+};
+const DEFAULT_HEAD_SUB='How the financial wellbeing programme is landing across your workforce Not available who is using it, the outcomes achieved, and how employees rate the service.';
+function restoreDefaultPortalIdentity(){
+  document.querySelectorAll('.logo img, .topbar .logo img, .pdf-brand img').forEach(img=>{
+    img.src='/static/logo.png';
+    img.removeAttribute('data-custom-logo');
+  });
+  const brandName=document.getElementById('channel-brand-name'); if(brandName) brandName.textContent='';
+  const sub=document.querySelector('#employer-view > .head .head-sub'); if(sub) sub.textContent=DEFAULT_HEAD_SUB;
+  document.title='empower-fin Dashboard Portal';
+}
+function applyDefaultPortalTheme(){
+  const root=document.documentElement.style;
+  if(BrandTheme){
+    BrandTheme.set({brand:DEFAULT_PORTAL_BRAND,light:null,charts:DEFAULT_PORTAL_CHARTS});
+  }else{
+    [
+      '--blue','--blue-d','--brand-primary','--brand-primary-deep','--ice','--brand-soft',
+      '--brand-grad-1','--brand-grad-2','--brand-grad-3','--brand-grad-4','--brand-grad-5',
+      ...Object.keys(DEFAULT_PORTAL_CHARTS)
+    ].forEach(key=>root.removeProperty(key));
+  }
+  root.setProperty('--engagement-color','var(--chart-engagement)');
+  root.setProperty('--cashflow-color','var(--chart-cashflow)');
+  root.setProperty('--debt-risk-color','var(--chart-debt)');
+  root.setProperty('--insurance-color','var(--chart-insurance)');
+  root.setProperty('--eligible-workforce-color','var(--chart-workforce)');
+  root.setProperty('--stress-low-color','var(--chart-low)');
+  root.setProperty('--stress-mid-color','var(--chart-mid)');
+  root.setProperty('--stress-high-color','var(--chart-high)');
+  restoreDefaultPortalIdentity();
+}
 function applyTheme(theme, user){
   const root=document.documentElement.style;
-  // Admins retain the portal's original dashboard palette. Employer branding is
-  // applied only inside an authenticated employer session.
-  if(user && ['ADMIN','SUPERADMIN'].includes(String(user.role||'').toUpperCase())){
-    // Super Admin and Admin use the standard empower-fin dashboard brand.
-    // Partner/employer branding is intentionally not applied to privileged roles.
-    const accent='#B15BE8';
-    const primary='#32217C';
-    const navy='#2B1B68';
-    const chartPalette=complementaryPalette(accent,navy);
-    if(BrandTheme){
-      const charts={}; Object.entries(chartPalette).forEach(([k,v])=>{ charts['--chart-'+k]=v; });
-      BrandTheme.set({ brand:{ accentColor:accent, primaryColor:primary, navyColor:navy }, light:'engine', charts });
-    } else {
-      root.setProperty('--blue',accent);
-      root.setProperty('--blue-d',shade(accent,-18));
-      root.setProperty('--brand-primary',navy);
-      root.setProperty('--brand-primary-deep',shade(navy,-22));
-      root.setProperty('--ice',tint(accent,92));
-      root.setProperty('--brand-soft',tint(accent,94));
-      root.setProperty('--brand-grad-1',primary);
-      root.setProperty('--brand-grad-2',mix(primary,accent,.45));
-      root.setProperty('--brand-grad-3',accent);
-      root.setProperty('--brand-grad-4',mix(accent,'#ffffff',.28));
-      root.setProperty('--brand-grad-5',mix(accent,'#ffffff',.55));
-      Object.entries(chartPalette).forEach(([key,value])=>root.setProperty('--chart-'+key,value));
-    }
-    root.setProperty('--engagement-color','var(--chart-engagement)');
-    root.setProperty('--cashflow-color','var(--chart-cashflow)');
-    root.setProperty('--debt-risk-color','var(--chart-debt)');
-    root.setProperty('--insurance-color','var(--chart-insurance)');
-    root.setProperty('--eligible-workforce-color','var(--chart-workforce)');
-    root.setProperty('--stress-low-color','var(--chart-low)');
-    root.setProperty('--stress-mid-color','var(--chart-mid)');
-    root.setProperty('--stress-high-color','var(--chart-high)');
+  const privileged=user && ['ADMIN','SUPERADMIN'].includes(String(user.role||'').toUpperCase());
+  // No selected partner/employer brand means the original empower-fin design.
+  // Admin/Superadmin control-plane screens also keep that original palette.
+  if(privileged || !theme || theme.branded===false){
+    applyDefaultPortalTheme();
     return;
   }
-  if(!theme) return;
+
   const hex=c=>c?('#'+String(c).replace(/^#/,'')):null;
   const baseName='empower-fin Dashboard Portal';
   const accent=hex(theme.accentColor||theme.primaryColor||'#b15be8');
   const primary=hex(theme.navyColor||theme.primaryColor||accent);
   if(!BrandTheme){ // legacy fallback (engine failed to load)
-  root.setProperty('--blue', accent);
-  root.setProperty('--blue-d', shade(accent,-18));
-  root.setProperty('--brand-primary', primary);
-  root.setProperty('--brand-primary-deep', shade(primary,-22));
-  root.setProperty('--ice', tint(accent,92));
-  root.setProperty('--brand-soft', tint(accent,94));
-  root.setProperty('--brand-grad-1', shade(primary,0));
-  root.setProperty('--brand-grad-2', mix(primary,accent,.45));
-  root.setProperty('--brand-grad-3', accent);
-  root.setProperty('--brand-grad-4', mix(accent,'#ffffff',.28));
-  root.setProperty('--brand-grad-5', mix(accent,'#ffffff',.55));
+    root.setProperty('--blue', accent);
+    root.setProperty('--blue-d', shade(accent,-18));
+    root.setProperty('--brand-primary', primary);
+    root.setProperty('--brand-primary-deep', shade(primary,-22));
+    root.setProperty('--ice', tint(accent,92));
+    root.setProperty('--brand-soft', tint(accent,94));
+    root.setProperty('--brand-grad-1', shade(primary,0));
+    root.setProperty('--brand-grad-2', mix(primary,accent,.45));
+    root.setProperty('--brand-grad-3', accent);
+    root.setProperty('--brand-grad-4', mix(accent,'#ffffff',.28));
+    root.setProperty('--brand-grad-5', mix(accent,'#ffffff',.55));
   }
-  // Employer-only chart palette: derive harmonious hues from the uploaded brand
-  // colours rather than reusing the logo colours for every data series. Stable
-  // semantic assignments keep each metric recognisable across all chart types.
   const chartPalette = complementaryPalette(accent, primary);
   if(BrandTheme){
     const charts={}; Object.entries(chartPalette).forEach(([k,v])=>{ charts['--chart-'+k]=v; });
@@ -3276,7 +3413,7 @@ function applyTheme(theme, user){
   }
   document.title=(theme.name||baseName)+' Not available Employer Insights';
   if(theme.tagline){
-    const sub=document.querySelector('.head-sub');
+    const sub=document.querySelector('#employer-view > .head .head-sub');
     if(sub) sub.textContent=theme.tagline;
   }
 }
@@ -3412,15 +3549,84 @@ function addAuthBar(me){
   }
 }
 
+function renderRefreshStatus(status,sourceAt){
+  document.getElementById('refresh-status-note')?.remove();
+  const freshness=document.querySelector('.data-fresh');
+  const fl=document.getElementById('data-fresh-label');
+  if(!fl) return;
+
+  const state=String(status?.lastSyncStatus||'');
+  const syncAt=status?.lastSuccessfulSyncAt||status?.publishedDataAt||null;
+  const syncNote=String(status?.lastSyncNote||'');
+  const rebuilding=state==='REBUILDING';
+  const issue=['FULL_REFRESH_FAILED','FULL_REFRESH_PRECHECK_FAILED','FAILED','PARTIAL'].includes(state);
+  const showingPublished=Boolean(status?.servingLastSuccessful)||rebuilding||issue;
+  const fmt=d=>new Date(d).toLocaleString('en-ZA',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+
+  freshness?.classList.remove('is-error','is-rebuilding','is-stale');
+  if(rebuilding){
+    freshness?.classList.add('is-rebuilding');
+    fl.textContent=syncAt?'Purging & rebuilding · showing '+fmt(syncAt):'Purging & rebuilding';
+  }else if(issue){
+    freshness?.classList.add('is-stale');
+    fl.textContent=syncAt?'Refresh issue · showing '+fmt(syncAt):'Refresh issue';
+  }else if(syncAt && syncNote.startsWith('Full refresh completed')){
+    fl.textContent='Purged & overwritten '+fmt(syncAt);
+  }else if(syncAt){
+    fl.textContent='Last synced '+new Date(syncAt).toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'});
+  }else if(sourceAt){
+    fl.textContent='Source updated '+new Date(sourceAt).toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'});
+  }else{
+    fl.textContent='Live data';
+  }
+
+  const titleParts=[];
+  if(syncNote) titleParts.push(syncNote);
+  if(sourceAt) titleParts.push('Source data updated '+new Date(sourceAt).toLocaleString('en-ZA',{dateStyle:'medium',timeStyle:'short'}));
+  fl.removeAttribute('title');
+  if(titleParts.length) fl.title=titleParts.join(' ');
+
+  if((rebuilding||issue) && showingPublished){
+    const host=document.querySelector('.head');
+    if(host){
+      const note=document.createElement('div');
+      note.id='refresh-status-note';
+      note.className='refresh-status-note';
+      const reason=syncNote||'No additional refresh detail was recorded.';
+      note.textContent=rebuilding
+        ? 'Refresh in progress. The dashboard is staying on the last successful data until the new dataset is fully rebuilt. '+reason
+        : 'Refresh did not complete. The dashboard is still showing the last successful data. Reason: '+reason;
+      host.insertAdjacentElement('afterend',note);
+    }
+  }
+}
+
 function showLiveError(error){
+  const status=error?.syncStatus?.lastSyncStatus||null;
+  const rebuilding=status==='REBUILDING';
+  const failed=status==='FULL_REFRESH_FAILED';
+  const title=rebuilding ? 'Dashboard refresh in progress' : failed ? 'Full refresh failed — last published dashboard unavailable' : 'Live dashboard data is unavailable';
+  const copy=rebuilding
+    ? 'The refresh is rebuilding the source data. Normally the last successful dashboard remains visible; this fallback is shown only because no published snapshot could be loaded.'
+    : failed
+      ? 'The authoritative reload did not complete, and no last-successful published dashboard snapshot could be loaded for this request.'
+      : 'The portal has not substituted demonstration figures. Check the latest sync/import status in Administration, then reload this page.';
   const view=document.getElementById('employer-view');
   if(view) view.innerHTML=`<div class="card" style="max-width:760px;margin:48px auto;padding:34px">
-    <div style="font:800 23px Manrope,sans-serif;color:var(--brand-primary)">Live dashboard data is unavailable</div>
-    <p style="margin:12px 0 0;color:#5b6b7a;line-height:1.65">The portal has not substituted demonstration figures. Check the latest sync/import status in Administration, then reload this page.</p>
+    <div style="font:800 23px Manrope,sans-serif;color:var(--brand-primary)">${title}</div>
+    <p style="margin:12px 0 0;color:#5b6b7a;line-height:1.65">${copy}</p>
     <div style="margin-top:16px;padding:10px 12px;background:#f7f9fb;border-radius:8px;color:#7b8792;font:600 12px Manrope,sans-serif">${String(error?.message||error||'Unknown data error').replace(/[<>&]/g,'')}</div>
   </div>`;
-  const fl=document.getElementById('data-fresh-label'); if(fl) fl.textContent='Data unavailable';
-  document.querySelector('.data-fresh')?.classList.add('is-error');
+  const fl=document.getElementById('data-fresh-label');
+  const freshness=document.querySelector('.data-fresh');
+  freshness?.classList.remove('is-error','is-rebuilding');
+  if(rebuilding){
+    if(fl) fl.textContent='Purging & rebuilding';
+    freshness?.classList.add('is-rebuilding');
+  }else{
+    if(fl) fl.textContent=failed?'Refresh failed — data withheld':'Data unavailable';
+    freshness?.classList.add('is-error');
+  }
 }
 
 function applySyntheticDataNotice(me){
@@ -3455,6 +3661,9 @@ async function checkSourceVersion(){
     const r=await fetch('/api/dashboard/version',{cache:'no-store'});
     if(!r.ok) return;
     const d=await r.json();
+    const status=d.syncStatus?.lastSyncStatus||null;
+    renderRefreshStatus(d.syncStatus);
+    if(status==='REBUILDING' || status==='FULL_REFRESH_FAILED') return;
     if(!__SOURCE_VERSION__) { __SOURCE_VERSION__=d.version||null; return; }
     if(d.version && d.version !== __SOURCE_VERSION__){
       __SOURCE_VERSION__=d.version;
@@ -3467,7 +3676,7 @@ async function checkSourceVersion(){
     }
   }catch(_){}
 }
-setInterval(checkSourceVersion,60000);
+setInterval(checkSourceVersion,30000);
 </script>
 <script>
 /* Employer chart recolouring pass: applies to all present and future chart marks,
@@ -3498,5 +3707,6 @@ setInterval(checkSourceVersion,60000);
 })();
 </script>
 <script src="/static/shell.js?v=1"></script>
+<script src="/static/admin-source-status.js?v=1"></script>
 </body>
 </html>

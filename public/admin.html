@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="/static/portal-nav-v080.css?v=0.10.0">
 <script src="/static/safe.js?v=1"></script>
-<script src="/static/brand-engine.js?v=1"></script>
+<script src="/static/brand-engine.js?v=3"></script>
 <title>Administration Console | empower-fin</title>
 <meta name="description" content="Data imports, integrations, users and audit trail for the empower-fin Dashboard Portal.">
 <meta name="robots" content="noindex,nofollow">
@@ -95,19 +95,23 @@
   .hist td .st{font-size:11px;font-weight:800;padding:3px 9px;border-radius:6px;}
   .st.COMMITTED{background:var(--green-soft);color:#137a47;}
   .st.VALIDATED{background:var(--ice);color:var(--blue-d);}
+  .st.COMMITTING{background:var(--amber-soft);color:#8a5a10;}
   .st.FAILED{background:var(--red-soft);color:#b5391f;}
+  .history-row-detail{display:block;margin-top:4px;font-size:10.5px;line-height:1.4;color:var(--grey);font-weight:600;}
+  .history-row-detail.live{color:#8a5a10;}
+  .job-progress-detail{margin-top:9px;font-size:11.5px;line-height:1.5;color:var(--grey);font-weight:600;}
   .st.REVERTED{background:#f1f1f4;color:#777;}
   .section-gap{margin-top:22px;}
   .field-desc{color:var(--grey-l);}
   code{background:var(--ice);padding:1px 6px;border-radius:5px;font-size:12px;}
   .hidden{display:none;}
-  .partner-preview{display:flex;align-items:center;gap:12px;margin-top:12px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--brand-primary);}
-  .partner-preview-logo{width:52px;height:52px;border-radius:12px;object-fit:contain;background:#fff;border:1px solid var(--line);padding:5px;flex:0 0 auto;}
-  .partner-preview-fallback{display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#fff;padding:0;}
+  .partner-preview{display:flex;align-items:center;gap:12px;margin-top:12px;padding:12px 14px;border:1px solid var(--preview-line,var(--line));border-radius:12px;background:var(--preview-surface,var(--brand-primary));color:var(--preview-text,#fff);}
+  .partner-preview-logo{width:52px;height:52px;border-radius:12px;object-fit:contain;background:var(--preview-logo-bg,#fff);border:1px solid var(--preview-line,var(--line));padding:5px;flex:0 0 auto;}
+  .partner-preview-fallback{display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:var(--preview-on-accent,#fff);padding:0;background:var(--preview-accent)!important;}
   .partner-preview-copy{min-width:0;}
-  .partner-preview-copy strong{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .partner-preview-copy span{display:block;margin-top:3px;font-size:11.5px;color:var(--grey);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .partner-preview-badge{margin-left:auto;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--grey-l);white-space:nowrap;}
+  .partner-preview-copy strong{display:block;font-size:14px;color:var(--preview-text,#fff);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .partner-preview-copy span{display:block;margin-top:3px;font-size:11.5px;color:var(--preview-muted,#d7dee5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .partner-preview-badge{margin-left:auto;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--preview-accent,#fff);white-space:nowrap;}
   .partner-preview-open{margin-top:12px;width:100%;justify-content:center;background:var(--brand-primary);color:#fff;border-color:transparent;}
   .partner-preview-open:hover{color:#fff;border-color:transparent;box-shadow:0 10px 24px rgba(50,33,124,.2);}
   .partner-card{animation:partner-card-in .45s both;}
@@ -121,33 +125,33 @@
   .client-preview-toolbar strong{font-size:13px;color:var(--brand-primary);flex:1;}
   .client-preview-toolbar span{font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--blue-d);background:var(--ice);padding:6px 9px;border-radius:7px;}
   .client-preview-close{width:32px;height:32px;border-radius:9px;border:1px solid var(--line);background:#fff;color:var(--grey);font-size:20px;line-height:1;cursor:pointer;}
-  .client-preview-app{--preview-navy:#32217c;--preview-blue:#b15be8;--preview-ice:#f3efff;--preview-line:#e8e1f7;--preview-ink:#0f2438;color:var(--preview-ink);font-family:Manrope,system-ui,sans-serif;}
-  .client-preview-app .cp-topbar{display:flex;align-items:center;gap:12px;padding:16px 28px;background:#fff;border-bottom:1px solid var(--preview-line);}
-  .client-preview-app .cp-logo{width:34px;height:34px;border-radius:9px;object-fit:contain;background:#fff;border:1px solid var(--preview-line);padding:3px;}
+  .client-preview-app{--preview-bg:#f6f4fb;--preview-surface:#fff;--preview-surface-2:#f3efff;--preview-logo-bg:#fff;--preview-navy:#32217c;--preview-blue:#b15be8;--preview-line:#e8e1f7;--preview-ink:#0f2438;--preview-muted:#5b6b7a;--preview-on-accent:#fff;background:var(--preview-bg);color:var(--preview-ink);font-family:Manrope,system-ui,sans-serif;}
+  .client-preview-app .cp-topbar{display:flex;align-items:center;gap:12px;padding:16px 28px;background:var(--preview-surface);border-bottom:1px solid var(--preview-line);}
+  .client-preview-app .cp-logo{width:34px;height:34px;border-radius:9px;object-fit:contain;background:var(--preview-logo-bg,#fff);border:1px solid var(--preview-line);padding:3px;}
   .client-preview-app .cp-brand{font-weight:800;color:var(--preview-navy);font-size:14px;}
-  .client-preview-app .cp-user{margin-left:auto;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--brand-primary);color:#fff;font-size:11px;font-weight:800;}
+  .client-preview-app .cp-user{margin-left:auto;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--preview-blue);color:var(--preview-on-accent);font-size:11px;font-weight:800;}
   .client-preview-app .cp-body{padding:30px 28px 38px;}
   .client-preview-app .cp-eyebrow{font-size:10px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--preview-blue);}
   .client-preview-app h3{margin-top:7px;font:600 29px Fraunces,serif;color:var(--preview-navy);letter-spacing:-.4px;}
-  .client-preview-app .cp-sub{margin-top:7px;font-size:12.5px;color:#5b6b7a;max-width:620px;line-height:1.5;}
+  .client-preview-app .cp-sub{margin-top:7px;font-size:12.5px;color:var(--preview-muted);max-width:620px;line-height:1.5;}
   .client-preview-app .cp-filters{display:flex;gap:8px;flex-wrap:wrap;margin-top:20px;}
-  .client-preview-app .cp-filter{padding:7px 10px;border:1px solid var(--preview-line);border-radius:8px;background:#fff;color:#5b6b7a;font-size:11px;font-weight:700;}
-  .client-preview-app .cp-filter.active{background:var(--preview-ice);color:var(--preview-navy);border-color:var(--preview-blue);}
+  .client-preview-app .cp-filter{padding:7px 10px;border:1px solid var(--preview-line);border-radius:8px;background:var(--preview-surface);color:var(--preview-muted);font-size:11px;font-weight:700;}
+  .client-preview-app .cp-filter.active{background:var(--preview-surface-2);color:var(--preview-navy);border-color:var(--preview-blue);}
   .client-preview-app .cp-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:14px;margin-top:18px;}
-  .client-preview-app .cp-card{background:#fff;border:1px solid var(--preview-line);border-radius:14px;padding:17px;box-shadow:0 7px 20px rgba(15,36,56,.05);}
+  .client-preview-app .cp-card{background:var(--preview-surface);border:1px solid var(--preview-line);border-radius:14px;padding:17px;box-shadow:0 7px 20px rgba(15,36,56,.05);}
   .client-preview-app .cp-card-wide{grid-column:span 2;}
-  .client-preview-app .cp-card-label{font-size:11px;font-weight:800;color:#8497a7;text-transform:uppercase;letter-spacing:.05em;}
+  .client-preview-app .cp-card-label{font-size:11px;font-weight:800;color:var(--preview-muted);text-transform:uppercase;letter-spacing:.05em;}
   .client-preview-app .cp-score{display:flex;align-items:end;gap:10px;margin-top:13px;}
   .client-preview-app .cp-score strong{font-size:42px;line-height:1;color:var(--preview-navy);}
-  .client-preview-app .cp-score span{font-size:11px;color:#1fa463;font-weight:800;padding-bottom:5px;}
+  .client-preview-app .cp-score span{font-size:11px;color:var(--preview-blue);font-weight:800;padding-bottom:5px;}
   .client-preview-app .cp-bars{height:82px;display:flex;align-items:end;gap:7px;margin-top:16px;padding-bottom:3px;border-bottom:1px solid var(--preview-line);}
-  .client-preview-app .cp-bars i{display:block;flex:1;border-radius:5px 5px 2px 2px;background:var(--brand-primary);animation:cpBarIn .65s cubic-bezier(.2,.8,.2,1) both;transform-origin:bottom;}
+  .client-preview-app .cp-bars i{display:block;flex:1;border-radius:5px 5px 2px 2px;background:var(--preview-blue);animation:cpBarIn .65s cubic-bezier(.2,.8,.2,1) both;transform-origin:bottom;}
   @keyframes cpBarIn{from{transform:scaleY(0);opacity:.2}to{transform:scaleY(1);opacity:1}}
   .client-preview-app .cp-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:15px;}
-  .client-preview-app .cp-kpi{padding:11px;border-radius:10px;background:var(--preview-ice);}
+  .client-preview-app .cp-kpi{padding:11px;border-radius:10px;background:var(--preview-surface-2);}
   .client-preview-app .cp-kpi strong{display:block;font-size:20px;color:var(--preview-navy);}
-  .client-preview-app .cp-kpi span{display:block;margin-top:3px;font-size:10px;color:#5b6b7a;font-weight:700;}
-  .client-preview-app .cp-outcome{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f7f4ff;font-size:12px;font-weight:700;color:var(--preview-navy);}
+  .client-preview-app .cp-kpi span{display:block;margin-top:3px;font-size:10px;color:var(--preview-muted);font-weight:700;}
+  .client-preview-app .cp-outcome{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--preview-line);font-size:12px;font-weight:700;color:var(--preview-navy);}
   .client-preview-app .cp-outcome:last-child{border-bottom:0;}
   .client-preview-app .cp-dot{width:9px;height:9px;border-radius:50%;background:var(--preview-blue);}
   @media(max-width:700px){.client-preview-app .cp-grid{grid-template-columns:1fr}.client-preview-app .cp-card-wide{grid-column:span 1}.client-preview-app .cp-body{padding:24px 16px 30px}.client-preview-app .cp-topbar{padding:13px 16px}.client-preview-app h3{font-size:25px}.client-preview-toolbar span{display:none}}
@@ -164,10 +168,10 @@
   @media(max-width:720px){.source-mode-grid{grid-template-columns:1fr}.integration-two-col{grid-template-columns:1fr!important}.integration-two-col label[style*="grid-column:span 2"],.integration-panel-title{grid-column:span 1!important}}
 
   /* ── welcome splash (shown briefly right after sign-in) ── */
-  #welcome-splash{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:var(--brand-primary);transition:opacity .45s ease, visibility .45s ease;}
+  #welcome-splash{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:#f3f7fb;background:radial-gradient(900px 520px at 50% -8%,color-mix(in srgb,var(--blue) 12%,transparent),transparent 62%),linear-gradient(160deg,color-mix(in srgb,var(--ice) 42%,#fff) 0%,color-mix(in srgb,var(--brand-soft) 68%,#f3f7fb) 100%);transition:opacity .45s ease, visibility .45s ease;}
   #welcome-splash.hide{opacity:0;visibility:hidden;pointer-events:none;}
-  .welcome-splash-inner{text-align:center;}
-  .welcome-splash-logo{height:40px;width:auto;margin-bottom:22px;opacity:.94;}
+  .welcome-splash-inner{text-align:center;padding:30px 36px;border:1px solid color-mix(in srgb,var(--line) 76%,transparent);border-radius:18px;background:color-mix(in srgb,#fff 88%,var(--ice));box-shadow:0 18px 55px rgba(15,36,56,.10);min-width:min(360px,calc(100vw - 36px));}
+  .welcome-splash-logo{height:40px;width:auto;max-width:220px;object-fit:contain;margin-bottom:22px;opacity:.98;}
   .welcome-splash-spinner{width:32px;height:32px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--blue);margin:0 auto 20px;animation:welcome-spin .8s linear infinite;}
   @keyframes welcome-spin{to{transform:rotate(360deg);}}
   .welcome-splash-greeting{font-family:'Fraunces',serif;font-weight:600;font-size:26px;color:var(--brand-primary);}
@@ -191,7 +195,7 @@
 </style>
 <link rel="stylesheet" href="/static/enterprise.css?v=2">
   <link rel="stylesheet" href="/static/enterprise-v3.css?v=3">
-<link rel="stylesheet" href="/static/dark-theme-v2.css?v=1">
+<link rel="stylesheet" href="/static/dark-theme-v2.css?v=4">
 </head>
 <body data-portal-build="0.10.0">
 <div id="welcome-splash">
@@ -332,7 +336,7 @@
 
       <!-- import history -->
       <div class="card section-gap">
-        <div class="card-hd"><h2>Import history</h2><div class="note">Most recent first · Revert is shown only when a batch can be safely rolled back</div></div>
+        <div class="card-hd"><h2>Import history</h2><div class="note">Live updates every 1.5s · Rows show validated totals and how many changes have actually reached live tables</div></div>
         <div class="card-bd" style="padding:6px 8px 12px;">
           <table class="hist"><thead><tr><th>Report</th><th>File</th><th>Rows</th><th>Status</th><th>When</th><th>Download</th><th></th></tr></thead>
           <tbody id="hist-body"><tr><td colspan="7" class="muted" style="padding:14px;">No imports yet.</td></tr></tbody></table>
@@ -357,9 +361,10 @@
             </button>
           </div>
           <div style="max-width:820px;margin-bottom:14px;">
-            <label style="display:block;font-size:12.5px;font-weight:700;color:#5b6b7a;max-width:390px;">Auto-sync every (hours)
+            <label style="display:block;font-size:12.5px;font-weight:700;color:#5b6b7a;max-width:390px;">Heartbeat reconciliation every (hours)
               <input id="integ-hours" type="number" min="1" value="24" style="display:block;width:100%;margin-top:5px;font:inherit;font-weight:500;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">
             </label>
+            <div id="integ-change-mode" class="muted" style="margin-top:7px;max-width:820px;">SQL sources also use indexed change detection between heartbeat runs.</div>
           </div>
 
           <div id="integ-api-panel" class="integration-two-col" style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:820px;">
@@ -472,7 +477,9 @@
             <button class="btn" onclick="saveInteg()">Save settings</button>
             <button class="btn btn-ghost" onclick="testInteg()">Test source</button>
             <button class="btn" style="background:#b15be8;color:#fff;border-color:#b15be8;" onclick="syncNow()">Sync now</button>
+            <button id="btn-refresh-now" class="btn btn-ghost" onclick="refreshNow(this)" title="Run the full governed purge, authoritative reload, snapshot rebuild and publish cycle now">Refresh now</button>
           </div>
+          <div class="muted" style="margin-top:8px;max-width:820px;line-height:1.5;"><b>Sync now</b> applies incremental source changes. <b>Refresh now</b> runs the full purge-and-reload cycle; dashboard users keep seeing the last successful published data until the new refresh completes successfully.</div>
           <div id="integ-result" style="margin-top:12px;"></div>
           <div style="margin-top:18px;">
             <div style="font-size:12.5px;font-weight:700;color:#5b6b7a;margin-bottom:8px;">Recent syncs</div>
@@ -650,20 +657,17 @@
 
       <!-- danger zone: full reset -->
       <div class="card section-gap" style="border-color:#f3c9c0;">
-        <div class="card-hd" style="border-bottom-color:#fbe4df;"><h2 style="color:#b5391f;">Danger zone</h2><div class="note">Clear all imported data for a clean go-live start</div></div>
+        <div class="card-hd" style="border-bottom-color:#fbe4df;"><h2 style="color:#b5391f;">Danger zone</h2><div class="note">Authoritative reset and rebuild from the connected source</div></div>
         <div class="card-bd">
-          <p class="muted" style="margin-bottom:14px;">This permanently removes <b>all imported portal data</b> — employers and their related workforce, journey, debt, policy, rating, referral, salary-advance, score and import records. <b>User logins are kept.</b> There is no undo. Use this only when moving from testing to a clean data set.</p>
-          <button class="btn" id="reset-btn" style="border-color:#e0492f;color:#b5391f;" onclick="openReset()">Reset all imported data…</button>
+          <p class="muted" style="margin-bottom:14px;"><b>Reset always reloads.</b> The connected API/SQL database becomes the source of truth: prior cursors, import history, MLOps decisions and stale-write comparisons are ignored for this rebuild. The current published dashboard stays visible until all 10 feeds have been rebuilt successfully. User logins, access, branding and separately sourced chat history are kept.</p>
+          <button class="btn" id="reset-btn" style="border-color:#e0492f;color:#b5391f;" onclick="openReset()">Reset &amp; rebuild from source…</button>
           <div id="reset-area" style="display:none;margin-top:16px;padding:16px;border:1px solid #f3c9c0;border-radius:11px;background:#fdf5f3;">
             <div style="font-weight:700;color:#b5391f;font-size:13.5px;margin-bottom:8px;">Are you sure? This cannot be undone.</div>
             <div class="muted" style="margin-bottom:10px;">Type <b>RESET</b> below to confirm.</div>
             <input id="reset-confirm" placeholder="type RESET" style="font-family:inherit;font-size:13.5px;padding:9px 12px;border:1px solid #e0492f;border-radius:9px;width:160px;">
-            <button class="btn" style="background:#e0492f;color:#fff;border-color:#e0492f;margin-left:8px;" onclick="doReset()">Permanently reset</button>
+            <button class="btn" style="background:#e0492f;color:#fff;border-color:#e0492f;margin-left:8px;" onclick="doReset()">Reset &amp; rebuild</button>
             <button class="btn btn-ghost" style="margin-left:4px;" onclick="$('#reset-area').style.display='none'">Cancel</button>
-            <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:12.5px;font-weight:700;color:#b5391f;cursor:pointer;">
-              <input id="reset-then-sync" type="checkbox" style="width:16px;height:16px;">
-              Also reload fresh data from the connected API/SQL source immediately after clearing
-            </label>
+            <div class="muted" style="margin-top:12px;">This cannot leave the portal as an intentionally empty dataset: the reset and source rewrite are one authoritative operation.</div>
             <div class="banner" id="reset-msg" style="display:none;margin-top:12px;"></div>
           </div>
         </div>
@@ -678,6 +682,14 @@
 /* ── Admin console. Talks to the import API. Set API base if served elsewhere. ── */
 const API = ""; // same origin
 let MANIFEST = null, CURRENT = null, LAST_BATCH = null;
+const AdminBrandTheme = window.BrandEngine ? BrandEngine.themeController() : null;
+const DEFAULT_PORTAL_BRAND = {accentColor:'7D2FA3',primaryColor:'B15BE8',navyColor:'2B1B68'};
+function applyAdminBrandTheme(){
+  if(!AdminBrandTheme) return;
+  // Administration always uses the canonical empower-fin palette. Partner
+  // branding belongs in client previews and client dashboards, never the control plane.
+  AdminBrandTheme.set({brand:DEFAULT_PORTAL_BRAND,light:null});
+}
 
 const $ = s => document.querySelector(s);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({
@@ -700,7 +712,7 @@ function handleWelcomeSplash(me){
   const first=(me.name||'').trim().split(/\s+/)[0]||'there';
   if(greet) greet.textContent='Hi '+first+' \uD83D\uDC4B';
   const logo=document.getElementById('welcome-splash-logo');
-  if(logo && me.theme && me.theme.logoDataUrl) logo.src=me.theme.logoDataUrl;
+  if(logo && me.theme && me.theme.logoDataUrl){ logo.src=me.theme.logoDataUrl; logo.setAttribute('data-custom-logo','1'); }
   try{ sessionStorage.setItem('ef_splash_shown','1'); }catch(_){}
   setTimeout(()=>el.classList.add('hide'), 700);
 }
@@ -773,16 +785,28 @@ async function loadInteg(){
     }
 
     const s = $('#integ-status');
+    const changeMode=$('#integ-change-mode');
+    if(changeMode){
+      changeMode.textContent = c.changeDetectionSupported
+        ? `Live SQL change detection is active every ${Number(c.sourceChangePollSeconds||30).toLocaleString('en-ZA')}s using indexed source_updated_at watermarks. Bulk writes process up to ${Number(c.syncBulkChunkSize||20000).toLocaleString('en-ZA')} rows per database call. The hourly setting above remains a safety reconciliation.`
+        : 'This source does not expose a portable SQL watermark, so the heartbeat schedule above controls automatic reconciliation.';
+    }
     const configuredText = c.configured ? 'configured' : 'incomplete';
     if(c.lastSyncAt){
       const when = new Date(c.lastSyncAt).toLocaleString('en-ZA');
+      const lastGood = c.lastSuccessfulSyncAt ? new Date(c.lastSuccessfulSyncAt).toLocaleString('en-ZA') : 'none yet';
+      const failureStates=['FAILED','PARTIAL','FULL_REFRESH_FAILED','FULL_REFRESH_PRECHECK_FAILED'];
+      const rebuilding=c.lastSyncStatus==='REBUILDING';
       s.style.display='block';
-      s.className = 'banner ' + (c.lastSyncStatus==='OK'?'ok':c.lastSyncStatus==='FAILED'?'err':'ok');
-      s.textContent = `${c.effectiveSourceMode || c.sourceMode || 'API'} source · ${configuredText} · Last sync: ${c.lastSyncStatus} · ${when} — ${c.lastSyncNote||''}`;
+      s.className = 'banner ' + (c.lastSyncStatus==='OK'?'ok':failureStates.includes(c.lastSyncStatus)?'err':'');
+      const reason=c.lastSyncNote||'No refresh reason was recorded.';
+      const watcher=c.changeDetectionEnabled?` · Change watch: every ${c.sourceChangePollSeconds||30}s`:'';
+      s.textContent = `${c.effectiveSourceMode || c.sourceMode || 'API'} source · ${configuredText}${watcher} · Last attempt: ${c.lastSyncStatus||'UNKNOWN'} · ${when} · Last successful: ${lastGood} · ${rebuilding?'Refresh status':'Refresh reason'}: ${reason}`;
     }else{
       s.style.display='block';
       s.className = 'banner ' + (c.configured?'ok':'');
-      s.textContent = `${c.effectiveSourceMode || c.sourceMode || 'API'} source · ${configuredText}. No sync has run yet.`;
+      const watcher=c.changeDetectionEnabled?` Change watch runs every ${c.sourceChangePollSeconds||30}s.`:'';
+      s.textContent = `${c.effectiveSourceMode || c.sourceMode || 'API'} source · ${configuredText}. No sync has run yet.${watcher}`;
     }
     loadIntegLogs();
   }catch(e){}
@@ -849,42 +873,99 @@ async function syncNow(){
   const mode = ($('#integ-mode').value || 'API').toUpperCase();
   $('#integ-result').innerHTML = `<div class="banner ok">Saving settings…</div>`;
   try{
-    // Sync must run against exactly what "Test source" just validated — not
-    // whatever was last saved. Otherwise an unsaved dropdown change (e.g.
-    // switching to MySQL) tests fine but syncs against the old settings,
-    // with nothing in the UI showing the two are out of sync.
     const saveBody = integrationDraft();
     const saveResp = await fetch(`${API}/api/admin/integration`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(saveBody)});
     const saved = await saveResp.json();
     if(!saveResp.ok) throw new Error(saved.error || 'Could not save settings before syncing');
     $('#integ-token').value=''; $('#integ-sql-password').value='';
   }catch(e){ $('#integ-result').innerHTML = `<div class="banner err">✕ ${esc(e.message)}</div>`; return; }
-  $('#integ-result').innerHTML = `<div class="banner ok">Syncing all reports from ${mode}… you can leave this page; the job runs server-side.</div>`;
+
   try{
     const r = await fetch(`${API}/api/admin/integration/sync`,{method:'POST'});
     const d = await r.json();
     if(!r.ok || d.error){ $('#integ-result').innerHTML = `<div class="banner err">✕ ${esc(d.error||'sync failed to start')}</div>`; return; }
-    const jobId = d.jobId;
-    const render = (j)=>{
-      const rows = Object.entries(j.summary||{}).map(([k,v])=>{
-        const txt = v.error ? `<span style="color:#b5391f">${esc(v.error)}</span>` : v.errorCount ? `<span style="color:#b5391f">${esc(v.errorCount)} validation error(s)</span>` : `${esc(v.committed ?? 0)} loaded${v.inserted!=null?` (${esc(v.inserted)} new, ${esc(v.updated)} updated)`:''}`;
-        return `<tr><td style="font-weight:700">${k}</td><td>${txt}</td></tr>`;
-      }).join('');
-      const cls = j.status==='OK'?'ok':j.status==='FAILED'?'err':'ok';
-      $('#integ-result').innerHTML = `<div class="banner ${cls}">${esc(j.status)}: ${esc(j.note)}</div><table class="hist" style="margin-top:8px"><tbody>${rows}</tbody></table>`;
-      loadInteg();
-    };
-    const poll = setInterval(async ()=>{
-      try{
-        const j = await fetch(`${API}/api/admin/sync-jobs/${jobId}`).then(x=>x.json());
-        if(j.status==='PROCESSING') return;
-        clearInterval(poll);
-        if(j.status==='FAILED'){ $('#integ-result').innerHTML = `<div class="banner err">✕ ${esc(j.error||'sync failed')}</div>`; return; }
-        render(j);
-      }catch(e){ clearInterval(poll); $('#integ-result').innerHTML = `<div class="banner err">✕ ${esc(e.message)}</div>`; }
-    }, 2000);
-  }catch(e){ $('#integ-result').innerHTML = `<div class="banner err">✕ ${esc(e.message)}</div>`; }
+
+    const result = await pollJob(
+      `${API}/api/admin/sync-jobs/${d.jobId}`,
+      `Syncing all reports from ${mode}`,
+      () => { loadHistory(); },
+      '#integ-result'
+    );
+
+    const rows = Object.entries(result.summary||{}).map(([k,v])=>{
+      const txt = v.error
+        ? `<span style="color:#b5391f">${esc(v.error)}</span>`
+        : v.errorCount
+          ? `<span style="color:#b5391f">${esc(v.errorCount)} validation error(s)</span>`
+          : (()=>{ const h=Number(v.historyRows||0), s=Number(v.staleSkipped||0); return `${Number(v.committed||0).toLocaleString('en-ZA')} processed · +${Number(v.inserted||0).toLocaleString('en-ZA')} new · ~${Number(v.updated||0).toLocaleString('en-ZA')} updated · -${Number(v.deleted||0).toLocaleString('en-ZA')} deleted${h>0?` · ${h.toLocaleString('en-ZA')} dated history observation(s)`:s>0?` · ${s.toLocaleString('en-ZA')} stale skipped`:''}${v.authoritativeOverwrite?' · authoritative overwrite':''}`; })();
+      return `<tr><td style="font-weight:700">${esc(k)}</td><td>${txt}</td></tr>`;
+    }).join('');
+    const cls = result.status==='OK'?'ok':result.status==='FAILED'?'err':'ok';
+    $('#integ-result').innerHTML = `<div class="banner ${cls}">${esc(result.status)}: ${esc(result.note)}</div><table class="hist" style="margin-top:8px"><tbody>${rows}</tbody></table>`;
+    await Promise.allSettled([loadHistory(),loadInteg(),loadIntegLogs()]);
+  }catch(e){
+    $('#integ-result').innerHTML = `<div class="banner err">✕ ${esc(e.message)}</div>`;
+  }
 }
+async function refreshNow(btn){
+  if(!confirm('Run an authoritative full refresh now?\n\nThe connected source will be treated as truth. Previous cursors, MLOps decisions and stale-write comparisons will not gate this rebuild. All 10 feeds are read from the beginning, the source-derived model is rewritten, and a new dashboard is published only after the full rebuild succeeds.\n\nDashboard users continue seeing the last successful published dashboard while this runs.')) return;
+  const original=btn?.textContent||'Refresh now';
+  if(btn){ btn.disabled=true; btn.textContent='Refreshing…'; }
+  $('#integ-result').innerHTML = '<div class="banner ok">Saving settings and preflighting the source…</div>';
+  try{
+    const saveBody=integrationDraft();
+    const saveResp=await fetch(`${API}/api/admin/integration`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(saveBody)});
+    const saved=await saveResp.json().catch(()=>({}));
+    if(!saveResp.ok) throw new Error(saved.error||'Could not save settings before refresh');
+    $('#integ-token').value=''; $('#integ-sql-password').value='';
+
+    $('#integ-result').innerHTML = '<div class="banner ok">Full refresh started. The last successful dashboard remains published while source data is rebuilt…</div>';
+    const r=await fetch(`${API}/api/admin/integration/refresh`,{method:'POST'});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok || !d.ok) throw new Error(d.error||d.note||'Full refresh failed');
+    if(d.status==='ALREADY_RUNNING'){
+      $('#integ-result').innerHTML = '<div class="banner ok">A full refresh is already running on another application instance. The last successful dashboard remains visible until it publishes.</div>';
+      return;
+    }
+    const detail=[
+      d.purgedRows!=null ? `${Number(d.purgedRows).toLocaleString('en-ZA')} source rows purged` : null,
+      d.overwrittenRows!=null ? `${Number(d.overwrittenRows).toLocaleString('en-ZA')} rows committed` : null,
+      d.publishedDashboards!=null ? `${Number(d.publishedDashboards).toLocaleString('en-ZA')} dashboard snapshot${Number(d.publishedDashboards)===1?'':'s'} published` : null,
+    ].filter(Boolean).join(' · ');
+    $('#integ-result').innerHTML = `<div class="banner ok">✓ Full refresh completed and published.${detail?' '+esc(detail)+'.':''}</div>`;
+  }catch(e){
+    $('#integ-result').innerHTML = `<div class="banner err">✕ Refresh did not publish a new dashboard. The last successful dashboard remains visible. Reason: ${esc(e.message)}</div>`;
+  }finally{
+    if(btn){ btn.disabled=false; btn.textContent=original; }
+    loadInteg();
+    loadIntegLogs();
+  }
+}
+
+function syncLogFailureDetail(log){
+  const summary=log?.summary||{};
+  const order=Array.isArray(MANIFEST?.loadOrder)?MANIFEST.loadOrder:[];
+  for(let i=0;i<order.length;i++){
+    const key=order[i], item=summary?.[key];
+    if(item?.error){
+      const rep=MANIFEST?.reports?.find(r=>r.key===key);
+      return `STEP ${i+1} ${rep?.title||key}: ${item.error}`;
+    }
+  }
+  if(summary?.source?.error) return `Source connection: ${summary.source.error}`;
+  return '';
+}
+function syncLogBlockedDetail(log){
+  const summary=log?.summary||{};
+  const order=Array.isArray(MANIFEST?.loadOrder)?MANIFEST.loadOrder:[];
+  return order.map((key,i)=>{
+    const item=summary?.[key];
+    if(item?.status!=='BLOCKED') return null;
+    const rep=MANIFEST?.reports?.find(r=>r.key===key);
+    return `STEP ${i+1} ${rep?.title||key}`;
+  }).filter(Boolean).join(', ');
+}
+
 async function loadIntegLogs(){
   try{
     const logs = await fetch(`${API}/api/admin/integration/logs`).then(r=>r.json());
@@ -893,8 +974,17 @@ async function loadIntegLogs(){
     tb.innerHTML = logs.map(l=>{
       const when = new Date(l.startedAt).toLocaleString('en-ZA');
       const badge = l.status==='OK'?'#1fa463':l.status==='FAILED'?'#e0492f':'#e8910c';
-      return `<tr><td>${when}</td><td>${esc(l.trigger)}</td><td><span style="color:${badge};font-weight:700">${esc(l.status)}</span></td><td class="muted">${esc(l.note||'')}</td></tr>`;
+      const failure=syncLogFailureDetail(l);
+      const blocked=syncLogBlockedDetail(l);
+      const detail=[l.note||'',failure?('Failure: '+failure):'',blocked?('Blocked downstream: '+blocked):''].filter(Boolean).join(' · ');
+      return `<tr><td>${when}</td><td>${esc(l.trigger)}</td><td><span style="color:${badge};font-weight:700">${esc(l.status)}</span></td><td class="muted">${esc(detail)}</td></tr>`;
     }).join('');
+    const latest=logs[0];
+    const latestFailure=syncLogFailureDetail(latest);
+    if(latestFailure && ['PARTIAL','FAILED'].includes(String(latest?.status||''))){
+      const s=$('#integ-status');
+      if(s && !s.textContent.includes(latestFailure)) s.textContent += ` · Failed feed: ${latestFailure}`;
+    }
   }catch(e){}
 }
 
@@ -1150,16 +1240,17 @@ function renderPartners(){
     const logo = p.logoDataUrl
       ? `<img class="partner-preview-logo" src="${p.logoDataUrl}" alt="${esc(p.displayName||p.name)} logo">`
       : `<div class="partner-preview-logo partner-preview-fallback" style="background:${ac};">${(p.displayName||p.name||'?').slice(0,2).toUpperCase()}</div>`;
+    const pv=partnerPreviewTokens(p);
     return `<div class="card partner-card" style="margin-bottom:16px;padding:20px;border:1px solid #e8e1f7;">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
         <div style="width:34px;height:34px;border-radius:8px;background:${pc};box-shadow:inset 0 0 0 1px rgba(255,255,255,.35);"></div>
         <div style="font-weight:800;font-size:15px;color:#32217c;flex:1;">${esc(p.name)}</div>
         <span class="muted" style="font-size:12px;">${esc(p._count.users)} users · ${esc(p._count.employers)} employers · /p/${esc(p.slug)}</span>
       </div>
-      <div class="partner-preview" style="--preview-primary:${pc};--preview-accent:${ac};">
+      <div class="partner-preview" style="${pv.style}">
         ${logo}
-        <div class="partner-preview-copy"><strong style="color:${nv};">${p.displayName||p.name}</strong><span>${esc(p.tagline||'Your branded portal preview')}</span></div>
-        <span class="partner-preview-badge" style="color:${ac};">Live preview</span>
+        <div class="partner-preview-copy"><strong>${esc(p.displayName||p.name)}</strong><span>${esc(p.tagline||'Your branded portal preview')}</span></div>
+        <span class="partner-preview-badge">Live preview</span>
       </div>
       <button class="btn partner-preview-open" type="button" onclick="openClientPreview('${esc(p.id)}')">View client dashboard</button>
       <div style="display:grid;grid-template-columns:repeat(3,1fr) 2fr;gap:12px;align-items:end;margin-top:16px;">
@@ -1182,6 +1273,52 @@ function renderPartners(){
   }).join('');
 }
 function previewHex(value,fallback){ return '#'+String(value||fallback).replace(/^#/,''); }
+function partnerBrand(p){
+  return {
+    accentColor:String(p?.accentColor||p?.primaryColor||'B15BE8').replace(/^#/,''),
+    primaryColor:String(p?.primaryColor||p?.accentColor||'32217C').replace(/^#/,''),
+    navyColor:String(p?.navyColor||p?.primaryColor||'32217C').replace(/^#/,''),
+  };
+}
+function readableOn(background, preferred){
+  if(!window.BrandEngine) return '#ffffff';
+  const bg=String(background||'#17212b').replace(/^#/,'');
+  const pref=String(preferred||'FFFFFF').replace(/^#/,'');
+  return '#'+BrandEngine.ensureContrast(pref,bg,4.5);
+}
+function partnerPreviewTokens(p){
+  const brand=partnerBrand(p);
+  if(!window.BrandEngine){
+    const surface=previewHex(brand.navyColor,'32217C');
+    return {style:`--preview-surface:${surface};--preview-text:#fff;--preview-muted:#d7dee5;--preview-accent:${previewHex(brand.accentColor,'B15BE8')};--preview-on-accent:#fff;--preview-line:rgba(255,255,255,.24);--preview-logo-bg:#fff;`};
+  }
+  const t=BrandEngine.themeTokens(brand,'dark');
+  const surface=t['--bar-bg'];
+  const accent=readableOn(surface,brand.accentColor);
+  const text=readableOn(surface,t['--brand-primary']);
+  const muted=readableOn(surface,t['--grey']);
+  const onAccent=BrandEngine.contrast('FFFFFF',accent.replace(/^#/,''))>=4.5?'#fff':'#0b0f19';
+  return {style:`--preview-surface:${surface};--preview-text:${text};--preview-muted:${muted};--preview-accent:${accent};--preview-on-accent:${onAccent};--preview-line:${t['--dm-line']};--preview-logo-bg:#fff;`};
+}
+function applyClientPreviewTheme(p){
+  const app=$('#client-preview-app'); if(!app) return;
+  const brand=partnerBrand(p);
+  const dark=document.documentElement.classList.contains('portal-dark');
+  const t=window.BrandEngine ? BrandEngine.themeTokens(brand,dark?'dark':'light') : null;
+  const surface=t?.['--white'] || '#fff';
+  const accent=t?.['--blue'] || previewHex(brand.accentColor,'B15BE8');
+  const onAccent=window.BrandEngine && BrandEngine.contrast('FFFFFF',accent.replace(/^#/,''))<4.5 ? '#0b0f19' : '#fff';
+  app.style.setProperty('--preview-bg',t?.['--dm-bg']||t?.['--ent-paper']||'#f6f4fb');
+  app.style.setProperty('--preview-surface',surface);
+  app.style.setProperty('--preview-surface-2',t?.['--ice']||'#f3efff');
+  app.style.setProperty('--preview-navy',t?.['--brand-primary']||previewHex(brand.navyColor,'32217C'));
+  app.style.setProperty('--preview-blue',accent);
+  app.style.setProperty('--preview-line',t?.['--line']||'#e8e1f7');
+  app.style.setProperty('--preview-ink',t?.['--ink']||'#0f2438');
+  app.style.setProperty('--preview-muted',t?.['--grey']||'#5b6b7a');
+  app.style.setProperty('--preview-on-accent',onAccent);
+  app.style.setProperty('--preview-logo-bg','#fff');
+}
 function previewLogo(p){
   return p.logoDataUrl
     ? `<img class="cp-logo" src="${p.logoDataUrl}" alt="${esc(p.displayName||p.name)} logo">`
@@ -1191,8 +1328,8 @@ function openClientPreview(id){
   const p=PARTNERS.find(x=>x.id===id); if(!p) return;
   const app=$('#client-preview-app');
   const name=p.displayName||p.name||'Client dashboard';
-  const accent=previewHex(p.accentColor,'B15BE8'), navy=previewHex(p.navyColor,'32217C'), primary=previewHex(p.primaryColor,'32217C');
-  app.style.setProperty('--preview-blue',accent); app.style.setProperty('--preview-navy',navy); app.style.setProperty('--preview-ice',`color-mix(in srgb, ${primary} 8%, white)`); app.style.setProperty('--preview-line',`color-mix(in srgb, ${primary} 18%, white)`);
+  app.dataset.partnerId=id;
+  applyClientPreviewTheme(p);
   app.innerHTML=`<div class="cp-topbar">${previewLogo(p)}<span class="cp-brand">${name}</span><span class="cp-user">AD</span></div>
     <div class="cp-body">
       <div class="cp-eyebrow">Employer insights · financial wellbeing programme</div>
@@ -1211,6 +1348,14 @@ function openClientPreview(id){
 function closeClientPreview(event){
   if(event && event.target!==$('#client-preview-overlay')) return;
   $('#client-preview-overlay').classList.remove('is-open'); document.body.style.overflow='';
+}
+if(typeof MutationObserver!=='undefined'){
+  new MutationObserver(()=>{
+    const overlay=$('#client-preview-overlay'), app=$('#client-preview-app');
+    if(!overlay?.classList.contains('is-open') || !app?.dataset.partnerId) return;
+    const p=PARTNERS.find(x=>x.id===app.dataset.partnerId);
+    if(p) applyClientPreviewTheme(p);
+  }).observe(document.documentElement,{attributes:true,attributeFilter:['class']});
 }
 document.addEventListener('keydown',event=>{ if(event.key==='Escape' && $('#client-preview-overlay').classList.contains('is-open')) closeClientPreview(); });
 async function editPartner(id,field,value){
@@ -1420,7 +1565,6 @@ function openReset(){
   if(!area || !input || !msg) return;
   area.style.display='block';
   input.value='';
-  const alsoSync=$('#reset-then-sync'); if(alsoSync) alsoSync.checked=false;
   msg.style.display='none';
   msg.textContent='';
   input.focus();
@@ -1435,10 +1579,10 @@ async function doReset(){
     msg.textContent='Please type RESET exactly to confirm.';
     return;
   }
-  if(!confirm('Permanently remove all imported portal data? User accounts are kept. This cannot be undone.')) return;
+  if(!confirm('Reset the source-derived reporting model and rebuild it immediately from the connected source? The last successful dashboard remains published until all 10 feeds complete.')) return;
   msg.className='banner ok';
   msg.style.display='block';
-  msg.textContent='Clearing imported data…';
+  msg.textContent='Preflighting source, then resetting and rewriting all 10 feeds from the authoritative database…';
   try{
     const r=await fetch(`${API}/api/admin/reset-all`,{
       method:'POST',
@@ -1447,39 +1591,22 @@ async function doReset(){
     });
     let d={};
     try{ d=await r.json(); }catch(_){ }
-    if(!r.ok) throw new Error(d.error || `Reset failed (HTTP ${r.status})`);
-    const total=Object.values(d.cleared||{}).reduce((sum,value)=>sum+(Number(value)||0),0);
+    if(!r.ok || !d.ok) throw new Error(d.error || d.note || `Reset & rebuild failed (HTTP ${r.status})`);
+    const cleared=Object.values(d.cleared||{}).reduce((sum,value)=>sum+(Number(value)||0),0);
+    const loaded=Number(d.overwrittenRows||0);
     input.value='';
     const resultArea=$('#result'); if(resultArea) resultArea.innerHTML='';
-    await loadHistory();
-    const alsoSync = $('#reset-then-sync')?.checked;
-    if(!alsoSync){
-      msg.className='banner ok';
-      msg.textContent=`✓ Reset complete. Cleared ${total} imported records. User accounts were kept.`;
-      return;
-    }
     msg.className='banner ok';
-    msg.textContent=`Cleared ${total} imported records. Reloading fresh data from the connected source…`;
-    try{
-      const sr = await fetch(`${API}/api/admin/integration/sync`,{method:'POST'});
-      const sd = await sr.json();
-      if(sd.error){ msg.className='banner err'; msg.textContent=`✓ Cleared ${total} records, but the reload failed: ${sd.error}`; return; }
-      const loaded = Object.values(sd.summary||{}).reduce((sum,v)=>sum+(Number(v.committed)||0),0);
-      msg.className = sd.status==='OK' ? 'banner ok' : 'banner err';
-      msg.textContent = `✓ Cleared ${total} records and reloaded ${loaded} fresh from the source (${sd.status}: ${sd.note||''}).`;
-      if(typeof loadInteg==='function') loadInteg();
-    }catch(e){
-      msg.className='banner err';
-      msg.textContent=`✓ Cleared ${total} records, but the reload request failed: ${e.message}`;
-    }
+    msg.textContent=`✓ Authoritative rebuild published. Cleared ${cleared.toLocaleString('en-ZA')} source-derived rows and accepted ${loaded.toLocaleString('en-ZA')} rows from the connected source. Previous cursors/MLOps/staleness did not gate this rebuild.`;
+    await Promise.allSettled([loadHistory(),loadInteg(),loadIntegLogs(),loadMLOpsAlert()]);
   }catch(e){
     msg.className='banner err';
-    msg.textContent=`✕ ${e.message}`;
+    msg.textContent=`✕ Reset & rebuild did not publish. The last successful dashboard remains visible. Reason: ${e.message}`;
   }
 }
 
-
 async function boot(){
+  installCompactCollapse();
   // Require an authenticated admin, then load the report contract independently
   // from the rest of the optional administration panels. A failure elsewhere
   // must never remove the report selector or its upload controls.
@@ -1493,6 +1620,7 @@ async function boot(){
     return;
   }
   if(!me.modules.admin){ location.href='/dashboard'; return; }
+  applyAdminBrandTheme();
 
   const isSuperAdmin = me.role === 'SUPERADMIN';
   const posture = document.getElementById('role-posture');
@@ -1601,39 +1729,63 @@ function wireDrop(){
   d.addEventListener('drop',e=>{ if(e.dataTransfer.files[0]) upload(e.dataTransfer.files[0]); });
 }
 
-async function pollJob(url, label){
+async function pollJob(url, label, onProgress=null, target='#result'){
   const started = Date.now();
   const jobId = url.split('/').pop();
   let settled = false;
   let source = null;
   let fallbackTimer = null;
 
-  const showProgress = (progress, phase, message) => {
+  const showProgress = (payload={}) => {
+    const progress=payload.progress ?? 0;
+    const phase=payload.phase ?? 'PROCESSING';
+    const message=payload.message || label;
+    const detail=payload.detail || {};
     const pct = Math.max(0, Math.min(100, Number(progress||0)));
-    $('#result').innerHTML = `<div class="job-progress">
-      <strong>${esc(message || label)}</strong>
+    const host=document.querySelector(target);
+    if(!host) return;
+    const pieces=[];
+    if(detail.reportKey) pieces.push(`Feed ${esc(detail.reportKey)}${detail.feedIndex&&detail.feedCount?` · ${esc(detail.feedIndex)}/${esc(detail.feedCount)}`:''}`);
+    if(detail.sourceTotalRows!=null) pieces.push(`Source view: ${Number(detail.sourceTotalRows).toLocaleString('en-ZA')} rows`);
+    if(detail.pulledRows!=null) pieces.push(`Pulled: ${Number(detail.pulledRows).toLocaleString('en-ZA')}`);
+    if(detail.validatedRows!=null) pieces.push(`Validated: ${Number(detail.validatedRows).toLocaleString('en-ZA')}`);
+    if(detail.committedRows!=null) pieces.push(`Processed live: ${Number(detail.committedRows).toLocaleString('en-ZA')}`);
+    if(detail.inserted!=null||detail.updated!=null||detail.deleted!=null){
+      const mutations=`+${Number(detail.inserted||0).toLocaleString('en-ZA')} new · ~${Number(detail.updated||0).toLocaleString('en-ZA')} updated · -${Number(detail.deleted||0).toLocaleString('en-ZA')} deleted`;
+      const history=Number(detail.historyRows||0);
+      pieces.push(history>0 ? `${mutations} · ${history.toLocaleString('en-ZA')} dated history observation(s)` : `${mutations}${Number(detail.skipped||0)>0?` · ${Number(detail.skipped).toLocaleString('en-ZA')} stale skipped`:''}`);
+    }
+    host.innerHTML = `<div class="job-progress">
+      <strong>${esc(message)}</strong>
       <div class="job-progress-track"><div class="job-progress-fill" style="width:${pct}%"></div></div>
-      <div class="job-progress-meta"><span>${esc(phase || 'PROCESSING')}</span><strong>${pct}%</strong></div>
+      <div class="job-progress-meta"><span>${esc(phase)}</span><strong>${pct}%</strong></div>
+      ${pieces.length?`<div class="job-progress-detail">${pieces.map(esc).join(' · ')}</div>`:''}
     </div>`;
   };
 
-  const getFinal = async () => {
+  const readState = async () => {
     const r = await fetch(url, { cache: 'no-store' });
     const d = await r.json().catch(() => null);
     if(!r.ok || !d) throw new Error(d?.error || `${label} status check failed: HTTP ${r.status}`);
+    return d;
+  };
+
+  const finishState = async (d) => {
     if(d.status === 'DONE') return d.result || d;
     if(d.status === 'FAILED') throw new Error(d.error || `${label} failed`);
+    showProgress(d);
+    if(onProgress) onProgress(d);
     return null;
   };
 
   const fallbackPoll = async () => {
     while(Date.now() - started < 30 * 60 * 1000){
-      const done = await getFinal();
+      const state=await readState();
+      const done=await finishState(state);
       if(done) return done;
-      showProgress(0, 'PROCESSING', `${label} is still running`);
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 1500));
     }
-    throw new Error(`${label} is still running after 30 minutes. Check Import history before retrying.`);
+    throw new Error(`${label} is still running after 30 minutes. Import history continues to update automatically.`);
   };
 
   if(window.EventSource && jobId){
@@ -1649,10 +1801,12 @@ async function pollJob(url, label){
         source.addEventListener('job.progress', async event => {
           try{
             const p = JSON.parse(event.data || '{}');
-            showProgress(p.progress, p.phase, p.message || label);
+            showProgress(p);
+            if(onProgress) onProgress(p);
             if(p.status === 'DONE' || p.status === 'FAILED'){
               try{
-                const final = await getFinal();
+                const finalState=await readState();
+                const final=await finishState(finalState);
                 if(final) finish(resolve, final);
               }catch(e){ finish(reject, e); }
             }
@@ -1798,10 +1952,13 @@ async function revert(batchId){
   }
 }
 
+let HISTORY_LOADING=false;
 async function loadHistory(){
+  if(HISTORY_LOADING) return;
+  HISTORY_LOADING=true;
   const body=$('#hist-body');
   try{
-    const r = await fetch(`${API}/api/admin/batches`);
+    const r = await fetch(`${API}/api/admin/batches`,{cache:'no-store'});
     let batches=[];
     try{ batches = await r.json(); }catch(_){ }
     if(!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -1809,19 +1966,38 @@ async function loadHistory(){
       body.innerHTML = '<tr><td colspan="7" class="muted" style="padding:16px 10px;">No imports yet.</td></tr>';
       return;
     }
-    body.innerHTML = batches.map(b=>`<tr>
-      <td>${(MANIFEST.reports.find(x=>x.key===b.reportKey)||{}).title||b.reportKey}</td>
-      <td class="muted">${esc(b.filename)}</td>
-      <td>${esc(b.rowCount)}</td>
-      <td><span class="st ${esc(b.status)}">${esc(b.status)}</span></td>
-      <td class="muted">${fmtDate(b.uploadedAt)}</td>
-      <td><a class="btn btn-ghost" style="padding:5px 11px;font-size:12px;display:inline-block;" href="${API}/api/admin/batches/${esc(b.id)}/download" download>Download CSV</a></td>
-      <td>${b.status==='COMMITTED' && b.revertable
-        ? `<button class="btn btn-ghost" style="padding:5px 11px;font-size:12px;" onclick="revert('${esc(b.id)}')">Revert</button>`
-        : (b.status==='COMMITTED' ? `<span class="muted" style="font-size:11px;" title="${esc(b.revertReason||'This batch cannot be safely reverted.')}">Not reversible</span>` : '')}</td>
-    </tr>`).join('');
+    body.innerHTML = batches.map(b=>{
+      const total=Number(b.rowCount||0);
+      const inserted=Number(b.insertedCount||0), updated=Number(b.updatedCount||0), deleted=Number(b.deletedCount||0);
+      const applied=inserted+updated+deleted;
+      const isLiveCommit=b.status==='VALIDATED' && applied>0;
+      const statusClass=isLiveCommit?'COMMITTING':b.status;
+      const statusLabel=isLiveCommit?'COMMITTING':(b.status==='VALIDATED'?'VALIDATED · NOT LIVE':b.status);
+      const historicalFeed=['employees','debt_accounts','policies'].includes(b.reportKey);
+      const authoritative=String(b.uploadedBy||'').includes('(full-refresh)');
+      const remainder=b.status==='COMMITTED'?Math.max(0,total-applied):0;
+      let detail='';
+      if(b.status==='VALIDATED' && applied===0) detail=`validated · 0 current-projection changes applied yet`;
+      else if(isLiveCommit) detail=`${applied.toLocaleString('en-ZA')} current-projection change(s) applied so far`;
+      else if(b.status==='COMMITTED' && historicalFeed) detail=`processed from source · +${inserted.toLocaleString('en-ZA')} current new · ~${updated.toLocaleString('en-ZA')} current rewritten · -${deleted.toLocaleString('en-ZA')} deleted · ${remainder.toLocaleString('en-ZA')} dated observation(s) retained in history${authoritative?' · authoritative rebuild':''}`;
+      else if(b.status==='COMMITTED') detail=`processed from source · +${inserted.toLocaleString('en-ZA')} new · ~${updated.toLocaleString('en-ZA')} rewritten · -${deleted.toLocaleString('en-ZA')} deleted${remainder>0 && !authoritative?` · ${remainder.toLocaleString('en-ZA')} stale skipped`:''}${authoritative?' · authoritative rebuild':''}`;
+      else detail=`rows`;
+      return `<tr>
+        <td>${(MANIFEST?.reports?.find(x=>x.key===b.reportKey)||{}).title||esc(b.reportKey)}</td>
+        <td class="muted">${esc(b.filename)}</td>
+        <td><strong>${total.toLocaleString('en-ZA')}</strong><span class="history-row-detail ${isLiveCommit?'live':''}">${esc(detail)}</span></td>
+        <td><span class="st ${esc(statusClass)}">${esc(statusLabel)}</span></td>
+        <td class="muted">${fmtDate(b.committedAt||b.uploadedAt)}</td>
+        <td><a class="btn btn-ghost" style="padding:5px 11px;font-size:12px;display:inline-block;" href="${API}/api/admin/batches/${esc(b.id)}/download" download>Download CSV</a></td>
+        <td>${b.status==='COMMITTED' && b.revertable
+          ? `<button class="btn btn-ghost" style="padding:5px 11px;font-size:12px;" onclick="revert('${esc(b.id)}')">Revert</button>`
+          : (b.status==='COMMITTED' ? `<span class="muted" style="font-size:11px;" title="${esc(b.revertReason||'This batch cannot be safely reverted.')}">Not reversible</span>` : '')}</td>
+      </tr>`;
+    }).join('');
   }catch(e){
     body.innerHTML = `<tr><td colspan="7" class="muted" style="padding:16px 10px;color:#b5391f;">Could not load import history: ${esc(e.message)}</td></tr>`;
+  }finally{
+    HISTORY_LOADING=false;
   }
 }
 
@@ -1837,15 +2013,15 @@ function installCompactCollapse(){
     head.appendChild(btn);
   });
 }
-window.addEventListener("load", () => { installCompactCollapse(); boot(); }, { once: true });
+window.addEventListener("load", () => boot(), { once: true });
+window.setInterval(() => {
+  if(document.visibilityState !== 'visible') return;
+  loadHistory();
+}, 1500);
 window.setInterval(() => {
   if(document.visibilityState !== 'visible') return;
   Promise.allSettled([loadAdminSecuritySummary(), loadComplianceSummary()]);
 }, 30000);
-</script>
-<script>
-/* Dark mode for admin pages: same engine, default portal brand. Light mode stays on the page's original palette. */
-if(window.BrandEngine){ BrandEngine.themeController().set({ brand:{ accentColor:'7D2FA3', primaryColor:'B15BE8', navyColor:'2B1B68' }, light:null }); }
 </script>
 <script src="/static/shell.js?v=1"></script>
 <script>
@@ -1943,13 +2119,27 @@ async function loadMLOpsAlert(){
       const reportKey=e.metadata?.reportKey||'dataset';
       if(!latestByReport.has(reportKey)) latestByReport.set(reportKey,e);
     }
-    const issue=[...latestByReport.values()].find(e=>e.status && e.status!=='PASS');
-    if(!issue) return;
+    const latest=[...latestByReport.values()].filter(e=>e.status && e.status!=='PASS');
+    const issue=latest.find(e=>e.status==='QUARANTINE') || latest.find(e=>e.status==='REVIEW');
+    if(!issue){
+      card.classList.remove('show');
+      document.getElementById('mlops-alert-detail')?.classList.remove('open');
+      return;
+    }
     card.classList.add('show');
     const meta=issue.metadata||{};
     const findings=Array.isArray(meta.findings)?meta.findings:[];
-    document.getElementById('mlops-alert-summary').textContent=
-      `${issue.status}: ${meta.reportKey||'incoming dataset'} was blocked before live-table commit. ${meta.findingCount||findings.length||0} issue(s) require review.`;
+    const blocking=issue.status==='QUARANTINE';
+    const badge=document.getElementById('mlops-alert-badge');
+    if(badge){
+      badge.textContent=blocking?'ACTION REQUIRED':'REVIEW ONLY';
+      badge.style.color=blocking?'#b5391f':'#8a5a10';
+      badge.style.background=blocking?'#fdecea':'#fff8e8';
+      badge.style.borderColor=blocking?'#f3c9c1':'#efd49b';
+    }
+    document.getElementById('mlops-alert-summary').textContent=blocking
+      ? `QUARANTINE: ${meta.reportKey||'incoming dataset'} was blocked before live-table commit. ${meta.findingCount||findings.length||0} issue(s) require action.`
+      : `REVIEW: ${meta.reportKey||'incoming dataset'} loaded successfully with ${meta.findingCount||findings.length||0} advisory warning(s). No rows were blocked.`;
     const detail=document.getElementById('mlops-alert-detail');
     detail.innerHTML=
       `<div class="mlops-summary"><strong>What is off:</strong> ${esc(issue.modelKey||'data-quality')} detected abnormal incoming data.</div>`+
@@ -1972,6 +2162,7 @@ async function loadAdminSecuritySummary(){
   }catch(_){}
 }
 </script>
+<script src="/static/admin-source-status.js?v=1"></script>
 </body>
 </html>
 <script>
