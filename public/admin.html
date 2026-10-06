@@ -2136,13 +2136,23 @@ async function loadMLOpsAlert(){
       const reportKey=e.metadata?.reportKey||'dataset';
       if(!latestByReport.has(reportKey)) latestByReport.set(reportKey,e);
     }
-    const issue=[...latestByReport.values()].find(e=>e.status && e.status!=='PASS');
+    const latest=[...latestByReport.values()].filter(e=>e.status && e.status!=='PASS');
+    const issue=latest.find(e=>e.status==='QUARANTINE') || latest.find(e=>e.status==='REVIEW');
     if(!issue) return;
     card.classList.add('show');
     const meta=issue.metadata||{};
     const findings=Array.isArray(meta.findings)?meta.findings:[];
-    document.getElementById('mlops-alert-summary').textContent=
-      `${issue.status}: ${meta.reportKey||'incoming dataset'} was blocked before live-table commit. ${meta.findingCount||findings.length||0} issue(s) require review.`;
+    const blocking=issue.status==='QUARANTINE';
+    const badge=document.getElementById('mlops-alert-badge');
+    if(badge){
+      badge.textContent=blocking?'ACTION REQUIRED':'REVIEW ONLY';
+      badge.style.color=blocking?'#b5391f':'#8a5a10';
+      badge.style.background=blocking?'#fdecea':'#fff8e8';
+      badge.style.borderColor=blocking?'#f3c9c1':'#efd49b';
+    }
+    document.getElementById('mlops-alert-summary').textContent=blocking
+      ? `QUARANTINE: ${meta.reportKey||'incoming dataset'} was blocked before live-table commit. ${meta.findingCount||findings.length||0} issue(s) require action.`
+      : `REVIEW: ${meta.reportKey||'incoming dataset'} loaded successfully with ${meta.findingCount||findings.length||0} advisory warning(s). No rows were blocked.`;
     const detail=document.getElementById('mlops-alert-detail');
     detail.innerHTML=
       `<div class="mlops-summary"><strong>What is off:</strong> ${esc(issue.modelKey||'data-quality')} detected abnormal incoming data.</div>`+
