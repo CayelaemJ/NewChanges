@@ -472,7 +472,9 @@
             <button class="btn" onclick="saveInteg()">Save settings</button>
             <button class="btn btn-ghost" onclick="testInteg()">Test source</button>
             <button class="btn" style="background:#b15be8;color:#fff;border-color:#b15be8;" onclick="syncNow()">Sync now</button>
+            <button id="btn-refresh-now" class="btn btn-ghost" onclick="refreshNow(this)" title="Run the full governed purge, authoritative reload, snapshot rebuild and publish cycle now">Refresh now</button>
           </div>
+          <div class="muted" style="margin-top:8px;max-width:820px;line-height:1.5;"><b>Sync now</b> applies incremental source changes. <b>Refresh now</b> runs the full purge-and-reload cycle; dashboard users keep seeing the last successful published data until the new refresh completes successfully.</div>
           <div id="integ-result" style="margin-top:12px;"></div>
           <div style="margin-top:18px;">
             <div style="font-size:12.5px;font-weight:700;color:#5b6b7a;margin-bottom:8px;">Recent syncs</div>
@@ -889,6 +891,30 @@ async function syncNow(){
     }, 2000);
   }catch(e){ $('#integ-result').innerHTML = `<div class="banner err">✕ ${esc(e.message)}</div>`; }
 }
+async function refreshNow(btn){
+  if(!confirm('Run a full data refresh now?\n\nThis will preflight the source, purge the working source-derived dashboard data, reload all canonical feeds, rebuild snapshots, and publish only if the full refresh succeeds.\n\nDashboard users will continue seeing the last successful published dashboard while this runs.')) return;
+  const original=btn?.textContent||'Refresh now';
+  if(btn){ btn.disabled=true; btn.textContent='Refreshing…'; }
+  $('#integ-result').innerHTML = '<div class="banner ok">Full refresh started. The last successful dashboard remains published while source data is rebuilt…</div>';
+  try{
+    const r=await fetch(`${API}/api/admin/integration/refresh`,{method:'POST'});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok || !d.ok) throw new Error(d.error||d.note||'Full refresh failed');
+    const detail=[
+      d.purgedRows!=null ? `${Number(d.purgedRows).toLocaleString('en-ZA')} source rows purged` : null,
+      d.overwrittenRows!=null ? `${Number(d.overwrittenRows).toLocaleString('en-ZA')} rows committed` : null,
+      d.publishedDashboards!=null ? `${Number(d.publishedDashboards).toLocaleString('en-ZA')} dashboard snapshot${Number(d.publishedDashboards)===1?'':'s'} published` : null,
+    ].filter(Boolean).join(' · ');
+    $('#integ-result').innerHTML = `<div class="banner ok">✓ Full refresh completed and published.${detail?' '+esc(detail)+'.':''}</div>`;
+  }catch(e){
+    $('#integ-result').innerHTML = `<div class="banner err">✕ Refresh did not publish a new dashboard. The last successful dashboard remains visible. Reason: ${esc(e.message)}</div>`;
+  }finally{
+    if(btn){ btn.disabled=false; btn.textContent=original; }
+    loadInteg();
+    loadIntegLogs();
+  }
+}
+
 async function loadIntegLogs(){
   try{
     const logs = await fetch(`${API}/api/admin/integration/logs`).then(r=>r.json());
