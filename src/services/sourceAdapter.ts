@@ -58,7 +58,7 @@ export interface IntegrationSourceConfig {
 export interface SourceAdapter {
   mode: SourceMode;
   label: string;
-  fetchReport(reportKey: string, window?: SourceWindow, sourceViewOverride?: string | null, options?: { useReplica?: boolean }): Promise<SourceFetchResult>;
+  fetchReport(reportKey: string, window?: SourceWindow, sourceViewOverride?: string | null, options?: { useReplica?: boolean; authoritative?: boolean }): Promise<SourceFetchResult>;
   test(): Promise<{ ok: true; note: string; details?: unknown }>;
   describe?(reportKey: string): Promise<{ database: string | null; totalRows: number; newest: string | null; location: string }>;
   watermark?(reportKey: string): Promise<{ newest: string | null; location: string }>;
@@ -274,7 +274,7 @@ interface SqlQueryResult {
 
 interface SqlExecutor {
   dialect: SqlDialect;
-  queryReport(reportKey: string, window: SourceWindow, maxRows: number, sourceViewOverride?: string | null): Promise<SqlQueryResult>;
+  queryReport(reportKey: string, window: SourceWindow, maxRows: number | null, sourceViewOverride?: string | null): Promise<SqlQueryResult>;
   probe(reportKey: string): Promise<string[]>;
   describe(reportKey: string): Promise<{ database: string | null; totalRows: number; newest: string | null }>;
   watermark(reportKey: string): Promise<{ newest: string | null }>;
@@ -328,8 +328,12 @@ async function openPostgresExecutor(config: IntegrationSourceConfig): Promise<Sq
       const where: string[] = [];
       if (window.since) { params.push(window.since); where.push(`source_updated_at > $${params.length}`); }
       if (window.through) { params.push(window.through); where.push(`source_updated_at <= $${params.length}`); }
-      params.push(maxRows + 1);
-      const sql = `SELECT * FROM ${view}${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY source_updated_at ASC LIMIT $${params.length}`;
+      let limitSql = "";
+      if (maxRows != null) {
+        params.push(maxRows + 1);
+        limitSql = ` LIMIT ${params.length}`;
+      }
+      const sql = `SELECT * FROM ${view}${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY source_updated_at ASC${limitSql}`;
       const result = await client.query(sql, params);
       return { rows: result.rows, columns: result.fields?.map((f: any) => String(f.name)) ?? [] };
     },
@@ -381,8 +385,12 @@ async function openMysqlExecutor(config: IntegrationSourceConfig): Promise<SqlEx
       const where: string[] = [];
       if (window.since) { params.push(window.since); where.push("source_updated_at > ?"); }
       if (window.through) { params.push(window.through); where.push("source_updated_at <= ?"); }
-      params.push(maxRows + 1);
-      const sql = `SELECT * FROM ${view}${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY source_updated_at ASC LIMIT ?`;
+      let limitSql = "";
+      if (maxRows != null) {
+        params.push(maxRows + 1);
+        limitSql = " LIMIT ?";
+      }
+      const sql = `SELECT * FROM ${view}${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY source_updated_at ASC${limitSql}`;
       const [rows, fields] = await connection.query({ sql, timeout: queryTimeout }, params);
       return {
         rows: Array.isArray(rows) ? rows as Record<string, unknown>[] : [],
@@ -435,11 +443,12 @@ async function openMssqlExecutor(config: IntegrationSourceConfig): Promise<SqlEx
     async queryReport(reportKey, window, maxRows, sourceViewOverride) {
       const view = qualifiedView("MSSQL", config, reportKey, sourceViewOverride);
       const request = pool.request();
-      request.input("limit", mssql.Int, maxRows + 1);
+      if (maxRows != null) request.input("limit", mssql.Int, maxRows + 1);
       const where: string[] = [];
       if (window.since) { request.input("since", mssql.DateTimeOffset, window.since); where.push("source_updated_at > @since"); }
       if (window.through) { request.input("through", mssql.DateTimeOffset, window.through); where.push("source_updated_at <= @through"); }
-      const sql = `SELECT TOP (@limit) * FROM ${view}${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY source_updated_at ASC`;
+      const top = maxRows == null ? "" : "TOP (@limit) ";
+      const sql = `SELECT ${top}* FROM ${view}${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY source_updated_at ASC`;
       const result = await request.query(sql);
       const rows = Array.isArray(result.recordset) ? result.recordset as Record<string, unknown>[] : [];
       const columns = result.recordset?.columns ? Object.keys(result.recordset.columns) : (rows[0] ? Object.keys(rows[0]) : []);
@@ -555,12 +564,13 @@ async function createSqlAdapter(config: IntegrationSourceConfig): Promise<Source
     throw new Error(`Could not open a ${dialect} connection to ${config.sqlHost}:${config.sqlPort ?? "(default port)"} — ${note}. If this looks like a protocol/handshake error rather than an auth or network error, double-check that "SQL platform" in Admin is actually set to the database engine you're running (and that Save settings was clicked after changing it), then re-test.`);
   }
 
-  async function fetchReport(reportKey: string, window: SourceWindow = {}, sourceViewOverride?: string | null, options?: { useReplica?: boolean }): Promise<SourceFetchResult> {
+  async function fetchReport(reportKey: string, window: SourceWindow = {}, sourceViewOverride?: string | null, options?: { useReplica?: boolean; authoritative?: boolean }): Promise<SourceFetchResult> {
     const selectedExecutor = options?.useReplica ? replicaExecutor : executor;
     if (options?.useReplica && !selectedExecutor) throw new Error("Read replica is required for " + reportKey + ", but no approved replica is configured.");
-    const result = await (selectedExecutor ?? executor).queryReport(reportKey, window, maxRows, sourceViewOverride);
-    if (result.rows.length > maxRows) {
-      throw new Error(`${reportKey}: SQL extraction exceeded the configured ${maxRows.toLocaleString("en-ZA")} row safety limit for one sync window. Increase sync frequency or sqlMaxRowsPerReport.`);
+    const effectiveMaxRows = options?.authoritative ? null : maxRows;
+    const result = await (selectedExecutor ?? executor).queryReport(reportKey, window, effectiveMaxRows, sourceViewOverride);
+    if (effectiveMaxRows != null && result.rows.length > effectiveMaxRows) {
+      throw new Error(`${reportKey}: SQL extraction exceeded the configured ${effectiveMaxRows.toLocaleString("en-ZA")} row safety limit for one sync window. Increase sync frequency or sqlMaxRowsPerReport.`);
     }
     return {
       records: normalizeSqlRows(reportKey, result.rows),
