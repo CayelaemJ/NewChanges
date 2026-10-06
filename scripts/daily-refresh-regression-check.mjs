@@ -10,6 +10,8 @@ const server = read("src/server.ts");
 const dashboard = read("public/dashboard.html");
 const sourceAdapter = read("src/services/sourceAdapter.ts");
 const admin = read("public/admin.html");
+const users = read("public/users.html");
+const sourceStatus = read("public/admin-source-status.js");
 
 const failures = [];
 const must = (ok, message) => { if (!ok) failures.push(message); };
@@ -50,6 +52,10 @@ must(sync.includes('commitSyncRows(reportKey, result.rows as Record<string, any>
 must(sync.includes('authoritative: authoritativeOverwrite'), "authoritative source extraction must be explicitly requested");
 must(sourceAdapter.includes('const effectiveMaxRows = options?.authoritative ? null : maxRows'), "authoritative SQL rebuild must bypass the incremental per-feed row cap");
 must(sourceAdapter.includes('maxRows: number | null'), "SQL executors must support uncapped authoritative reads");
+must(sourceAdapter.includes("SOURCE_CONFIG_LOCKED") && sourceAdapter.includes("effectiveSourceConfig"), "admin-selected source settings must be able to become the effective runtime database unless explicit environment locking is enabled");
+must(sync.includes("effectiveSqlDatabase") && sync.includes('lastSyncStatus: "PROCESSING"'), "admin status must expose the effective database and publish an in-flight sync state");
+must(admin.includes("/static/admin-source-status.js") && dashboard.includes("/static/admin-source-status.js") && users.includes("/static/admin-source-status.js"), "admin-only connected-source status must be present on Admin, Dashboard and Users");
+must(sourceStatus.includes("/api/admin/integration") && sourceStatus.includes("Connected source:") && sourceStatus.includes("COMPLETE"), "source status widget must use the protected admin integration endpoint and make completion explicit");
 must(admin.includes('Reset always reloads.') && !admin.includes('id="reset-then-sync"'), "Reset UI must always reload from source and must not offer an optional sync checkbox");
 must(imports.includes('options.authoritativeOverwrite || historicalObservationFeed ? 0 : projectionOnly'), "authoritative overwrite must not report source rows as stale skips");
 must(server.includes('triggerRefreshNow("reset")') && !server.includes('const result = await resetAllData()'), "Reset must be a single authoritative reset+reload operation, never a raw clear followed by optional sync");
