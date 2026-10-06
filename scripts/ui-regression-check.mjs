@@ -14,6 +14,8 @@ const server = read("src/server.ts");
 const snap = read("src/services/snapshotBuilder.ts");
 const score = read("src/services/scoreEngine.ts");
 const imports = read("src/services/importService.ts");
+const darkTheme = read("public/dark-theme-v2.css");
+const brandEngine = read("public/brand-engine.js");
 const failures=[];
 const must=(ok,msg)=>{ if(!ok) failures.push(msg); };
 const everyPage=(predicate)=>Object.entries(pages).every(([name,src])=>predicate(src,name));
@@ -42,7 +44,6 @@ must(pages.users.includes('showUsersLoadError') && pages.users.includes('Could n
 must(pages.users.includes("const users=await getJson('/api/users')"), 'Users page must fetch the admin user list through the checked JSON helper');
 
 must(pages.admin.includes('function openReset()') && pages.admin.includes('async function doReset()') && pages.admin.includes('/api/admin/reset-all'), 'Administration reset control must have working open/reset handlers');
-must(pages.admin.includes('id="btn-refresh-now"') && pages.admin.includes('async function refreshNow(btn)') && pages.admin.includes('/api/admin/integration/refresh'), 'Administration must expose the governed full Refresh now control');
 must(pages.admin.includes('id="btn-refresh-now"') && pages.admin.includes('async function refreshNow(btn)') && pages.admin.includes('/api/admin/integration/refresh'), 'Administration must expose the governed full Refresh now control');
 must(pages.admin.includes('b.revertable') && pages.admin.includes('Could not revert this import'), 'Import history must expose safe revert controls and visible revert failures');
 must(server.includes('revertable') && server.includes('reply.code(409)') && imports.includes('batch.reportKey === "employers"'), 'Backend must publish revertability and safely support insert-only employer rollback');
@@ -98,10 +99,6 @@ must(dashboardCss.includes('.drawer-outcome .drawer-stat-grid .dsv') && dashboar
 must(pages.dashboard.includes('function countAxisTicks(maxValue,target=5)') && pages.dashboard.includes('function shortTrendLabel(label)'), "outcome completion trends must use integer ticks and compact month labels");
 must(pages.dashboard.includes('class="outcome-trend-chart"'), "outcome completion trend must use its responsive chart class");
 must(pages.dashboard.includes('/static/dashboard.css?v=0.11.1'), "dashboard must cache-bust the repaired drilldown stylesheet");
-must(pages.dashboard.includes("function openDrawer(title, sub, bodyHTML, kind='')") && pages.dashboard.includes("'drawer drawer-outcome'"), "outcome drilldowns must receive the drawer-outcome class");
-must(dashboardCss.includes('.drawer-outcome .drawer-stat-grid .dsv') && dashboardCss.includes('text-overflow:clip'), "outcome drilldown values must never be ellipsized");
-must(pages.dashboard.includes('function countAxisTicks(maxValue,target=5)') && pages.dashboard.includes('function shortTrendLabel(label)'), "outcome count charts must use integer ticks and compact month labels");
-must(pages.dashboard.includes('class="outcome-trend-chart"'), "outcome completion trend must use the dedicated responsive chart class");
 must(pages.dashboard.includes('function renderPeriodLineChart') && !pages.dashboard.includes('period-bar-chart'), "monthly and quarter comparisons must use line charts, not bar fallback cards");
 must((pages.dashboard.includes('pc.current.label') && pages.dashboard.includes('pc.previous.label')) || (pages.dashboard.includes('DATA.filterContext?.comparison?.current') && pages.dashboard.includes('DATA.filterContext?.comparison?.previous')), "comparison charts must use exact current and previous period labels");
 must(!pages.dashboard.includes('cumulative value drawn'), "monthly EWA chart copy must not describe a monthly series as cumulative");
@@ -140,6 +137,16 @@ for (const page of ["dashboard", "admin", "users"]) {
 }
 must(read("public/dashboard.html").includes("BrandEngine.themeController()"), "dashboard theme must be applied through the brand engine controller");
 must(read("public/admin.html").includes("BrandEngine.extractFromImage"), "admin logo detection must use the brand engine");
+must(server.includes("themeForEmployer") && server.includes("payload.theme = await themeForEmployer(employerId)") && server.includes("payload.theme = await themeForEmployer(employer.id)"), "dashboard APIs must publish the selected employer's white-label theme");
+must(pages.dashboard.includes("applyTheme(live.theme || me?.theme, null)"), "selected employer branding must replace the admin shell brand after dashboard data loads");
+must(pages.admin.includes("function partnerPreviewTokens(p)") && pages.admin.includes("BrandEngine.themeTokens(brand,'dark')"), "partner cards must derive their preview palette through Brand Engine");
+must(pages.admin.includes("background:var(--preview-surface,var(--brand-primary))") && pages.admin.includes("color:var(--preview-text,#fff)"), "partner preview must use its own contrast-safe surface and foreground");
+must(pages.admin.includes(".cp-user") && pages.admin.includes("background:var(--preview-blue);color:var(--preview-on-accent)") && pages.admin.includes(".cp-bars i") && pages.admin.includes("background:var(--preview-blue);animation:cpBarIn"), "client preview accents must come from the client brand, never the global portal brand");
+must(pages.admin.includes("applyAdminBrandTheme(me.theme)") && !pages.admin.includes("brand:{ accentColor:'7D2FA3', primaryColor:'B15BE8', navyColor:'2B1B68' }"), "Administration dark mode must derive from the authenticated Brand Engine theme rather than force purple");
+must(pages.users.includes("applyUsersBrandTheme(ME.theme)") && !pages.users.includes("brand:{ accentColor:'7D2FA3', primaryColor:'B15BE8', navyColor:'2B1B68' }"), "Users dark mode must derive from the authenticated Brand Engine theme rather than force purple");
+must(["dashboard","admin","users"].every(page=>pages[page].includes("/static/brand-engine.js?v=2") && pages[page].includes("/static/dark-theme-v2.css?v=3")), "protected pages must cache-bust the repaired Brand Engine and dark theme assets");
+must(darkTheme.includes(".security-stat") && darkTheme.includes(".security-panel") && darkTheme.includes(".compliance-box") && darkTheme.includes(".ingestion-method") && darkTheme.includes(".client-preview-dialog"), "dark mode must remap admin/users/security/client-preview surfaces instead of leaving white islands");
+must(brandEngine.includes("contrast('FFFFFF', acc) >= 4.5"), "dark-mode on-accent foreground must be chosen from the rendered contrast-adjusted accent");
 must(/background:var\(--white,#fff\)!important/.test(read("public/enterprise.css")), "enterprise surfaces must be token-driven so dark mode can restyle them");
 if(failures.length){ console.error('UI regression check failed:\n- '+failures.join('\n- ')); process.exit(1); }
 console.log('UI regression check passed: v0.10.0 navigation, SQL integration, users/import controls, live-data availability and demo-leak safeguards are present.');
