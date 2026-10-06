@@ -665,7 +665,7 @@ async function commitRowsChunk(
 }
 
 
-const SYNC_BULK_CHUNK_SIZE = Number(process.env.SYNC_BULK_CHUNK_SIZE ?? 5000);
+export const SYNC_BULK_CHUNK_SIZE = Math.max(1000, Math.min(50000, Number(process.env.SYNC_BULK_CHUNK_SIZE ?? 20000) || 20000));
 const SYNC_FUNCTIONS: Record<string, string> = {
   employers: "sync_upsert_employers",
   workforce_snapshots: "sync_upsert_workforce_snapshots",
