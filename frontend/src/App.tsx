@@ -184,7 +184,7 @@ function DashboardView({me}:{me:Me}) {
   return <main className="dashboard-shell" style={themeStyle}>
     <div className="topbar">
       <div className="topbar-inner">
-        <div className="logo"><img src="/static/logo.png" alt="empower-fin Dashboard Portal" /><span className="logo-text">{me.theme?.name||""}</span></div>
+        <div className="logo"><img src={me.theme?.logoDataUrl||"/static/logo.png"} alt={me.theme?.name||"empower-fin Dashboard Portal"} data-custom-logo={me.theme?.logoDataUrl?"1":undefined} /><span className="logo-text">{me.theme?.name||""}</span></div>
         <div className="topbar-divider" />
         <div className="audience-switch"><button className="on" type="button">Employer view</button><button type="button" disabled>Portfolio view</button></div>
         <div className="topbar-spacer" />
