@@ -32,3 +32,6 @@ if(failures.length){console.error("PERIOD COMPARISON REGRESSION CHECK FAILED:");
 console.log("Period comparison regression checks passed.");
 
 must(snap.includes('DASHBOARD_CACHE_SCHEMA') && snap.includes('financial-comparison-v2'),"dashboard cache must be versioned when the financial comparison payload shape changes");
+
+// Executive Insight receives full rand values from periodComparison; never multiply by 1,000.
+must(dash.includes("return 'R '+Math.round(n).toLocaleString('en-ZA');") && !dash.includes("Math.round(n*1000)"),"formatRandThousands must not rescale full rand values");
