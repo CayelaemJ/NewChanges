@@ -557,14 +557,15 @@ BEGIN
   ),
   ups AS (
     INSERT INTO "SalaryAdvance"
-      ("id","advanceRef","employerId","employeeId","clientId","amountCents","status",
+      ("advanceRef","employerId","employeeId","clientId","amountCents","status",
        "bankVerified","blacklisted","advancedAt","sourceUpdatedAt","sourceDeletedAt","updatedAt")
-    SELECT salary_advance_id, salary_advance_id, employer_ref, employee_id, client_id,
+    SELECT salary_advance_id, employer_ref, employee_id, client_id,
            amount_cents, status, (bank_status = 'PASSED'), blacklisted, advanced_at,
            source_updated_at,
            CASE WHEN is_deleted THEN source_updated_at ELSE NULL END, NOW()
     FROM resolved
-    ON CONFLICT ("id") DO UPDATE SET
+    ON CONFLICT ("advanceRef") DO UPDATE SET
+      "employerId"=EXCLUDED."employerId",
       "employeeId"=EXCLUDED."employeeId", "clientId"=EXCLUDED."clientId",
       "amountCents"=EXCLUDED."amountCents", "status"=EXCLUDED."status",
       "bankVerified"=EXCLUDED."bankVerified", "blacklisted"=EXCLUDED."blacklisted",

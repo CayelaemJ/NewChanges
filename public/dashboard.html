@@ -2234,9 +2234,12 @@ function formatRand(v){
   return 'R '+Math.round(n).toLocaleString('en-ZA');
 }
 function formatRandThousands(v){
+  // Historical helper name retained for compatibility. Dashboard comparison
+  // payloads are already full rand values; multiplying by 1,000 corrupts
+  // Executive Insight (e.g. R56,899 -> R56,899,000).
   const n=Number(v);
   if(!Number.isFinite(n)) return 'Not available';
-  return 'R '+Math.round(n*1000).toLocaleString('en-ZA');
+  return 'R '+Math.round(n).toLocaleString('en-ZA');
 }
 function niceTicks(values,count=5){
   const nums=values.map(Number).filter(Number.isFinite);
