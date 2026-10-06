@@ -292,8 +292,8 @@
     var loadingBg = lch(0.38, tint * 0.85, hue);
     var loadingSurface = lch(0.46, tint * 0.72, hue);
     var loadingLine = lch(0.56, tint * 0.60, hue);
-    var loadingInk = ensureContrast(lch(0.97, 0.008, hue), loadingSurface, 8);
-    var loadingMuted = ensureContrast(lch(0.84, 0.012, hue), loadingSurface, 5.5);
+    var loadingInk = ensureContrast(lch(0.97, 0.008, hue), loadingSurface, 5);
+    var loadingMuted = ensureContrast(lch(0.84, 0.012, hue), loadingSurface, 4.5);
     t['--dm-bg'] = pound(bg); t['--dm-surface'] = pound(surf); t['--dm-surface-2'] = pound(surf2); t['--dm-line'] = pound(line);
     t['--dm-loading-bg'] = pound(loadingBg); t['--dm-loading-surface'] = pound(loadingSurface); t['--dm-loading-line'] = pound(loadingLine);
     t['--dm-loading-ink'] = pound(loadingInk); t['--dm-loading-muted'] = pound(loadingMuted);
