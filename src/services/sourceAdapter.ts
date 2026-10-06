@@ -61,6 +61,7 @@ export interface SourceAdapter {
   fetchReport(reportKey: string, window?: SourceWindow, sourceViewOverride?: string | null, options?: { useReplica?: boolean }): Promise<SourceFetchResult>;
   test(): Promise<{ ok: true; note: string; details?: unknown }>;
   describe?(reportKey: string): Promise<{ database: string | null; totalRows: number; newest: string | null; location: string }>;
+  watermark?(reportKey: string): Promise<{ newest: string | null; location: string }>;
   close(): Promise<void>;
 }
 
@@ -276,6 +277,7 @@ interface SqlExecutor {
   queryReport(reportKey: string, window: SourceWindow, maxRows: number, sourceViewOverride?: string | null): Promise<SqlQueryResult>;
   probe(reportKey: string): Promise<string[]>;
   describe(reportKey: string): Promise<{ database: string | null; totalRows: number; newest: string | null }>;
+  watermark(reportKey: string): Promise<{ newest: string | null }>;
   close(): Promise<void>;
 }
 
@@ -342,6 +344,11 @@ async function openPostgresExecutor(config: IntegrationSourceConfig): Promise<Sq
       const row = r.rows[0] ?? {};
       return { database: row.db ?? null, totalRows: Number(row.n ?? 0), newest: row.newest ?? null };
     },
+    async watermark(reportKey) {
+      const view = qualifiedView("POSTGRESQL", config, reportKey);
+      const r = await client.query(`SELECT MAX(source_updated_at)::text AS newest FROM ${view}`);
+      return { newest: r.rows?.[0]?.newest ?? null };
+    },
     async close() { await client.end(); },
   };
 }
@@ -393,6 +400,12 @@ async function openMysqlExecutor(config: IntegrationSourceConfig): Promise<SqlEx
       const row = Array.isArray(rows) ? rows[0] ?? {} : {};
       return { database: row.db ?? null, totalRows: Number(row.n ?? 0), newest: row.newest ?? null };
     },
+    async watermark(reportKey) {
+      const view = qualifiedView("MYSQL", config, reportKey);
+      const [rows]: any = await connection.query({ sql: `SELECT CAST(MAX(source_updated_at) AS CHAR) AS newest FROM ${view}`, timeout: queryTimeout });
+      const row = Array.isArray(rows) ? rows[0] ?? {} : {};
+      return { newest: row.newest ?? null };
+    },
     async close() { await connection.end(); },
   };
 }
@@ -443,6 +456,12 @@ async function openMssqlExecutor(config: IntegrationSourceConfig): Promise<SqlEx
       const r = await pool.request().query(`SELECT DB_NAME() AS db, COUNT(*) AS n, CONVERT(varchar(40), MAX(source_updated_at), 127) AS newest FROM ${view}`);
       const row: any = r.recordset?.[0] ?? {};
       return { database: row.db ?? null, totalRows: Number(row.n ?? 0), newest: row.newest ?? null };
+    },
+    async watermark(reportKey) {
+      const view = qualifiedView("MSSQL", config, reportKey);
+      const r = await pool.request().query(`SELECT CONVERT(varchar(40), MAX(source_updated_at), 127) AS newest FROM ${view}`);
+      const row: any = r.recordset?.[0] ?? {};
+      return { newest: row.newest ?? null };
     },
     async close() { await pool.close(); },
   };
@@ -556,6 +575,10 @@ async function createSqlAdapter(config: IntegrationSourceConfig): Promise<Source
     async describe(reportKey: string) {
       const d = await executor.describe(reportKey);
       return { ...d, location: `${dialect}:${config.sqlHost}:${config.sqlPort ?? "default"}/${d.database ?? config.sqlDatabase}.${formatSqlLocation(config, reportKey)}` };
+    },
+    async watermark(reportKey: string) {
+      const d = await executor.watermark(reportKey);
+      return { ...d, location: `${dialect}:${config.sqlHost}:${config.sqlPort ?? "default"}/${config.sqlDatabase}.${formatSqlLocation(config, reportKey)}` };
     },
     async test() {
       const details: Record<string, unknown> = {};
