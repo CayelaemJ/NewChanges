@@ -292,7 +292,7 @@
     t['--line'] = pound(line); t['--line-soft'] = pound(lineSoft); t['--ice'] = pound(ice); t['--ice-2'] = pound(surf2); t['--brand-soft'] = pound(surf2);
     t['--blue'] = pound(acc); t['--blue-d'] = pound(lch(Math.min(accL.L + 0.07, 0.92), accL.C, accL.h));
     t['--brand-primary'] = pound(head); t['--brand-primary-deep'] = pound(bar); t['--bar-bg'] = pound(bar); t['--brand-vivid'] = pound(ensureContrast(accent, bar, 3));
-    t['--dm-on-accent'] = contrast('FFFFFF', accent) >= 4.5 ? '#ffffff' : '#0b0f19';
+    t['--dm-on-accent'] = contrast('FFFFFF', acc) >= 4.5 ? '#ffffff' : '#0b0f19';
     t['--brand-grad-1'] = pound(bar); t['--brand-grad-2'] = pound(bar); t['--brand-grad-3'] = pound(acc); t['--brand-grad-4'] = pound(acc); t['--brand-grad-5'] = pound(acc);
     t['--green-soft'] = '#153d2e'; t['--amber-soft'] = '#41321a'; t['--red-soft'] = '#45262a';
     return t;
