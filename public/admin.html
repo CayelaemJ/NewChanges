@@ -2121,7 +2121,11 @@ async function loadMLOpsAlert(){
     }
     const latest=[...latestByReport.values()].filter(e=>e.status && e.status!=='PASS');
     const issue=latest.find(e=>e.status==='QUARANTINE') || latest.find(e=>e.status==='REVIEW');
-    if(!issue) return;
+    if(!issue){
+      card.classList.remove('show');
+      document.getElementById('mlops-alert-detail')?.classList.remove('open');
+      return;
+    }
     card.classList.add('show');
     const meta=issue.metadata||{};
     const findings=Array.isArray(meta.findings)?meta.findings:[];
