@@ -680,6 +680,12 @@
 /* ── Admin console. Talks to the import API. Set API base if served elsewhere. ── */
 const API = ""; // same origin
 let MANIFEST = null, CURRENT = null, LAST_BATCH = null;
+const AdminBrandTheme = window.BrandEngine ? BrandEngine.themeController() : null;
+function applyAdminBrandTheme(theme){
+  if(!AdminBrandTheme) return;
+  const brand=theme||{accentColor:'B15BE8',primaryColor:'32217C',navyColor:'2B1B68'};
+  AdminBrandTheme.set({brand,light:null});
+}
 
 const $ = s => document.querySelector(s);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({
@@ -1588,6 +1594,7 @@ async function boot(){
     return;
   }
   if(!me.modules.admin){ location.href='/dashboard'; return; }
+  applyAdminBrandTheme(me.theme);
 
   const isSuperAdmin = me.role === 'SUPERADMIN';
   const posture = document.getElementById('role-posture');
@@ -1937,10 +1944,6 @@ window.setInterval(() => {
   if(document.visibilityState !== 'visible') return;
   Promise.allSettled([loadAdminSecuritySummary(), loadComplianceSummary()]);
 }, 30000);
-</script>
-<script>
-/* Dark mode for admin pages: same engine, default portal brand. Light mode stays on the page's original palette. */
-if(window.BrandEngine){ BrandEngine.themeController().set({ brand:{ accentColor:'7D2FA3', primaryColor:'B15BE8', navyColor:'2B1B68' }, light:null }); }
 </script>
 <script src="/static/shell.js?v=1"></script>
 <script>
