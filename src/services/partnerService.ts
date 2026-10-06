@@ -17,6 +17,7 @@ export const DEFAULT_THEME = {
   navyColor: "330A36",
   logoDataUrl: null as string | null,
   tagline: null as string | null,
+  branded: false as const,
 };
 
 export async function listPartners() {
@@ -111,6 +112,7 @@ export async function themeForUser(userId: string) {
     navyColor: p.navyColor || DEFAULT_THEME.navyColor,
     logoDataUrl: p.logoDataUrl || null,
     tagline: p.tagline || null,
+    branded: true as const,
   };
 }
 
@@ -128,6 +130,7 @@ export async function themeForEmployer(employerId: string) {
     navyColor: p.navyColor || DEFAULT_THEME.navyColor,
     logoDataUrl: p.logoDataUrl || null,
     tagline: p.tagline || null,
+    branded: true as const,
   };
 }
 
@@ -142,5 +145,6 @@ export async function themeForSlug(slug: string) {
     navyColor: p.navyColor || DEFAULT_THEME.navyColor,
     logoDataUrl: p.logoDataUrl || null,
     tagline: p.tagline || null,
+    branded: true as const,
   };
 }
