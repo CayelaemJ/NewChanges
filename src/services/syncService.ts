@@ -569,7 +569,12 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
           },
         });
         let committed;
+        const historicalObservationFeed = ["employees", "debt_accounts", "policies"].includes(reportKey);
         const reportProgress = async (p: CommitProgress) => {
+          const historyRows = p.historyRows ?? (historicalObservationFeed
+            ? Math.max(0, p.processed - p.inserted - p.updated - p.deleted)
+            : 0);
+          const skipped = authoritativeOverwrite || historicalObservationFeed ? 0 : p.skipped;
           await prisma.importBatch.update({
             where: { id: batch.id },
             data: {
@@ -593,8 +598,8 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
             inserted: p.inserted,
             updated: p.updated,
             deleted: p.deleted,
-            skipped: p.skipped,
-            historyRows: p.historyRows,
+            skipped,
+            historyRows,
             batchId: batch.id,
           });
         };
@@ -636,6 +641,12 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
           );
           await prisma.importBatch.update({ where: { id: batch.id }, data: { stagedRows: result.rows as Json } });
           committed = await commitBatch(batch.id, { recompute: false, onProgress: reportProgress });
+        }
+        if (authoritativeOverwrite) {
+          if (historicalObservationFeed && committed.historyRows == null) {
+            committed.historyRows = Math.max(0, result.rowCount - committed.inserted - committed.updated - committed.deleted);
+          }
+          committed.skipped = 0;
         }
         await prisma.importBatch.update({
           where: { id: batch.id },
