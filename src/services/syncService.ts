@@ -354,6 +354,17 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
 
   const throughAt = new Date();
   const log = await prisma.syncLog.create({ data: { trigger, status: "RUNNING", throughAt } });
+  if (trigger !== "full-refresh") {
+    const mode = configuredSourceMode(config);
+    await prisma.integrationConfig.update({
+      where: { id: "default" },
+      data: {
+        lastSyncAt: throughAt,
+        lastSyncStatus: "PROCESSING",
+        lastSyncNote: `${mode} source sync is running. Completion is only reported after all ordered feeds and dashboard rebuild work finish.`,
+      },
+    });
+  }
   const summary: Record<string, any> = {};
   const touchedEmployers = new Set<string>();
   let anyFailed = false;
