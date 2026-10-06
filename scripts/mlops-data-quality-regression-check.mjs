@@ -23,5 +23,6 @@ must(importer.includes("importBatchRow.deleteMany"),"quarantined staged rows mus
 must(sync.includes("assessIncomingRows"),"live database/API syncs must invoke the data-quality gate");
 must(sync.includes("No rows were written to live tables"),"blocked live syncs must report that no live rows were written");
 must(admin.includes("/api/admin/mlops/events?limit=50"),"admin console must surface blocked MLOps events");
+must(admin.includes("REVIEW ONLY") && admin.includes("No rows were blocked"),"admin must distinguish advisory MLOps review from blocking quarantine");
 if(failures.length){console.error("MLOps data-quality regression check failed:\\n- "+failures.join("\\n- "));process.exit(1);}
 console.log("MLOps data-quality regression checks passed.");
