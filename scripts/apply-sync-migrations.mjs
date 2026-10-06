@@ -70,5 +70,28 @@ for (const file of files) {
   console.log(`OK ${file} - ${statements.length} statement(s) applied`);
 }
 
+if (files.includes("001-sync-upsert-procedures.sql")) {
+  const bulkFunctions = [
+    "sync_upsert_employers",
+    "sync_upsert_workforce_snapshots",
+    "sync_upsert_employees",
+    "sync_upsert_platform_users",
+    "sync_upsert_journeys",
+    "sync_upsert_debt_accounts",
+    "sync_upsert_policies",
+    "sync_upsert_ratings",
+    "sync_upsert_referrals",
+    "sync_upsert_salary_advances",
+  ];
+  for (const fn of bulkFunctions) {
+    const result = await client.query(`SELECT inserted, updated, deleted FROM ${fn}('[]'::jsonb)`);
+    const row = result.rows?.[0] ?? {};
+    if (Number(row.inserted ?? 0) !== 0 || Number(row.updated ?? 0) !== 0 || Number(row.deleted ?? 0) !== 0) {
+      throw new Error(`Bulk sync smoke test for ${fn} unexpectedly changed rows`);
+    }
+    console.log(`SMOKE OK ${fn}`);
+  }
+}
+
 await client.end();
-console.log("All sync migrations applied.");
+console.log("All sync migrations applied and bulk procedures smoke-tested.");
