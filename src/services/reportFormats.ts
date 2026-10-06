@@ -18,6 +18,7 @@ export interface FieldSpec {
   required: boolean;
   enumValues?: string[];
   cents?: boolean;
+  statisticalProfile?: "continuous" | "bounded" | "none";
   description: string;
   example?: string;
 }
@@ -191,7 +192,7 @@ const ratings: ReportFormat = {
     { name: "employer_ref", type: "string", required: true, description: "Employer code.", example: "VIG" },
     { name: "payroll_ref", type: "string", required: true, description: "Employee who rated.", example: "EMP-004821" },
     { name: "journey_type", type: "enum", required: false, enumValues: JOURNEY_TYPES, description: "Journey rated.", example: "CREDIT_LIFE" },
-    { name: "stars", type: "int", required: true, description: "Rating from 1 to 5.", example: "5" },
+    { name: "stars", type: "int", required: true, statisticalProfile: "bounded", description: "Rating from 1 to 5. Bounded ordinal field: validate the 1-5 domain, but do not run distribution outlier/drift detection.", example: "5" },
     { name: "created_at", type: "date", required: true, description: "Rating event date.", example: "2026-03-21" },
     ...SOURCE_FIELDS,
   ],
