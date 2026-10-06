@@ -13,7 +13,7 @@ import { snapshotEmployer } from "./snapshotBuilder.js";
 import { notifyAdmins, notifyScoreChangeIfCurrentPeriod } from "./automationService.js";
 import { commitBatch, commitSyncRows, SYNC_BULK_CHUNK_SIZE, type CommitProgress } from "./importService.js";
 import { assessIncomingRows } from "./dataQualityService.js";
-import { createSourceAdapter, configuredSourceMode, sourceIsConfigured } from "./sourceAdapter.js";
+import { createSourceAdapter, configuredSourceMode, effectiveSourceConfig, sourceEnvironmentLocked, sourceIsConfigured } from "./sourceAdapter.js";
 import { runMLOpsAssessment } from "./mlopsService.js";
 
 const prisma = new PrismaClient();
@@ -151,6 +151,7 @@ export async function saveAnalyticsRoute(input: { reportKey: string; executionMo
 
 export function publicConfig(config: Awaited<ReturnType<typeof getConfig>>) {
   const { authToken, sqlPassword, sourceAnalyticsReplicaPassword, ...safe } = config as any;
+  const effective = effectiveSourceConfig(config);
   let effectiveSourceMode = "API";
   let configured = false;
   try {
@@ -159,18 +160,45 @@ export function publicConfig(config: Awaited<ReturnType<typeof getConfig>>) {
   } catch {
     effectiveSourceMode = String(config.sourceMode ?? "API").toUpperCase();
   }
+  const environmentLocked = sourceEnvironmentLocked();
+  const envOverrides = environmentLocked
+    ? [
+        ["SOURCE_MODE", "Source mode"],
+        ["SOURCE_API_BASE_URL", "API base URL"],
+        ["SOURCE_SQL_DIALECT", "SQL platform"],
+        ["SOURCE_SQL_HOST", "SQL host"],
+        ["SOURCE_SQL_PORT", "SQL port"],
+        ["SOURCE_SQL_DATABASE", "SQL database"],
+        ["SOURCE_SQL_SCHEMA", "SQL schema"],
+        ["SOURCE_SQL_USERNAME", "SQL username"],
+        ["SOURCE_SQL_VIEW_PREFIX", "SQL view prefix"],
+      ].filter(([envName]) => Boolean(process.env[envName])).map(([envName, label]) => ({
+        envName,
+        label,
+        value: process.env[envName],
+      }))
+    : [];
   return {
     ...safe,
     effectiveSourceMode,
     configured,
+    environmentLocked,
+    envOverrides,
+    effectiveSqlDialect: effective.sqlDialect ?? null,
+    effectiveSqlHost: effective.sqlHost ?? null,
+    effectiveSqlPort: effective.sqlPort ?? null,
+    effectiveSqlDatabase: effective.sqlDatabase ?? null,
+    effectiveSqlSchema: effective.sqlSchema ?? null,
+    effectiveSqlViewPrefix: effective.sqlViewPrefix ?? "v_",
+    effectiveApiBaseUrl: effective.baseUrl ?? null,
     changeDetectionSupported: effectiveSourceMode === "SQL",
     changeDetectionEnabled: configured && effectiveSourceMode === "SQL" && Boolean((config as any).enabled),
     sourceChangePollSeconds: SOURCE_CHANGE_POLL_SECONDS,
     syncBulkChunkSize: SYNC_BULK_CHUNK_SIZE,
-    hasToken: Boolean(process.env.SOURCE_API_TOKEN || authToken),
-    hasSqlPassword: Boolean(process.env.SOURCE_SQL_PASSWORD || sqlPassword),
-    sqlPasswordFromEnvironment: Boolean(process.env.SOURCE_SQL_PASSWORD),
-    apiTokenFromEnvironment: Boolean(process.env.SOURCE_API_TOKEN),
+    hasToken: Boolean(effective.authToken),
+    hasSqlPassword: Boolean(effective.sqlPassword),
+    sqlPasswordFromEnvironment: Boolean(process.env.SOURCE_SQL_PASSWORD) && (!sqlPassword || environmentLocked),
+    apiTokenFromEnvironment: Boolean(process.env.SOURCE_API_TOKEN) && (!authToken || environmentLocked),
   };
 }
 
