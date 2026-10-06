@@ -1543,7 +1543,10 @@ app.get<{
     if (!payload) return sendPublishedDashboardUnavailable(reply, syncStatus);
     const sections = await sectionsForUser(user);
     if (!sections.voiceOfEmployee) payload.chat = { available: false };
-    payload.theme = await themeForEmployer(employerId);
+    const userTheme = await themeForUser(user.id);
+    payload.theme = !isAdminRole(user) && userTheme.branded
+      ? userTheme
+      : await themeForEmployer(employerId);
     payload.syncStatus = usePublished
       ? syncStatusForPublishedSnapshot(syncStatus, published?.capturedAt ?? null)
       : syncStatus;
