@@ -653,10 +653,10 @@
   @media(max-width:1080px){ .theme-grid{grid-template-columns:1fr;} .chat-jrow{grid-template-columns:150px 1fr 90px;} }
 
   /* ── welcome splash (shown briefly right after sign-in) ── */
-  #welcome-splash{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:radial-gradient(1200px 700px at 50% -10%, rgba(177,91,232,.18), transparent 60%), linear-gradient(160deg,#f3f7fb 0%,#eef2ff 100%);transition:opacity .45s ease, visibility .45s ease;}
+  #welcome-splash{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:#f3f7fb;background:radial-gradient(900px 520px at 50% -8%,color-mix(in srgb,var(--blue) 12%,transparent),transparent 62%),linear-gradient(160deg,color-mix(in srgb,var(--ice) 42%,#fff) 0%,color-mix(in srgb,var(--brand-soft) 68%,#f3f7fb) 100%);transition:opacity .45s ease, visibility .45s ease;}
   #welcome-splash.hide{opacity:0;visibility:hidden;pointer-events:none;}
-  .welcome-splash-inner{text-align:center;}
-  .welcome-splash-logo{height:40px;width:auto;margin-bottom:22px;opacity:.94;}
+  .welcome-splash-inner{text-align:center;padding:30px 36px;border:1px solid color-mix(in srgb,var(--line) 76%,transparent);border-radius:18px;background:color-mix(in srgb,#fff 88%,var(--ice));box-shadow:0 18px 55px rgba(15,36,56,.10);min-width:min(360px,calc(100vw - 36px));}
+  .welcome-splash-logo{height:40px;width:auto;max-width:220px;object-fit:contain;margin-bottom:22px;opacity:.98;}
   .welcome-splash-spinner{width:32px;height:32px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--blue);margin:0 auto 20px;animation:welcome-spin .8s linear infinite;}
   @keyframes welcome-spin{to{transform:rotate(360deg);}}
   .welcome-splash-greeting{font-family:'Fraunces',serif;font-weight:600;font-size:26px;color:var(--brand-primary);}
