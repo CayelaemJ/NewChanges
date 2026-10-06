@@ -1949,7 +1949,8 @@ async function loadHistory(){
       const inserted=Number(b.insertedCount||0), updated=Number(b.updatedCount||0), deleted=Number(b.deletedCount||0);
       const applied=inserted+updated+deleted;
       const isLiveCommit=b.status==='VALIDATED' && applied>0;
-      const statusLabel=isLiveCommit?'COMMITTING':b.status;
+      const statusClass=isLiveCommit?'COMMITTING':b.status;
+      const statusLabel=isLiveCommit?'COMMITTING':(b.status==='VALIDATED'?'VALIDATED · NOT LIVE':b.status);
       const skipped=b.status==='COMMITTED'?Math.max(0,total-applied):null;
       let detail='';
       if(b.status==='VALIDATED' && applied===0) detail=`${total.toLocaleString('en-ZA')} validated · 0 applied to live tables yet`;
@@ -1960,7 +1961,7 @@ async function loadHistory(){
         <td>${(MANIFEST?.reports?.find(x=>x.key===b.reportKey)||{}).title||esc(b.reportKey)}</td>
         <td class="muted">${esc(b.filename)}</td>
         <td><strong>${total.toLocaleString('en-ZA')}</strong><span class="history-row-detail ${isLiveCommit?'live':''}">${esc(detail)}</span></td>
-        <td><span class="st ${esc(statusLabel)}">${esc(statusLabel)}</span></td>
+        <td><span class="st ${esc(statusClass)}">${esc(statusLabel)}</span></td>
         <td class="muted">${fmtDate(b.committedAt||b.uploadedAt)}</td>
         <td><a class="btn btn-ghost" style="padding:5px 11px;font-size:12px;display:inline-block;" href="${API}/api/admin/batches/${esc(b.id)}/download" download>Download CSV</a></td>
         <td>${b.status==='COMMITTED' && b.revertable
