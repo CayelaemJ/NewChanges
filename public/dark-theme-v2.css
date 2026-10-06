@@ -96,7 +96,7 @@ html.portal-dark :is([style*="border:1px solid #e8e1f7" i], [style*="border:1px 
 html.portal-dark [id^="editor-"] td[style*="background:#eef3f8" i] { background: var(--dm-surface-2) !important; }
 html.portal-dark [id^="editor-"] div[style*="background:#fff" i] { background: var(--ice) !important; border-color: var(--dm-line) !important; }
 html.portal-dark :is([style*="background:#fbfaff" i], [style*="background:#f8f5ff" i], [style*="background:#fafcfe" i]) { background: var(--dm-surface-2) !important; border-color: var(--dm-line) !important; }
-html.portal-dark [style*="background:#fff" i]:not(.partner-preview-logo):not(.cp-logo):not(.cp-card):not(.cp-topbar):not(.cp-filter) { background: var(--dm-surface) !important; border-color: var(--dm-line) !important; }
+html.portal-dark :is([style*="background:#fff;" i], [style*="background: #fff;" i]):not(.partner-preview-logo):not(.cp-logo):not(.cp-card):not(.cp-topbar):not(.cp-filter) { background: var(--dm-surface) !important; border-color: var(--dm-line) !important; }
 
 /* scrollbars + selection */
 html.portal-dark { scrollbar-color: var(--dm-line) var(--dm-bg); }
