@@ -110,17 +110,22 @@ BEGIN
     FROM jsonb_array_elements(COALESCE(p_rows, '[]'::JSONB)) r
     WHERE r->>'employer_ref' IS NOT NULL AND r->>'payroll_ref' IS NOT NULL
   ),
+  projection AS (
+    SELECT DISTINCT ON (employer_ref, payroll_ref) *
+    FROM src
+    ORDER BY employer_ref, payroll_ref, observed_at DESC, source_updated_at DESC
+  ),
   ups AS (
     INSERT INTO "Employee"
       ("id","employerId","payrollRef","siteId","incomeBand","active","observedAt",
        "eligibleFrom","eligibleTo","sourceUpdatedAt","sourceDeletedAt","updatedAt")
     SELECT md5(employer_ref || '|' || payroll_ref), employer_ref, payroll_ref,
-           (SELECT s."id" FROM "Site" s WHERE s."employerId" = employer_ref AND s."name" = src.site_name),
+           (SELECT s."id" FROM "Site" s WHERE s."employerId" = employer_ref AND s."name" = projection.site_name),
            income_band,
            CASE WHEN is_deleted THEN FALSE ELSE COALESCE(active, eligible_to IS NULL) END,
            observed_at, eligible_from, eligible_to, source_updated_at,
            CASE WHEN is_deleted THEN source_updated_at ELSE NULL END, NOW()
-    FROM src
+    FROM projection
     ON CONFLICT ("employerId","payrollRef") DO UPDATE SET
       "siteId"=EXCLUDED."siteId", "incomeBand"=EXCLUDED."incomeBand",
       "active"=EXCLUDED."active", "observedAt"=EXCLUDED."observedAt",
@@ -282,6 +287,11 @@ BEGIN
     JOIN "Employee" e ON e."employerId" = s.employer_ref AND e."payrollRef" = s.payroll_ref
     JOIN "PlatformUser" pu ON pu."employeeId" = e."id"
   ),
+  projection AS (
+    SELECT DISTINCT ON (account_ref) *
+    FROM resolved
+    ORDER BY account_ref, observed_at DESC, source_updated_at DESC
+  ),
   ups AS (
     INSERT INTO "DebtAccount"
       ("id","platformUserId","journeyId","creditorName","creditType","balanceCents",
@@ -291,7 +301,7 @@ BEGIN
            balance_cents, in_arrears, state, challenge_status, observed_at, closed_at,
            source_updated_at,
            CASE WHEN is_deleted THEN source_updated_at ELSE NULL END, NOW()
-    FROM resolved
+    FROM projection
     ON CONFLICT ("id") DO UPDATE SET
       "journeyId"=EXCLUDED."journeyId", "creditorName"=EXCLUDED."creditorName",
       "creditType"=EXCLUDED."creditType", "balanceCents"=EXCLUDED."balanceCents",
@@ -299,7 +309,9 @@ BEGIN
       "challengeStatus"=EXCLUDED."challengeStatus", "observedAt"=EXCLUDED."observedAt",
       "closedAt"=EXCLUDED."closedAt", "sourceUpdatedAt"=EXCLUDED."sourceUpdatedAt",
       "sourceDeletedAt"=EXCLUDED."sourceDeletedAt", "updatedAt"=NOW()
-    WHERE EXCLUDED."sourceUpdatedAt" >= "DebtAccount"."sourceUpdatedAt"
+    WHERE EXCLUDED."observedAt" > "DebtAccount"."observedAt"
+       OR (EXCLUDED."observedAt" = "DebtAccount"."observedAt"
+           AND EXCLUDED."sourceUpdatedAt" >= "DebtAccount"."sourceUpdatedAt")
     RETURNING xmax = 0 AS is_ins
   )
   SELECT COUNT(*) FILTER (WHERE is_ins), COUNT(*) FILTER (WHERE NOT is_ins)
@@ -366,6 +378,11 @@ BEGIN
     JOIN "Employee" e ON e."employerId" = s.employer_ref AND e."payrollRef" = s.payroll_ref
     JOIN "PlatformUser" pu ON pu."employeeId" = e."id"
   ),
+  projection AS (
+    SELECT DISTINCT ON (policy_ref) *
+    FROM resolved
+    ORDER BY policy_ref, observed_at DESC, source_updated_at DESC
+  ),
   ups AS (
     INSERT INTO "InsurancePolicy"
       ("id","platformUserId","type","premiumCents","isWasteful","isResolved",
@@ -375,7 +392,7 @@ BEGIN
            observed_at, effective_from, effective_to, resolved_at,
            source_updated_at,
            CASE WHEN is_deleted THEN source_updated_at ELSE NULL END, NOW()
-    FROM resolved
+    FROM projection
     ON CONFLICT ("id") DO UPDATE SET
       "type"=EXCLUDED."type", "premiumCents"=EXCLUDED."premiumCents",
       "isWasteful"=EXCLUDED."isWasteful", "isResolved"=EXCLUDED."isResolved",
@@ -383,7 +400,9 @@ BEGIN
       "effectiveTo"=EXCLUDED."effectiveTo", "resolvedAt"=EXCLUDED."resolvedAt",
       "sourceUpdatedAt"=EXCLUDED."sourceUpdatedAt",
       "sourceDeletedAt"=EXCLUDED."sourceDeletedAt", "updatedAt"=NOW()
-    WHERE EXCLUDED."sourceUpdatedAt" >= "InsurancePolicy"."sourceUpdatedAt"
+    WHERE EXCLUDED."observedAt" > "InsurancePolicy"."observedAt"
+       OR (EXCLUDED."observedAt" = "InsurancePolicy"."observedAt"
+           AND EXCLUDED."sourceUpdatedAt" >= "InsurancePolicy"."sourceUpdatedAt")
     RETURNING xmax = 0 AS is_ins
   )
   SELECT COUNT(*) FILTER (WHERE is_ins), COUNT(*) FILTER (WHERE NOT is_ins)
