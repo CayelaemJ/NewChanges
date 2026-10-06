@@ -163,3 +163,5 @@ must(brandEngine.includes("contrast('FFFFFF', acc) >= 4.5"), "dark-mode on-accen
 must(/background:var\(--white,#fff\)!important/.test(read("public/enterprise.css")), "enterprise surfaces must be token-driven so dark mode can restyle them");
 if(failures.length){ console.error('UI regression check failed:\n- '+failures.join('\n- ')); process.exit(1); }
 console.log('UI regression check passed: v0.10.0 navigation, SQL integration, users/import controls, live-data availability and demo-leak safeguards are present.');
+
+must(server.includes('const userTheme = await themeForUser(user.id);') && server.includes('!isAdminRole(user) && userTheme.branded') && server.includes('await themeForEmployer(employerId)'), 'viewer partner theme must win over employer fallback on dashboard payload');
