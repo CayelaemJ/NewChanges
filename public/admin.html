@@ -945,6 +945,30 @@ async function refreshNow(btn){
   }
 }
 
+function syncLogFailureDetail(log){
+  const summary=log?.summary||{};
+  const order=Array.isArray(MANIFEST?.loadOrder)?MANIFEST.loadOrder:[];
+  for(let i=0;i<order.length;i++){
+    const key=order[i], item=summary?.[key];
+    if(item?.error){
+      const rep=MANIFEST?.reports?.find(r=>r.key===key);
+      return `STEP ${i+1} ${rep?.title||key}: ${item.error}`;
+    }
+  }
+  if(summary?.source?.error) return `Source connection: ${summary.source.error}`;
+  return '';
+}
+function syncLogBlockedDetail(log){
+  const summary=log?.summary||{};
+  const order=Array.isArray(MANIFEST?.loadOrder)?MANIFEST.loadOrder:[];
+  return order.map((key,i)=>{
+    const item=summary?.[key];
+    if(item?.status!=='BLOCKED') return null;
+    const rep=MANIFEST?.reports?.find(r=>r.key===key);
+    return `STEP ${i+1} ${rep?.title||key}`;
+  }).filter(Boolean).join(', ');
+}
+
 async function loadIntegLogs(){
   try{
     const logs = await fetch(`${API}/api/admin/integration/logs`).then(r=>r.json());
@@ -953,8 +977,17 @@ async function loadIntegLogs(){
     tb.innerHTML = logs.map(l=>{
       const when = new Date(l.startedAt).toLocaleString('en-ZA');
       const badge = l.status==='OK'?'#1fa463':l.status==='FAILED'?'#e0492f':'#e8910c';
-      return `<tr><td>${when}</td><td>${esc(l.trigger)}</td><td><span style="color:${badge};font-weight:700">${esc(l.status)}</span></td><td class="muted">${esc(l.note||'')}</td></tr>`;
+      const failure=syncLogFailureDetail(l);
+      const blocked=syncLogBlockedDetail(l);
+      const detail=[l.note||'',failure?('Failure: '+failure):'',blocked?('Blocked downstream: '+blocked):''].filter(Boolean).join(' · ');
+      return `<tr><td>${when}</td><td>${esc(l.trigger)}</td><td><span style="color:${badge};font-weight:700">${esc(l.status)}</span></td><td class="muted">${esc(detail)}</td></tr>`;
     }).join('');
+    const latest=logs[0];
+    const latestFailure=syncLogFailureDetail(latest);
+    if(latestFailure && ['PARTIAL','FAILED'].includes(String(latest?.status||''))){
+      const s=$('#integ-status');
+      if(s && !s.textContent.includes(latestFailure)) s.textContent += ` · Failed feed: ${latestFailure}`;
+    }
   }catch(e){}
 }
 
