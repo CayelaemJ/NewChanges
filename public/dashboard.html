@@ -3135,7 +3135,7 @@ async function loadLiveData({refreshOnly=false}={}){
     if(requestSeq!==LIVE_REQUEST_SEQ) return;
     // The employer being viewed owns the visual brand. This is also true when
     // an internal Admin/Superadmin is previewing a client dashboard.
-    applyTheme(live.theme || me?.theme, null);
+    applyTheme(live.theme, null);
     DATA=live; BASE=JSON.parse(JSON.stringify(DATA)); window.__LIVE__=true;
     if(live.employer){ const h1=document.querySelector('.head h1'); if(h1) h1.firstChild.textContent=live.employer+' '; }
     const sourceAt=live.sourceDataUpdatedAt||live.dataAsOf;
@@ -3325,65 +3325,70 @@ function applySectionVisibility(me){
 }
 
 const BrandTheme = window.BrandEngine ? BrandEngine.themeController() : null; // owns light/dark brand tokens
+const DEFAULT_PORTAL_BRAND = {accentColor:'7D2FA3',primaryColor:'B15BE8',navyColor:'2B1B68'};
+const DEFAULT_PORTAL_CHARTS = {
+  '--chart-engagement':'#3a93d2','--chart-cashflow':'#1fa463','--chart-debt':'#607486',
+  '--chart-insurance':'#8a4fc4','--chart-workforce':'#4ea3da','--chart-low':'#1fa463',
+  '--chart-mid':'#e8910c','--chart-high':'#e0492f'
+};
+const DEFAULT_HEAD_SUB='How the financial wellbeing programme is landing across your workforce Not available who is using it, the outcomes achieved, and how employees rate the service.';
+function restoreDefaultPortalIdentity(){
+  document.querySelectorAll('.logo img, .topbar .logo img, .pdf-brand img').forEach(img=>{
+    img.src='/static/logo.png';
+    img.removeAttribute('data-custom-logo');
+  });
+  const brandName=document.getElementById('channel-brand-name'); if(brandName) brandName.textContent='';
+  const sub=document.querySelector('#employer-view > .head .head-sub'); if(sub) sub.textContent=DEFAULT_HEAD_SUB;
+  document.title='empower-fin Dashboard Portal';
+}
+function applyDefaultPortalTheme(){
+  const root=document.documentElement.style;
+  if(BrandTheme){
+    BrandTheme.set({brand:DEFAULT_PORTAL_BRAND,light:null,charts:DEFAULT_PORTAL_CHARTS});
+  }else{
+    [
+      '--blue','--blue-d','--brand-primary','--brand-primary-deep','--ice','--brand-soft',
+      '--brand-grad-1','--brand-grad-2','--brand-grad-3','--brand-grad-4','--brand-grad-5',
+      ...Object.keys(DEFAULT_PORTAL_CHARTS)
+    ].forEach(key=>root.removeProperty(key));
+  }
+  root.setProperty('--engagement-color','var(--chart-engagement)');
+  root.setProperty('--cashflow-color','var(--chart-cashflow)');
+  root.setProperty('--debt-risk-color','var(--chart-debt)');
+  root.setProperty('--insurance-color','var(--chart-insurance)');
+  root.setProperty('--eligible-workforce-color','var(--chart-workforce)');
+  root.setProperty('--stress-low-color','var(--chart-low)');
+  root.setProperty('--stress-mid-color','var(--chart-mid)');
+  root.setProperty('--stress-high-color','var(--chart-high)');
+  restoreDefaultPortalIdentity();
+}
 function applyTheme(theme, user){
   const root=document.documentElement.style;
-  // Admins retain the portal's original dashboard palette. Employer branding is
-  // applied only inside an authenticated employer session.
-  if(user && ['ADMIN','SUPERADMIN'].includes(String(user.role||'').toUpperCase())){
-    // Super Admin and Admin use the standard empower-fin dashboard brand.
-    // Partner/employer branding is intentionally not applied to privileged roles.
-    const accent='#B15BE8';
-    const primary='#32217C';
-    const navy='#2B1B68';
-    const chartPalette=complementaryPalette(accent,navy);
-    if(BrandTheme){
-      const charts={}; Object.entries(chartPalette).forEach(([k,v])=>{ charts['--chart-'+k]=v; });
-      BrandTheme.set({ brand:{ accentColor:accent, primaryColor:primary, navyColor:navy }, light:'engine', charts });
-    } else {
-      root.setProperty('--blue',accent);
-      root.setProperty('--blue-d',shade(accent,-18));
-      root.setProperty('--brand-primary',navy);
-      root.setProperty('--brand-primary-deep',shade(navy,-22));
-      root.setProperty('--ice',tint(accent,92));
-      root.setProperty('--brand-soft',tint(accent,94));
-      root.setProperty('--brand-grad-1',primary);
-      root.setProperty('--brand-grad-2',mix(primary,accent,.45));
-      root.setProperty('--brand-grad-3',accent);
-      root.setProperty('--brand-grad-4',mix(accent,'#ffffff',.28));
-      root.setProperty('--brand-grad-5',mix(accent,'#ffffff',.55));
-      Object.entries(chartPalette).forEach(([key,value])=>root.setProperty('--chart-'+key,value));
-    }
-    root.setProperty('--engagement-color','var(--chart-engagement)');
-    root.setProperty('--cashflow-color','var(--chart-cashflow)');
-    root.setProperty('--debt-risk-color','var(--chart-debt)');
-    root.setProperty('--insurance-color','var(--chart-insurance)');
-    root.setProperty('--eligible-workforce-color','var(--chart-workforce)');
-    root.setProperty('--stress-low-color','var(--chart-low)');
-    root.setProperty('--stress-mid-color','var(--chart-mid)');
-    root.setProperty('--stress-high-color','var(--chart-high)');
+  const privileged=user && ['ADMIN','SUPERADMIN'].includes(String(user.role||'').toUpperCase());
+  // No selected partner/employer brand means the original empower-fin design.
+  // Admin/Superadmin control-plane screens also keep that original palette.
+  if(privileged || !theme || theme.branded===false){
+    applyDefaultPortalTheme();
     return;
   }
-  if(!theme) return;
+
   const hex=c=>c?('#'+String(c).replace(/^#/,'')):null;
   const baseName='empower-fin Dashboard Portal';
   const accent=hex(theme.accentColor||theme.primaryColor||'#b15be8');
   const primary=hex(theme.navyColor||theme.primaryColor||accent);
   if(!BrandTheme){ // legacy fallback (engine failed to load)
-  root.setProperty('--blue', accent);
-  root.setProperty('--blue-d', shade(accent,-18));
-  root.setProperty('--brand-primary', primary);
-  root.setProperty('--brand-primary-deep', shade(primary,-22));
-  root.setProperty('--ice', tint(accent,92));
-  root.setProperty('--brand-soft', tint(accent,94));
-  root.setProperty('--brand-grad-1', shade(primary,0));
-  root.setProperty('--brand-grad-2', mix(primary,accent,.45));
-  root.setProperty('--brand-grad-3', accent);
-  root.setProperty('--brand-grad-4', mix(accent,'#ffffff',.28));
-  root.setProperty('--brand-grad-5', mix(accent,'#ffffff',.55));
+    root.setProperty('--blue', accent);
+    root.setProperty('--blue-d', shade(accent,-18));
+    root.setProperty('--brand-primary', primary);
+    root.setProperty('--brand-primary-deep', shade(primary,-22));
+    root.setProperty('--ice', tint(accent,92));
+    root.setProperty('--brand-soft', tint(accent,94));
+    root.setProperty('--brand-grad-1', shade(primary,0));
+    root.setProperty('--brand-grad-2', mix(primary,accent,.45));
+    root.setProperty('--brand-grad-3', accent);
+    root.setProperty('--brand-grad-4', mix(accent,'#ffffff',.28));
+    root.setProperty('--brand-grad-5', mix(accent,'#ffffff',.55));
   }
-  // Employer-only chart palette: derive harmonious hues from the uploaded brand
-  // colours rather than reusing the logo colours for every data series. Stable
-  // semantic assignments keep each metric recognisable across all chart types.
   const chartPalette = complementaryPalette(accent, primary);
   if(BrandTheme){
     const charts={}; Object.entries(chartPalette).forEach(([k,v])=>{ charts['--chart-'+k]=v; });
@@ -3408,7 +3413,7 @@ function applyTheme(theme, user){
   }
   document.title=(theme.name||baseName)+' Not available Employer Insights';
   if(theme.tagline){
-    const sub=document.querySelector('.head-sub');
+    const sub=document.querySelector('#employer-view > .head .head-sub');
     if(sub) sub.textContent=theme.tagline;
   }
 }
