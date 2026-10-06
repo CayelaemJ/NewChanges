@@ -3133,6 +3133,9 @@ async function loadLiveData({refreshOnly=false}={}){
     });
     const live=await dashboardPromise;
     if(requestSeq!==LIVE_REQUEST_SEQ) return;
+    // The employer being viewed owns the visual brand. This is also true when
+    // an internal Admin/Superadmin is previewing a client dashboard.
+    applyTheme(live.theme || me?.theme, null);
     DATA=live; BASE=JSON.parse(JSON.stringify(DATA)); window.__LIVE__=true;
     if(live.employer){ const h1=document.querySelector('.head h1'); if(h1) h1.firstChild.textContent=live.employer+' '; }
     const sourceAt=live.sourceDataUpdatedAt||live.dataAsOf;
