@@ -25,6 +25,8 @@ must(!/ROUND\(\(r->>'(?:monthly_saving_rand|balance_impact_rand|balance_rand|pre
 must(bulkSql.includes('"siteName","incomeBand","active"') && bulkSql.includes('"incomeBand"=EXCLUDED."incomeBand"'), "employee historical versions must preserve income band");
 must(bulkSql.includes('"policyId","observedAt","type","premiumCents"') && bulkSql.includes('"type"=EXCLUDED."type", "premiumCents"'), "policy historical versions must persist the required policy type");
 must((migrationRunner.match(/SMOKE OK/g)||[]).length >= 1 && migrationRunner.includes("sync_upsert_employees") && migrationRunner.includes("sync_upsert_salary_advances"), "deployment must smoke-test all bulk procedures against the real schema");
+must((bulkSql.match(/SELECT DISTINCT ON/g)||[]).length >= 3 && bulkSql.includes("ORDER BY employer_ref, payroll_ref, observed_at DESC, source_updated_at DESC") && bulkSql.includes("ORDER BY account_ref, observed_at DESC, source_updated_at DESC") && bulkSql.includes("ORDER BY policy_ref, observed_at DESC, source_updated_at DESC"), "dated bulk feeds must dedupe current projections while preserving observation history");
+must(migrationRunner.includes("dated multi-observation projection/history semantics") && migrationRunner.includes("EmployeeVersion") && migrationRunner.includes("DebtAccountVersion") && migrationRunner.includes("InsurancePolicyVersion"), "deployment smoke tests must exercise duplicate projection keys with multiple dated history rows");
 
 if (failures.length) {
   console.error("Import regression check failed:\n- " + failures.join("\n- "));
