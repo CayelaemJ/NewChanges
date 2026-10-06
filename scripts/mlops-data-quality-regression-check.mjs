@@ -12,6 +12,12 @@ must(service.includes("NON_FINITE"),"non-finite numeric values must quarantine")
 must(service.includes("DATA_QUALITY_GATE"),"data-quality decisions must emit telemetry");
 must(service.includes("action:string"),"findings must explain what must be fixed");
 must(service.includes('"QUARANTINE"') && service.includes('"REVIEW"'),"quarantine and review states must be explicit");
+must(service.includes("getFormat") && service.includes("requiredFields"),"missingness decisions must follow the feed contract");
+must(service.includes("MISSINGNESS_SPIKE_REQUIRED") && service.includes("OPTIONAL_MISSINGNESS_HIGH"),"required-field missingness must quarantine while optional-field missingness remains advisory");
+must(service.includes("COMPLETED_JOURNEY_MISSING_COMPLETED_AT"),"journey lifecycle rules must still quarantine impossible completed records");
+must(sync.includes('quality.status === "QUARANTINE"'),"live source syncs must block only QUARANTINE findings");
+must(importer.includes('quality.status === "QUARANTINE"'),"file imports must block only QUARANTINE findings");
+must(sync.includes('quality.status === "REVIEW"') && sync.includes("allowed with REVIEW warnings"),"REVIEW findings must remain visible without stopping a live sync");
 must(importer.includes("assessIncomingRows"),"incoming imports must invoke the data-quality gate");
 must(importer.includes("importBatchRow.deleteMany"),"quarantined staged rows must be removed before commit");
 must(sync.includes("assessIncomingRows"),"live database/API syncs must invoke the data-quality gate");
