@@ -1483,7 +1483,7 @@ async function dashboardSyncState() {
 }
 
 function dashboardUsesPublishedSnapshot(syncStatus: Awaited<ReturnType<typeof dashboardSyncState>>) {
-  return syncStatus.lastSyncStatus === "REBUILDING" || syncStatus.lastSyncStatus === "FULL_REFRESH_FAILED";
+  return ["REBUILDING", "PARTIAL", "FAILED", "FULL_REFRESH_FAILED", "FULL_REFRESH_PRECHECK_FAILED"].includes(String(syncStatus.lastSyncStatus || ""));
 }
 
 function syncStatusForPublishedSnapshot(
