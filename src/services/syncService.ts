@@ -329,6 +329,7 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
   const touchedEmployers = new Set<string>();
   let anyFailed = false;
   let anyOk = false;
+  let failedStep: { reportIndex: number; reportKey: string; title: string; reason: string } | null = null;
   let adapter: Awaited<ReturnType<typeof createSourceAdapter>> | null = null;
 
   try {
@@ -434,7 +435,9 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
             data: { lastStatus: "FAILED", lastNote: note },
           });
           anyFailed = true;
-          continue;
+          failedStep = { reportIndex, reportKey, title: format.title, reason: note };
+          console.error(`[sync] STEP ${reportIndex + 1} ${format.title} failed validation: ${note}`);
+          break;
         }
 
         if (result.rowCount === 0) {
@@ -457,7 +460,9 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
             await prisma.integrationCursor.update({ where: { reportKey }, data: { lastStatus: "FAILED", lastNote: note } });
             summary[reportKey] = { error: note, source: pulled.location, pulled: 0, committed: 0 };
             anyFailed = true;
-            continue;
+            failedStep = { reportIndex, reportKey, title: format.title, reason: note };
+            console.error(`[sync] STEP ${reportIndex + 1} ${format.title} failed: ${note}`);
+            break;
           }
           let rebasedCursor = cursor.lastSourceUpdatedAt;
           if (adapter.mode === "SQL" && adapter.watermark && cursor.lastSourceUpdatedAt) {
@@ -521,8 +526,12 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
             html: `<p>An incoming sync for <strong>${reportKey}</strong> was blocked by the MLOps data-quality gate.</p><p>No rows were written to live tables. Review the MLOps event log and correct the source data before retrying.</p>`,
             slackText: `:rotating_light: MLOps blocked live sync ${reportKey}. No rows were written to live tables; review the MLOps event log and correct the source data before retrying.`,
           }).catch(() => {});
-          summary[reportKey] = { error: `MLOps data-quality gate blocked the sync: ${reason}`, source: pulled.location, pulled: result.rowCount, committed: 0, batchId: blockedBatch.id };
-          continue;
+          const failureReason = `MLOps data-quality gate blocked the sync: ${reason}`;
+          summary[reportKey] = { error: failureReason, source: pulled.location, pulled: result.rowCount, committed: 0, batchId: blockedBatch.id };
+          anyFailed = true;
+          failedStep = { reportIndex, reportKey, title: format.title, reason: failureReason };
+          console.error(`[sync] STEP ${reportIndex + 1} ${format.title} blocked by MLOps: ${reason}`);
+          break;
         }
 
         // Fast sync path: keep a lightweight audit row, but do not copy the
@@ -671,6 +680,33 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
           data: { lastStatus: "FAILED", lastNote: note },
         });
         anyFailed = true;
+        failedStep = { reportIndex, reportKey, title: format.title, reason: note };
+        console.error(`[sync] STEP ${reportIndex + 1} ${format.title} failed: ${note}`);
+        break;
+      }
+    }
+
+    // The feed sequence is a dependency chain, not ten independent imports.
+    // Once a step fails, later steps must not run against an incomplete parent
+    // state. Mark them BLOCKED without advancing their source cursors.
+    if (failedStep) {
+      for (let blockedIndex = failedStep.reportIndex + 1; blockedIndex < LOAD_ORDER.length; blockedIndex++) {
+        const blockedKey = LOAD_ORDER[blockedIndex];
+        const blockedFormat = getFormat(blockedKey);
+        const blockedTitle = blockedFormat?.title ?? blockedKey;
+        const blockedNote = `Blocked by STEP ${failedStep.reportIndex + 1} ${failedStep.title}: ${failedStep.reason}`;
+        summary[blockedKey] = {
+          status: "BLOCKED",
+          committed: 0,
+          blockedBy: failedStep.reportKey,
+          blockedByStep: failedStep.reportIndex + 1,
+          note: blockedNote,
+        };
+        await prisma.integrationCursor.upsert({
+          where: { reportKey: blockedKey },
+          create: { reportKey: blockedKey, lastStatus: "BLOCKED", lastNote: blockedNote },
+          update: { lastStatus: "BLOCKED", lastNote: blockedNote },
+        });
       }
     }
   } catch (error: any) {
@@ -685,7 +721,7 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
 
   // A full refresh is not complete until the read model has been rebuilt.
   // Normal incremental syncs keep snapshot work off the critical path.
-  if (trigger === "full-refresh") {
+  if (trigger === "full-refresh" && !anyFailed) {
     for (const employerId of touchedEmployers) {
       try {
         const r = await snapshotEmployer(employerId);
@@ -700,7 +736,7 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
         console.error(`[sync] full-refresh snapshot failed for ${employerId}:`, error?.message ?? error);
       }
     }
-  } else {
+  } else if (!anyFailed) {
     for (const employerId of touchedEmployers) pendingSnapshotEmployers.add(employerId);
     if (touchedEmployers.size && !snapshotDrainScheduled) {
       snapshotDrainScheduled = true;
@@ -725,23 +761,29 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
     }
   }
 
-  await emitSyncProgress(options, {
-    phase: "REBUILDING_DASHBOARD",
-    progress: 96,
-    message: trigger === "full-refresh"
-      ? "Source rows are committed; rebuilding dashboard snapshots before publish"
-      : "Source rows are committed; finalising dashboard refresh",
-    feedCount: LOAD_ORDER.length,
-  });
+  if (!anyFailed) {
+    await emitSyncProgress(options, {
+      phase: "REBUILDING_DASHBOARD",
+      progress: 96,
+      message: trigger === "full-refresh"
+        ? "Source rows are committed; rebuilding dashboard snapshots before publish"
+        : "Source rows are committed; finalising dashboard refresh",
+      feedCount: LOAD_ORDER.length,
+    });
+  }
   const status = anyFailed ? (anyOk ? "PARTIAL" : "FAILED") : "OK";
   const mode = configuredSourceMode(config);
+  const failedDetail = failedStep
+    ? `STEP ${failedStep.reportIndex + 1} ${failedStep.title} failed: ${failedStep.reason}`
+    : null;
+  const blockedCount = failedStep ? Math.max(0, LOAD_ORDER.length - failedStep.reportIndex - 1) : 0;
   const note = status === "OK"
     ? trigger === "full-refresh"
-      ? `All reports synced successfully from ${mode}; dashboard snapshots were rebuilt before completion.`
-      : `All reports synced successfully from ${mode}; changed employer snapshots were queued in the background.`
-    : status === "PARTIAL"
-      ? `Some ${mode} reports synced. Failed report cursors were not advanced; see details.`
-      : `${mode} sync failed; no report cursor was advanced for failed feeds.`;
+      ? `All 10 reports synced successfully from ${mode} in dependency order; dashboard snapshots were rebuilt before completion.`
+      : `All 10 reports synced successfully from ${mode} in dependency order; changed employer snapshots were queued in the background.`
+    : failedDetail
+      ? `${failedDetail} ${blockedCount} downstream step${blockedCount === 1 ? "" : "s"} blocked to preserve load order. Last successful dashboard remains in place; failed and blocked cursors were not advanced.`
+      : `${mode} sync failed before the ordered feed chain completed. Last successful dashboard remains in place.`;
   const finishedAt = new Date();
 
   await prisma.syncLog.update({
@@ -764,7 +806,7 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
   }
 
   await emitSyncProgress(options, {
-    phase: status === "FAILED" ? "FAILED" : "COMPLETE",
+    phase: status === "OK" ? "COMPLETE" : "FAILED",
     progress: 100,
     message: note,
     feedCount: LOAD_ORDER.length,
