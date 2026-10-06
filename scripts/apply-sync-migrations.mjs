@@ -144,11 +144,11 @@ if (files.includes("001-sync-upsert-procedures.sql")) {
       },
     ]);
     const employeeState = await client.query(
-      `SELECT "id","observedAt","incomeBand"::text AS "incomeBand" FROM "Employee" WHERE "employerId"=$1 AND "payrollRef"=$2`,
+      `SELECT "id",to_char("observedAt",'YYYY-MM-DD') AS "observedDate","incomeBand"::text AS "incomeBand" FROM "Employee" WHERE "employerId"=$1 AND "payrollRef"=$2`,
       [employer, payroll],
     );
     const employeeId = employeeState.rows?.[0]?.id;
-    if (!employeeId || String(employeeState.rows[0].observedAt).slice(0, 10) !== "2026-02-28" || employeeState.rows[0].incomeBand !== "BAND_20_40K") {
+    if (!employeeId || employeeState.rows[0].observedDate !== "2026-02-28" || employeeState.rows[0].incomeBand !== "BAND_20_40K") {
       throw new Error("Employee bulk projection did not retain the newest dated observation");
     }
     const employeeHistory = await client.query(`SELECT COUNT(*)::int AS n FROM "EmployeeVersion" WHERE "employeeId"=$1`, [employeeId]);
@@ -180,8 +180,8 @@ if (files.includes("001-sync-upsert-procedures.sql")) {
         challenge_status: null, journey_ref: journey, source_updated_at: t2, is_deleted: false,
       },
     ]);
-    const debtState = await client.query(`SELECT "observedAt","balanceCents" FROM "DebtAccount" WHERE "id"=$1`, [account]);
-    if (String(debtState.rows?.[0]?.observedAt).slice(0, 10) !== "2026-02-28" || Number(debtState.rows?.[0]?.balanceCents) !== 700000) {
+    const debtState = await client.query(`SELECT to_char("observedAt",'YYYY-MM-DD') AS "observedDate","balanceCents" FROM "DebtAccount" WHERE "id"=$1`, [account]);
+    if (debtState.rows?.[0]?.observedDate !== "2026-02-28" || Number(debtState.rows?.[0]?.balanceCents) !== 700000) {
       throw new Error("Debt bulk projection did not retain the newest dated observation");
     }
     const debtHistory = await client.query(`SELECT COUNT(*)::int AS n FROM "DebtAccountVersion" WHERE "accountId"=$1`, [account]);
@@ -201,8 +201,8 @@ if (files.includes("001-sync-upsert-procedures.sql")) {
         source_updated_at: t2, is_deleted: false,
       },
     ]);
-    const policyState = await client.query(`SELECT "observedAt","premiumCents" FROM "InsurancePolicy" WHERE "id"=$1`, [policy]);
-    if (String(policyState.rows?.[0]?.observedAt).slice(0, 10) !== "2026-02-28" || Number(policyState.rows?.[0]?.premiumCents) !== 20000) {
+    const policyState = await client.query(`SELECT to_char("observedAt",'YYYY-MM-DD') AS "observedDate","premiumCents" FROM "InsurancePolicy" WHERE "id"=$1`, [policy]);
+    if (policyState.rows?.[0]?.observedDate !== "2026-02-28" || Number(policyState.rows?.[0]?.premiumCents) !== 20000) {
       throw new Error("Policy bulk projection did not retain the newest dated observation");
     }
     const policyHistory = await client.query(`SELECT COUNT(*)::int AS n FROM "InsurancePolicyVersion" WHERE "policyId"=$1`, [policy]);
