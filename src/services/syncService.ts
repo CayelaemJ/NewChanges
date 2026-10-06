@@ -392,6 +392,7 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
           through: throughAt,
         }, useSourceRoute ? route.sourceView : null, {
           useReplica: Boolean(useSourceRoute && (route.useReplica || config.sourceAnalyticsUseReplica)),
+          authoritative: authoritativeOverwrite,
         });
         await emitSyncProgress(options, {
           phase: "VALIDATING",
