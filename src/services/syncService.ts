@@ -247,9 +247,16 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
   let adapter: Awaited<ReturnType<typeof createSourceAdapter>> | null = null;
 
   try {
+    await emitSyncProgress(options, {
+      phase: "CONNECTING",
+      progress: 2,
+      message: `Connecting to ${configuredSourceMode(config)} source`,
+      feedCount: LOAD_ORDER.length,
+    });
     adapter = await createSourceAdapter(config);
 
-    for (const reportKey of LOAD_ORDER) {
+    for (let reportIndex = 0; reportIndex < LOAD_ORDER.length; reportIndex++) {
+      const reportKey = LOAD_ORDER[reportIndex];
       const format = getFormat(reportKey);
       if (!format) continue;
 
@@ -270,11 +277,43 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
         if (useSourceRoute && configuredSourceMode(config) !== "SQL") {
           throw new Error(`Analytics route for ${reportKey} requires SQL source mode.`);
         }
+        let sourceTotalRows: number | null = null;
+        if (options.onProgress && adapter.mode === "SQL" && adapter.describe) {
+          try {
+            const described = await adapter.describe(reportKey);
+            sourceTotalRows = Number.isFinite(Number(described.totalRows)) ? Number(described.totalRows) : null;
+          } catch {}
+        }
+        const feedStart = 5 + (reportIndex / Math.max(1, LOAD_ORDER.length)) * 82;
+        await emitSyncProgress(options, {
+          phase: "READING_SOURCE",
+          progress: Math.round(feedStart),
+          message: sourceTotalRows == null
+            ? `Reading ${reportKey} from ${adapter.mode}`
+            : `Reading ${reportKey}: source view contains ${sourceTotalRows.toLocaleString("en-ZA")} row(s)`,
+          reportKey,
+          feedIndex: reportIndex + 1,
+          feedCount: LOAD_ORDER.length,
+          sourceTotalRows,
+          committedRows: 0,
+        });
+
         const pulled = await adapter.fetchReport(reportKey, {
           since: requestSince,
           through: throughAt,
         }, useSourceRoute ? route.sourceView : null, {
           useReplica: Boolean(useSourceRoute && (route.useReplica || config.sourceAnalyticsUseReplica)),
+        });
+        await emitSyncProgress(options, {
+          phase: "VALIDATING",
+          progress: Math.round(feedStart + 2),
+          message: `Validating ${pulled.records.length.toLocaleString("en-ZA")} ${reportKey} row(s)`,
+          reportKey,
+          feedIndex: reportIndex + 1,
+          feedCount: LOAD_ORDER.length,
+          sourceTotalRows,
+          pulledRows: pulled.records.length,
+          committedRows: 0,
         });
         const result = validate(format, pulled.records);
 
