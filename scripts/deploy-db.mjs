@@ -54,10 +54,28 @@ if (process.env.MYSQLHOST && process.env.MYSQLUSER && process.env.MYSQLPASSWORD 
   }
 }
 
-// ── Apply server-side sync procedures (idempotent) ──
+// ── Apply the core server-side bulk upsert procedures on every deploy. ──
+// These are CREATE OR REPLACE functions and are the normal fast path for API/SQL
+// integration syncs. Without them the app falls back to the much slower 1k-row
+// Prisma commit path, which is not acceptable for 100k+ row source tables.
+console.log("\n🧩 Applying core bulk sync procedures...");
+const coreSync = spawnSync("node", ["scripts/apply-sync-migrations.mjs", "001-sync-upsert-procedures.sql"], { stdio: "inherit" });
+if (coreSync.error || coreSync.status !== 0) {
+  console.error("Core bulk sync procedure installation failed; refusing to deploy the slow fallback as the default.");
+  if (coreSync.error) console.error(coreSync.error);
+  process.exit(coreSync.status ?? 1);
+}
+
+// Optional legacy/direct helpers remain opt-in. The application does not depend
+// on these for the normal cross-database sync path.
 if (process.env.APPLY_SYNC_MIGRATIONS === "true") {
-  console.log("\n🧩 Applying sync stored procedures...");
-  spawnSync("node", ["scripts/apply-sync-migrations.mjs"], { stdio: "inherit" });
+  console.log("\n🧩 Applying optional direct/bulk sync helpers...");
+  const optionalSync = spawnSync("node", ["scripts/apply-sync-migrations.mjs", "002-direct-sql-sync.sql", "003-bulk-replace-sync.sql"], { stdio: "inherit" });
+  if (optionalSync.error || optionalSync.status !== 0) {
+    console.error("Optional sync helper installation failed.");
+    if (optionalSync.error) console.error(optionalSync.error);
+    process.exit(optionalSync.status ?? 1);
+  }
 }
 
 process.exit(0);
