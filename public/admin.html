@@ -681,10 +681,12 @@
 const API = ""; // same origin
 let MANIFEST = null, CURRENT = null, LAST_BATCH = null;
 const AdminBrandTheme = window.BrandEngine ? BrandEngine.themeController() : null;
-function applyAdminBrandTheme(theme){
+const DEFAULT_PORTAL_BRAND = {accentColor:'7D2FA3',primaryColor:'B15BE8',navyColor:'2B1B68'};
+function applyAdminBrandTheme(){
   if(!AdminBrandTheme) return;
-  const brand=theme||{accentColor:'B15BE8',primaryColor:'32217C',navyColor:'2B1B68'};
-  AdminBrandTheme.set({brand,light:null});
+  // Administration always uses the canonical empower-fin palette. Partner
+  // branding belongs in client previews and client dashboards, never the control plane.
+  AdminBrandTheme.set({brand:DEFAULT_PORTAL_BRAND,light:null});
 }
 
 const $ = s => document.querySelector(s);
@@ -1595,7 +1597,7 @@ async function boot(){
     return;
   }
   if(!me.modules.admin){ location.href='/dashboard'; return; }
-  applyAdminBrandTheme(me.theme);
+  applyAdminBrandTheme();
 
   const isSuperAdmin = me.role === 'SUPERADMIN';
   const posture = document.getElementById('role-posture');
