@@ -657,20 +657,17 @@
 
       <!-- danger zone: full reset -->
       <div class="card section-gap" style="border-color:#f3c9c0;">
-        <div class="card-hd" style="border-bottom-color:#fbe4df;"><h2 style="color:#b5391f;">Danger zone</h2><div class="note">Clear all imported data for a clean go-live start</div></div>
+        <div class="card-hd" style="border-bottom-color:#fbe4df;"><h2 style="color:#b5391f;">Danger zone</h2><div class="note">Authoritative reset and rebuild from the connected source</div></div>
         <div class="card-bd">
-          <p class="muted" style="margin-bottom:14px;">This permanently removes <b>all imported portal data</b> — employers and their related workforce, journey, debt, policy, rating, referral, salary-advance, score and import records. <b>User logins are kept.</b> There is no undo. Use this only when moving from testing to a clean data set.</p>
-          <button class="btn" id="reset-btn" style="border-color:#e0492f;color:#b5391f;" onclick="openReset()">Reset all imported data…</button>
+          <p class="muted" style="margin-bottom:14px;"><b>Reset always reloads.</b> The connected API/SQL database becomes the source of truth: prior cursors, import history, MLOps decisions and stale-write comparisons are ignored for this rebuild. The current published dashboard stays visible until all 10 feeds have been rebuilt successfully. User logins, access, branding and separately sourced chat history are kept.</p>
+          <button class="btn" id="reset-btn" style="border-color:#e0492f;color:#b5391f;" onclick="openReset()">Reset &amp; rebuild from source…</button>
           <div id="reset-area" style="display:none;margin-top:16px;padding:16px;border:1px solid #f3c9c0;border-radius:11px;background:#fdf5f3;">
             <div style="font-weight:700;color:#b5391f;font-size:13.5px;margin-bottom:8px;">Are you sure? This cannot be undone.</div>
             <div class="muted" style="margin-bottom:10px;">Type <b>RESET</b> below to confirm.</div>
             <input id="reset-confirm" placeholder="type RESET" style="font-family:inherit;font-size:13.5px;padding:9px 12px;border:1px solid #e0492f;border-radius:9px;width:160px;">
-            <button class="btn" style="background:#e0492f;color:#fff;border-color:#e0492f;margin-left:8px;" onclick="doReset()">Permanently reset</button>
+            <button class="btn" style="background:#e0492f;color:#fff;border-color:#e0492f;margin-left:8px;" onclick="doReset()">Reset &amp; rebuild</button>
             <button class="btn btn-ghost" style="margin-left:4px;" onclick="$('#reset-area').style.display='none'">Cancel</button>
-            <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:12.5px;font-weight:700;color:#b5391f;cursor:pointer;">
-              <input id="reset-then-sync" type="checkbox" style="width:16px;height:16px;">
-              Also reload fresh data from the connected API/SQL source immediately after clearing
-            </label>
+            <div class="muted" style="margin-top:12px;">This cannot leave the portal as an intentionally empty dataset: the reset and source rewrite are one authoritative operation.</div>
             <div class="banner" id="reset-msg" style="display:none;margin-top:12px;"></div>
           </div>
         </div>
@@ -911,7 +908,7 @@ async function syncNow(){
   }
 }
 async function refreshNow(btn){
-  if(!confirm('Run a full data refresh now?\n\nThis will save the current integration settings, preflight the source, purge the working source-derived dashboard data, reload all canonical feeds, rebuild snapshots, and publish only if the full refresh succeeds.\n\nDashboard users will continue seeing the last successful published dashboard while this runs.')) return;
+  if(!confirm('Run an authoritative full refresh now?\n\nThe connected source will be treated as truth. Previous cursors, MLOps decisions and stale-write comparisons will not gate this rebuild. All 10 feeds are read from the beginning, the source-derived model is rewritten, and a new dashboard is published only after the full rebuild succeeds.\n\nDashboard users continue seeing the last successful published dashboard while this runs.')) return;
   const original=btn?.textContent||'Refresh now';
   if(btn){ btn.disabled=true; btn.textContent='Refreshing…'; }
   $('#integ-result').innerHTML = '<div class="banner ok">Saving settings and preflighting the source…</div>';
@@ -1568,7 +1565,6 @@ function openReset(){
   if(!area || !input || !msg) return;
   area.style.display='block';
   input.value='';
-  const alsoSync=$('#reset-then-sync'); if(alsoSync) alsoSync.checked=false;
   msg.style.display='none';
   msg.textContent='';
   input.focus();
@@ -1583,10 +1579,10 @@ async function doReset(){
     msg.textContent='Please type RESET exactly to confirm.';
     return;
   }
-  if(!confirm('Permanently remove all imported portal data? User accounts are kept. This cannot be undone.')) return;
+  if(!confirm('Reset the source-derived reporting model and rebuild it immediately from the connected source? The last successful dashboard remains published until all 10 feeds complete.')) return;
   msg.className='banner ok';
   msg.style.display='block';
-  msg.textContent='Clearing imported data…';
+  msg.textContent='Preflighting source, then resetting and rewriting all 10 feeds from the authoritative database…';
   try{
     const r=await fetch(`${API}/api/admin/reset-all`,{
       method:'POST',
@@ -1595,37 +1591,19 @@ async function doReset(){
     });
     let d={};
     try{ d=await r.json(); }catch(_){ }
-    if(!r.ok) throw new Error(d.error || `Reset failed (HTTP ${r.status})`);
-    const total=Object.values(d.cleared||{}).reduce((sum,value)=>sum+(Number(value)||0),0);
+    if(!r.ok || !d.ok) throw new Error(d.error || d.note || `Reset & rebuild failed (HTTP ${r.status})`);
+    const cleared=Object.values(d.cleared||{}).reduce((sum,value)=>sum+(Number(value)||0),0);
+    const loaded=Number(d.overwrittenRows||0);
     input.value='';
     const resultArea=$('#result'); if(resultArea) resultArea.innerHTML='';
-    await loadHistory();
-    const alsoSync = $('#reset-then-sync')?.checked;
-    if(!alsoSync){
-      msg.className='banner ok';
-      msg.textContent=`✓ Reset complete. Cleared ${total} imported records. User accounts were kept.`;
-      return;
-    }
     msg.className='banner ok';
-    msg.textContent=`Cleared ${total} imported records. Reloading fresh data from the connected source…`;
-    try{
-      const sr = await fetch(`${API}/api/admin/integration/sync`,{method:'POST'});
-      const sd = await sr.json();
-      if(sd.error){ msg.className='banner err'; msg.textContent=`✓ Cleared ${total} records, but the reload failed: ${sd.error}`; return; }
-      const loaded = Object.values(sd.summary||{}).reduce((sum,v)=>sum+(Number(v.committed)||0),0);
-      msg.className = sd.status==='OK' ? 'banner ok' : 'banner err';
-      msg.textContent = `✓ Cleared ${total} records and reloaded ${loaded} fresh from the source (${sd.status}: ${sd.note||''}).`;
-      if(typeof loadInteg==='function') loadInteg();
-    }catch(e){
-      msg.className='banner err';
-      msg.textContent=`✓ Cleared ${total} records, but the reload request failed: ${e.message}`;
-    }
+    msg.textContent=`✓ Authoritative rebuild published. Cleared ${cleared.toLocaleString('en-ZA')} source-derived rows and accepted ${loaded.toLocaleString('en-ZA')} rows from the connected source. Previous cursors/MLOps/staleness did not gate this rebuild.`;
+    await Promise.allSettled([loadHistory(),loadInteg(),loadIntegLogs(),loadMLOpsAlert()]);
   }catch(e){
     msg.className='banner err';
-    msg.textContent=`✕ ${e.message}`;
+    msg.textContent=`✕ Reset & rebuild did not publish. The last successful dashboard remains visible. Reason: ${e.message}`;
   }
 }
-
 
 async function boot(){
   installCompactCollapse();
@@ -1773,7 +1751,9 @@ async function pollJob(url, label, onProgress=null, target='#result'){
     if(detail.validatedRows!=null) pieces.push(`Validated: ${Number(detail.validatedRows).toLocaleString('en-ZA')}`);
     if(detail.committedRows!=null) pieces.push(`Processed live: ${Number(detail.committedRows).toLocaleString('en-ZA')}`);
     if(detail.inserted!=null||detail.updated!=null||detail.deleted!=null){
-      pieces.push(`+${Number(detail.inserted||0).toLocaleString('en-ZA')} new · ~${Number(detail.updated||0).toLocaleString('en-ZA')} updated · -${Number(detail.deleted||0).toLocaleString('en-ZA')} deleted · ${Number(detail.skipped||0).toLocaleString('en-ZA')} stale skipped`);
+      const mutations=`+${Number(detail.inserted||0).toLocaleString('en-ZA')} new · ~${Number(detail.updated||0).toLocaleString('en-ZA')} updated · -${Number(detail.deleted||0).toLocaleString('en-ZA')} deleted`;
+      const history=Number(detail.historyRows||0);
+      pieces.push(history>0 ? `${mutations} · ${history.toLocaleString('en-ZA')} dated history observation(s)` : `${mutations}${Number(detail.skipped||0)>0?` · ${Number(detail.skipped).toLocaleString('en-ZA')} stale skipped`:''}`);
     }
     host.innerHTML = `<div class="job-progress">
       <strong>${esc(message)}</strong>
