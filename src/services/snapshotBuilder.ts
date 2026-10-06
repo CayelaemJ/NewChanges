@@ -964,6 +964,7 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
   for (const [i, type] of [...byType.keys()].entries()) {
     const byMonth = outcomeMonthly.get(type) ?? new Map<string, number>();
     (outcomes[i] as any).trend = trendMonths.map((m) => byMonth.get(m) ?? 0);
+    (outcomes[i] as any).trendLabels = trendMonths.map(monthLabel);
     (outcomes[i] as any).delta = trendDelta((outcomes[i] as any).trend);
   }
 
@@ -1272,6 +1273,7 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
         monthlySavingRand: Number(comparisonPayload?.kpis?.monthlySaving?.rand ?? 0),
         totalAdvancedRaw: Number(comparisonPayload?.ewa?.totalRaw ?? 0),
         outcomes: Object.fromEntries((Array.isArray(comparisonPayload.outcomes) ? comparisonPayload.outcomes : []).map((row: any) => [row.key, row.trend || []])),
+        outcomeLabels: (Array.isArray(comparisonPayload.outcomes) ? comparisonPayload.outcomes : []).find((row: any) => Array.isArray(row.trendLabels))?.trendLabels ?? [],
       },
     } : null,
     filterOptions: {
