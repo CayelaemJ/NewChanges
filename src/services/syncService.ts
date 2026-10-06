@@ -620,6 +620,14 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
     }
   }
 
+  await emitSyncProgress(options, {
+    phase: "REBUILDING_DASHBOARD",
+    progress: 96,
+    message: trigger === "full-refresh"
+      ? "Source rows are committed; rebuilding dashboard snapshots before publish"
+      : "Source rows are committed; finalising dashboard refresh",
+    feedCount: LOAD_ORDER.length,
+  });
   const status = anyFailed ? (anyOk ? "PARTIAL" : "FAILED") : "OK";
   const mode = configuredSourceMode(config);
   const note = status === "OK"
@@ -650,6 +658,12 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
     });
   }
 
+  await emitSyncProgress(options, {
+    phase: status === "FAILED" ? "FAILED" : "COMPLETE",
+    progress: 100,
+    message: note,
+    feedCount: LOAD_ORDER.length,
+  });
   return { ok: status !== "FAILED", status, sourceMode: mode, note, throughAt, touchedEmployers: [...touchedEmployers], summary };
 }
 
