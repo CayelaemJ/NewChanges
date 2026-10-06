@@ -3133,9 +3133,9 @@ async function loadLiveData({refreshOnly=false}={}){
     });
     const live=await dashboardPromise;
     if(requestSeq!==LIVE_REQUEST_SEQ) return;
-    // The employer being viewed owns the visual brand. This is also true when
-    // an internal Admin/Superadmin is previewing a client dashboard.
-    applyTheme(live.theme, null);
+    // Employer branding applies to normal branded users. Admin/Superadmin
+    // remain on the empower-fin control-plane palette even while viewing client data.
+    applyTheme(live.theme, me);
     DATA=live; BASE=JSON.parse(JSON.stringify(DATA)); window.__LIVE__=true;
     if(live.employer){ const h1=document.querySelector('.head h1'); if(h1) h1.firstChild.textContent=live.employer+' '; }
     const sourceAt=live.sourceDataUpdatedAt||live.dataAsOf;
@@ -3682,7 +3682,7 @@ setInterval(checkSourceVersion,30000);
 /* Employer chart recolouring pass: applies to all present and future chart marks,
    while deliberately leaving the admin dashboard's original palette untouched. */
 (function(){
-  const isAdmin=()=>{let u=window.currentUser||window.me||window.currentUserData;try{u=u||JSON.parse(sessionStorage.getItem('currentUser')||localStorage.getItem('currentUser')||'null');}catch(e){}return String(u?.role||u?.userRole||document.body?.dataset?.role||'').toUpperCase()==='ADMIN';};
+  const isAdmin=()=>{let u=window.currentUser||window.me||window.currentUserData;try{u=u||JSON.parse(sessionStorage.getItem('currentUser')||localStorage.getItem('currentUser')||'null');}catch(e){}return ['ADMIN','SUPERADMIN'].includes(String(u?.role||u?.userRole||document.body?.dataset?.role||'').toUpperCase());};
   const semantic={
     '#1fa463':'var(--chart-cashflow)','#137a47':'var(--chart-cashflow)','#16a34a':'var(--chart-cashflow)',
     '#e0492f':'var(--chart-high)','#e74c3c':'var(--chart-high)','#dc2626':'var(--chart-high)',
