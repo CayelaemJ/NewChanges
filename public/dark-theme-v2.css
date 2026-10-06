@@ -16,15 +16,24 @@ html.portal-dark .topbar {
 }
 
 /* surfaces */
-html.portal-dark :is(.card, .panel, .kpi, .drawer, .schedule-modal, .portal-account-menu, .source-mode-card, .stat-strip, .opp-card, .ds-card, .portal-modal) {
+html.portal-dark :is(
+  .card, .panel, .kpi, .drawer, .schedule-modal, .portal-account-menu, .source-mode-card, .stat-strip, .opp-card, .ds-card, .portal-modal,
+  .security-stat, .security-panel, .security-drawer, .compliance-box, .job-progress, .ingestion-method, .mlops-alert,
+  #ops-architecture
+) {
   background: var(--dm-surface, #1d2029) !important;
   border-color: var(--dm-line, #343849) !important;
   color: var(--ink, #eceef4);
   box-shadow: 0 1px 0 rgba(255,255,255,.03) inset, 0 6px 20px rgba(0,0,0,.28) !important;
 }
 html.portal-dark .kpi { border-top-color: var(--brand-vivid, var(--blue)) !important; }
-html.portal-dark :is(.drawer-note, .ds, .pf-toolbar, .pf-filter-menu, .dropdown-menu) {
-  background: var(--dm-surface-2, #262a36) !important; border-color: var(--dm-line, #343849) !important;
+html.portal-dark :is(
+  .drawer-note, .ds, .pf-toolbar, .pf-filter-menu, .dropdown-menu,
+  .security-summary, .security-control, .security-detail, .mlops-detail, .ingestion-note, .job-progress-track
+) {
+  background: var(--dm-surface-2, #262a36) !important;
+  border-color: var(--dm-line, #343849) !important;
+  color: var(--ink, #eceef4) !important;
 }
 html.portal-dark :is(.dropdown-item, .pf-filter-option):hover { background: var(--ice); }
 
@@ -52,6 +61,15 @@ html.portal-dark .metric-info { background: var(--ice); color: var(--ink); borde
 html.portal-dark .source-mode-card:hover { background: var(--dm-surface-2) !important; border-color: var(--blue) !important; }
 html.portal-dark .source-mode-card.on { background: var(--ice) !important; border-color: var(--blue) !important; }
 html.portal-dark .source-mode-icon { background: var(--ice) !important; color: var(--blue) !important; }
+html.portal-dark .ingestion-method:hover { background: var(--dm-surface-2) !important; border-color: var(--blue) !important; }
+html.portal-dark .ingestion-method.on { background: var(--ice) !important; border-color: var(--blue) !important; }
+html.portal-dark .ingestion-method-icon { background: var(--ice) !important; color: var(--blue) !important; }
+html.portal-dark .security-summary { background-image:none !important; }
+html.portal-dark :is(.security-stat .v, .security-panel-head h3, .security-control strong, .compliance-box h3, .compliance-item strong, .job-progress-meta strong) { color: var(--brand-primary) !important; }
+html.portal-dark :is(.security-stat .k, .security-summary p, .security-panel-note, .security-control span, .compliance-box p, .compliance-item small, .ingestion-note, #ops-architecture) { color: var(--grey) !important; }
+html.portal-dark .client-preview-dialog { background: var(--dm-bg) !important; border-color: var(--dm-line) !important; }
+html.portal-dark .client-preview-toolbar { background: var(--dm-surface) !important; border-color: var(--dm-line) !important; }
+html.portal-dark .client-preview-close { background: var(--dm-surface-2) !important; border-color: var(--dm-line) !important; color: var(--ink) !important; }
 
 /* data-viz tracks, table rules */
 html.portal-dark :is(.funnel-bar-bg, .hbar-track, .rb-track, .wd-track, .theme-track, .chat-jbar-track) { background: var(--ice); border-color: var(--dm-line); }
@@ -77,6 +95,8 @@ html.portal-dark [style*="background:#fdf5f3" i] { background: var(--red-soft) !
 html.portal-dark :is([style*="border:1px solid #e8e1f7" i], [style*="border:1px solid #efd49b" i], [style*="border:1px solid #f3c9c0" i]) { border-color: var(--dm-line) !important; }
 html.portal-dark [id^="editor-"] td[style*="background:#eef3f8" i] { background: var(--dm-surface-2) !important; }
 html.portal-dark [id^="editor-"] div[style*="background:#fff" i] { background: var(--ice) !important; border-color: var(--dm-line) !important; }
+html.portal-dark :is([style*="background:#fbfaff" i], [style*="background:#f8f5ff" i], [style*="background:#fafcfe" i]) { background: var(--dm-surface-2) !important; border-color: var(--dm-line) !important; }
+html.portal-dark [style*="background:#fff" i]:not(.partner-preview-logo):not(.cp-logo):not(.cp-card):not(.cp-topbar):not(.cp-filter) { border-color: var(--dm-line) !important; }
 
 /* scrollbars + selection */
 html.portal-dark { scrollbar-color: var(--dm-line) var(--dm-bg); }
