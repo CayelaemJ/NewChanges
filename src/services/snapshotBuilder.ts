@@ -16,7 +16,7 @@ const prisma = new PrismaClient();
 // cohort is commonly requested repeatedly while users move between tabs.
 // Keep this deliberately small so slicer changes remain effectively real-time.
 const DASHBOARD_CACHE_TTL_MS = 60_000;
-const DASHBOARD_CACHE_SCHEMA = "financial-comparison-v2";
+const DASHBOARD_CACHE_SCHEMA = "financial-comparison-v3";
 const dashboardCache = new Map<string, { expiresAt: number; payload: any }>();
 const PUBLISHED_DASHBOARD_CACHE_KEY = "__published_dashboard_v1__";
 
