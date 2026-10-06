@@ -43,6 +43,7 @@ must(pages.users.includes("const users=await getJson('/api/users')"), 'Users pag
 
 must(pages.admin.includes('function openReset()') && pages.admin.includes('async function doReset()') && pages.admin.includes('/api/admin/reset-all'), 'Administration reset control must have working open/reset handlers');
 must(pages.admin.includes('id="btn-refresh-now"') && pages.admin.includes('async function refreshNow(btn)') && pages.admin.includes('/api/admin/integration/refresh'), 'Administration must expose the governed full Refresh now control');
+must(pages.admin.includes('id="btn-refresh-now"') && pages.admin.includes('async function refreshNow(btn)') && pages.admin.includes('/api/admin/integration/refresh'), 'Administration must expose the governed full Refresh now control');
 must(pages.admin.includes('b.revertable') && pages.admin.includes('Could not revert this import'), 'Import history must expose safe revert controls and visible revert failures');
 must(server.includes('revertable') && server.includes('reply.code(409)') && imports.includes('batch.reportKey === "employers"'), 'Backend must publish revertability and safely support insert-only employer rollback');
 must(server.includes('X-Empower-Portal-Build') && server.includes('no-store, no-cache') && server.includes('version: "0.10.0"'), 'server must expose build identity and disable stale UI caching');
@@ -92,6 +93,11 @@ must(dashboardCss.includes('@media (max-width:900px) and (orientation:landscape)
 must(pages.dashboard.includes('data-label="Creditor"') && pages.dashboard.includes('data-label="Average per account"'), "creditor detail must expose mobile-readable row labels");
 must(dashboardCss.includes('table.ct tr.ct-row') && dashboardCss.includes('table.ct tr.ct-row td::before'), "creditor table must reflow into readable mobile cards");
 must(dashboardCss.includes('.drawer-outcome') && dashboardCss.includes('.drawer-creditor'), "drilldown drawers must have dedicated responsive layouts");
+must(pages.dashboard.includes("function openDrawer(title, sub, bodyHTML, kind='')") && pages.dashboard.includes("'drawer drawer-outcome'"), "outcome drilldowns must receive their dedicated drawer class");
+must(dashboardCss.includes('.drawer-outcome .drawer-stat-grid .dsv') && dashboardCss.includes('text-overflow:clip'), "outcome drilldown values must never be ellipsized");
+must(pages.dashboard.includes('function countAxisTicks(maxValue,target=5)') && pages.dashboard.includes('function shortTrendLabel(label)'), "outcome completion trends must use integer ticks and compact month labels");
+must(pages.dashboard.includes('class="outcome-trend-chart"'), "outcome completion trend must use its responsive chart class");
+must(pages.dashboard.includes('/static/dashboard.css?v=0.11.1'), "dashboard must cache-bust the repaired drilldown stylesheet");
 must(pages.dashboard.includes("function openDrawer(title, sub, bodyHTML, kind='')") && pages.dashboard.includes("'drawer drawer-outcome'"), "outcome drilldowns must receive the drawer-outcome class");
 must(dashboardCss.includes('.drawer-outcome .drawer-stat-grid .dsv') && dashboardCss.includes('text-overflow:clip'), "outcome drilldown values must never be ellipsized");
 must(pages.dashboard.includes('function countAxisTicks(maxValue,target=5)') && pages.dashboard.includes('function shortTrendLabel(label)'), "outcome count charts must use integer ticks and compact month labels");
@@ -102,6 +108,7 @@ must(!pages.dashboard.includes('cumulative value drawn'), "monthly EWA chart cop
 
 must(pages.dashboard.includes('const rows=Array.isArray(DATA.income)?DATA.income:[]') && pages.dashboard.includes('brandSeries(i)'), "income reach must be robust and use the dashboard brand palette");
 must(snap.includes('INCOME_VALUES.map((band, index)') && snap.includes('incomeCounts.get(band) ?? 0'), "income reach data must preserve zero-count configured bands");
+must(snap.includes('const DASHBOARD_CACHE_SCHEMA = "financial-comparison-v3"') && snap.includes('trendLabels = trendMonths.map(monthLabel)'), "dashboard read-model cache must invalidate stale outcome drilldown payloads and include real trend labels");
 must(dashboardCss.includes('.drawer-outcome .drawer-stat-grid') && dashboardCss.includes('white-space:nowrap'), "drilldown financial values must not wrap within stat cards");
 
 must(snap.includes('comparisonPayload') && snap.includes('previous month') && snap.includes('previous quarter') && snap.includes('previous 30 days') && snap.includes('same period last year'), "server comparisons must use exact like-for-like reporting windows");
