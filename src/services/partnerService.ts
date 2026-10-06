@@ -113,6 +113,9 @@ function hasPartnerBranding(p: any) {
 // resolve the theme that should apply for a given user
 export async function themeForUser(userId: string) {
   const user = await prisma.user.findUnique({ where: { id: userId }, include: { partner: true } });
+  // Admin and Superadmin are control-plane identities. Their own partner
+  // assignment must never rebrand Administration, Users, or the default dashboard shell.
+  if (user?.role === "ADMIN" || user?.role === "SUPERADMIN") return { ...DEFAULT_THEME };
   const p = user?.partner;
   if (!p || !p.active || !hasPartnerBranding(p)) return { ...DEFAULT_THEME };
   return {
