@@ -95,7 +95,11 @@
   .hist td .st{font-size:11px;font-weight:800;padding:3px 9px;border-radius:6px;}
   .st.COMMITTED{background:var(--green-soft);color:#137a47;}
   .st.VALIDATED{background:var(--ice);color:var(--blue-d);}
+  .st.COMMITTING{background:var(--amber-soft);color:#8a5a10;}
   .st.FAILED{background:var(--red-soft);color:#b5391f;}
+  .history-row-detail{display:block;margin-top:4px;font-size:10.5px;line-height:1.4;color:var(--grey);font-weight:600;}
+  .history-row-detail.live{color:#8a5a10;}
+  .job-progress-detail{margin-top:9px;font-size:11.5px;line-height:1.5;color:var(--grey);font-weight:600;}
   .st.REVERTED{background:#f1f1f4;color:#777;}
   .section-gap{margin-top:22px;}
   .field-desc{color:var(--grey-l);}
@@ -863,41 +867,39 @@ async function syncNow(){
   const mode = ($('#integ-mode').value || 'API').toUpperCase();
   $('#integ-result').innerHTML = `<div class="banner ok">Saving settings…</div>`;
   try{
-    // Sync must run against exactly what "Test source" just validated — not
-    // whatever was last saved. Otherwise an unsaved dropdown change (e.g.
-    // switching to MySQL) tests fine but syncs against the old settings,
-    // with nothing in the UI showing the two are out of sync.
     const saveBody = integrationDraft();
     const saveResp = await fetch(`${API}/api/admin/integration`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(saveBody)});
     const saved = await saveResp.json();
     if(!saveResp.ok) throw new Error(saved.error || 'Could not save settings before syncing');
     $('#integ-token').value=''; $('#integ-sql-password').value='';
   }catch(e){ $('#integ-result').innerHTML = `<div class="banner err">✕ ${esc(e.message)}</div>`; return; }
-  $('#integ-result').innerHTML = `<div class="banner ok">Syncing all reports from ${mode}… you can leave this page; the job runs server-side.</div>`;
+
   try{
     const r = await fetch(`${API}/api/admin/integration/sync`,{method:'POST'});
     const d = await r.json();
     if(!r.ok || d.error){ $('#integ-result').innerHTML = `<div class="banner err">✕ ${esc(d.error||'sync failed to start')}</div>`; return; }
-    const jobId = d.jobId;
-    const render = (j)=>{
-      const rows = Object.entries(j.summary||{}).map(([k,v])=>{
-        const txt = v.error ? `<span style="color:#b5391f">${esc(v.error)}</span>` : v.errorCount ? `<span style="color:#b5391f">${esc(v.errorCount)} validation error(s)</span>` : `${esc(v.committed ?? 0)} loaded${v.inserted!=null?` (${esc(v.inserted)} new, ${esc(v.updated)} updated)`:''}`;
-        return `<tr><td style="font-weight:700">${k}</td><td>${txt}</td></tr>`;
-      }).join('');
-      const cls = j.status==='OK'?'ok':j.status==='FAILED'?'err':'ok';
-      $('#integ-result').innerHTML = `<div class="banner ${cls}">${esc(j.status)}: ${esc(j.note)}</div><table class="hist" style="margin-top:8px"><tbody>${rows}</tbody></table>`;
-      loadInteg();
-    };
-    const poll = setInterval(async ()=>{
-      try{
-        const j = await fetch(`${API}/api/admin/sync-jobs/${jobId}`).then(x=>x.json());
-        if(j.status==='PROCESSING') return;
-        clearInterval(poll);
-        if(j.status==='FAILED'){ $('#integ-result').innerHTML = `<div class="banner err">✕ ${esc(j.error||'sync failed')}</div>`; return; }
-        render(j);
-      }catch(e){ clearInterval(poll); $('#integ-result').innerHTML = `<div class="banner err">✕ ${esc(e.message)}</div>`; }
-    }, 2000);
-  }catch(e){ $('#integ-result').innerHTML = `<div class="banner err">✕ ${esc(e.message)}</div>`; }
+
+    const result = await pollJob(
+      `${API}/api/admin/sync-jobs/${d.jobId}`,
+      `Syncing all reports from ${mode}`,
+      () => { loadHistory(); },
+      '#integ-result'
+    );
+
+    const rows = Object.entries(result.summary||{}).map(([k,v])=>{
+      const txt = v.error
+        ? `<span style="color:#b5391f">${esc(v.error)}</span>`
+        : v.errorCount
+          ? `<span style="color:#b5391f">${esc(v.errorCount)} validation error(s)</span>`
+          : `${Number(v.committed||0).toLocaleString('en-ZA')} processed · +${Number(v.inserted||0).toLocaleString('en-ZA')} new · ~${Number(v.updated||0).toLocaleString('en-ZA')} updated · -${Number(v.deleted||0).toLocaleString('en-ZA')} deleted · ${Number(v.staleSkipped||0).toLocaleString('en-ZA')} stale skipped`;
+      return `<tr><td style="font-weight:700">${esc(k)}</td><td>${txt}</td></tr>`;
+    }).join('');
+    const cls = result.status==='OK'?'ok':result.status==='FAILED'?'err':'ok';
+    $('#integ-result').innerHTML = `<div class="banner ${cls}">${esc(result.status)}: ${esc(result.note)}</div><table class="hist" style="margin-top:8px"><tbody>${rows}</tbody></table>`;
+    await Promise.allSettled([loadHistory(),loadInteg(),loadIntegLogs()]);
+  }catch(e){
+    $('#integ-result').innerHTML = `<div class="banner err">✕ ${esc(e.message)}</div>`;
+  }
 }
 async function refreshNow(btn){
   if(!confirm('Run a full data refresh now?\n\nThis will save the current integration settings, preflight the source, purge the working source-derived dashboard data, reload all canonical feeds, rebuild snapshots, and publish only if the full refresh succeeds.\n\nDashboard users will continue seeing the last successful published dashboard while this runs.')) return;
@@ -1706,39 +1708,61 @@ function wireDrop(){
   d.addEventListener('drop',e=>{ if(e.dataTransfer.files[0]) upload(e.dataTransfer.files[0]); });
 }
 
-async function pollJob(url, label){
+async function pollJob(url, label, onProgress=null, target='#result'){
   const started = Date.now();
   const jobId = url.split('/').pop();
   let settled = false;
   let source = null;
   let fallbackTimer = null;
 
-  const showProgress = (progress, phase, message) => {
+  const showProgress = (payload={}) => {
+    const progress=payload.progress ?? 0;
+    const phase=payload.phase ?? 'PROCESSING';
+    const message=payload.message || label;
+    const detail=payload.detail || {};
     const pct = Math.max(0, Math.min(100, Number(progress||0)));
-    $('#result').innerHTML = `<div class="job-progress">
-      <strong>${esc(message || label)}</strong>
+    const host=document.querySelector(target);
+    if(!host) return;
+    const pieces=[];
+    if(detail.reportKey) pieces.push(`Feed ${esc(detail.reportKey)}${detail.feedIndex&&detail.feedCount?` · ${esc(detail.feedIndex)}/${esc(detail.feedCount)}`:''}`);
+    if(detail.sourceTotalRows!=null) pieces.push(`Source view: ${Number(detail.sourceTotalRows).toLocaleString('en-ZA')} rows`);
+    if(detail.pulledRows!=null) pieces.push(`Pulled: ${Number(detail.pulledRows).toLocaleString('en-ZA')}`);
+    if(detail.validatedRows!=null) pieces.push(`Validated: ${Number(detail.validatedRows).toLocaleString('en-ZA')}`);
+    if(detail.committedRows!=null) pieces.push(`Processed live: ${Number(detail.committedRows).toLocaleString('en-ZA')}`);
+    if(detail.inserted!=null||detail.updated!=null||detail.deleted!=null){
+      pieces.push(`+${Number(detail.inserted||0).toLocaleString('en-ZA')} new · ~${Number(detail.updated||0).toLocaleString('en-ZA')} updated · -${Number(detail.deleted||0).toLocaleString('en-ZA')} deleted · ${Number(detail.skipped||0).toLocaleString('en-ZA')} stale skipped`);
+    }
+    host.innerHTML = `<div class="job-progress">
+      <strong>${esc(message)}</strong>
       <div class="job-progress-track"><div class="job-progress-fill" style="width:${pct}%"></div></div>
-      <div class="job-progress-meta"><span>${esc(phase || 'PROCESSING')}</span><strong>${pct}%</strong></div>
+      <div class="job-progress-meta"><span>${esc(phase)}</span><strong>${pct}%</strong></div>
+      ${pieces.length?`<div class="job-progress-detail">${pieces.map(esc).join(' · ')}</div>`:''}
     </div>`;
   };
 
-  const getFinal = async () => {
+  const readState = async () => {
     const r = await fetch(url, { cache: 'no-store' });
     const d = await r.json().catch(() => null);
     if(!r.ok || !d) throw new Error(d?.error || `${label} status check failed: HTTP ${r.status}`);
+    return d;
+  };
+
+  const finishState = async (d) => {
     if(d.status === 'DONE') return d.result || d;
     if(d.status === 'FAILED') throw new Error(d.error || `${label} failed`);
+    showProgress(d);
+    if(onProgress) onProgress(d);
     return null;
   };
 
   const fallbackPoll = async () => {
     while(Date.now() - started < 30 * 60 * 1000){
-      const done = await getFinal();
+      const state=await readState();
+      const done=await finishState(state);
       if(done) return done;
-      showProgress(0, 'PROCESSING', `${label} is still running`);
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 1500));
     }
-    throw new Error(`${label} is still running after 30 minutes. Check Import history before retrying.`);
+    throw new Error(`${label} is still running after 30 minutes. Import history continues to update automatically.`);
   };
 
   if(window.EventSource && jobId){
@@ -1754,10 +1778,12 @@ async function pollJob(url, label){
         source.addEventListener('job.progress', async event => {
           try{
             const p = JSON.parse(event.data || '{}');
-            showProgress(p.progress, p.phase, p.message || label);
+            showProgress(p);
+            if(onProgress) onProgress(p);
             if(p.status === 'DONE' || p.status === 'FAILED'){
               try{
-                const final = await getFinal();
+                const finalState=await readState();
+                const final=await finishState(finalState);
                 if(final) finish(resolve, final);
               }catch(e){ finish(reject, e); }
             }
@@ -1903,10 +1929,13 @@ async function revert(batchId){
   }
 }
 
+let HISTORY_LOADING=false;
 async function loadHistory(){
+  if(HISTORY_LOADING) return;
+  HISTORY_LOADING=true;
   const body=$('#hist-body');
   try{
-    const r = await fetch(`${API}/api/admin/batches`);
+    const r = await fetch(`${API}/api/admin/batches`,{cache:'no-store'});
     let batches=[];
     try{ batches = await r.json(); }catch(_){ }
     if(!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -1914,19 +1943,34 @@ async function loadHistory(){
       body.innerHTML = '<tr><td colspan="7" class="muted" style="padding:16px 10px;">No imports yet.</td></tr>';
       return;
     }
-    body.innerHTML = batches.map(b=>`<tr>
-      <td>${(MANIFEST.reports.find(x=>x.key===b.reportKey)||{}).title||b.reportKey}</td>
-      <td class="muted">${esc(b.filename)}</td>
-      <td>${esc(b.rowCount)}</td>
-      <td><span class="st ${esc(b.status)}">${esc(b.status)}</span></td>
-      <td class="muted">${fmtDate(b.uploadedAt)}</td>
-      <td><a class="btn btn-ghost" style="padding:5px 11px;font-size:12px;display:inline-block;" href="${API}/api/admin/batches/${esc(b.id)}/download" download>Download CSV</a></td>
-      <td>${b.status==='COMMITTED' && b.revertable
-        ? `<button class="btn btn-ghost" style="padding:5px 11px;font-size:12px;" onclick="revert('${esc(b.id)}')">Revert</button>`
-        : (b.status==='COMMITTED' ? `<span class="muted" style="font-size:11px;" title="${esc(b.revertReason||'This batch cannot be safely reverted.')}">Not reversible</span>` : '')}</td>
-    </tr>`).join('');
+    body.innerHTML = batches.map(b=>{
+      const total=Number(b.rowCount||0);
+      const inserted=Number(b.insertedCount||0), updated=Number(b.updatedCount||0), deleted=Number(b.deletedCount||0);
+      const applied=inserted+updated+deleted;
+      const isLiveCommit=b.status==='VALIDATED' && applied>0;
+      const statusLabel=isLiveCommit?'COMMITTING':b.status;
+      const skipped=b.status==='COMMITTED'?Math.max(0,total-applied):null;
+      let detail='';
+      if(b.status==='VALIDATED' && applied===0) detail=`${total.toLocaleString('en-ZA')} validated · 0 applied to live tables yet`;
+      else if(isLiveCommit) detail=`${applied.toLocaleString('en-ZA')} changes applied so far of ${total.toLocaleString('en-ZA')} validated rows`;
+      else if(b.status==='COMMITTED') detail=`${total.toLocaleString('en-ZA')} processed · +${inserted.toLocaleString('en-ZA')} new · ~${updated.toLocaleString('en-ZA')} updated · -${deleted.toLocaleString('en-ZA')} deleted · ${Number(skipped||0).toLocaleString('en-ZA')} stale skipped`;
+      else detail=`${total.toLocaleString('en-ZA')} rows`;
+      return `<tr>
+        <td>${(MANIFEST?.reports?.find(x=>x.key===b.reportKey)||{}).title||esc(b.reportKey)}</td>
+        <td class="muted">${esc(b.filename)}</td>
+        <td><strong>${total.toLocaleString('en-ZA')}</strong><span class="history-row-detail ${isLiveCommit?'live':''}">${esc(detail)}</span></td>
+        <td><span class="st ${esc(statusLabel)}">${esc(statusLabel)}</span></td>
+        <td class="muted">${fmtDate(b.committedAt||b.uploadedAt)}</td>
+        <td><a class="btn btn-ghost" style="padding:5px 11px;font-size:12px;display:inline-block;" href="${API}/api/admin/batches/${esc(b.id)}/download" download>Download CSV</a></td>
+        <td>${b.status==='COMMITTED' && b.revertable
+          ? `<button class="btn btn-ghost" style="padding:5px 11px;font-size:12px;" onclick="revert('${esc(b.id)}')">Revert</button>`
+          : (b.status==='COMMITTED' ? `<span class="muted" style="font-size:11px;" title="${esc(b.revertReason||'This batch cannot be safely reverted.')}">Not reversible</span>` : '')}</td>
+      </tr>`;
+    }).join('');
   }catch(e){
     body.innerHTML = `<tr><td colspan="7" class="muted" style="padding:16px 10px;color:#b5391f;">Could not load import history: ${esc(e.message)}</td></tr>`;
+  }finally{
+    HISTORY_LOADING=false;
   }
 }
 
@@ -1943,6 +1987,10 @@ function installCompactCollapse(){
   });
 }
 window.addEventListener("load", () => { installCompactCollapse(); boot(); }, { once: true });
+window.setInterval(() => {
+  if(document.visibilityState !== 'visible') return;
+  loadHistory();
+}, 1500);
 window.setInterval(() => {
   if(document.visibilityState !== 'visible') return;
   Promise.allSettled([loadAdminSecuritySummary(), loadComplianceSummary()]);
