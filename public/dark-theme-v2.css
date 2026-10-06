@@ -88,9 +88,29 @@ html.portal-dark tbody tr:hover td { background: var(--ice) !important; }
 html.portal-dark svg [stroke="#f7f4ff"] { stroke: var(--dm-line); }
 html.portal-dark svg [stroke="#fff"], html.portal-dark svg [stroke="#ffffff"] { stroke: var(--dm-surface); }
 
-/* welcome splash, tinted by the brand accent */
+/* Loading is a softer transition surface, not a near-black blackout. */
 html.portal-dark #welcome-splash {
-  background: radial-gradient(1200px 700px at 50% -10%, color-mix(in srgb, var(--blue) 22%, transparent), transparent 60%), linear-gradient(160deg, var(--dm-bg) 0%, var(--dm-surface) 100%) !important;
+  background: #3d404a !important;
+  background:
+    radial-gradient(900px 520px at 50% -8%, color-mix(in srgb, var(--brand-vivid, var(--blue)) 12%, transparent), transparent 62%),
+    linear-gradient(160deg, var(--dm-loading-bg, #3d404a) 0%, color-mix(in srgb, var(--dm-loading-surface, #50535d) 82%, var(--dm-loading-bg, #3d404a)) 100%) !important;
+}
+html.portal-dark #welcome-splash .welcome-splash-inner {
+  background: color-mix(in srgb, var(--dm-loading-surface, #50535d) 92%, white 8%) !important;
+  border-color: var(--dm-loading-line, #6b6e78) !important;
+  box-shadow: 0 20px 60px rgba(0,0,0,.18) !important;
+}
+html.portal-dark #welcome-splash .welcome-splash-greeting { color: var(--dm-loading-ink, #f7f8fb) !important; }
+html.portal-dark #welcome-splash .welcome-splash-sub { color: var(--dm-loading-muted, #dde0e8) !important; }
+html.portal-dark #welcome-splash .welcome-splash-spinner {
+  border-color: color-mix(in srgb, var(--dm-loading-line, #6b6e78) 72%, transparent) !important;
+  border-top-color: var(--brand-vivid, var(--blue)) !important;
+}
+html.portal-dark #welcome-splash .welcome-splash-logo {
+  background:#fff;
+  border-radius:10px;
+  padding:7px 12px;
+  box-shadow:0 8px 24px rgba(0,0,0,.10);
 }
 
 /* inline-styled legacy text/backgrounds (few remain; mapped to tokens, case-insensitive) */
