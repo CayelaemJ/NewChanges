@@ -897,7 +897,7 @@ async function syncNow(){
         ? `<span style="color:#b5391f">${esc(v.error)}</span>`
         : v.errorCount
           ? `<span style="color:#b5391f">${esc(v.errorCount)} validation error(s)</span>`
-          : `${Number(v.committed||0).toLocaleString('en-ZA')} processed · +${Number(v.inserted||0).toLocaleString('en-ZA')} new · ~${Number(v.updated||0).toLocaleString('en-ZA')} updated · -${Number(v.deleted||0).toLocaleString('en-ZA')} deleted · ${Number(v.staleSkipped||0).toLocaleString('en-ZA')} stale skipped`;
+          : (()=>{ const h=Number(v.historyRows||0), s=Number(v.staleSkipped||0); return `${Number(v.committed||0).toLocaleString('en-ZA')} processed · +${Number(v.inserted||0).toLocaleString('en-ZA')} new · ~${Number(v.updated||0).toLocaleString('en-ZA')} updated · -${Number(v.deleted||0).toLocaleString('en-ZA')} deleted${h>0?` · ${h.toLocaleString('en-ZA')} dated history observation(s)`:s>0?` · ${s.toLocaleString('en-ZA')} stale skipped`:''}${v.authoritativeOverwrite?' · authoritative overwrite':''}`; })();
       return `<tr><td style="font-weight:700">${esc(k)}</td><td>${txt}</td></tr>`;
     }).join('');
     const cls = result.status==='OK'?'ok':result.status==='FAILED'?'err':'ok';
@@ -1973,12 +1973,15 @@ async function loadHistory(){
       const isLiveCommit=b.status==='VALIDATED' && applied>0;
       const statusClass=isLiveCommit?'COMMITTING':b.status;
       const statusLabel=isLiveCommit?'COMMITTING':(b.status==='VALIDATED'?'VALIDATED · NOT LIVE':b.status);
-      const skipped=b.status==='COMMITTED'?Math.max(0,total-applied):null;
+      const historicalFeed=['employees','debt_accounts','policies'].includes(b.reportKey);
+      const authoritative=String(b.uploadedBy||'').includes('(full-refresh)');
+      const remainder=b.status==='COMMITTED'?Math.max(0,total-applied):0;
       let detail='';
-      if(b.status==='VALIDATED' && applied===0) detail=`${total.toLocaleString('en-ZA')} validated · 0 applied to live tables yet`;
-      else if(isLiveCommit) detail=`${applied.toLocaleString('en-ZA')} changes applied so far of ${total.toLocaleString('en-ZA')} validated rows`;
-      else if(b.status==='COMMITTED') detail=`${total.toLocaleString('en-ZA')} processed · +${inserted.toLocaleString('en-ZA')} new · ~${updated.toLocaleString('en-ZA')} updated · -${deleted.toLocaleString('en-ZA')} deleted · ${Number(skipped||0).toLocaleString('en-ZA')} stale skipped`;
-      else detail=`${total.toLocaleString('en-ZA')} rows`;
+      if(b.status==='VALIDATED' && applied===0) detail=`validated · 0 current-projection changes applied yet`;
+      else if(isLiveCommit) detail=`${applied.toLocaleString('en-ZA')} current-projection change(s) applied so far`;
+      else if(b.status==='COMMITTED' && historicalFeed) detail=`processed from source · +${inserted.toLocaleString('en-ZA')} current new · ~${updated.toLocaleString('en-ZA')} current rewritten · -${deleted.toLocaleString('en-ZA')} deleted · ${remainder.toLocaleString('en-ZA')} dated observation(s) retained in history${authoritative?' · authoritative rebuild':''}`;
+      else if(b.status==='COMMITTED') detail=`processed from source · +${inserted.toLocaleString('en-ZA')} new · ~${updated.toLocaleString('en-ZA')} rewritten · -${deleted.toLocaleString('en-ZA')} deleted${remainder>0 && !authoritative?` · ${remainder.toLocaleString('en-ZA')} stale skipped`:''}${authoritative?' · authoritative rebuild':''}`;
+      else detail=`rows`;
       return `<tr>
         <td>${(MANIFEST?.reports?.find(x=>x.key===b.reportKey)||{}).title||esc(b.reportKey)}</td>
         <td class="muted">${esc(b.filename)}</td>
