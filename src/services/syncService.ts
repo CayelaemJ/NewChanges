@@ -405,7 +405,11 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
           throw new Error(`Analytics route for ${reportKey} requires SQL source mode.`);
         }
         let sourceTotalRows: number | null = null;
-        if (options.onProgress && adapter.mode === "SQL" && adapter.describe) {
+        // A full reset/rebuild must prove what exists at the source before it
+        // accepts an empty extraction. Always inspect SQL source row counts for
+        // authoritative reloads; progress-only describes are insufficient
+        // because Reset may run without a live progress subscriber.
+        if ((authoritativeOverwrite || options.onProgress) && adapter.mode === "SQL" && adapter.describe) {
           try {
             const described = await adapter.describe(reportKey);
             sourceTotalRows = Number.isFinite(Number(described.totalRows)) ? Number(described.totalRows) : null;
@@ -427,12 +431,22 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
         });
 
         const pulled = await adapter.fetchReport(reportKey, {
+          // Incremental syncs use a bounded source window. Authoritative
+          // Reset/Refresh deliberately uses NO time window at all: reconnecting
+          // the same database must be equivalent to reloading the Power BI
+          // source from scratch, regardless of old cursors or source timestamps.
           since: requestSince,
-          through: throughAt,
+          through: authoritativeOverwrite ? undefined : throughAt,
         }, useSourceRoute ? route.sourceView : null, {
           useReplica: Boolean(useSourceRoute && (route.useReplica || config.sourceAnalyticsUseReplica)),
           authoritative: authoritativeOverwrite,
         });
+
+        if (authoritativeOverwrite && sourceTotalRows != null && sourceTotalRows > 0 && pulled.records.length === 0) {
+          throw new Error(
+            `${reportKey}: authoritative rebuild found ${sourceTotalRows.toLocaleString("en-ZA")} row(s) in the connected source view but extracted 0. Refusing to publish an empty rebuild; check the selected source route/view and SQL connection.`,
+          );
+        }
         await emitSyncProgress(options, {
           phase: "VALIDATING",
           progress: Math.round(feedStart + 2),

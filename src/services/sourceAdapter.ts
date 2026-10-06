@@ -298,7 +298,7 @@ interface SqlQueryResult {
 
 interface SqlExecutor {
   dialect: SqlDialect;
-  queryReport(reportKey: string, window: SourceWindow, maxRows: number | null, sourceViewOverride?: string | null): Promise<SqlQueryResult>;
+  queryReport(reportKey: string, window: SourceWindow, maxRows: number | null, sourceViewOverride?: string | null, offset?: number): Promise<SqlQueryResult>;
   probe(reportKey: string): Promise<string[]>;
   describe(reportKey: string): Promise<{ database: string | null; totalRows: number; newest: string | null }>;
   watermark(reportKey: string): Promise<{ newest: string | null }>;
@@ -346,7 +346,7 @@ async function openPostgresExecutor(config: IntegrationSourceConfig): Promise<Sq
 
   return {
     dialect: "POSTGRESQL",
-    async queryReport(reportKey, window, maxRows, sourceViewOverride) {
+    async queryReport(reportKey, window, maxRows, sourceViewOverride, offset = 0) {
       const view = qualifiedView("POSTGRESQL", config, reportKey, sourceViewOverride);
       const params: unknown[] = [];
       const where: string[] = [];
@@ -354,10 +354,11 @@ async function openPostgresExecutor(config: IntegrationSourceConfig): Promise<Sq
       if (window.through) { params.push(window.through); where.push(`source_updated_at <= $${params.length}`); }
       let limitSql = "";
       if (maxRows != null) {
-        params.push(maxRows + 1);
+        params.push(maxRows);
         limitSql = ` LIMIT ${params.length}`;
       }
-      const sql = `SELECT * FROM ${view}${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY source_updated_at ASC${limitSql}`;
+      const offsetSql = maxRows != null && offset > 0 ? ` OFFSET ${Math.max(0, Math.trunc(offset))}` : "";
+      const sql = `SELECT * FROM ${view}${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY source_updated_at ASC${limitSql}${offsetSql}`;
       const result = await client.query(sql, params);
       return { rows: result.rows, columns: result.fields?.map((f: any) => String(f.name)) ?? [] };
     },
@@ -403,7 +404,7 @@ async function openMysqlExecutor(config: IntegrationSourceConfig): Promise<SqlEx
 
   return {
     dialect: "MYSQL",
-    async queryReport(reportKey, window, maxRows, sourceViewOverride) {
+    async queryReport(reportKey, window, maxRows, sourceViewOverride, offset = 0) {
       const view = qualifiedView("MYSQL", config, reportKey, sourceViewOverride);
       const params: unknown[] = [];
       const where: string[] = [];
@@ -411,10 +412,12 @@ async function openMysqlExecutor(config: IntegrationSourceConfig): Promise<SqlEx
       if (window.through) { params.push(window.through); where.push("source_updated_at <= ?"); }
       let limitSql = "";
       if (maxRows != null) {
-        params.push(maxRows + 1);
+        params.push(maxRows);
         limitSql = " LIMIT ?";
       }
-      const sql = `SELECT * FROM ${view}${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY source_updated_at ASC${limitSql}`;
+      const offsetSql = maxRows != null && offset > 0 ? " OFFSET ?" : "";
+      if (maxRows != null && offset > 0) params.push(Math.max(0, Math.trunc(offset)));
+      const sql = `SELECT * FROM ${view}${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY source_updated_at ASC${limitSql}${offsetSql}`;
       const [rows, fields] = await connection.query({ sql, timeout: queryTimeout }, params);
       return {
         rows: Array.isArray(rows) ? rows as Record<string, unknown>[] : [],
@@ -464,15 +467,17 @@ async function openMssqlExecutor(config: IntegrationSourceConfig): Promise<SqlEx
 
   return {
     dialect: "MSSQL",
-    async queryReport(reportKey, window, maxRows, sourceViewOverride) {
+    async queryReport(reportKey, window, maxRows, sourceViewOverride, offset = 0) {
       const view = qualifiedView("MSSQL", config, reportKey, sourceViewOverride);
       const request = pool.request();
-      if (maxRows != null) request.input("limit", mssql.Int, maxRows + 1);
+      if (maxRows != null) request.input("limit", mssql.Int, maxRows);
+      if (maxRows != null) request.input("offset", mssql.Int, Math.max(0, Math.trunc(offset)));
       const where: string[] = [];
       if (window.since) { request.input("since", mssql.DateTimeOffset, window.since); where.push("source_updated_at > @since"); }
       if (window.through) { request.input("through", mssql.DateTimeOffset, window.through); where.push("source_updated_at <= @through"); }
-      const top = maxRows == null ? "" : "TOP (@limit) ";
-      const sql = `SELECT ${top}* FROM ${view}${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY source_updated_at ASC`;
+      const sql = maxRows == null
+        ? `SELECT * FROM ${view}${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY source_updated_at ASC`
+        : `SELECT * FROM ${view}${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY source_updated_at ASC OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY`;
       const result = await request.query(sql);
       const rows = Array.isArray(result.recordset) ? result.recordset as Record<string, unknown>[] : [];
       const columns = result.recordset?.columns ? Object.keys(result.recordset.columns) : (rows[0] ? Object.keys(rows[0]) : []);
@@ -550,7 +555,12 @@ async function createSqlAdapter(config: IntegrationSourceConfig): Promise<Source
   if (!(process.env.SOURCE_SQL_PASSWORD || config.sqlPassword)) throw new Error("SQL password is required. Set it in Admin or SOURCE_SQL_PASSWORD.");
 
   const dialect = sqlDialect(config);
-  const maxRows = intSetting(config.sqlMaxRowsPerReport, 250_000, 1, 2_000_000);
+  // This is a per-query extraction page size, NOT a total feed limit.
+  // Large sources are read page-by-page so a 300k/1m+ feed does not fail or
+  // force one enormous source query. Keep pages bounded to protect the source
+  // database and Railway memory while the write side continues using its own
+  // 20k bulk chunks.
+  const extractionPageSize = intSetting(config.sqlMaxRowsPerReport, 50_000, 1_000, 250_000);
   let executor: SqlExecutor;
   let replicaExecutor: SqlExecutor | null = null;
   try {
@@ -591,13 +601,23 @@ async function createSqlAdapter(config: IntegrationSourceConfig): Promise<Source
   async function fetchReport(reportKey: string, window: SourceWindow = {}, sourceViewOverride?: string | null, options?: { useReplica?: boolean; authoritative?: boolean }): Promise<SourceFetchResult> {
     const selectedExecutor = options?.useReplica ? replicaExecutor : executor;
     if (options?.useReplica && !selectedExecutor) throw new Error("Read replica is required for " + reportKey + ", but no approved replica is configured.");
-    const effectiveMaxRows = options?.authoritative ? null : maxRows;
-    const result = await (selectedExecutor ?? executor).queryReport(reportKey, window, effectiveMaxRows, sourceViewOverride);
-    if (effectiveMaxRows != null && result.rows.length > effectiveMaxRows) {
-      throw new Error(`${reportKey}: SQL extraction exceeded the configured ${effectiveMaxRows.toLocaleString("en-ZA")} row safety limit for one sync window. Increase sync frequency or sqlMaxRowsPerReport.`);
+
+    const activeExecutor = selectedExecutor ?? executor;
+    const records: Record<string, unknown>[] = [];
+    let offset = 0;
+
+    // Always page SQL extraction. Authoritative rebuilds are unlimited in total
+    // rows, but still use bounded queries so Reset can reload a very large
+    // database without one giant SELECT monopolising the source connection.
+    while (true) {
+      const page = await activeExecutor.queryReport(reportKey, window, extractionPageSize, sourceViewOverride, offset);
+      records.push(...normalizeSqlRows(reportKey, page.rows));
+      if (page.rows.length < extractionPageSize) break;
+      offset += page.rows.length;
     }
+
     return {
-      records: normalizeSqlRows(reportKey, result.rows),
+      records,
       location: `${dialect}${options?.useReplica ? "-REPLICA" : ""}:${formatSqlLocation(options?.useReplica && replicaExecutor ? { ...config, sqlSchema: config.sqlReplicaSchema ?? config.sqlSchema } : config, reportKey)}`,
     };
   }
