@@ -86,33 +86,57 @@ function numberEnv(name: string): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
-function withEnvironment(config: IntegrationSourceConfig): IntegrationSourceConfig {
+export function sourceEnvironmentLocked(): boolean {
+  const raw = String(process.env.SOURCE_CONFIG_LOCKED ?? "").trim().toLowerCase();
+  return ["1", "true", "yes", "on"].includes(raw);
+}
+
+function chooseSourceSetting<T>(
+  envName: string,
+  saved: T | null | undefined,
+  parse: (raw: string) => T,
+  options: { allowEmptySaved?: boolean } = {},
+): T | null | undefined {
+  const raw = process.env[envName];
+  const envPresent = raw != null && raw !== "";
+  const savedPresent = saved !== null && saved !== undefined &&
+    (options.allowEmptySaved || typeof saved !== "string" || saved.trim() !== "");
+  if (sourceEnvironmentLocked()) return envPresent ? parse(raw!) : saved;
+  return savedPresent ? saved : (envPresent ? parse(raw!) : saved);
+}
+
+export function effectiveSourceConfig(config: IntegrationSourceConfig): IntegrationSourceConfig {
+  const text = (raw: string) => raw;
+  const integer = (raw: string) => Number(raw);
+  const bool = (raw: string) => !["0", "false", "no", "off"].includes(raw.toLowerCase());
+
   return {
     ...config,
-    baseUrl: process.env.SOURCE_API_BASE_URL || config.baseUrl,
-    authToken: process.env.SOURCE_API_TOKEN || config.authToken,
-    sqlDialect: process.env.SOURCE_SQL_DIALECT || config.sqlDialect,
-    sqlHost: process.env.SOURCE_SQL_HOST || config.sqlHost,
-    sqlPort: numberEnv("SOURCE_SQL_PORT") ?? config.sqlPort,
-    sqlDatabase: process.env.SOURCE_SQL_DATABASE || config.sqlDatabase,
-    sqlSchema: process.env.SOURCE_SQL_SCHEMA ?? config.sqlSchema,
-    sqlUsername: process.env.SOURCE_SQL_USERNAME || config.sqlUsername,
-    sqlPassword: process.env.SOURCE_SQL_PASSWORD || config.sqlPassword,
-    sqlSsl: boolEnv("SOURCE_SQL_SSL") ?? config.sqlSsl,
-    sqlTrustServerCertificate: boolEnv("SOURCE_SQL_TRUST_SERVER_CERTIFICATE") ?? config.sqlTrustServerCertificate,
-    sqlViewPrefix: process.env.SOURCE_SQL_VIEW_PREFIX || config.sqlViewPrefix,
-    sqlQueryTimeoutMs: numberEnv("SOURCE_SQL_QUERY_TIMEOUT_MS") ?? config.sqlQueryTimeoutMs,
-    sqlMaxRowsPerReport: numberEnv("SOURCE_SQL_MAX_ROWS_PER_REPORT") ?? config.sqlMaxRowsPerReport,
-    sqlReplicaEnabled: boolEnv("SOURCE_SQL_REPLICA_ENABLED") ?? config.sqlReplicaEnabled,
-    sqlReplicaHost: process.env.SOURCE_SQL_REPLICA_HOST || config.sqlReplicaHost,
-    sqlReplicaPort: numberEnv("SOURCE_SQL_REPLICA_PORT") ?? config.sqlReplicaPort,
-    sqlReplicaDatabase: process.env.SOURCE_SQL_REPLICA_DATABASE || config.sqlReplicaDatabase,
-    sqlReplicaSchema: process.env.SOURCE_SQL_REPLICA_SCHEMA ?? config.sqlReplicaSchema,
-    sqlReplicaUsername: process.env.SOURCE_SQL_REPLICA_USERNAME || config.sqlReplicaUsername,
-    sqlReplicaPassword: process.env.SOURCE_SQL_REPLICA_PASSWORD || config.sqlReplicaPassword,
-    sqlReplicaSsl: boolEnv("SOURCE_SQL_REPLICA_SSL") ?? config.sqlReplicaSsl,
-    sqlReplicaTrustServerCertificate: boolEnv("SOURCE_SQL_REPLICA_TRUST_SERVER_CERTIFICATE") ?? config.sqlReplicaTrustServerCertificate,
-    sqlReplicaMaxLagSeconds: numberEnv("SOURCE_SQL_REPLICA_MAX_LAG_SECONDS") ?? config.sqlReplicaMaxLagSeconds,
+    sourceMode: chooseSourceSetting("SOURCE_MODE", config.sourceMode, text),
+    baseUrl: chooseSourceSetting("SOURCE_API_BASE_URL", config.baseUrl, text),
+    authToken: chooseSourceSetting("SOURCE_API_TOKEN", config.authToken, text),
+    sqlDialect: chooseSourceSetting("SOURCE_SQL_DIALECT", config.sqlDialect, text),
+    sqlHost: chooseSourceSetting("SOURCE_SQL_HOST", config.sqlHost, text),
+    sqlPort: chooseSourceSetting("SOURCE_SQL_PORT", config.sqlPort, integer),
+    sqlDatabase: chooseSourceSetting("SOURCE_SQL_DATABASE", config.sqlDatabase, text),
+    sqlSchema: chooseSourceSetting("SOURCE_SQL_SCHEMA", config.sqlSchema, text, { allowEmptySaved: true }),
+    sqlUsername: chooseSourceSetting("SOURCE_SQL_USERNAME", config.sqlUsername, text),
+    sqlPassword: chooseSourceSetting("SOURCE_SQL_PASSWORD", config.sqlPassword, text),
+    sqlSsl: chooseSourceSetting("SOURCE_SQL_SSL", config.sqlSsl, bool),
+    sqlTrustServerCertificate: chooseSourceSetting("SOURCE_SQL_TRUST_SERVER_CERTIFICATE", config.sqlTrustServerCertificate, bool),
+    sqlViewPrefix: chooseSourceSetting("SOURCE_SQL_VIEW_PREFIX", config.sqlViewPrefix, text),
+    sqlQueryTimeoutMs: chooseSourceSetting("SOURCE_SQL_QUERY_TIMEOUT_MS", config.sqlQueryTimeoutMs, integer),
+    sqlMaxRowsPerReport: chooseSourceSetting("SOURCE_SQL_MAX_ROWS_PER_REPORT", config.sqlMaxRowsPerReport, integer),
+    sqlReplicaEnabled: chooseSourceSetting("SOURCE_SQL_REPLICA_ENABLED", config.sqlReplicaEnabled, bool),
+    sqlReplicaHost: chooseSourceSetting("SOURCE_SQL_REPLICA_HOST", config.sqlReplicaHost, text),
+    sqlReplicaPort: chooseSourceSetting("SOURCE_SQL_REPLICA_PORT", config.sqlReplicaPort, integer),
+    sqlReplicaDatabase: chooseSourceSetting("SOURCE_SQL_REPLICA_DATABASE", config.sqlReplicaDatabase, text),
+    sqlReplicaSchema: chooseSourceSetting("SOURCE_SQL_REPLICA_SCHEMA", config.sqlReplicaSchema, text, { allowEmptySaved: true }),
+    sqlReplicaUsername: chooseSourceSetting("SOURCE_SQL_REPLICA_USERNAME", config.sqlReplicaUsername, text),
+    sqlReplicaPassword: chooseSourceSetting("SOURCE_SQL_REPLICA_PASSWORD", config.sqlReplicaPassword, text),
+    sqlReplicaSsl: chooseSourceSetting("SOURCE_SQL_REPLICA_SSL", config.sqlReplicaSsl, bool),
+    sqlReplicaTrustServerCertificate: chooseSourceSetting("SOURCE_SQL_REPLICA_TRUST_SERVER_CERTIFICATE", config.sqlReplicaTrustServerCertificate, bool),
+    sqlReplicaMaxLagSeconds: chooseSourceSetting("SOURCE_SQL_REPLICA_MAX_LAG_SECONDS", config.sqlReplicaMaxLagSeconds, integer),
   };
 }
 
@@ -124,14 +148,14 @@ function cleanIdentifier(value: string | null | undefined, label: string, allowB
 }
 
 export function configuredSourceMode(config: IntegrationSourceConfig): SourceMode {
-  const raw = String(process.env.SOURCE_MODE ?? config.sourceMode ?? "API").trim().toUpperCase();
+  const raw = String(effectiveSourceConfig(config).sourceMode ?? "API").trim().toUpperCase();
   if (raw !== "API" && raw !== "SQL") throw new Error(`Unsupported source mode "${raw}". Use API or SQL.`);
   return raw;
 }
 
 export function sourceIsConfigured(config: IntegrationSourceConfig): boolean {
   const mode = configuredSourceMode(config);
-  const effective = withEnvironment(config);
+  const effective = effectiveSourceConfig(config);
   if (mode === "API") return Boolean(effective.baseUrl);
   return Boolean(effective.sqlHost && effective.sqlDatabase && effective.sqlUsername && effective.sqlPassword);
 }
@@ -481,7 +505,7 @@ function effectiveReplicaEnabled(config: IntegrationSourceConfig): boolean {
 }
 
 export async function checkMysqlReadReplica(config: IntegrationSourceConfig): Promise<{ configured: boolean; reachable: boolean; readOnly: boolean | null; lagSeconds: number | null; lagWithinThreshold: boolean | null; host: string | null; database: string | null; note: string }> {
-  const effective = withEnvironment(config);
+  const effective = effectiveSourceConfig(config);
   if (!effective.sqlReplicaHost || !effective.sqlReplicaUsername || !(process.env.SOURCE_SQL_REPLICA_PASSWORD || effective.sqlReplicaPassword)) {
     return { configured: false, reachable: false, readOnly: null, lagSeconds: null, lagWithinThreshold: null, host: effective.sqlReplicaHost ?? null, database: effective.sqlReplicaDatabase ?? effective.sqlDatabase ?? null, note: "No read replica is configured." };
   }
@@ -614,6 +638,6 @@ async function createSqlAdapter(config: IntegrationSourceConfig): Promise<Source
 
 export async function createSourceAdapter(config: IntegrationSourceConfig): Promise<SourceAdapter> {
   const mode = configuredSourceMode(config);
-  const effective = withEnvironment(config);
+  const effective = effectiveSourceConfig(config);
   return mode === "SQL" ? createSqlAdapter(effective) : createApiAdapter(effective);
 }
