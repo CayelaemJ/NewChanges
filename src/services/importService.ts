@@ -27,6 +27,7 @@ export interface CommitProgress {
   updated: number;
   deleted: number;
   skipped: number;
+  historyRows?: number;
 }
 
 interface CommitOptions {
@@ -39,6 +40,7 @@ interface CommitStats {
   updated: number;
   deleted: number;
   skipped: number;
+  historyRows?: number;
 }
 
 function currentPeriod(): string {
@@ -692,11 +694,13 @@ export async function commitSyncRows(
   reportKey: string,
   rows: Record<string, any>[],
   onProgress?: (progress: CommitProgress) => void | Promise<void>,
+  options: { authoritativeOverwrite?: boolean } = {},
 ): Promise<CommitStats> {
   const functionName = SYNC_FUNCTIONS[reportKey];
   if (!functionName) throw new Error(`bulk sync handler not implemented for report ${reportKey}`);
 
-  const stats: CommitStats = { inserted: 0, updated: 0, deleted: 0, skipped: 0 };
+  const stats: CommitStats = { inserted: 0, updated: 0, deleted: 0, skipped: 0, historyRows: 0 };
+  const historicalObservationFeed = new Set(["employees", "debt_accounts", "policies"]).has(reportKey);
   for (let offset = 0; offset < rows.length; offset += SYNC_BULK_CHUNK_SIZE) {
     const chunk = rows.slice(offset, offset + SYNC_BULK_CHUNK_SIZE);
     const result = await prisma.$queryRawUnsafe<any[]>(
@@ -708,7 +712,9 @@ export async function commitSyncRows(
     stats.updated += Number(merged?.updated ?? 0);
     stats.deleted += Number(merged?.deleted ?? 0);
     const processed = Math.min(rows.length, offset + chunk.length);
-    stats.skipped = Math.max(0, processed - stats.inserted - stats.updated - stats.deleted);
+    const projectionOnly = Math.max(0, processed - stats.inserted - stats.updated - stats.deleted);
+    stats.historyRows = historicalObservationFeed ? projectionOnly : 0;
+    stats.skipped = options.authoritativeOverwrite || historicalObservationFeed ? 0 : projectionOnly;
     if (onProgress) {
       await onProgress({
         reportKey,
@@ -718,11 +724,14 @@ export async function commitSyncRows(
         updated: stats.updated,
         deleted: stats.deleted,
         skipped: stats.skipped,
+        historyRows: stats.historyRows,
       });
     }
   }
 
-  stats.skipped = Math.max(0, rows.length - stats.inserted - stats.updated - stats.deleted);
+  const remainder = Math.max(0, rows.length - stats.inserted - stats.updated - stats.deleted);
+  stats.historyRows = historicalObservationFeed ? remainder : 0;
+  stats.skipped = options.authoritativeOverwrite || historicalObservationFeed ? 0 : remainder;
   return stats;
 }
 
