@@ -776,9 +776,13 @@ async function loadInteg(){
     const configuredText = c.configured ? 'configured' : 'incomplete';
     if(c.lastSyncAt){
       const when = new Date(c.lastSyncAt).toLocaleString('en-ZA');
+      const lastGood = c.lastSuccessfulSyncAt ? new Date(c.lastSuccessfulSyncAt).toLocaleString('en-ZA') : 'none yet';
+      const failureStates=['FAILED','PARTIAL','FULL_REFRESH_FAILED','FULL_REFRESH_PRECHECK_FAILED'];
+      const rebuilding=c.lastSyncStatus==='REBUILDING';
       s.style.display='block';
-      s.className = 'banner ' + (c.lastSyncStatus==='OK'?'ok':c.lastSyncStatus==='FAILED'?'err':'ok');
-      s.textContent = `${c.effectiveSourceMode || c.sourceMode || 'API'} source · ${configuredText} · Last sync: ${c.lastSyncStatus} · ${when} — ${c.lastSyncNote||''}`;
+      s.className = 'banner ' + (c.lastSyncStatus==='OK'?'ok':failureStates.includes(c.lastSyncStatus)?'err':'');
+      const reason=c.lastSyncNote||'No refresh reason was recorded.';
+      s.textContent = `${c.effectiveSourceMode || c.sourceMode || 'API'} source · ${configuredText} · Last attempt: ${c.lastSyncStatus||'UNKNOWN'} · ${when} · Last successful: ${lastGood} · ${rebuilding?'Refresh status':'Refresh reason'}: ${reason}`;
     }else{
       s.style.display='block';
       s.className = 'banner ' + (c.configured?'ok':'');
