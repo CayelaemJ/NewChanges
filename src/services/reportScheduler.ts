@@ -429,11 +429,8 @@ async function assertDashboardPublishable() {
     where: { id: "default" },
     select: { lastSyncStatus: true, lastSyncNote: true },
   });
-  if (state?.lastSyncStatus === "REBUILDING") {
-    throw new Error("Dashboard data is currently being purged and rebuilt; report delivery is deferred until the full refresh completes.");
-  }
-  if (state?.lastSyncStatus === "FULL_REFRESH_FAILED") {
-    throw new Error("The last full refresh failed after purge; report delivery is blocked until a complete source refresh succeeds.");
+  if (["REBUILDING", "PARTIAL", "FAILED", "FULL_REFRESH_FAILED", "FULL_REFRESH_PRECHECK_FAILED"].includes(String(state?.lastSyncStatus || ""))) {
+    throw new Error(`Dashboard source state is ${state?.lastSyncStatus}; scheduled/manual report delivery is deferred until a complete successful source sync publishes consistent data. ${state?.lastSyncNote || ""}`.trim());
   }
   return state;
 }
