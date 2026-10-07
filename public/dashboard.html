@@ -815,8 +815,21 @@
 <!-- ════════════════════════ TOP BAR ════════════════════════ -->
 <div class="topbar">
   <div class="topbar-inner">
-    <div class="logo">
-      <img src="/static/the-fixer-logo.svg?v=6" class="efs-brand-logo" alt="The Fixer" style="height:32px;width:auto;"><span id="channel-brand-name" style="font:800 13px Manrope,sans-serif;color:var(--brand-primary);white-space:nowrap;"></span>
+    <div class="logo portal-brand-lockup" id="portal-brand-lockup">
+      <div class="portal-brand-default" id="portal-brand-default">
+        <img src="/static/the-fixer-logo.svg?v=6" class="efs-brand-logo" alt="The Fixer">
+      </div>
+      <div class="portal-brand-partner" id="portal-brand-partner" hidden>
+        <div class="portal-partner-mark">
+          <img id="portal-partner-logo" alt="">
+          <span id="channel-brand-name" class="portal-partner-name"></span>
+        </div>
+        <span class="portal-cobrand-rule" aria-hidden="true"></span>
+        <span class="portal-powered-by">Powered by</span>
+        <span class="portal-fixer-panel">
+          <img src="/static/the-fixer-logo.svg?v=6" class="efs-brand-logo portal-fixer-secondary" alt="The Fixer">
+        </span>
+      </div>
     </div>
     <div class="topbar-divider"></div>
     <div class="audience-switch" id="audience-switch">
@@ -3358,11 +3371,17 @@ const DEFAULT_PORTAL_CHARTS = {
 };
 const DEFAULT_HEAD_SUB='How the financial wellbeing programme is landing across your workforce Not available who is using it, the outcomes achieved, and how employees rate the service.';
 function restoreDefaultPortalIdentity(){
-  document.querySelectorAll('.logo img, .topbar .logo img, .pdf-brand img').forEach(img=>{
+  const defaultBrand=document.getElementById('portal-brand-default');
+  const partnerBrand=document.getElementById('portal-brand-partner');
+  const partnerLogo=document.getElementById('portal-partner-logo');
+  if(defaultBrand) defaultBrand.hidden=false;
+  if(partnerBrand) partnerBrand.hidden=true;
+  if(partnerLogo){ partnerLogo.removeAttribute('src'); partnerLogo.removeAttribute('data-custom-logo'); partnerLogo.alt=''; }
+  const brandName=document.getElementById('channel-brand-name'); if(brandName) brandName.textContent='';
+  document.querySelectorAll('.pdf-brand img').forEach(img=>{
     img.src='/static/the-fixer-logo.svg?v=6';
     img.removeAttribute('data-custom-logo');
   });
-  const brandName=document.getElementById('channel-brand-name'); if(brandName) brandName.textContent='';
   const sub=document.querySelector('#employer-view > .head .head-sub'); if(sub) sub.textContent=DEFAULT_HEAD_SUB;
   document.title='empower-fin Dashboard Portal';
 }
@@ -3482,11 +3501,23 @@ function applyTheme(theme, user){
   root.setProperty('--stress-mid-color','var(--chart-mid)');
   root.setProperty('--stress-high-color','var(--chart-high)');
   const brandName=document.getElementById('channel-brand-name');
+  const defaultBrand=document.getElementById('portal-brand-default');
+  const partnerBrand=document.getElementById('portal-brand-partner');
+  const partnerLogo=document.getElementById('portal-partner-logo');
   if(theme.logoDataUrl){
-    document.querySelectorAll('.logo img, .topbar .logo img, .pdf-brand img').forEach(img=>{ img.src=theme.logoDataUrl; img.setAttribute('data-custom-logo','1'); });
+    if(defaultBrand) defaultBrand.hidden=true;
+    if(partnerBrand) partnerBrand.hidden=false;
+    if(partnerLogo){
+      partnerLogo.src=theme.logoDataUrl;
+      partnerLogo.alt=(theme.name||'Partner')+' logo';
+      partnerLogo.setAttribute('data-custom-logo','1');
+    }
     if(brandName) brandName.textContent='';
-  }else if(brandName){
-    brandName.textContent=theme.name && theme.name!==baseName ? theme.name : '';
+    document.querySelectorAll('.pdf-brand img').forEach(img=>{ img.src=theme.logoDataUrl; img.setAttribute('data-custom-logo','1'); });
+  }else{
+    if(defaultBrand) defaultBrand.hidden=false;
+    if(partnerBrand) partnerBrand.hidden=true;
+    if(brandName) brandName.textContent=theme.name && theme.name!==baseName ? theme.name : '';
   }
   document.title=(theme.name||baseName)+' Not available Employer Insights';
   if(theme.tagline){
