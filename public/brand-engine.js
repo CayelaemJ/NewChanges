@@ -201,18 +201,33 @@
     if (!sec) { sec = { L: dom.L, C: dom.C, h: (dom.h + 32) % 360, hex: lch(clamp(dom.L + 0.05, 0.3, 0.8), dom.C, (dom.h + 32) % 360), share: 0 }; derivedSecondary = true; }
 
     // Semantic role assignment:
-    // If a logo is built from a large dark structural colour plus a smaller,
-    // brighter vivid colour (The Fixer is a good example), keep the dark colour
-    // as primary/navy and use the brighter colour as the true brand accent.
-    // Otherwise retain the historical dominant-as-accent behaviour.
-    var structuralDominant = !derivedSecondary &&
-      dom.L < 0.55 &&
-      sec.L > dom.L + 0.10 &&
-      sec.C >= 0.06 &&
-      dom.share >= Math.max(0.08, sec.share * 1.35);
+    // Detect structural + accent pairs from physical colour share, not only
+    // score ordering. A small vivid accent can outrank a much larger dark
+    // structural colour because chroma is rewarded in the cluster score.
+    // The Fixer is the canonical example: violet is structural, mint is accent.
+    var structuralCluster = null, vividCluster = null;
+    if (!derivedSecondary) {
+      for (var si = 0; si < clusters.length; si++) {
+        var darkCandidate = clusters[si];
+        if (darkCandidate.L >= 0.55 || darkCandidate.share < 0.08) continue;
+        for (var vi = 0; vi < clusters.length; vi++) {
+          if (vi === si) continue;
+          var brightCandidate = clusters[vi];
+          if (brightCandidate.L <= darkCandidate.L + 0.10) continue;
+          if (brightCandidate.C < 0.06 || brightCandidate.share < 0.02) continue;
+          if (hueDist(brightCandidate.h, darkCandidate.h) < 40) continue;
+          if (darkCandidate.share < brightCandidate.share * 1.35) continue;
+          if (!structuralCluster || darkCandidate.share > structuralCluster.share) {
+            structuralCluster = darkCandidate;
+            vividCluster = brightCandidate;
+          }
+        }
+      }
+    }
+    var structuralDominant = !!(structuralCluster && vividCluster);
 
-    var accentCluster = structuralDominant ? sec : dom;
-    var primaryCluster = structuralDominant ? dom : (derivedSecondary ? dom : sec);
+    var accentCluster = structuralDominant ? vividCluster : dom;
+    var primaryCluster = structuralDominant ? structuralCluster : (derivedSecondary ? dom : sec);
 
     // Preserve the logo's real accent colour. themeTokens() separately derives a
     // contrast-safe UI accent for text/buttons, while --brand-vivid keeps this
@@ -222,7 +237,7 @@
 
     // dark tone: prefer the structural dominant where appropriate, otherwise a
     // real dark chromatic cluster or a darkened dominant hue.
-    var darkCl = structuralDominant ? dom : clusters.filter(function (c) { return c.L < 0.38 && c.share >= 0.08; })[0];
+    var darkCl = structuralDominant ? structuralCluster : clusters.filter(function (c) { return c.L < 0.38 && c.share >= 0.08; })[0];
     var navy = darkCl ? darkCl.hex : lch(Math.min(0.3, dom.L * 0.55), Math.min(dom.C * 0.85, 0.11), dom.h);
     navy = ensureContrast(navy, 'FFFFFF', 8); // white text on the brand bar must be AAA
 
