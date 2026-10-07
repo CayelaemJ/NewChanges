@@ -107,10 +107,18 @@ html.portal-dark #welcome-splash .welcome-splash-spinner {
   border-top-color: var(--brand-vivid, var(--blue)) !important;
 }
 html.portal-dark #welcome-splash .welcome-splash-logo {
-  background:#fff;
-  border-radius:10px;
-  padding:7px 12px;
-  box-shadow:0 8px 24px rgba(0,0,0,.10);
+  content:url('/static/the-fixer-logo-reversed.svg?v=1') !important;
+  width:144px !important;
+  min-width:120px !important;
+  height:auto !important;
+  max-width:none !important;
+  background:transparent !important;
+  border:0 !important;
+  border-radius:0 !important;
+  padding:0 !important;
+  box-shadow:none !important;
+  filter:none !important;
+  opacity:1 !important;
 }
 
 /* inline-styled legacy text/backgrounds (few remain; mapped to tokens, case-insensitive) */
