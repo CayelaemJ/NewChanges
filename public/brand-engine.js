@@ -200,16 +200,36 @@
     var derivedSecondary = false;
     if (!sec) { sec = { L: dom.L, C: dom.C, h: (dom.h + 32) % 360, hex: lch(clamp(dom.L + 0.05, 0.3, 0.8), dom.C, (dom.h + 32) % 360), share: 0 }; derivedSecondary = true; }
 
-    // UI accent: dominant hue, forced to >= 4.5:1 against white (buttons carry white text)
-    var accent = ensureContrast(dom.hex, 'FFFFFF', 4.5);
-    // dark tone: a real dark chromatic cluster if the logo has one, else dominant hue at low lightness
-    var darkCl = clusters.filter(function (c) { return c.L < 0.38 && c.share >= 0.08; })[0];
+    // Semantic role assignment:
+    // If a logo is built from a large dark structural colour plus a smaller,
+    // brighter vivid colour (The Fixer is a good example), keep the dark colour
+    // as primary/navy and use the brighter colour as the true brand accent.
+    // Otherwise retain the historical dominant-as-accent behaviour.
+    var structuralDominant = !derivedSecondary &&
+      dom.L < 0.55 &&
+      sec.L > dom.L + 0.10 &&
+      sec.C >= 0.06 &&
+      dom.share >= Math.max(0.08, sec.share * 1.35);
+
+    var accentCluster = structuralDominant ? sec : dom;
+    var primaryCluster = structuralDominant ? dom : (derivedSecondary ? dom : sec);
+
+    // Preserve the logo's real accent colour. themeTokens() separately derives a
+    // contrast-safe UI accent for text/buttons, while --brand-vivid keeps this
+    // original colour for rules, indicators, chart highlights and decorative use.
+    var accent = accentCluster.hex.toUpperCase();
+    var primary = primaryCluster.hex.toUpperCase();
+
+    // dark tone: prefer the structural dominant where appropriate, otherwise a
+    // real dark chromatic cluster or a darkened dominant hue.
+    var darkCl = structuralDominant ? dom : clusters.filter(function (c) { return c.L < 0.38 && c.share >= 0.08; })[0];
     var navy = darkCl ? darkCl.hex : lch(Math.min(0.3, dom.L * 0.55), Math.min(dom.C * 0.85, 0.11), dom.h);
     navy = ensureContrast(navy, 'FFFFFF', 8); // white text on the brand bar must be AAA
 
     out.accentColor = accent;
-    out.primaryColor = derivedSecondary ? dom.hex.toUpperCase() : ensureContrast(sec.hex, 'FFFFFF', 3);
+    out.primaryColor = primary;
     out.navyColor = navy;
+    out.diagnostics.roleModel = structuralDominant ? 'dark-structural-plus-vivid-accent' : 'dominant-accent';
     out.palette = clusters.slice(0, 5).map(function (c, idx) {
       return { hex: c.hex, share: Math.round(c.share * 1000) / 1000, role: c === dom ? 'dominant' : (c === sec ? 'secondary' : 'minor') };
     });
@@ -316,30 +336,38 @@
   function deriveChartPalette(theme) {
     theme = theme || {};
     var accent = String(theme.accentColor || theme.primaryColor || '0FC79B').replace(/^#/, '');
-    var primary = String(theme.primaryColor || accent).replace(/^#/, '');
+    var primary = String(theme.primaryColor || theme.navyColor || accent).replace(/^#/, '');
+    var navy = String(theme.navyColor || primary).replace(/^#/, '');
     if (!parseHex(accent)) accent = '0FC79B';
     if (!parseHex(primary)) primary = accent;
-    var a = hexToLch(accent), p = hexToLch(primary);
-    var hue = a.C > 0.035 ? a.h : p.h;
-    var baseC = Math.min(Math.max(a.C, 0.055), 0.16);
-    var defs = {
-      engagement:[150,0.50,0.78], cashflow:[175,0.58,0.70],
-      debt:[25,0.50,0.62], insurance:[285,0.48,0.78],
-      workforce:[205,0.54,0.72], low:[150,0.58,0.68],
-      mid:[65,0.58,0.62], high:[5,0.55,0.62]
+    if (!parseHex(navy)) navy = primary;
+
+    // Keep data-series colours recognisably inside the brand family instead of
+    // rotating around the full colour wheel. Status colours stay semantic.
+    var p = hexToLch(primary), a = hexToLch(accent);
+    var engagement = ensureContrast(primary, 'FFFFFF', 3.4);
+    var cashflow = ensureContrast(accent, 'FFFFFF', 3.4);
+    var debt = ensureContrast(mixHex(navy, '607486', 0.42), 'FFFFFF', 3.4);
+    var insurance = ensureContrast(lch(clamp(p.L + 0.11, 0.34, 0.68), Math.max(0.045, p.C * 0.72), (p.h + 14) % 360), 'FFFFFF', 3.4);
+    var workforce = ensureContrast(mixHex(primary, accent, 0.46), 'FFFFFF', 3.4);
+
+    // If primary/accent are too similar, open up the secondary series slightly
+    // while keeping them adjacent to the brand hues rather than inventing a rainbow.
+    if (hueDist(p.h, a.h) < 28) {
+      insurance = ensureContrast(lch(0.50, Math.max(p.C, 0.07), (p.h + 32) % 360), 'FFFFFF', 3.4);
+      workforce = ensureContrast(lch(0.48, Math.max(a.C, 0.07), (a.h - 28 + 360) % 360), 'FFFFFF', 3.4);
+    }
+
+    return {
+      engagement:'#' + engagement,
+      cashflow:'#' + cashflow,
+      debt:'#' + debt,
+      insurance:'#' + insurance,
+      workforce:'#' + workforce,
+      low:'#187A4D',
+      mid:'#9A5B00',
+      high:'#B5391F'
     };
-    var out = {};
-    Object.keys(defs).forEach(function (key) {
-      var d = defs[key], cc = Math.min(d[2] * baseC, 0.18);
-      out[key] = '#' + ensureContrast(lch(d[1], cc, (hue + d[0] + 360) % 360), 'FFFFFF', 3.4);
-    });
-    var seen = {};
-    Object.keys(out).forEach(function (key, idx) {
-      var bare = out[key].replace(/^#/,'').toUpperCase();
-      if (seen[bare]) out[key] = '#' + ensureContrast(lch(0.54, 0.075, (hue + idx * 43) % 360), 'FFFFFF', 3.4);
-      seen[out[key].replace(/^#/,'').toUpperCase()] = true;
-    });
-    return out;
   }
 
   /**
