@@ -21,6 +21,7 @@
   function applyTheme(dark=readTheme()){
     document.documentElement.classList.toggle('portal-dark',dark);
     document.body?.classList.toggle('portal-dark',dark);
+    try{ window.dispatchEvent(new CustomEvent('portal-theme-change',{detail:{dark}})); }catch(_){}
     return dark;
   }
   function toggleTheme(){
