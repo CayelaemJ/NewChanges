@@ -1674,9 +1674,10 @@ function renderWellness(){
       const state=!available?'Unavailable':score>=75?'Strong':score>=60?'On track':score>=40?'At risk':'Critical';
       const col=brandSeries(i);
       return `<div class="wd-row" style="--driver-color:${col};--driver-state:${tone.c}">
-        <div class="wd-top"><div class="wd-name">${esc(d.name)} ${employerInfoButton(mk)}<small>${d.note||''}</small></div><div class="wd-val">${available?score:'—'}<span>/100</span></div></div>
-        <div class="wd-track"><div class="wd-fill" style="width:${available?score:0}%;background:${available?col:'var(--brand-soft)'}"></div></div>
-        <div class="wd-foot"><span class="wd-state"><i></i>${state}</span><span class="wd-scale">0 <b>50</b> 100</span></div>
+        <div class="wd-name">${esc(d.name)} ${employerInfoButton(mk)}<small>${d.note||''}</small></div>
+        <div class="wd-meter"><div class="wd-track"><div class="wd-fill" style="width:${available?score:0}%;background:${available?col:'var(--brand-soft)'}"></div></div><div class="wd-scale"><span>0</span><span>50</span><span>100</span></div></div>
+        <div class="wd-val">${available?score:'—'}<span>/100</span></div>
+        <div class="wd-state"><i></i>${state}</div>
       </div>`;
     }).join('');
     wrap.appendChild(el(`<div class="wellness-inner"><div class="wellness-left"><div style="font-family:'Fraunces',serif;font-size:46px;color:var(--brand-primary);line-height:1">Not available</div><div style="font-size:11px;color:#8497a7;font-weight:800;margin-top:4px">/ 100</div><div class="wellness-band" style="color:#8a6610;background:#fff8e8;border-color:#efd49b">${ragLights('amber')}Data incomplete</div><div class="wellness-note">The score is calculated only when all required driver feeds are available. Missing data is never treated as zero.</div></div><div class="wellness-right">${drivers||'<div class="muted">Required score drivers have not been loaded.</div>'}</div></div>`));
@@ -1697,9 +1698,10 @@ function renderWellness(){
     const col=brandSeries(i);
     const mk=employerMetricKey(d.name); 
     return `<div class="wd-row" style="--driver-color:${col};--driver-state:${tone.c}">
-      <div class="wd-top"><div class="wd-name">${esc(d.name)} ${employerInfoButton(mk)}<small>${d.note||''}</small></div><div class="wd-val">${available?score:'—'}<span>/100</span></div></div>
-      <div class="wd-track"><div class="wd-fill" style="width:0;background:${available?col:'var(--brand-soft)'}" data-w="${available?score:0}"></div></div>
-      <div class="wd-foot"><span class="wd-state"><i></i>${state}</span><span class="wd-scale">0 <b>50</b> 100</span></div>
+      <div class="wd-name">${esc(d.name)} ${employerInfoButton(mk)}<small>${d.note||''}</small></div>
+      <div class="wd-meter"><div class="wd-track"><div class="wd-fill" style="width:0;background:${available?col:'var(--brand-soft)'}" data-w="${available?score:0}"></div></div><div class="wd-scale"><span>0</span><span>50</span><span>100</span></div></div>
+      <div class="wd-val">${available?score:'—'}<span>/100</span></div>
+      <div class="wd-state"><i></i>${state}</div>
     </div>`; 
   }).join('');
   const bt=bandTone(Number(w.score)||0);
