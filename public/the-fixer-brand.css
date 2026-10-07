@@ -1591,3 +1591,29 @@ html:not(.efs-default-brand) .topbar .portal-partner-mark img{
   .portal-fixer-panel{display:flex;padding:7px 8px;min-height:38px;}
   .portal-fixer-secondary{width:120px!important;min-width:120px!important;}
 }
+
+
+/* HOME HEADER GUIDELINE FIX
+   Indigo header = reversed White + Green logo, no filters or recolouring. */
+.home-nav .home-fixer-logo{
+  content:url('/static/the-fixer-logo-reversed.svg?v=1')!important;
+  width:144px!important;
+  min-width:120px!important;
+  height:auto!important;
+  max-width:none!important;
+  filter:none!important;
+  opacity:1!important;
+  background:transparent!important;
+  border:0!important;
+  padding:0!important;
+  box-shadow:none!important;
+}
+.home-nav a[aria-label="The Fixer home"]{
+  display:flex;
+  align-items:center;
+  padding-inline:14px;
+}
+@media(max-width:640px){
+  .home-nav .home-fixer-logo{width:120px!important;min-width:120px!important;}
+  .home-nav a[aria-label="The Fixer home"]{padding-inline:12px;}
+}
