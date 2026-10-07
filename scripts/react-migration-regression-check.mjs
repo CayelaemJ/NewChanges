@@ -44,6 +44,10 @@ for (const [name, ok] of checks) {
   else { console.error(`FAIL: ${name}`); failed++; }
 }
 if (failed) process.exit(1);
+
+assertIncludes(app, 'portal-brand-partner', 'React shell must support partner-led co-branding');
+assertIncludes(app, 'portal-fixer-secondary', 'React partner shell must retain The Fixer as a secondary mark');
+assertIncludes(app, 'Powered by', 'React partner co-brand descriptor must remain plain text');
 console.log(`React migration foundation checks passed (${checks.length})`);
 
 checks.push(["Viewer dashboard uses assigned channel-partner logo", app.includes('src={me.theme?.logoDataUrl||"/static/the-fixer-logo.svg?v=6"}') && app.includes('data-custom-logo={me.theme?.logoDataUrl?"1":undefined}')]);
