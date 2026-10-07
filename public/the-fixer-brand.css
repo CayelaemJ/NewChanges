@@ -1855,3 +1855,64 @@ html.efs-default-brand.portal-dark .topbar-inner > img.efs-brand-logo:not([data-
     max-width:120px!important;
   }
 }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   PARTNER HEADER — NO WHITE FIELD WHEN SAFE
+   Dark partner chrome uses approved reversed artwork directly.
+   Light partner chrome uses full-colour artwork directly.
+   Only mid-tone/awkward colours keep a minimal white protection field.
+   ═══════════════════════════════════════════════════════════════ */
+.portal-brand-partner[data-partner-header-tone="dark"] .portal-fixer-panel{
+  background:transparent!important;
+  padding:0!important;
+  min-height:0!important;
+}
+.portal-brand-partner[data-partner-header-tone="dark"] .portal-fixer-secondary{
+  content:url('/static/the-fixer-logo-reversed.svg?v=1')!important;
+  width:120px!important;
+  min-width:120px!important;
+  background:transparent!important;
+  padding:0!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+.portal-brand-partner[data-partner-header-tone="dark"] .portal-powered-by{
+  color:rgba(255,255,255,.78)!important;
+}
+.portal-brand-partner[data-partner-header-tone="dark"] .portal-cobrand-rule{
+  background:rgba(255,255,255,.34)!important;
+}
+
+.portal-brand-partner[data-partner-header-tone="light"] .portal-fixer-panel{
+  background:transparent!important;
+  padding:0!important;
+  min-height:0!important;
+}
+.portal-brand-partner[data-partner-header-tone="light"] .portal-fixer-secondary{
+  content:url('/static/the-fixer-logo.svg?v=6')!important;
+  width:120px!important;
+  min-width:120px!important;
+  background:transparent!important;
+  padding:0!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+.portal-brand-partner[data-partner-header-tone="light"] .portal-powered-by{
+  color:rgba(32,27,51,.72)!important;
+}
+.portal-brand-partner[data-partner-header-tone="light"] .portal-cobrand-rule{
+  background:#2B1D73!important;
+}
+
+/* Mid-tone fallback: keep the protection field but make it extremely lean. */
+.portal-brand-partner[data-partner-header-tone="mid"] .portal-fixer-panel{
+  background:#fff!important;
+  padding:2px 4px!important;
+  min-height:30px!important;
+}
+.portal-brand-partner[data-partner-header-tone="mid"] .portal-fixer-secondary{
+  content:url('/static/the-fixer-logo.svg?v=6')!important;
+  width:120px!important;
+  min-width:120px!important;
+}
