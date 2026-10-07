@@ -11,7 +11,7 @@ type Me = {
   name?: string; email?: string; role?: string;
   employers?: Array<{ id: string; name: string }>;
   sections?: Record<string, boolean>;
-  theme?: { name?: string; primaryColor?: string; accentColor?: string; navyColor?: string; logoDataUrl?: string | null; tagline?: string | null };
+  theme?: { name?: string; primaryColor?: string; accentColor?: string; navyColor?: string; logoDataUrl?: string | null; tagline?: string | null; branded?: boolean };
 };
 
 type BrandEngine = {
@@ -130,6 +130,7 @@ function DashboardView({me}:{me:Me}) {
   const [income,setIncome]=useState("all"); const [site,setSite]=useState("all"); const [periodOptions,setPeriodOptions]=useState<string[]>([]);
   const [selectedEmployerId,setSelectedEmployerId]=useState(me.employers?.[0]?.id??""); const [loading,setLoading]=useState(true); const [error,setError]=useState("");
   const employer=me.employers?.find(e=>e.id===selectedEmployerId)??me.employers?.[0];
+  const defaultEfsShell = ["ADMIN","SUPERADMIN"].includes(String(me.role||"").toUpperCase()) || me.theme?.branded === false || !me.theme;
   const brandPrimary = normaliseHex(me.theme?.primaryColor, "#2B1D73");
   const brandNavy = normaliseHex(me.theme?.navyColor, "#0d2a47");
   const brandAccent = normaliseHex(me.theme?.accentColor, "#087F65");
@@ -145,7 +146,8 @@ function DashboardView({me}:{me:Me}) {
   } as CSSProperties;
   useEffect(()=>{
     document.documentElement.classList.toggle("portal-dark",darkMode);
-  },[darkMode]);
+    document.documentElement.classList.toggle("efs-default-brand",defaultEfsShell);
+  },[darkMode,defaultEfsShell]);
   useEffect(()=>{
     const engine=window.BrandEngine?.themeController();
     if(engine) engine.set({brand:{accentColor:brandAccent,primaryColor:brandPrimary,navyColor:brandNavy},light:"engine",charts:chartPalette});
@@ -198,7 +200,7 @@ function DashboardView({me}:{me:Me}) {
   return <main className="dashboard-shell" style={themeStyle}>
     <div className="topbar">
       <div className="topbar-inner">
-        <div className="logo"><img src={me.theme?.logoDataUrl||"/static/the-fixer-logo.svg"} alt={me.theme?.name||"empower-fin Dashboard Portal"} data-custom-logo={me.theme?.logoDataUrl?"1":undefined} /><span className="logo-text">{me.theme?.name||""}</span></div>
+        <div className="logo"><img className="efs-brand-logo" src={me.theme?.logoDataUrl||"/static/the-fixer-logo.svg"} alt={me.theme?.name||"The Fixer"} data-custom-logo={me.theme?.logoDataUrl?"1":undefined} /><span className="logo-text">{me.theme?.name||""}</span></div>
         <div className="topbar-divider" />
         <div className="audience-switch"><button className="on" type="button">Employer view</button><button type="button" disabled>Portfolio view</button></div>
         <div className="topbar-spacer" />
