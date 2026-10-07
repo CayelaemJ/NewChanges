@@ -11,7 +11,7 @@ ok(BE.VERSION === "1.1.0", "brand engine exposes a version for MLOps telemetry")
 for (const n of ["teal_orange_transparent", "red_on_white", "mono_black", "navy_gold_aa", "tiny_purple", "white_yellow_on_navy", "pastel_mint"]) {
   const r = load(n); ok(r, n + ": result"); 
   for (const k of ["primaryColor", "accentColor", "navyColor"]) ok(/^[0-9A-F]{6}$/.test(r[k]), `${n}.${k} is 6-digit hex (${r[k]})`);
-  ok(BE.contrast(r.accentColor, "FFFFFF") >= 4.5, `${n}: accent >= 4.5:1 on white (${BE.contrast(r.accentColor, "FFFFFF").toFixed(2)})`);
+  ok(BE.contrast(BE.themeTokens(r,"light")["--blue"], "FFFFFF") >= 4.5, `${n}: rendered UI accent >= 4.5:1 on white`);
   ok(BE.contrast(r.navyColor, "FFFFFF") >= 7, `${n}: brand bar >= 7:1 for white text (${BE.contrast(r.navyColor, "FFFFFF").toFixed(2)})`);
 }
 // ground truth
@@ -29,7 +29,24 @@ ok(hd(hue(r.navyColor), 265) < 30, `navy_gold: dark tone is blue (hue ${hue(r.na
 r = load("mono_black");
 ok(r.warnings.some((w) => /monochrome/.test(w)) && r.confidence < 0.3, "monochrome logo warns and reports low confidence");
 r = load("tiny_purple"); ok(hd(hue(r.accentColor), 310) < 30, "tiny icon still resolves purple"); ok(r.warnings.some((w) => /small/.test(w)), "tiny icon warns about resolution");
-r = load("pastel_mint"); ok(BE.contrast(r.accentColor, "FFFFFF") >= 4.5, "pastel logo is darkened to a legible accent");
+r = load("pastel_mint"); ok(BE.contrast(BE.themeTokens(r,"light")["--blue"], "FFFFFF") >= 4.5, "pastel logo renders a contrast-safe UI accent");
+
+
+// The Fixer-style role model: a large dark structural colour plus a smaller
+// bright accent must map to primary/navy + accent rather than being reversed.
+{
+  const w=100,h=100,p=Buffer.alloc(w*h*4);
+  for(let i=0;i<w*h;i++){
+    const mint=(i%12===0); // ~8.3% accent, distributed so perimeter is not a flat background
+    const o=i*4, c=mint?[0x0F,0xC7,0x9B]:[0x2B,0x1D,0x73];
+    p[o]=c[0];p[o+1]=c[1];p[o+2]=c[2];p[o+3]=255;
+  }
+  const fx=BE.analyzePixels(p,w,h);
+  ok(fx.diagnostics.roleModel==="dark-structural-plus-vivid-accent","The Fixer-like logo uses structural+accent role model");
+  ok(hd(hue(fx.primaryColor),hue("2B1D73"))<12,`The Fixer-like primary stays violet (${fx.primaryColor})`);
+  ok(hd(hue(fx.accentColor),hue("0FC79B"))<12,`The Fixer-like accent stays mint (${fx.accentColor})`);
+  ok(BE.contrast(BE.themeTokens(fx,"light")["--blue"],"FFFFFF")>=4.5,"The Fixer mint derives a contrast-safe interactive accent");
+}
 
 // speed: 128x128 well under a frame budget
 const big = Buffer.alloc(128 * 128 * 4); for (let i = 0; i < big.length; i += 4) { big[i] = (i * 7) & 255; big[i + 1] = (i * 13) & 255; big[i + 2] = (i * 3) & 255; big[i + 3] = 255; }
