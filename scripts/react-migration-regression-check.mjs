@@ -46,4 +46,4 @@ for (const [name, ok] of checks) {
 if (failed) process.exit(1);
 console.log(`React migration foundation checks passed (${checks.length})`);
 
-checks.push(["Viewer dashboard uses assigned channel-partner logo", app.includes('src={me.theme?.logoDataUrl||"/static/logo.png"}') && app.includes('data-custom-logo={me.theme?.logoDataUrl?"1":undefined}')]);
+checks.push(["Viewer dashboard uses assigned channel-partner logo", app.includes('src={me.theme?.logoDataUrl||"/static/the-fixer-logo.svg"}') && app.includes('data-custom-logo={me.theme?.logoDataUrl?"1":undefined}')]);
