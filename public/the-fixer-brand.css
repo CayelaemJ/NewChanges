@@ -1491,3 +1491,100 @@ html.efs-default-brand:not(.portal-dark){
 html.efs-default-brand:not(.portal-dark) body{
   background:#FFFFFF!important;
 }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   PARTNER-LED CO-BRANDING
+   Partner leads; descriptor is plain text; The Fixer stays secondary.
+   ═══════════════════════════════════════════════════════════════ */
+.portal-brand-lockup{
+  display:flex;
+  align-items:center;
+  min-width:0;
+}
+.portal-brand-default,
+.portal-brand-partner{
+  align-items:center;
+}
+.portal-brand-default{display:flex;}
+.portal-brand-partner{
+  display:flex;
+  gap:12px;
+}
+.portal-brand-partner[hidden]{display:none!important;}
+.portal-partner-mark{
+  display:flex;
+  align-items:center;
+  min-width:0;
+}
+.portal-partner-mark img{
+  display:block;
+  max-height:34px;
+  max-width:150px;
+  width:auto;
+  height:auto;
+  object-fit:contain;
+}
+.portal-partner-name{
+  font:800 13px 'Manrope',sans-serif;
+  color:inherit;
+  white-space:nowrap;
+}
+.portal-cobrand-rule{
+  width:1px;
+  height:32px;
+  background:#2B1D73;
+  flex:0 0 auto;
+}
+.portal-powered-by{
+  font:700 9.5px 'Manrope',sans-serif;
+  letter-spacing:.04em;
+  color:inherit;
+  white-space:nowrap;
+}
+.portal-fixer-panel{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#FFFFFF;
+  padding:10px 12px;
+  min-height:44px;
+  box-sizing:border-box;
+}
+.portal-fixer-secondary{
+  width:120px!important;
+  min-width:120px!important;
+  height:auto!important;
+  content:url('/static/the-fixer-logo.svg?v=6')!important;
+  background:transparent!important;
+  border:0!important;
+  padding:0!important;
+  box-shadow:none!important;
+}
+
+/* On true partner shells, partner identity owns the chrome. The Fixer mark
+   remains protected on white per the partner-background guideline. */
+html:not(.efs-default-brand) .topbar .portal-cobrand-rule{
+  background:#2B1D73!important;
+}
+html:not(.efs-default-brand) .topbar .portal-powered-by{
+  color:rgba(255,255,255,.82)!important;
+}
+html:not(.efs-default-brand) .topbar .portal-partner-mark img{
+  filter:none!important;
+}
+
+/* Mobile: retain both identities; collapse descriptor before logos. */
+@media(max-width:820px){
+  .portal-brand-partner{gap:8px;}
+  .portal-powered-by{display:none;}
+  .portal-cobrand-rule{height:28px;}
+  .portal-fixer-panel{padding:8px 10px;min-height:40px;}
+  .portal-fixer-secondary{width:120px!important;min-width:120px!important;}
+  .portal-partner-mark img{max-width:110px;max-height:30px;}
+}
+@media(max-width:560px){
+  .portal-fixer-panel{display:none;}
+  .portal-cobrand-rule{display:none;}
+  .portal-partner-mark img{max-width:120px;}
+}
