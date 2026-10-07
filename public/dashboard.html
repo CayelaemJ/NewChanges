@@ -3531,12 +3531,12 @@ function applyTheme(theme, user){
   root.setProperty('--stress-high-color','var(--chart-high)');
   const brandName=document.getElementById('channel-brand-name');
   const defaultBrand=document.getElementById('portal-brand-default');
-  const partnerBrand=document.getElementById('portal-brand-partner');
+  const partnerBrandEl=document.getElementById('portal-brand-partner');
   const partnerLogo=document.getElementById('portal-partner-logo');
   if(theme.logoDataUrl){
     applyPartnerHeaderLogoMode(theme);
     if(defaultBrand) defaultBrand.hidden=true;
-    if(partnerBrand) partnerBrand.hidden=false;
+    if(partnerBrandEl) partnerBrandEl.hidden=false;
     if(partnerLogo){
       partnerLogo.src=theme.logoDataUrl;
       partnerLogo.alt=(theme.name||'Partner')+' logo';
@@ -3546,7 +3546,7 @@ function applyTheme(theme, user){
     document.querySelectorAll('.pdf-brand img').forEach(img=>{ img.src=theme.logoDataUrl; img.setAttribute('data-custom-logo','1'); });
   }else{
     if(defaultBrand) defaultBrand.hidden=false;
-    if(partnerBrand) partnerBrand.hidden=true;
+    if(partnerBrandEl) partnerBrandEl.hidden=true;
     if(brandName) brandName.textContent=theme.name && theme.name!==baseName ? theme.name : '';
   }
   document.title=(theme.name||baseName)+' Not available Employer Insights';
