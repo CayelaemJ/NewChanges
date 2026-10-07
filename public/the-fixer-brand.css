@@ -1086,3 +1086,98 @@ html[data-theme="dark"].efs-default-brand #side-logo.efs-brand-logo:not([data-cu
     border-radius:8px;
   }
 }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   LOGO FILTER RESET + DARK SHELL CORRECTION
+   ═══════════════════════════════════════════════════════════════ */
+img.efs-brand-logo{
+  filter:none!important;
+  opacity:1!important;
+}
+.topbar img.efs-brand-logo,
+.auth-side img.efs-brand-logo,
+.pub-header img.efs-brand-logo,
+.home-nav img.efs-brand-logo{
+  filter:none!important;
+  opacity:1!important;
+}
+
+/* Make the actual full-colour logo work on dark chrome without turning it white. */
+html.efs-default-brand.portal-dark .topbar .efs-brand-logo:not([data-custom-logo]){
+  background:#F8F7FC!important;
+  border:1px solid rgba(43,29,115,.10)!important;
+  border-radius:9px!important;
+  padding:4px 8px!important;
+  box-shadow:none!important;
+}
+html.efs-default-brand:not(.portal-dark) .topbar .efs-brand-logo:not([data-custom-logo]){
+  background:transparent!important;
+  border:0!important;
+  padding:0!important;
+  box-shadow:none!important;
+}
+
+/* EFS dark mode should be layered and violet-tinted, not flat black. */
+html.efs-default-brand.portal-dark{
+  --dm-bg:#121125!important;
+  --dm-surface:#1A1830!important;
+  --dm-surface-2:#23203B!important;
+  --dm-line:#37334F!important;
+  --white:#1A1830!important;
+  --ent-paper:#121125!important;
+  --ink:#F5F3FB!important;
+  --grey:#B7B2C8!important;
+  --grey-l:#8E89A4!important;
+  --line:#37334F!important;
+  --line-soft:#2B2841!important;
+  --ice:#27233F!important;
+  --ice-2:#211E37!important;
+  --brand-soft:#211E37!important;
+}
+html.efs-default-brand.portal-dark body{
+  background:
+    radial-gradient(circle at 85% 8%,rgba(15,199,155,.055),transparent 28rem),
+    linear-gradient(180deg,#15132B 0%,#121125 320px)!important;
+}
+html.efs-default-brand.portal-dark :is(.card,.security-panel,.compliance-box,.source-mode-card,.ingestion-method,.client-preview-dialog){
+  background:var(--dm-surface)!important;
+  border-color:var(--dm-line)!important;
+}
+html.efs-default-brand.portal-dark :is(.security-stat,.security-control,.compliance-item,.job-progress,.kpi,.stress-cell,.opp-card){
+  background:linear-gradient(180deg,#201D36,#1A1830)!important;
+  border-color:var(--dm-line)!important;
+}
+html.efs-default-brand.portal-dark :is(.head h1,.card-title,.security-panel-head h3,.security-stat .v,.kpi-value,.stress-v,.opp-n){
+  color:#F4F1FF!important;
+}
+html.efs-default-brand.portal-dark .muted,
+html.efs-default-brand.portal-dark :is(.head-sub,.security-panel-note,.security-stat .k,.kpi-label,.kpi-sub){
+  color:var(--grey)!important;
+}
+
+/* Inline white security/governance blocks must participate in dark mode. */
+html.efs-default-brand.portal-dark [style*="background:linear-gradient(135deg,#fbf9ff,#fff)" i]{
+  background:linear-gradient(135deg,#211E37,#1A1830)!important;
+  border-color:var(--dm-line)!important;
+}
+html.efs-default-brand.portal-dark [style*="background:#fff" i]{
+  border-color:var(--dm-line)!important;
+}
+
+/* Login keeps the actual logo; use a compact light plate on the purple brand panel. */
+html.efs-default-brand #side-logo.efs-brand-logo{
+  background:#F8F7FC!important;
+  border:1px solid rgba(255,255,255,.30)!important;
+  border-radius:9px!important;
+  padding:6px 10px!important;
+  box-shadow:0 6px 18px rgba(20,12,62,.10)!important;
+  height:34px!important;
+}
+html.efs-default-brand[data-theme="dark"] .logo .efs-brand-logo:not([data-custom-logo]){
+  background:#F8F7FC!important;
+  border:1px solid rgba(43,29,115,.10)!important;
+  border-radius:9px!important;
+  padding:6px 10px!important;
+  filter:none!important;
+}
