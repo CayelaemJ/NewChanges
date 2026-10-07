@@ -209,3 +209,98 @@ html .welcome-splash-logo[data-custom-logo]{filter:none!important}
 :root{--radius:10px;--radius-sm:6px}
 .card,.panel,.kpi{border-radius:10px!important}
 .kpi{border-top-color:var(--brand-vivid,var(--ent-navy))!important}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   UPLOADED LOGO CLEAN TREATMENT
+   User/partner uploaded marks render as artwork, not as generated badges.
+   No automatic white field, padding, radius or shadow.
+   ═══════════════════════════════════════════════════════════════ */
+img[data-custom-logo="1"],
+img[data-custom-logo]{
+  filter:none!important;
+  opacity:1!important;
+  background:transparent!important;
+  padding:0!important;
+  margin:0!important;
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  outline:0!important;
+  width:auto!important;
+  height:auto!important;
+  max-height:36px!important;
+  max-width:170px!important;
+  object-fit:contain!important;
+}
+
+/* Header partner marks size to their artwork with no surrounding plate. */
+.portal-partner-mark,
+.dashboard-shell .portal-partner-mark{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  width:auto!important;
+  min-width:0!important;
+  padding:0!important;
+  margin:0!important;
+  background:transparent!important;
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+}
+.portal-partner-mark img[data-custom-logo],
+.dashboard-shell .portal-partner-mark img[data-custom-logo]{
+  max-height:36px!important;
+  max-width:170px!important;
+}
+
+/* Uploaded marks in previews/auth/public chrome follow the same clean rule. */
+:is(.partner-preview-logo,.cp-logo,.pub-header,.auth-side,.topbar) img[data-custom-logo]{
+  background:transparent!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+}
+
+/* The Fixer secondary co-brand panel is intentionally separate: its white
+   protection field is required by the supplied partner-background guideline. */
+.portal-fixer-panel,
+.dashboard-shell .portal-fixer-panel{
+  padding:3px 6px!important;
+  min-height:34px!important;
+}
+.portal-fixer-secondary,
+.dashboard-shell .portal-fixer-secondary{
+  width:120px!important;
+  min-width:120px!important;
+  height:auto!important;
+}
+
+@media(max-width:820px){
+  img[data-custom-logo]{max-height:30px!important;max-width:120px!important;}
+  .portal-partner-mark img[data-custom-logo],
+  .dashboard-shell .portal-partner-mark img[data-custom-logo]{
+    max-height:30px!important;
+    max-width:120px!important;
+  }
+  .portal-fixer-panel,
+  .dashboard-shell .portal-fixer-panel{
+    padding:3px 5px!important;
+    min-height:32px!important;
+  }
+}
+@media(max-width:560px){
+  img[data-custom-logo]{max-height:28px!important;max-width:90px!important;}
+  .portal-partner-mark img[data-custom-logo],
+  .dashboard-shell .portal-partner-mark img[data-custom-logo]{
+    max-height:28px!important;
+    max-width:90px!important;
+  }
+  .portal-fixer-panel,
+  .dashboard-shell .portal-fixer-panel{
+    padding:2px 4px!important;
+    min-height:30px!important;
+  }
+}
