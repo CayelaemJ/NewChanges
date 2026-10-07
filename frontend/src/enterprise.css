@@ -3008,6 +3008,7 @@ html.efs-default-brand:not(.portal-dark) .dashboard-shell{
 .dashboard-shell .portal-brand-default,
 .dashboard-shell .portal-brand-partner{align-items:center;}
 .dashboard-shell .portal-brand-default{display:flex;}
+.dashboard-shell .portal-brand-default[hidden]{display:none!important;}
 .dashboard-shell .portal-brand-partner{display:flex;gap:12px;}
 .dashboard-shell .portal-partner-mark{display:flex;align-items:center;min-width:0;}
 .dashboard-shell .portal-partner-mark img{
