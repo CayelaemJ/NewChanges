@@ -200,7 +200,7 @@ function DashboardView({me}:{me:Me}) {
   return <main className="dashboard-shell" style={themeStyle}>
     <div className="topbar">
       <div className="topbar-inner">
-        <div className="logo"><img className="efs-brand-logo" src={me.theme?.logoDataUrl||"/static/the-fixer-logo.svg?v=4"} alt={me.theme?.name||"The Fixer"} data-custom-logo={me.theme?.logoDataUrl?"1":undefined} /><span className="logo-text">{me.theme?.name||""}</span></div>
+        <div className="logo"><img className="efs-brand-logo" src={me.theme?.logoDataUrl||"/static/the-fixer-logo.svg?v=6"} alt={me.theme?.name||"The Fixer"} data-custom-logo={me.theme?.logoDataUrl?"1":undefined} /><span className="logo-text">{me.theme?.name||""}</span></div>
         <div className="topbar-divider" />
         <div className="audience-switch"><button className="on" type="button">Employer view</button><button type="button" disabled>Portfolio view</button></div>
         <div className="topbar-spacer" />
