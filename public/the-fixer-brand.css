@@ -1793,3 +1793,31 @@ img[data-custom-logo]{
     min-height:30px!important;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   DARK LOADING LOGO — FINAL
+   Dark splash = approved reversed White + Green artwork directly on surface.
+   ═══════════════════════════════════════════════════════════════ */
+html.efs-default-brand.portal-dark #welcome-splash .welcome-splash-logo:not([data-custom-logo]),
+html[data-theme="dark"].efs-default-brand #welcome-splash .welcome-splash-logo:not([data-custom-logo]){
+  content:url('/static/the-fixer-logo-reversed.svg?v=1')!important;
+  width:144px!important;
+  min-width:120px!important;
+  height:auto!important;
+  max-width:none!important;
+  background:transparent!important;
+  border:0!important;
+  border-radius:0!important;
+  padding:0!important;
+  margin:0 auto 20px!important;
+  box-shadow:none!important;
+  filter:none!important;
+  opacity:1!important;
+}
+@media(max-width:640px){
+  html.efs-default-brand.portal-dark #welcome-splash .welcome-splash-logo:not([data-custom-logo]),
+  html[data-theme="dark"].efs-default-brand #welcome-splash .welcome-splash-logo:not([data-custom-logo]){
+    width:120px!important;
+    min-width:120px!important;
+  }
+}
