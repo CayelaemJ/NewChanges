@@ -1916,3 +1916,36 @@ html.efs-default-brand.portal-dark .topbar-inner > img.efs-brand-logo:not([data-
   width:120px!important;
   min-width:120px!important;
 }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   ADMIN / USERS DARK HEADER — MATCH DASHBOARD
+   Direct-image headers should behave like the working Dashboard shell.
+   ═══════════════════════════════════════════════════════════════ */
+html.efs-default-brand.portal-dark .topbar-inner > img.efs-brand-logo:not([data-custom-logo]){
+  content:url('/static/the-fixer-logo-reversed.svg?v=1')!important;
+  width:120px!important;
+  min-width:120px!important;
+  max-width:120px!important;
+  height:auto!important;
+  background:transparent!important;
+  padding:0!important;
+  margin:0!important;
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  filter:none!important;
+  opacity:1!important;
+}
+html.efs-default-brand.portal-dark .topbar:has(.topbar-inner > img.efs-brand-logo){
+  background:var(--bar-bg,#2B1D73)!important;
+  border-bottom:1px solid color-mix(in srgb,var(--dm-line) 78%,transparent)!important;
+  box-shadow:inset 0 -2px 0 var(--brand-vivid,#0FC79B),0 4px 18px rgba(0,0,0,.14)!important;
+}
+html.efs-default-brand.portal-dark .topbar:has(.topbar-inner > img.efs-brand-logo) :is(.portal-nav-link,.nav-link,.topbar-meta,.nav-who){
+  color:var(--grey,#B7B2C8)!important;
+}
+html.efs-default-brand.portal-dark .topbar:has(.topbar-inner > img.efs-brand-logo) :is(.portal-nav-link,.nav-link).is-active,
+html.efs-default-brand.portal-dark .topbar:has(.topbar-inner > img.efs-brand-logo) :is(.portal-nav-link,.nav-link).active{
+  color:#fff!important;
+}
