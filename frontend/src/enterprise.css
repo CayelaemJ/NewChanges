@@ -3009,12 +3009,12 @@ html.efs-default-brand:not(.portal-dark) .dashboard-shell{
 .dashboard-shell .portal-brand-partner{align-items:center;}
 .dashboard-shell .portal-brand-default{display:flex;}
 .dashboard-shell .portal-brand-default[hidden]{display:none!important;}
-.dashboard-shell .portal-brand-partner{display:flex;gap:12px;}
+.dashboard-shell .portal-brand-partner{display:flex;gap:9px;}
 .dashboard-shell .portal-partner-mark{display:flex;align-items:center;min-width:0;}
 .dashboard-shell .portal-partner-mark img{
   display:block;
-  max-height:34px;
-  max-width:150px;
+  max-height:36px;
+  max-width:170px;
   width:auto;
   height:auto;
   object-fit:contain;
@@ -3022,7 +3022,7 @@ html.efs-default-brand:not(.portal-dark) .dashboard-shell{
 }
 .dashboard-shell .portal-cobrand-rule{width:1px;height:32px;background:#2B1D73;flex:0 0 auto;}
 .dashboard-shell .portal-powered-by{
-  font:700 9.5px 'Manrope',sans-serif;
+  font:700 8.5px 'Manrope',sans-serif;
   letter-spacing:.04em;
   white-space:nowrap;
   color:rgba(255,255,255,.82);
@@ -3032,8 +3032,8 @@ html.efs-default-brand:not(.portal-dark) .dashboard-shell{
   align-items:center;
   justify-content:center;
   background:#fff;
-  padding:10px 12px;
-  min-height:44px;
+  padding:4px 7px;
+  min-height:36px;
   box-sizing:border-box;
 }
 .dashboard-shell .portal-fixer-secondary{
