@@ -22,6 +22,7 @@ declare global { interface Window { BrandEngine?: BrandEngine } }
 
 type Dashboard = {
   employer?: string; headcount?: number;
+  theme?: (Me["theme"] & { branded?: boolean });
   dataAsOf?: string;
   filterContext?: {
     label?: string; period?: string; range?: string; incomeLabel?: string;
@@ -180,6 +181,21 @@ function DashboardView({me}:{me:Me}) {
   const incomeOptions=data.filterOptions?.incomes??[];
   const role=roleLabels[me.role??""]??me.role??"User";
   const maxIncome=Math.max(1,...(data.income??[]).map(x=>x.count));
+  const contentTheme=(data.theme?.branded ? data.theme : me.theme) || {};
+  const contentPrimary=normaliseHex(contentTheme.primaryColor,brandPrimary);
+  const contentNavy=normaliseHex(contentTheme.navyColor,brandNavy);
+  const contentAccent=normaliseHex(contentTheme.accentColor,brandAccent);
+  const contentCharts=window.BrandEngine?.deriveChartPalette({accentColor:contentAccent,primaryColor:contentPrimary,navyColor:contentNavy}) ?? {};
+  const contentThemeStyle: CSSProperties = {
+    "--brand-primary":contentNavy,
+    "--brand-primary-deep":contentNavy,
+    "--brand-navy":contentNavy,
+    "--brand-accent":contentAccent,
+    "--brand-vivid":contentAccent,
+    "--blue":contentAccent,
+    "--blue-d":contentPrimary,
+    ...Object.fromEntries(Object.entries(contentCharts).map(([key,value])=>[`--chart-${key.replace(/^--chart-/,"")}`,value]))
+  } as CSSProperties;
 
   return <main className="dashboard-shell" style={themeStyle}>
     <div className="topbar">
@@ -195,7 +211,7 @@ function DashboardView({me}:{me:Me}) {
         </div>
       </div>
     </div>
-    <div className="wrap">
+    <div className="wrap" style={contentThemeStyle} data-partner-theme={data.theme?.branded?"1":undefined}>
       <header className="portal-header flex flex-col gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-center sm:justify-between">
         <div><div className="head-eyebrow">Employer Insights · Financial Wellbeing Programme</div><h1 className="mt-1 font-display text-3xl font-bold tracking-tight text-[var(--brand-primary)] sm:text-4xl">Your workforce <span className="emp">{data.employer}</span></h1></div>
         <div className="flex items-center gap-3 rounded-md border border-slate-200 bg-white px-3 py-2 shadow-sm"><div className="hidden h-8 w-8 items-center justify-center rounded-sm bg-[var(--brand-accent-soft)] text-[var(--brand-accent)] sm:flex"><span className="text-[10px] font-bold uppercase tracking-widest">User</span></div><div><p className="text-sm font-semibold text-slate-900">{me.name||me.email}</p><p className="text-[11px] text-slate-500">{role}</p></div></div>
