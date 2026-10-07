@@ -2950,3 +2950,52 @@ html.portal-dark .sync-toast{
   color:#29233A!important;
   border-color:#D9D5E1!important;
 }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   THE FIXER GUIDELINES v1.0 — REACT
+   ═══════════════════════════════════════════════════════════════ */
+.dashboard-shell img.efs-brand-logo:not([data-custom-logo]){
+  width:144px!important;
+  min-width:120px!important;
+  height:auto!important;
+  max-width:none!important;
+  filter:none!important;
+  opacity:1!important;
+  background:transparent!important;
+  border:0!important;
+  border-radius:0!important;
+  padding:0!important;
+  box-shadow:none!important;
+  transform:none!important;
+}
+html.efs-default-brand:not(.portal-dark) .dashboard-shell img.efs-brand-logo:not([data-custom-logo]){
+  content:url('/static/the-fixer-logo.svg?v=6');
+}
+html.efs-default-brand.portal-dark .dashboard-shell img.efs-brand-logo:not([data-custom-logo]){
+  content:url('/static/the-fixer-logo-reversed.svg?v=1');
+}
+html.efs-default-brand .dashboard-shell .topbar .logo:has(.efs-brand-logo:not([data-custom-logo])){
+  padding-inline:14px!important;
+}
+html.efs-default-brand .dashboard-shell .btn-primary{
+  background:#0FC79B!important;
+  border-color:#0FC79B!important;
+  color:#2B1D73!important;
+}
+html.efs-default-brand:not(.portal-dark) .dashboard-shell{
+  --surface-0:#FFFFFF;
+  --surface-1:#FAF9FD;
+  --surface-2:#F1EFF9;
+  --brand-primary-soft:#F1EFF9;
+  --brand-soft:#F1EFF9;
+}
+@media(max-width:640px){
+  .dashboard-shell img.efs-brand-logo:not([data-custom-logo]){
+    width:120px!important;
+    min-width:120px!important;
+  }
+  html.efs-default-brand .dashboard-shell .topbar .logo:has(.efs-brand-logo:not([data-custom-logo])){
+    padding-inline:12px!important;
+  }
+}
