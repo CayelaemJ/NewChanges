@@ -3407,7 +3407,8 @@ function applyEmployerScopedTheme(theme){
   const accent=hex(theme.accentColor||theme.primaryColor||'#0FC79B');
   const primary=hex(theme.navyColor||theme.primaryColor||accent);
   const brand={accentColor:accent,primaryColor:hex(theme.primaryColor)||accent,navyColor:primary};
-  const tokens=(window.BrandEngine && BrandEngine.themeTokens) ? BrandEngine.themeTokens(brand,'light') : {
+  const scopedMode=document.documentElement.classList.contains('portal-dark')?'dark':'light';
+  const tokens=(window.BrandEngine && BrandEngine.themeTokens) ? BrandEngine.themeTokens(brand,scopedMode) : {
     '--blue':accent,'--blue-d':shade(accent,-18),'--brand-primary':primary,'--brand-primary-deep':shade(primary,-22),
     '--ice':tint(accent,92),'--brand-soft':tint(accent,94),'--brand-vivid':accent,
     '--brand-grad-1':primary,'--brand-grad-2':mix(primary,accent,.45),'--brand-grad-3':accent,
@@ -3427,6 +3428,8 @@ function applyEmployerScopedTheme(theme){
   target.setAttribute('data-partner-theme','1');
 }
 function applyTheme(theme, user){
+  window.__dashboardActiveTheme=theme||null;
+  window.__dashboardActiveUser=user||null;
   const root=document.documentElement.style;
   const privileged=user && ['ADMIN','SUPERADMIN'].includes(String(user.role||'').toUpperCase());
   // Admin/Superadmin keep the EFS/The Fixer shell, but the selected employer
@@ -3489,6 +3492,18 @@ function applyTheme(theme, user){
     if(sub) sub.textContent=theme.tagline;
   }
 }
+window.addEventListener('portal-theme-change',()=>{
+  const t=window.__dashboardActiveTheme, u=window.__dashboardActiveUser;
+  if(u && ['ADMIN','SUPERADMIN'].includes(String(u.role||'').toUpperCase())){
+    applyDefaultPortalTheme();
+    applyEmployerScopedTheme(t);
+  }else if(t && t.branded!==false){
+    applyTheme(t,u);
+  }else{
+    applyDefaultPortalTheme();
+  }
+});
+
 // Create a full, repeatable chart palette from any valid employer brand hex.
 // Hue rotation makes the charts complementary to (not copies of) the logo hues.
 function complementaryPalette(accent, primary){
