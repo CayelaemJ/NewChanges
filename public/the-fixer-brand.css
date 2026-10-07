@@ -1,0 +1,49 @@
+/* The Fixer — default EFS Optimise brand layer
+   Applies only to the portal default theme. Partner Brand Engine values are
+   written as inline CSS custom properties and therefore continue to override
+   these defaults for explicitly branded partner experiences. */
+:root{
+  --brand-primary:#2B1D73;
+  --brand-primary-deep:#21145D;
+  --brand-accent:#0FC79B;
+  --brand-vivid:#0FC79B;
+  --blue:#087F65;
+  --blue-d:#075F50;
+  --ice:#EDF9F6;
+  --ice-2:#F6F4FB;
+  --brand-soft:#F0EDF8;
+  --line:#DDD8EC;
+  --line-soft:#EEEAF5;
+  --ink:#201B33;
+  --grey:#59566A;
+  --grey-l:#747083;
+  --bar-bg:#2B1D73;
+  --ent-paper:#F7F6FA;
+  --brand-grad-1:#2B1D73;
+  --brand-grad-2:#2B1D73;
+  --brand-grad-3:#0FC79B;
+  --brand-grad-4:#0FC79B;
+  --brand-grad-5:#0FC79B;
+}
+body{background:#F7F6FA;}
+.topbar{border-bottom-color:rgba(15,199,155,.55);}
+.topbar::after{background:#0FC79B!important;opacity:1!important;}
+.nav a.on::after{background:#0FC79B!important;}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,.btn:focus-visible,[tabindex]:focus-visible{
+  box-shadow:0 0 0 3px rgba(15,199,155,.24)!important;
+}
+.btn-primary,button.btn-primary{background:#2B1D73;border-color:#2B1D73;}
+.btn-primary:hover:not(:disabled),button.btn-primary:hover:not(:disabled){background:#21145D;border-color:#21145D;}
+.btn-primary::after,button.btn-primary::after{background:rgba(15,199,155,.22)!important;}
+.card:hover{border-color:rgba(43,29,115,.28);}
+.exec-band,.pf-banner,.opp-foot{background:#2B1D73;}
+.exec-pulse{background:#0FC79B;}
+.kpi-value,.rating-big,.stat-cell .v,.opp-n,.ds-v,.exec-v{color:var(--brand-primary);}
+.metric-info{background:#F0EDF8;border-color:#C9BFE8;color:#2B1D73;}
+.metric-info:hover,.metric-info:focus{background:#E8E2F6;border-color:#A99BD6;}
+.portal-dark{
+  --brand-vivid:#39E0B7;
+}
+@media (prefers-reduced-motion:reduce){
+  .topbar::after{transition:none!important;}
+}
