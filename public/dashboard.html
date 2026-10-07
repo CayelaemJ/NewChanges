@@ -3329,7 +3329,7 @@ function applySectionVisibility(me){
 }
 
 const BrandTheme = window.BrandEngine ? BrandEngine.themeController() : null; // owns light/dark brand tokens
-const DEFAULT_PORTAL_BRAND = {accentColor:'7D2FA3',primaryColor:'B15BE8',navyColor:'2B1B68'};
+const DEFAULT_PORTAL_BRAND = {accentColor:'0FC79B',primaryColor:'0FC79B',navyColor:'2B1D73'};
 const DEFAULT_PORTAL_CHARTS = {
   '--chart-engagement':'#3a93d2','--chart-cashflow':'#1fa463','--chart-debt':'#607486',
   '--chart-insurance':'#8a4fc4','--chart-workforce':'#4ea3da','--chart-low':'#1fa463',
@@ -3378,7 +3378,7 @@ function applyTheme(theme, user){
 
   const hex=c=>c?('#'+String(c).replace(/^#/,'')):null;
   const baseName='empower-fin Dashboard Portal';
-  const accent=hex(theme.accentColor||theme.primaryColor||'#b15be8');
+  const accent=hex(theme.accentColor||theme.primaryColor||'#0FC79B');
   const primary=hex(theme.navyColor||theme.primaryColor||accent);
   if(!BrandTheme){ // legacy fallback (engine failed to load)
     root.setProperty('--blue', accent);
