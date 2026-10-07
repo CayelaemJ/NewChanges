@@ -1507,6 +1507,7 @@ html.efs-default-brand:not(.portal-dark) body{
   align-items:center;
 }
 .portal-brand-default{display:flex;}
+.portal-brand-default[hidden]{display:none!important;}
 .portal-brand-partner{
   display:flex;
   gap:12px;
