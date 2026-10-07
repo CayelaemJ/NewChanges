@@ -32,7 +32,7 @@
 /* page shell */
 body{
   background:
-    linear-gradient(180deg,rgba(43,29,115,.035),transparent 260px),
+    linear-gradient(180deg,color-mix(in srgb,var(--brand-primary) 3.5%,transparent),transparent 260px),
     #F8F7FB;
 }
 .wrap{max-width:1380px!important;padding-left:32px!important;padding-right:32px!important;}
