@@ -200,7 +200,24 @@ function DashboardView({me}:{me:Me}) {
   return <main className="dashboard-shell" style={themeStyle}>
     <div className="topbar">
       <div className="topbar-inner">
-        <div className="logo"><img className="efs-brand-logo" src={me.theme?.logoDataUrl||"/static/the-fixer-logo.svg?v=6"} alt={me.theme?.name||"The Fixer"} data-custom-logo={me.theme?.logoDataUrl?"1":undefined} /><span className="logo-text">{me.theme?.name||""}</span></div>
+        <div className="logo portal-brand-lockup">
+          {(!defaultEfsShell && me.theme?.branded && me.theme?.logoDataUrl) ? (
+            <div className="portal-brand-partner">
+              <div className="portal-partner-mark">
+                <img src={me.theme.logoDataUrl} alt={(me.theme?.name||"Partner")+" logo"} data-custom-logo="1" />
+              </div>
+              <span className="portal-cobrand-rule" aria-hidden="true" />
+              <span className="portal-powered-by">Powered by</span>
+              <span className="portal-fixer-panel">
+                <img className="efs-brand-logo portal-fixer-secondary" src="/static/the-fixer-logo.svg?v=6" alt="The Fixer" />
+              </span>
+            </div>
+          ) : (
+            <div className="portal-brand-default">
+              <img className="efs-brand-logo" src="/static/the-fixer-logo.svg?v=6" alt="The Fixer" />
+            </div>
+          )}
+        </div>
         <div className="topbar-divider" />
         <div className="audience-switch"><button className="on" type="button">Employer view</button><button type="button" disabled>Portfolio view</button></div>
         <div className="topbar-spacer" />
