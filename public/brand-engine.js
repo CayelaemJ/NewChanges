@@ -544,21 +544,31 @@
    *     charts : { '--chart-x': '#hex' } light-mode chart colours, lifted automatically for dark
    */
   function themeController() {
-    var st = { brand: null, light: null, charts: {} }, applied = [], started = false;
+    var st = { brand: null, endorser: null, coBrand: false, light: null, charts: {} }, applied = [], started = false;
     function render() {
       var docEl = document.documentElement, dark = docEl.classList.contains('portal-dark'), set = {}, k;
-      if (dark) set = themeTokens(st.brand, 'dark');
-      else if (st.light === 'engine') set = themeTokens(st.brand, 'light');
-      else if (st.light) for (k in st.light) set[k] = st.light[k];
-      var surface = dark ? set['--white'] : null;
-      for (k in st.charts) set[k] = dark ? forDark(st.charts[k], surface) : st.charts[k];
+      if (st.coBrand) {
+        var co = coBrandSystem(st.brand, st.endorser, dark ? 'dark' : 'light');
+        set = co.tokens;
+        for (k in co.charts) set['--chart-' + k] = dark ? forDark(co.charts[k], String(set['--surface-1']||set['--white']).replace(/^#/,'')) : co.charts[k];
+      } else {
+        if (dark) set = themeTokens(st.brand, 'dark');
+        else if (st.light === 'engine') set = themeTokens(st.brand, 'light');
+        else if (st.light) for (k in st.light) set[k] = st.light[k];
+        var surface = dark ? set['--white'] : null;
+        for (k in st.charts) set[k] = dark ? forDark(st.charts[k], surface) : st.charts[k];
+      }
       applied.forEach(function (a) { if (!(a in set)) docEl.style.removeProperty(a); });
       Object.keys(set).forEach(function (a) { docEl.style.setProperty(a, set[a]); });
       applied = Object.keys(set);
     }
     return {
       set: function (o) {
-        st.brand = o.brand || {}; st.light = o.light === undefined ? null : o.light; st.charts = o.charts || {};
+        st.brand = o.brand || {};
+        st.endorser = o.endorser || null;
+        st.coBrand = !!o.coBrand;
+        st.light = o.light === undefined ? null : o.light;
+        st.charts = o.charts || {};
         render();
         if (!started && typeof MutationObserver !== 'undefined') {
           started = true; new MutationObserver(render).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
