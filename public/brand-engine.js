@@ -251,7 +251,7 @@
   }
 
   /* ───────────── theme tokens ───────────── */
-  var LIGHT_STATIC = { '--white': '#ffffff', '--ink': '#241536', '--grey': '#5b6b7a', '--grey-l': '#617486', '--line': '#e8e1f7', '--line-soft': '#f0ecfb' };
+  var LIGHT_STATIC = { '--white': '#ffffff', '--ink': '#201B33', '--grey': '#59566A', '--grey-l': '#747083', '--line': '#DDD8EC', '--line-soft': '#EEEAF5' };
   var pound = function (h) { return '#' + String(h).replace(/^#/, ''); };
 
   /**
@@ -261,10 +261,10 @@
    */
   function themeTokens(theme, mode) {
     theme = theme || {};
-    var accent = String(theme.accentColor || theme.primaryColor || 'B15BE8').replace(/^#/, '');
+    var accent = String(theme.accentColor || theme.primaryColor || '0FC79B').replace(/^#/, '');
     var navy = String(theme.navyColor || theme.primaryColor || accent).replace(/^#/, '');
     var second = String(theme.primaryColor || accent).replace(/^#/, '');
-    if (!parseHex(accent)) accent = '5F756D'; if (!parseHex(navy)) navy = '17212B'; if (!parseHex(second)) second = accent;
+    if (!parseHex(accent)) accent = '0FC79B'; if (!parseHex(navy)) navy = '2B1D73'; if (!parseHex(second)) second = accent;
     var A = hexToLch(accent), N = hexToLch(navy), t = {};
 
     if (mode !== 'dark') {
@@ -315,9 +315,9 @@
    */
   function deriveChartPalette(theme) {
     theme = theme || {};
-    var accent = String(theme.accentColor || theme.primaryColor || '5F756D').replace(/^#/, '');
+    var accent = String(theme.accentColor || theme.primaryColor || '0FC79B').replace(/^#/, '');
     var primary = String(theme.primaryColor || accent).replace(/^#/, '');
-    if (!parseHex(accent)) accent = '5F756D';
+    if (!parseHex(accent)) accent = '0FC79B';
     if (!parseHex(primary)) primary = accent;
     var a = hexToLch(accent), p = hexToLch(primary);
     var hue = a.C > 0.035 ? a.h : p.h;
