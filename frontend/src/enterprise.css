@@ -3156,3 +3156,57 @@ img[data-custom-logo]{
     min-height:30px!important;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   PARTNER HEADER — NO WHITE FIELD WHEN SAFE — REACT
+   ═══════════════════════════════════════════════════════════════ */
+.dashboard-shell .portal-brand-partner[data-partner-header-tone="dark"] .portal-fixer-panel{
+  background:transparent!important;
+  padding:0!important;
+  min-height:0!important;
+}
+.dashboard-shell .portal-brand-partner[data-partner-header-tone="dark"] .portal-fixer-secondary{
+  content:url('/static/the-fixer-logo-reversed.svg?v=1')!important;
+  width:120px!important;
+  min-width:120px!important;
+  background:transparent!important;
+  padding:0!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+.dashboard-shell .portal-brand-partner[data-partner-header-tone="dark"] .portal-powered-by{
+  color:rgba(255,255,255,.78)!important;
+}
+.dashboard-shell .portal-brand-partner[data-partner-header-tone="dark"] .portal-cobrand-rule{
+  background:rgba(255,255,255,.34)!important;
+}
+.dashboard-shell .portal-brand-partner[data-partner-header-tone="light"] .portal-fixer-panel{
+  background:transparent!important;
+  padding:0!important;
+  min-height:0!important;
+}
+.dashboard-shell .portal-brand-partner[data-partner-header-tone="light"] .portal-fixer-secondary{
+  content:url('/static/the-fixer-logo.svg?v=6')!important;
+  width:120px!important;
+  min-width:120px!important;
+  background:transparent!important;
+  padding:0!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+.dashboard-shell .portal-brand-partner[data-partner-header-tone="light"] .portal-powered-by{
+  color:rgba(32,27,51,.72)!important;
+}
+.dashboard-shell .portal-brand-partner[data-partner-header-tone="light"] .portal-cobrand-rule{
+  background:#2B1D73!important;
+}
+.dashboard-shell .portal-brand-partner[data-partner-header-tone="mid"] .portal-fixer-panel{
+  background:#fff!important;
+  padding:2px 4px!important;
+  min-height:30px!important;
+}
+.dashboard-shell .portal-brand-partner[data-partner-header-tone="mid"] .portal-fixer-secondary{
+  content:url('/static/the-fixer-logo.svg?v=6')!important;
+  width:120px!important;
+  min-width:120px!important;
+}
