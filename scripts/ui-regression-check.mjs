@@ -138,6 +138,8 @@ for (const page of ["dashboard", "admin", "users"]) {
   must(h.includes("/static/dark-theme-v2.css") && h.includes("/static/brand-engine.js"), `${page}: token-driven dark theme + brand engine must be loaded`);
   must(!h.includes("dark-mode-v1.css"), `${page}: legacy dark-mode stylesheet must not be loaded`);
 }
+must(read("public/the-fixer-brand.css").includes("THE FIXER GUIDELINES v1.0 COMPLIANCE") && read("public/the-fixer-brand.css").includes("the-fixer-logo-reversed.svg") && read("public/the-fixer-logo-reversed.svg").includes("99.607849%"), "dark backgrounds must use the approved reversed The Fixer artwork, not a boxed full-colour logo");
+must(read("public/the-fixer-brand.css").includes("min-width:120px") && read("public/the-fixer-brand.css").includes("padding-left:14px"), "official logo must respect digital minimum size and clear-space treatment");
 must(read("public/the-fixer-brand.css").includes("OFFICIAL LOGO + LIGHT/DARK SHELL") && pages.dashboard.includes("class=\"efs-brand-logo\"") && pages.dashboard.includes("class=\"efs-default-brand\""), "The Fixer must use the official full-colour vector with dedicated light/dark shell treatment");
 must(read("public/the-fixer-brand.css").includes("efs-brand-logo:not([data-custom-logo])") && read("public/the-fixer-brand.css").includes("data-custom-logo=\"1\""), "dark-mode logo plate must apply only to the default The Fixer logo, never uploaded partner logos");
 must(read("public/dashboard.html").includes("BrandEngine.themeController()"), "dashboard theme must be applied through the brand engine controller");
