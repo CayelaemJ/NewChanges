@@ -1982,7 +1982,7 @@ table.ct th,table.ct td{vertical-align:middle;}
    Uses active brand variables so partner themes remain functional.
    ═══════════════════════════════════════════════════════════════ */
 body{
-  background:linear-gradient(180deg,rgba(43,29,115,.035),transparent 260px),#F8F7FB;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--brand-primary) 3.5%,transparent),transparent 260px),#F8F7FB;
 }
 .wrap{max-width:1380px;padding-left:32px;padding-right:32px;}
 .topbar{
@@ -2022,7 +2022,7 @@ body{
 .exec-item:last-child{border-right:0;}
 .exec-v{color:#fff!important;font-size:22px;display:block!important;opacity:1!important;visibility:visible!important;}
 .exec-l{color:rgba(255,255,255,.72);}
-.exec-check{background:rgba(15,199,155,.16);color:var(--brand-accent);}
+.exec-check{background:color-mix(in srgb,var(--brand-accent) 16%,transparent);color:var(--brand-accent);}
 .stat-strip{box-shadow:var(--shadow);}
 @media(max-width:1080px){
   .exec-item{border-right:0;border-bottom:1px solid rgba(255,255,255,.10);padding:12px 0;}
