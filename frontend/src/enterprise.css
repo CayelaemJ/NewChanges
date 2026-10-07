@@ -2691,3 +2691,63 @@ body{
   .wd-meter{grid-column:1/-1;grid-row:2;}
   .wd-state{grid-column:1/-1;grid-row:3;}
 }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   OFFICIAL LOGO SHELL — REACT
+   Keep the full-colour mark in both light and dark modes.
+   ═══════════════════════════════════════════════════════════════ */
+.efs-brand-logo{display:block;width:auto;object-fit:contain;}
+html.efs-default-brand:not(.portal-dark) .dashboard-shell .topbar{
+  background:rgba(255,255,255,.96)!important;
+  border-bottom:1px solid var(--line)!important;
+  box-shadow:0 8px 24px rgba(35,27,70,.055)!important;
+  backdrop-filter:blur(16px);
+}
+html.efs-default-brand:not(.portal-dark) .dashboard-shell .topbar::after{
+  background:linear-gradient(90deg,var(--brand-primary) 0 72%,var(--brand-vivid) 72% 100%)!important;
+  height:2px!important;
+}
+html.efs-default-brand:not(.portal-dark) .dashboard-shell .topbar :is(.nav-link,.portal-nav-link,.data-fresh,.nav-who,.logo-text,label){
+  color:var(--grey)!important;
+}
+html.efs-default-brand:not(.portal-dark) .dashboard-shell .topbar .audience-switch{
+  background:var(--brand-primary-soft)!important;
+  border-color:var(--line-brand)!important;
+}
+html.efs-default-brand:not(.portal-dark) .dashboard-shell .topbar .audience-switch button{
+  color:var(--grey)!important;
+}
+html.efs-default-brand:not(.portal-dark) .dashboard-shell .topbar .audience-switch button.on{
+  background:#fff!important;
+  color:var(--brand-primary)!important;
+}
+html.efs-default-brand:not(.portal-dark) .dashboard-shell .topbar .topbar-divider{
+  background:var(--line)!important;
+}
+html.efs-default-brand.portal-dark .dashboard-shell .topbar{
+  background:var(--bar-bg)!important;
+  border-bottom:1px solid color-mix(in srgb,var(--dm-line) 80%,transparent)!important;
+  box-shadow:0 10px 30px rgba(0,0,0,.16)!important;
+}
+html.efs-default-brand.portal-dark .dashboard-shell .topbar .efs-brand-logo:not([data-custom-logo]){
+  background:#fff;
+  border:1px solid rgba(255,255,255,.76);
+  border-radius:10px;
+  padding:6px 10px;
+  box-shadow:0 7px 20px rgba(0,0,0,.14);
+}
+.dashboard-shell .efs-brand-logo[data-custom-logo="1"]{
+  background:transparent!important;
+  border:0!important;
+  padding:0!important;
+  box-shadow:none!important;
+}
+.dashboard-shell .topbar .efs-brand-logo{
+  height:34px!important;
+  max-width:205px!important;
+}
+@media(max-width:640px){
+  .dashboard-shell .topbar .efs-brand-logo{height:27px!important;max-width:158px!important;}
+  html.efs-default-brand.portal-dark .dashboard-shell .topbar .efs-brand-logo:not([data-custom-logo]){padding:5px 8px;border-radius:8px;}
+}
