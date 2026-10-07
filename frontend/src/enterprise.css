@@ -3053,7 +3053,10 @@ html.efs-default-brand:not(.portal-dark) .dashboard-shell{
   .dashboard-shell .portal-partner-mark img{max-width:110px;max-height:30px;}
 }
 @media(max-width:560px){
-  .dashboard-shell .portal-fixer-panel,
-  .dashboard-shell .portal-cobrand-rule{display:none;}
-  .dashboard-shell .portal-partner-mark img{max-width:120px;}
+  .dashboard-shell .portal-brand-partner{gap:6px;}
+  .dashboard-shell .portal-partner-mark img{max-width:90px;max-height:28px;}
+  .dashboard-shell .portal-cobrand-rule{height:26px;}
+  .dashboard-shell .portal-powered-by{display:none;}
+  .dashboard-shell .portal-fixer-panel{display:flex;padding:7px 8px;min-height:38px;}
+  .dashboard-shell .portal-fixer-secondary{width:120px!important;min-width:120px!important;}
 }
