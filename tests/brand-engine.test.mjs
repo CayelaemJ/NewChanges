@@ -64,6 +64,10 @@ for (const th of [{accentColor:"009DA5",primaryColor:"FF8000",navyColor:"0B3C40"
 // theme tokens
 for (const th of [{ accentColor: "009DA5", primaryColor: "FF8000", navyColor: "0B3C40" }, { accentColor: "B15BE8", navyColor: "330A36" }, { accentColor: "FFC800", navyColor: "0C235A" }, {}]) {
   const L = BE.themeTokens(th, "light"), D = BE.themeTokens(th, "dark");
+  for (const k of ["--brand-secondary","--brand-bridge","--brand-accent-soft","--brand-primary-soft","--surface-brand","--line-brand"]) {
+    ok(/^#[0-9A-F]{6}$/i.test(L[k]), `light: tonal token ${k} is a valid derived colour`);
+    ok(/^#[0-9A-F]{6}$/i.test(D[k]), `dark: tonal token ${k} is a valid derived colour`);
+  }
   ok(BE.contrast(L["--brand-primary"], "FFFFFF") >= 7, "light: brand colour reads on white");
   ok(BE.contrast(L["--blue"], "FFFFFF") >= 4.5, "light: accent reads on white");
   ok(BE.contrast(D["--ink"], D["--white"]) >= 12, "dark: body text >= 12:1");
