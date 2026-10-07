@@ -195,6 +195,11 @@ async function signIn(){
       body:JSON.stringify({email:$('#email').value,password:$('#password').value,remember:$('#remember').checked})});
     const d=await r.json();
     if(!r.ok) throw new Error(d.error||'Sign-in failed');
+    // A successful fresh sign-in should always get one The Fixer greeting.
+    try{
+      sessionStorage.removeItem('ef_splash_shown');
+      sessionStorage.setItem('ef_fresh_login','1');
+    }catch(_){}
     // route by role
     const me=await fetch('/api/auth/me').then(x=>x.json());
     if(me.modules.dashboard) location.href='/dashboard';
