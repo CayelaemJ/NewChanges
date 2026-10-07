@@ -1510,7 +1510,7 @@ html.efs-default-brand:not(.portal-dark) body{
 .portal-brand-default[hidden]{display:none!important;}
 .portal-brand-partner{
   display:flex;
-  gap:12px;
+  gap:9px;
 }
 .portal-brand-partner[hidden]{display:none!important;}
 .portal-partner-mark{
@@ -1520,8 +1520,8 @@ html.efs-default-brand:not(.portal-dark) body{
 }
 .portal-partner-mark img{
   display:block;
-  max-height:34px;
-  max-width:150px;
+  max-height:36px;
+  max-width:170px;
   width:auto;
   height:auto;
   object-fit:contain;
@@ -1538,7 +1538,7 @@ html.efs-default-brand:not(.portal-dark) body{
   flex:0 0 auto;
 }
 .portal-powered-by{
-  font:700 9.5px 'Manrope',sans-serif;
+  font:700 8.5px 'Manrope',sans-serif;
   letter-spacing:.04em;
   color:inherit;
   white-space:nowrap;
@@ -1548,8 +1548,8 @@ html.efs-default-brand:not(.portal-dark) body{
   align-items:center;
   justify-content:center;
   background:#FFFFFF;
-  padding:10px 12px;
-  min-height:44px;
+  padding:4px 7px;
+  min-height:36px;
   box-sizing:border-box;
 }
 .portal-fixer-secondary{
