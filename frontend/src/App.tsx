@@ -11,17 +11,19 @@ type Me = {
   name?: string; email?: string; role?: string;
   employers?: Array<{ id: string; name: string }>;
   sections?: Record<string, boolean>;
-  theme?: { name?: string; primaryColor?: string; accentColor?: string; navyColor?: string; logoDataUrl?: string | null; tagline?: string | null };
+  theme?: { name?: string; primaryColor?: string; accentColor?: string; navyColor?: string; logoDataUrl?: string | null; tagline?: string | null; branded?: boolean };
 };
 
 type BrandEngine = {
   themeController: () => { set: (options: { brand?: { accentColor?: string; primaryColor?: string; navyColor?: string }; light?: "engine" | null; charts?: Record<string,string> }) => void };
   deriveChartPalette: (theme: { accentColor?: string; primaryColor?: string; navyColor?: string }) => Record<string,string>;
+  themeTokens: (theme: { accentColor?: string; primaryColor?: string; navyColor?: string }, mode: "light"|"dark") => Record<string,string>;
 };
 declare global { interface Window { BrandEngine?: BrandEngine } }
 
 type Dashboard = {
   employer?: string; headcount?: number;
+  theme?: (Me["theme"] & { branded?: boolean });
   dataAsOf?: string;
   filterContext?: {
     label?: string; period?: string; range?: string; incomeLabel?: string;
@@ -72,6 +74,15 @@ function normaliseHex(value?: string | null, fallback = "#5f756d") {
   if (!value) return fallback;
   const hex = value.startsWith("#") ? value : "#" + value;
   return /^#[0-9a-fA-F]{6}$/.test(hex) ? hex : fallback;
+}
+
+function partnerHeaderTone(theme?: Me["theme"]) {
+  const raw=String(theme?.navyColor||theme?.primaryColor||theme?.accentColor||"").replace(/^#/,"");
+  if(!/^[0-9a-fA-F]{6}$/.test(raw)) return "mid";
+  const rgb=[0,2,4].map(i=>parseInt(raw.slice(i,i+2),16)/255);
+  const lin=(c:number)=>c<=0.03928?c/12.92:Math.pow((c+0.055)/1.055,2.4);
+  const L=.2126*lin(rgb[0])+.7152*lin(rgb[1])+.0722*lin(rgb[2]);
+  return L<0.22?"dark":L>0.72?"light":"mid";
 }
 
 function LineChart({values,labels,previous=[],previousLabels=[],currentLabel="Selected period",previousLabel="Previous period",prefix="R "}:{values:number[];labels:string[];previous?:number[];previousLabels?:string[];currentLabel?:string;previousLabel?:string;prefix?:string}) {
@@ -128,9 +139,10 @@ function DashboardView({me}:{me:Me}) {
   const [income,setIncome]=useState("all"); const [site,setSite]=useState("all"); const [periodOptions,setPeriodOptions]=useState<string[]>([]);
   const [selectedEmployerId,setSelectedEmployerId]=useState(me.employers?.[0]?.id??""); const [loading,setLoading]=useState(true); const [error,setError]=useState("");
   const employer=me.employers?.find(e=>e.id===selectedEmployerId)??me.employers?.[0];
-  const brandPrimary = normaliseHex(me.theme?.primaryColor, "#2b1b68");
+  const defaultEfsShell = ["ADMIN","SUPERADMIN"].includes(String(me.role||"").toUpperCase()) || me.theme?.branded === false || !me.theme;
+  const brandPrimary = normaliseHex(me.theme?.primaryColor, "#2B1D73");
   const brandNavy = normaliseHex(me.theme?.navyColor, "#0d2a47");
-  const brandAccent = normaliseHex(me.theme?.accentColor, "#7d2fa3");
+  const brandAccent = normaliseHex(me.theme?.accentColor, "#087F65");
   const chartPalette = useMemo(() => window.BrandEngine?.deriveChartPalette({accentColor: brandAccent, primaryColor: brandPrimary, navyColor: brandNavy}) ?? {}, [brandAccent, brandPrimary, brandNavy]);
   const themeStyle: CSSProperties = {
     "--brand-primary": brandPrimary,
@@ -143,7 +155,8 @@ function DashboardView({me}:{me:Me}) {
   } as CSSProperties;
   useEffect(()=>{
     document.documentElement.classList.toggle("portal-dark",darkMode);
-  },[darkMode]);
+    document.documentElement.classList.toggle("efs-default-brand",defaultEfsShell);
+  },[darkMode,defaultEfsShell]);
   useEffect(()=>{
     const engine=window.BrandEngine?.themeController();
     if(engine) engine.set({brand:{accentColor:brandAccent,primaryColor:brandPrimary,navyColor:brandNavy},light:"engine",charts:chartPalette});
@@ -180,11 +193,40 @@ function DashboardView({me}:{me:Me}) {
   const incomeOptions=data.filterOptions?.incomes??[];
   const role=roleLabels[me.role??""]??me.role??"User";
   const maxIncome=Math.max(1,...(data.income??[]).map(x=>x.count));
+  const contentTheme=(data.theme?.branded ? data.theme : me.theme) || {};
+  const contentPrimary=normaliseHex(contentTheme.primaryColor,brandPrimary);
+  const contentNavy=normaliseHex(contentTheme.navyColor,brandNavy);
+  const contentAccent=normaliseHex(contentTheme.accentColor,brandAccent);
+  const contentBrand={accentColor:contentAccent,primaryColor:contentPrimary,navyColor:contentNavy};
+  const contentCharts=window.BrandEngine?.deriveChartPalette(contentBrand) ?? {};
+  const contentTokens=window.BrandEngine?.themeTokens(contentBrand,darkMode?"dark":"light") ?? {};
+  const contentThemeStyle: CSSProperties = {
+    ...contentTokens,
+    "--brand-navy":contentNavy,
+    ...Object.fromEntries(Object.entries(contentCharts).map(([key,value])=>[`--chart-${key.replace(/^--chart-/,"")}`,value]))
+  } as CSSProperties;
 
   return <main className="dashboard-shell" style={themeStyle}>
     <div className="topbar">
       <div className="topbar-inner">
-        <div className="logo"><img src={me.theme?.logoDataUrl||"/static/logo.png"} alt={me.theme?.name||"empower-fin Dashboard Portal"} data-custom-logo={me.theme?.logoDataUrl?"1":undefined} /><span className="logo-text">{me.theme?.name||""}</span></div>
+        <div className="logo portal-brand-lockup">
+          {(!defaultEfsShell && me.theme?.branded && me.theme?.logoDataUrl) ? (
+            <div className="portal-brand-partner" data-partner-header-tone={partnerHeaderTone(me.theme)}>
+              <div className="portal-partner-mark">
+                <img src={me.theme.logoDataUrl} alt={(me.theme?.name||"Partner")+" logo"} data-custom-logo="1" />
+              </div>
+              <span className="portal-cobrand-rule" aria-hidden="true" />
+              <span className="portal-powered-by">Powered by</span>
+              <span className="portal-fixer-panel">
+                <img className="efs-brand-logo portal-fixer-secondary" src="/static/the-fixer-logo.svg?v=6" alt="The Fixer" />
+              </span>
+            </div>
+          ) : (
+            <div className="portal-brand-default">
+              <img className="efs-brand-logo" src="/static/the-fixer-logo.svg?v=6" alt="The Fixer" />
+            </div>
+          )}
+        </div>
         <div className="topbar-divider" />
         <div className="audience-switch"><button className="on" type="button">Employer view</button><button type="button" disabled>Portfolio view</button></div>
         <div className="topbar-spacer" />
@@ -195,7 +237,7 @@ function DashboardView({me}:{me:Me}) {
         </div>
       </div>
     </div>
-    <div className="wrap">
+    <div className="wrap" style={contentThemeStyle} data-partner-theme={data.theme?.branded?"1":undefined}>
       <header className="portal-header flex flex-col gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-center sm:justify-between">
         <div><div className="head-eyebrow">Employer Insights · Financial Wellbeing Programme</div><h1 className="mt-1 font-display text-3xl font-bold tracking-tight text-[var(--brand-primary)] sm:text-4xl">Your workforce <span className="emp">{data.employer}</span></h1></div>
         <div className="flex items-center gap-3 rounded-md border border-slate-200 bg-white px-3 py-2 shadow-sm"><div className="hidden h-8 w-8 items-center justify-center rounded-sm bg-[var(--brand-accent-soft)] text-[var(--brand-accent)] sm:flex"><span className="text-[10px] font-bold uppercase tracking-widest">User</span></div><div><p className="text-sm font-semibold text-slate-900">{me.name||me.email}</p><p className="text-[11px] text-slate-500">{role}</p></div></div>

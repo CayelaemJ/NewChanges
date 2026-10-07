@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="efs-default-brand">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -71,11 +71,11 @@
      page through --brand-primary/--blue without changing the default palette. */
   html[data-theme="dark"]{
     filter:none !important;
-    --auth-dark-shell:#393440;
-    --auth-dark-surface:#4a4351;
-    --auth-dark-input:#39343f;
-    --auth-dark-line:#706679;
-    --auth-dark-muted:#d7cfdd;
+    --auth-dark-shell:#141226;
+    --auth-dark-surface:#1E1B33;
+    --auth-dark-input:#17152A;
+    --auth-dark-line:#3D3856;
+    --auth-dark-muted:#BEB8CF;
     --white:var(--auth-dark-surface);
     --ink:#fbf9fc;
     --grey:var(--auth-dark-muted);
@@ -87,21 +87,27 @@
   html[data-theme="dark"] body{
     background:
       radial-gradient(900px 520px at 78% -8%,color-mix(in srgb,var(--blue) 10%,transparent),transparent 62%),
-      linear-gradient(160deg,#403946 0%,var(--auth-dark-shell) 100%);
+      linear-gradient(160deg,#1A1730 0%,var(--auth-dark-shell) 100%);
     color:#fbf9fc;
   }
   html[data-theme="dark"] h1,html[data-theme="dark"] label,html[data-theme="dark"] .logo{color:#fbf9fc;}
   html[data-theme="dark"] .sub,html[data-theme="dark"] label[style],html[data-theme="dark"] #cookie-banner p{color:var(--auth-dark-muted);}
   html[data-theme="dark"] #cookie-banner{background:var(--auth-dark-surface);border-color:var(--auth-dark-line);}
-  html[data-theme="dark"] #cookie-banner .dismiss{background:#3b3542;color:#eee9f1;border-color:var(--auth-dark-line);}
-  html[data-theme="dark"] #forgot-link,html[data-theme="dark"] .card a{color:#d6afea !important;}
+  html[data-theme="dark"] #cookie-banner .dismiss{background:#19162a;color:#eee9f1;border-color:var(--auth-dark-line);}
+  html[data-theme="dark"] #forgot-link,html[data-theme="dark"] .card a{color:#5FE0C0 !important;}
+  html[data-theme="dark"] .card{background:var(--auth-dark-surface)!important;border-color:var(--auth-dark-line)!important;box-shadow:0 18px 55px rgba(0,0,0,.22)!important;}
+  html[data-theme="dark"] input{background:var(--auth-dark-input)!important;border-color:var(--auth-dark-line)!important;color:#f7f5fb!important;}
+  html[data-theme="dark"] input:focus{border-color:#0FC79B!important;box-shadow:0 0 0 3px rgba(15,199,155,.12)!important;}
+  html[data-theme="dark"] button{background:#2B1D73!important;}
+  html[data-theme="dark"] button:hover{background:#38258F!important;}
 </style>
-<link rel="stylesheet" href="/static/enterprise.css?v=3">
-  <link rel="stylesheet" href="/static/enterprise-v3.css?v=3">
+<link rel="stylesheet" href="/static/enterprise.css?v=4">
+  <link rel="stylesheet" href="/static/enterprise-v3.css?v=4">
+<link rel="stylesheet" href="/static/the-fixer-brand.css?v=4">
 </head>
 <body class="auth has-sticky-cta">
   <aside class="auth-side">
-    <div><img src="/static/logo-large.png" alt="empower-fin logo" id="side-logo"></div>
+    <div><img src="/static/the-fixer-logo.svg?v=6" class="efs-brand-logo" alt="The Fixer logo" id="side-logo"></div>
     <div>
       <h2>Financial wellbeing, measured with rigour.</h2>
       <p>A secure analytics workspace giving employers and their partners a clear, auditable view of workforce financial health.</p>
@@ -112,7 +118,7 @@
   </aside>
   <main class="auth-main">
   <div class="card">
-    <div class="logo"><img src="/static/logo-large.png" alt="empower-fin Dashboard Portal" style="height:54px;width:auto;"></div>
+    <div class="logo"><img src="/static/the-fixer-logo.svg?v=6" class="efs-brand-logo" alt="The Fixer" style="height:54px;width:auto;"></div>
     <h1>Sign in to your workspace</h1>
     <div class="sub" id="brand-sub">Employee financial wellbeing platform</div>
     <label for="email">Email</label>
@@ -189,6 +195,11 @@ async function signIn(){
       body:JSON.stringify({email:$('#email').value,password:$('#password').value,remember:$('#remember').checked})});
     const d=await r.json();
     if(!r.ok) throw new Error(d.error||'Sign-in failed');
+    // A successful fresh sign-in should always get one The Fixer greeting.
+    try{
+      sessionStorage.removeItem('ef_splash_shown');
+      sessionStorage.setItem('ef_fresh_login','1');
+    }catch(_){}
     // route by role
     const me=await fetch('/api/auth/me').then(x=>x.json());
     if(me.modules.dashboard) location.href='/dashboard';

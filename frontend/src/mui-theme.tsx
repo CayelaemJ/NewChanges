@@ -8,8 +8,8 @@ const theme = createTheme({
   },
   palette: {
     primary: {
-      main: "var(--brand-accent, #7d2fa3)",
-      dark: "var(--brand-primary, #2b1b68)",
+      main: "var(--brand-accent, #087F65)",
+      dark: "var(--brand-primary, #2B1D73)",
       contrastText: "#fff",
     },
     background: {

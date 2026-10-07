@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="efs-default-brand">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="/static/portal-nav-v080.css?v=0.10.0">
 <link rel="stylesheet" href="/static/dashboard.css?v=0.11.1">
 <script src="/static/safe.js?v=1"></script>
-<script src="/static/brand-engine.js?v=3"></script>
+<script src="/static/brand-engine.js?v=6"></script>
 <title>Financial Wellbeing Dashboard | empower-fin</title>
 <meta name="description" content="Workforce financial-wellbeing scores, drivers and trends for your organisation.">
 <meta name="robots" content="noindex,nofollow">
@@ -795,18 +795,19 @@
   }
 </style>
 <link rel="stylesheet" href="/static/enterprise.css?v=2">
-  <link rel="stylesheet" href="/static/enterprise-v3.css?v=3">
-<link rel="stylesheet" href="/static/dark-theme-v2.css?v=4">
+  <link rel="stylesheet" href="/static/enterprise-v3.css?v=4">
+<link rel="stylesheet" href="/static/dark-theme-v2.css?v=6">
+<link rel="stylesheet" href="/static/the-fixer-brand.css?v=13">
 </head>
 <body data-portal-build="0.10.0">
 
 <!-- ════════════════════════ WELCOME SPLASH ════════════════════════ -->
 <div id="welcome-splash">
   <div class="welcome-splash-inner">
-    <img id="welcome-splash-logo" class="welcome-splash-logo" src="/static/logo-large.png" alt="empower-fin logo">
+    <img id="welcome-splash-logo" class="welcome-splash-logo efs-brand-logo" src="/static/the-fixer-logo.svg?v=6" alt="The Fixer logo">
     <div class="welcome-splash-spinner"></div>
     <div class="welcome-splash-greeting" id="welcome-splash-greeting">Welcome</div>
-    <div class="welcome-splash-sub">Loading your dashboard…</div>
+    <div class="welcome-splash-sub" id="welcome-splash-sub">The Fixer is getting things ready…</div>
   </div>
 </div>
 <script>setTimeout(function(){var e=document.getElementById('welcome-splash');if(e)e.classList.add('hide');},4500);</script>
@@ -814,8 +815,21 @@
 <!-- ════════════════════════ TOP BAR ════════════════════════ -->
 <div class="topbar">
   <div class="topbar-inner">
-    <div class="logo">
-      <img src="/static/logo.png" alt="empower-fin Dashboard Portal" style="height:32px;width:auto;"><span id="channel-brand-name" style="font:800 13px Manrope,sans-serif;color:var(--brand-primary);white-space:nowrap;"></span>
+    <div class="logo portal-brand-lockup" id="portal-brand-lockup">
+      <div class="portal-brand-default" id="portal-brand-default">
+        <img src="/static/the-fixer-logo.svg?v=6" class="efs-brand-logo" alt="The Fixer">
+      </div>
+      <div class="portal-brand-partner" id="portal-brand-partner" hidden>
+        <div class="portal-partner-mark">
+          <img id="portal-partner-logo" alt="">
+          <span id="channel-brand-name" class="portal-partner-name"></span>
+        </div>
+        <span class="portal-cobrand-rule" aria-hidden="true"></span>
+        <span class="portal-powered-by">Powered by</span>
+        <span class="portal-fixer-panel">
+          <img src="/static/the-fixer-logo.svg?v=6" class="efs-brand-logo portal-fixer-secondary" alt="The Fixer">
+        </span>
+      </div>
     </div>
     <div class="topbar-divider"></div>
     <div class="audience-switch" id="audience-switch">
@@ -835,7 +849,7 @@
 
   <div class="pdf-print-header" aria-hidden="true">
     <div class="pdf-brand">
-      <img src="/static/logo.png" alt="empower-fin logo">
+      <img src="/static/the-fixer-logo.svg?v=6" class="efs-brand-logo" alt="The Fixer logo">
       <div>
         <div class="pdf-kicker">empower-fin · Workforce Financial Wellbeing</div>
         <div class="pdf-title" id="pdf-report-title">Employer Insights</div>
@@ -1665,11 +1679,19 @@ function renderWellness(){
   if(!wrap) return;
   const w=DATA.wellness||{};
   if(window.__LIVE__ && (w.complete===false || !hasValue(w.score))){
-    const drivers=(w.drivers||[]).map(d=>{
+    const drivers=(w.drivers||[]).map((d,i)=>{
       const available=d.available!==false && hasValue(d.score);
       const score=available?Number(d.score):null;
-      const col=available?bandTone(score).c:'var(--chart-mid)';
-      const mk=employerMetricKey(d.name); return `<div class="wd-row"><div class="wd-name">${esc(d.name)} ${employerInfoButton(mk)}<small>${d.note||''}</small></div><div class="wd-track"><div class="wd-fill" style="width:${available?score:0}%;background:${available?col:'var(--brand-soft)'}"></div></div><div class="wd-val">${available?score:'Not available'}</div></div>`;
+      const mk=employerMetricKey(d.name);
+      const tone=available?bandTone(score):{c:'var(--grey-l)'};
+      const state=!available?'Unavailable':score>=75?'Strong':score>=60?'On track':score>=40?'At risk':'Critical';
+      const col=brandSeries(i);
+      return `<div class="wd-row" style="--driver-color:${col};--driver-state:${tone.c}">
+        <div class="wd-name">${esc(d.name)} ${employerInfoButton(mk)}<small>${d.note||''}</small></div>
+        <div class="wd-meter"><div class="wd-track"><div class="wd-fill" style="width:${available?score:0}%;background:${available?col:'var(--brand-soft)'}"></div></div><div class="wd-scale"><span>0</span><span>50</span><span>100</span></div></div>
+        <div class="wd-val">${available?score:'—'}<span>/100</span></div>
+        <div class="wd-state"><i></i>${state}</div>
+      </div>`;
     }).join('');
     wrap.appendChild(el(`<div class="wellness-inner"><div class="wellness-left"><div style="font-family:'Fraunces',serif;font-size:46px;color:var(--brand-primary);line-height:1">Not available</div><div style="font-size:11px;color:#8497a7;font-weight:800;margin-top:4px">/ 100</div><div class="wellness-band" style="color:#8a6610;background:#fff8e8;border-color:#efd49b">${ragLights('amber')}Data incomplete</div><div class="wellness-note">The score is calculated only when all required driver feeds are available. Missing data is never treated as zero.</div></div><div class="wellness-right">${drivers||'<div class="muted">Required score drivers have not been loaded.</div>'}</div></div>`));
     return;
@@ -1681,7 +1703,20 @@ function renderWellness(){
     <path d="M16 88 A64 64 0 0 1 144 88" fill="none" stroke="var(--ice-2)" stroke-width="13" stroke-linecap="round"/>
     <path d="M16 88 A64 64 0 0 1 144 88" fill="none" stroke="url(#wellnessGaugeGradient)" stroke-width="13" stroke-linecap="round" pathLength="100" stroke-dasharray="${value} ${100-value}" stroke-dashoffset="0"/>
     <text x="80" y="74" text-anchor="middle" font-family="Fraunces,serif" font-size="34" font-weight="600" fill="var(--brand-primary)">${value.toFixed(0)}</text><text x="80" y="90" text-anchor="middle" font-size="9.5" font-weight="700" fill="#8497a7">/ 100</text></svg>`;
-  const drivers=(w.drivers||[]).map(d=>{ const available=d.available!==false&&hasValue(d.score); const score=available?Number(d.score):0; const col=available?bandTone(score).c:'var(--chart-mid)'; const mk=employerMetricKey(d.name); return `<div class="wd-row"><div class="wd-name">${esc(d.name)} ${employerInfoButton(mk)}<small>${d.note||''}</small></div><div class="wd-track"><div class="wd-fill" style="width:0;background:${available?col:'var(--brand-soft)'}" data-w="${available?score:0}"></div></div><div class="wd-val">${available?score:'Not available'}</div></div>`; }).join('');
+  const drivers=(w.drivers||[]).map((d,i)=>{ 
+    const available=d.available!==false&&hasValue(d.score); 
+    const score=available?Number(d.score):0; 
+    const tone=available?bandTone(score):{c:'var(--grey-l)'}; 
+    const state=!available?'Unavailable':score>=75?'Strong':score>=60?'On track':score>=40?'At risk':'Critical';
+    const col=brandSeries(i);
+    const mk=employerMetricKey(d.name); 
+    return `<div class="wd-row" style="--driver-color:${col};--driver-state:${tone.c}">
+      <div class="wd-name">${esc(d.name)} ${employerInfoButton(mk)}<small>${d.note||''}</small></div>
+      <div class="wd-meter"><div class="wd-track"><div class="wd-fill" style="width:0;background:${available?col:'var(--brand-soft)'}" data-w="${available?score:0}"></div></div><div class="wd-scale"><span>0</span><span>50</span><span>100</span></div></div>
+      <div class="wd-val">${available?score:'—'}<span>/100</span></div>
+      <div class="wd-state"><i></i>${state}</div>
+    </div>`; 
+  }).join('');
   const bt=bandTone(Number(w.score)||0);
   wrap.appendChild(el(`<div class="wellness-inner"><div class="wellness-left">${gauge}<div class="wellness-band" style="color:${bt.c};background:${bt.bg};border-color:${bt.border}">${ragLights(bt.rag)}${w.band||'Index'}</div><div class="wellness-delta">${delta===null?'No prior period':(delta>0?'▲ +'+delta:'▼ '+delta)+' pts vs. '+(DATA.filterContext?.comparison?.label||'previous period')}</div><div class="wellness-note">A composite of four weighted drivers. Use it to track workforce financial health over time.</div></div><div class="wellness-right">${drivers}</div></div>`));
   setTimeout(()=>wrap.querySelectorAll('.wd-fill').forEach(f=>f.style.width=f.dataset.w+'%'),150);
@@ -3328,23 +3363,30 @@ function applySectionVisibility(me){
 }
 
 const BrandTheme = window.BrandEngine ? BrandEngine.themeController() : null; // owns light/dark brand tokens
-const DEFAULT_PORTAL_BRAND = {accentColor:'7D2FA3',primaryColor:'B15BE8',navyColor:'2B1B68'};
+const DEFAULT_PORTAL_BRAND = {accentColor:'0FC79B',primaryColor:'0FC79B',navyColor:'2B1D73'};
 const DEFAULT_PORTAL_CHARTS = {
-  '--chart-engagement':'#3a93d2','--chart-cashflow':'#1fa463','--chart-debt':'#607486',
-  '--chart-insurance':'#8a4fc4','--chart-workforce':'#4ea3da','--chart-low':'#1fa463',
-  '--chart-mid':'#e8910c','--chart-high':'#e0492f'
+  '--chart-engagement':'#4C3C92','--chart-cashflow':'#087F65','--chart-debt':'#607486',
+  '--chart-insurance':'#6D5BB0','--chart-workforce':'#2B1D73','--chart-low':'#187A4D',
+  '--chart-mid':'#9A5B00','--chart-high':'#B5391F'
 };
 const DEFAULT_HEAD_SUB='How the financial wellbeing programme is landing across your workforce Not available who is using it, the outcomes achieved, and how employees rate the service.';
 function restoreDefaultPortalIdentity(){
-  document.querySelectorAll('.logo img, .topbar .logo img, .pdf-brand img').forEach(img=>{
-    img.src='/static/logo.png';
+  const defaultBrand=document.getElementById('portal-brand-default');
+  const partnerBrand=document.getElementById('portal-brand-partner');
+  const partnerLogo=document.getElementById('portal-partner-logo');
+  if(defaultBrand) defaultBrand.hidden=false;
+  if(partnerBrand){ partnerBrand.hidden=true; partnerBrand.removeAttribute('data-partner-header-tone'); }
+  if(partnerLogo){ partnerLogo.removeAttribute('src'); partnerLogo.removeAttribute('data-custom-logo'); partnerLogo.alt=''; }
+  const brandName=document.getElementById('channel-brand-name'); if(brandName) brandName.textContent='';
+  document.querySelectorAll('.pdf-brand img').forEach(img=>{
+    img.src='/static/the-fixer-logo.svg?v=6';
     img.removeAttribute('data-custom-logo');
   });
-  const brandName=document.getElementById('channel-brand-name'); if(brandName) brandName.textContent='';
   const sub=document.querySelector('#employer-view > .head .head-sub'); if(sub) sub.textContent=DEFAULT_HEAD_SUB;
   document.title='empower-fin Dashboard Portal';
 }
 function applyDefaultPortalTheme(){
+  document.documentElement.classList.add('efs-default-brand');
   const root=document.documentElement.style;
   if(BrandTheme){
     BrandTheme.set({brand:DEFAULT_PORTAL_BRAND,light:null,charts:DEFAULT_PORTAL_CHARTS});
@@ -3365,19 +3407,94 @@ function applyDefaultPortalTheme(){
   root.setProperty('--stress-high-color','var(--chart-high)');
   restoreDefaultPortalIdentity();
 }
+function partnerHeaderTone(theme){
+  const raw=String((theme&& (theme.navyColor||theme.primaryColor||theme.accentColor))||'').replace(/^#/,'');
+  if(!/^[0-9a-fA-F]{6}$/.test(raw)) return 'mid';
+  const r=parseInt(raw.slice(0,2),16)/255,g=parseInt(raw.slice(2,4),16)/255,b=parseInt(raw.slice(4,6),16)/255;
+  const lin=c=>c<=0.03928?c/12.92:Math.pow((c+0.055)/1.055,2.4);
+  const L=.2126*lin(r)+.7152*lin(g)+.0722*lin(b);
+  if(L<0.22) return 'dark';
+  if(L>0.72) return 'light';
+  return 'mid';
+}
+function applyPartnerHeaderLogoMode(theme){
+  const lockup=document.getElementById('portal-brand-partner');
+  if(!lockup) return;
+  lockup.setAttribute('data-partner-header-tone',partnerHeaderTone(theme));
+}
+
+function clearEmployerScopedTheme(){
+  const target=document.getElementById('employer-view');
+  if(!target) return;
+  const keys=[
+    '--blue','--blue-d','--brand-primary','--brand-primary-raw','--brand-primary-deep','--brand-accent-raw','--ice','--ice-2','--brand-soft',
+    '--brand-vivid','--bar-bg','--brand-secondary','--brand-bridge','--brand-accent-soft','--brand-primary-soft',
+    '--surface-0','--surface-1','--surface-2','--surface-3','--surface-raised','--surface-subtle','--surface-mix-base','--text-strong','--text-muted','--line-brand',
+    '--partner-primary','--partner-accent','--partner-navy','--product-primary','--product-accent','--system-focus','--system-progress','--cobrand-relation',
+    '--brand-grad-1','--brand-grad-2','--brand-grad-3','--brand-grad-4','--brand-grad-5',
+    '--chart-engagement','--chart-cashflow','--chart-debt','--chart-insurance','--chart-workforce','--chart-low','--chart-mid','--chart-high',
+    '--engagement-color','--cashflow-color','--debt-risk-color','--insurance-color','--eligible-workforce-color','--stress-low-color','--stress-mid-color','--stress-high-color'
+  ];
+  keys.forEach(k=>target.style.removeProperty(k));
+  target.removeAttribute('data-partner-theme');
+}
+function applyEmployerScopedTheme(theme){
+  const target=document.getElementById('employer-view');
+  if(!target || !theme || theme.branded===false){ clearEmployerScopedTheme(); return; }
+  const hex=c=>c?('#'+String(c).replace(/^#/,'')):null;
+  const accent=hex(theme.accentColor||theme.primaryColor||'#0FC79B');
+  const primary=hex(theme.navyColor||theme.primaryColor||accent);
+  const brand={accentColor:accent,primaryColor:hex(theme.primaryColor)||accent,navyColor:primary};
+  const scopedMode=document.documentElement.classList.contains('portal-dark')?'dark':'light';
+  const fixerBrand={accentColor:'#0FC79B',primaryColor:'#2B1D73',navyColor:'#2B1D73'};
+  const coBrand=(window.BrandEngine && BrandEngine.coBrandSystem)
+    ? BrandEngine.coBrandSystem(brand,fixerBrand,scopedMode)
+    : null;
+  const tokens=coBrand ? coBrand.tokens : ((window.BrandEngine && BrandEngine.themeTokens) ? BrandEngine.themeTokens(brand,scopedMode) : {
+    '--blue':accent,'--blue-d':shade(accent,-18),'--brand-primary':primary,'--brand-primary-deep':shade(primary,-22),
+    '--ice':tint(accent,92),'--brand-soft':tint(accent,94),'--brand-vivid':accent,
+    '--brand-grad-1':primary,'--brand-grad-2':mix(primary,accent,.45),'--brand-grad-3':accent,
+    '--brand-grad-4':mix(accent,'#ffffff',.28),'--brand-grad-5':mix(accent,'#ffffff',.55)
+  });
+  Object.entries(tokens).forEach(([k,v])=>target.style.setProperty(k,String(v)));
+  const chartPalette=coBrand ? coBrand.charts : complementaryPalette(accent,primary);
+  if(coBrand && coBrand.diagnostics){
+    target.dataset.cobrandRelation=coBrand.diagnostics.relation||'';
+  }
+  Object.entries(chartPalette).forEach(([k,v])=>target.style.setProperty('--chart-'+k,v));
+  target.style.setProperty('--engagement-color','var(--chart-engagement)');
+  target.style.setProperty('--cashflow-color','var(--chart-cashflow)');
+  target.style.setProperty('--debt-risk-color','var(--chart-debt)');
+  target.style.setProperty('--insurance-color','var(--chart-insurance)');
+  target.style.setProperty('--eligible-workforce-color','var(--chart-workforce)');
+  target.style.setProperty('--stress-low-color','var(--chart-low)');
+  target.style.setProperty('--stress-mid-color','var(--chart-mid)');
+  target.style.setProperty('--stress-high-color','var(--chart-high)');
+  target.setAttribute('data-partner-theme','1');
+}
 function applyTheme(theme, user){
+  window.__dashboardActiveTheme=theme||null;
+  window.__dashboardActiveUser=user||null;
   const root=document.documentElement.style;
   const privileged=user && ['ADMIN','SUPERADMIN'].includes(String(user.role||'').toUpperCase());
-  // No selected partner/employer brand means the original empower-fin design.
-  // Admin/Superadmin control-plane screens also keep that original palette.
-  if(privileged || !theme || theme.branded===false){
+  // Admin/Superadmin keep the EFS/The Fixer shell, but the selected employer
+  // dashboard is allowed to render with that employer's partner branding.
+  if(privileged){
+    applyDefaultPortalTheme();
+    applyEmployerScopedTheme(theme);
+    return;
+  }
+  if(!theme || theme.branded===false){
+    clearEmployerScopedTheme();
     applyDefaultPortalTheme();
     return;
   }
+  clearEmployerScopedTheme();
+  document.documentElement.classList.remove('efs-default-brand');
 
   const hex=c=>c?('#'+String(c).replace(/^#/,'')):null;
   const baseName='empower-fin Dashboard Portal';
-  const accent=hex(theme.accentColor||theme.primaryColor||'#b15be8');
+  const accent=hex(theme.accentColor||theme.primaryColor||'#0FC79B');
   const primary=hex(theme.navyColor||theme.primaryColor||accent);
   if(!BrandTheme){ // legacy fallback (engine failed to load)
     root.setProperty('--blue', accent);
@@ -3392,11 +3509,16 @@ function applyTheme(theme, user){
     root.setProperty('--brand-grad-4', mix(accent,'#ffffff',.28));
     root.setProperty('--brand-grad-5', mix(accent,'#ffffff',.55));
   }
-  const chartPalette = complementaryPalette(accent, primary);
+  const partnerBrand={ accentColor:accent, primaryColor:hex(theme.primaryColor)||accent, navyColor:primary };
+  const fixerBrand={ accentColor:'#0FC79B', primaryColor:'#2B1D73', navyColor:'#2B1D73' };
+  const coBrand=(window.BrandEngine && BrandEngine.coBrandSystem)
+    ? BrandEngine.coBrandSystem(partnerBrand,fixerBrand,document.documentElement.classList.contains('portal-dark')?'dark':'light')
+    : null;
+  const chartPalette = coBrand ? coBrand.charts : complementaryPalette(accent, primary);
   if(BrandTheme){
-    const charts={}; Object.entries(chartPalette).forEach(([k,v])=>{ charts['--chart-'+k]=v; });
-    BrandTheme.set({ brand:{ accentColor:accent, primaryColor:hex(theme.primaryColor)||accent, navyColor:primary }, light:'engine', charts });
+    BrandTheme.set({ brand:partnerBrand, endorser:fixerBrand, coBrand:true, light:'engine', charts:{} });
   } else {
+    if(coBrand) Object.entries(coBrand.tokens).forEach(([key,value])=>root.setProperty(key,String(value)));
     Object.entries(chartPalette).forEach(([key,value])=>root.setProperty('--chart-'+key,value));
   }
   root.setProperty('--engagement-color','var(--chart-engagement)');
@@ -3408,11 +3530,24 @@ function applyTheme(theme, user){
   root.setProperty('--stress-mid-color','var(--chart-mid)');
   root.setProperty('--stress-high-color','var(--chart-high)');
   const brandName=document.getElementById('channel-brand-name');
+  const defaultBrand=document.getElementById('portal-brand-default');
+  const partnerBrandEl=document.getElementById('portal-brand-partner');
+  const partnerLogo=document.getElementById('portal-partner-logo');
   if(theme.logoDataUrl){
-    document.querySelectorAll('.logo img, .topbar .logo img, .pdf-brand img').forEach(img=>{ img.src=theme.logoDataUrl; img.setAttribute('data-custom-logo','1'); });
+    applyPartnerHeaderLogoMode(theme);
+    if(defaultBrand) defaultBrand.hidden=true;
+    if(partnerBrandEl) partnerBrandEl.hidden=false;
+    if(partnerLogo){
+      partnerLogo.src=theme.logoDataUrl;
+      partnerLogo.alt=(theme.name||'Partner')+' logo';
+      partnerLogo.setAttribute('data-custom-logo','1');
+    }
     if(brandName) brandName.textContent='';
-  }else if(brandName){
-    brandName.textContent=theme.name && theme.name!==baseName ? theme.name : '';
+    document.querySelectorAll('.pdf-brand img').forEach(img=>{ img.src=theme.logoDataUrl; img.setAttribute('data-custom-logo','1'); });
+  }else{
+    if(defaultBrand) defaultBrand.hidden=false;
+    if(partnerBrandEl) partnerBrandEl.hidden=true;
+    if(brandName) brandName.textContent=theme.name && theme.name!==baseName ? theme.name : '';
   }
   document.title=(theme.name||baseName)+' Not available Employer Insights';
   if(theme.tagline){
@@ -3420,6 +3555,18 @@ function applyTheme(theme, user){
     if(sub) sub.textContent=theme.tagline;
   }
 }
+window.addEventListener('portal-theme-change',()=>{
+  const t=window.__dashboardActiveTheme, u=window.__dashboardActiveUser;
+  if(u && ['ADMIN','SUPERADMIN'].includes(String(u.role||'').toUpperCase())){
+    applyDefaultPortalTheme();
+    applyEmployerScopedTheme(t);
+  }else if(t && t.branded!==false){
+    applyTheme(t,u);
+  }else{
+    applyDefaultPortalTheme();
+  }
+});
+
 // Create a full, repeatable chart palette from any valid employer brand hex.
 // Hue rotation makes the charts complementary to (not copies of) the logo hues.
 function complementaryPalette(accent, primary){
@@ -3504,11 +3651,29 @@ function handleWelcomeSplash(me){
   if(already){ el.classList.add('hide'); return; }
   var greet=document.getElementById('welcome-splash-greeting');
   var first=(me.name||'').trim().split(/\s+/)[0]||'there';
-  if(greet) greet.textContent='Hi '+first+' \uD83D\uDC4B';
+  var hour=new Date().getHours();
+  var daypart=hour<12?'Good morning':hour<18?'Good afternoon':'Good evening';
+  if(greet) greet.textContent=daypart+', '+first+' \uD83D\uDC4B';
+  var sub=document.getElementById('welcome-splash-sub');
+  if(sub) sub.textContent='The Fixer hopes you have a good day.';
   var logo=document.getElementById('welcome-splash-logo');
-  if(logo && me.theme && me.theme.logoDataUrl){ logo.src=me.theme.logoDataUrl; logo.setAttribute('data-custom-logo','1'); }
-  try{ sessionStorage.setItem('ef_splash_shown','1'); }catch(_){}
-  setTimeout(function(){ el.classList.add('hide'); }, 700);
+  var privileged=['ADMIN','SUPERADMIN'].includes(String(me?.role||'').toUpperCase());
+  if(logo){
+    if(privileged){
+      logo.src=document.documentElement.classList.contains('portal-dark')
+        ? '/static/the-fixer-logo-reversed.svg?v=1'
+        : '/static/the-fixer-logo.svg?v=6';
+      logo.removeAttribute('data-custom-logo');
+    }else if(me.theme && me.theme.logoDataUrl){
+      logo.src=me.theme.logoDataUrl;
+      logo.setAttribute('data-custom-logo','1');
+    }
+  }
+  try{
+    sessionStorage.setItem('ef_splash_shown','1');
+    sessionStorage.removeItem('ef_fresh_login');
+  }catch(_){}
+  setTimeout(function(){ el.classList.add('hide'); }, 1400);
 }
 
 function addAuthBar(me){

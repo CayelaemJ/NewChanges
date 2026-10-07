@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="efs-default-brand">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="/static/portal-nav-v080.css?v=0.10.0">
 <script src="/static/safe.js?v=1"></script>
-<script src="/static/brand-engine.js?v=3"></script>
+<script src="/static/brand-engine.js?v=6"></script>
 <title>Administration Console | empower-fin</title>
 <meta name="description" content="Data imports, integrations, users and audit trail for the empower-fin Dashboard Portal.">
 <meta name="robots" content="noindex,nofollow">
@@ -157,6 +157,85 @@
   @media(max-width:700px){.client-preview-app .cp-grid{grid-template-columns:1fr}.client-preview-app .cp-card-wide{grid-column:span 1}.client-preview-app .cp-body{padding:24px 16px 30px}.client-preview-app .cp-topbar{padding:13px 16px}.client-preview-app h3{font-size:25px}.client-preview-toolbar span{display:none}}
   @media(max-width:760px){.wrap{padding-left:16px;padding-right:16px}.grid{grid-template-columns:1fr}.topbar-inner{padding-left:16px;padding-right:16px}.head h1{font-size:29px}.partner-preview-badge{display:none}}
 
+  /* REAL DASHBOARD SNAPSHOT PREVIEW — mirrors the employer dashboard structure with synthetic data */
+  .client-preview-dialog{width:min(1380px,calc(100vw - 36px));max-height:calc(100vh - 36px);}
+  .client-preview-app{background:var(--preview-bg);color:var(--preview-ink);}
+  .client-preview-app .snap-shell{min-height:100%;background:var(--preview-bg);}
+  .client-preview-app .snap-topbar{display:flex;align-items:center;gap:12px;padding:12px 22px;background:var(--preview-navy);color:#fff;border-bottom:2px solid var(--preview-accent);}
+  .client-preview-app .snap-partner-logo{max-width:90px;max-height:30px;object-fit:contain;background:transparent;border:0;padding:0;}
+  .client-preview-app .snap-partner-fallback{font-size:13px;font-weight:900;letter-spacing:.03em;}
+  .client-preview-app .snap-powered{margin-left:4px;font-size:8px;font-weight:800;opacity:.7;text-transform:uppercase;letter-spacing:.08em;}
+  .client-preview-app .snap-fixer{font-size:13px;font-weight:900;color:#fff;white-space:nowrap;}
+  .client-preview-app .snap-spacer{flex:1;}
+  .client-preview-app .snap-nav{display:flex;gap:14px;font-size:9px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;opacity:.82;}
+  .client-preview-app .snap-avatar{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--preview-accent);color:var(--preview-on-accent);font-size:9px;font-weight:900;}
+  .client-preview-app .snap-body{padding:26px 24px 34px;}
+  .client-preview-app .snap-eyebrow{font-size:9px;font-weight:900;letter-spacing:.13em;text-transform:uppercase;color:var(--preview-blue);}
+  .client-preview-app .snap-head{display:flex;justify-content:space-between;gap:18px;align-items:flex-end;}
+  .client-preview-app .snap-head h3{margin:6px 0 0;font:600 28px Fraunces,serif;color:var(--preview-navy);}
+  .client-preview-app .snap-sub{margin-top:5px;color:var(--preview-muted);font-size:11px;max-width:680px;line-height:1.45;}
+  .client-preview-app .snap-actions{display:flex;gap:8px;}
+  .client-preview-app .snap-btn{padding:8px 11px;border:1px solid var(--preview-line);background:var(--preview-surface);color:var(--preview-navy);border-radius:7px;font-size:9px;font-weight:800;}
+  .client-preview-app .snap-btn.primary{background:var(--preview-blue);border-color:var(--preview-blue);color:var(--preview-on-accent);}
+  .client-preview-app .snap-period{display:flex;gap:15px;flex-wrap:wrap;margin-top:18px;padding:11px 13px;border-radius:9px;background:var(--preview-surface-2);font-size:9px;font-weight:750;color:var(--preview-navy);}
+  .client-preview-app .snap-banner{margin-top:12px;padding:10px 12px;border-radius:8px;background:#fff8e8;border:1px solid #efd49b;color:#7a5512;font-size:9px;line-height:1.4;}
+  .client-preview-app .snap-filterbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:12px;padding:8px;border:1px solid var(--preview-line);border-radius:9px;background:var(--preview-surface);}
+  .client-preview-app .snap-chip{padding:7px 9px;border-radius:6px;background:var(--preview-surface-2);border:1px solid var(--preview-line);font-size:9px;font-weight:800;color:var(--preview-navy);}
+  .client-preview-app .snap-chip.partner{background:var(--preview-navy);border-color:var(--preview-navy);color:#fff;min-width:130px;}
+  .client-preview-app .snap-insight{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;margin-top:10px;}
+  .client-preview-app .snap-insight-copy{padding:11px 12px;border:1px solid var(--preview-line);border-radius:9px;background:var(--preview-surface);font-size:9px;line-height:1.45;color:var(--preview-navy);}
+  .client-preview-app .snap-impact{margin-top:12px;padding:14px;border-radius:12px;background:linear-gradient(120deg,var(--preview-navy),color-mix(in srgb,var(--preview-navy) 76%,var(--preview-blue)));color:#fff;}
+  .client-preview-app .snap-impact-head{display:flex;justify-content:space-between;gap:12px;align-items:center;}
+  .client-preview-app .snap-impact h4{margin:0;font:600 16px Fraunces,serif;}
+  .client-preview-app .snap-impact-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:0;margin-top:13px;border-top:1px solid rgba(255,255,255,.14);}
+  .client-preview-app .snap-impact-cell{padding:12px 10px;border-right:1px solid rgba(255,255,255,.12);}
+  .client-preview-app .snap-impact-cell:last-child{border-right:0;}
+  .client-preview-app .snap-impact-cell strong{display:block;font:600 18px Fraunces,serif;}
+  .client-preview-app .snap-impact-cell span{display:block;margin-top:3px;font-size:8px;opacity:.76;font-weight:700;}
+  .client-preview-app .snap-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:12px;margin-top:12px;}
+  .client-preview-app .snap-card{background:var(--preview-surface);border:1px solid var(--preview-line);border-radius:11px;padding:13px;}
+  .client-preview-app .snap-card-title{font-size:9px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;color:var(--preview-muted);}
+  .client-preview-app .snap-wellness{display:grid;grid-template-columns:150px 1fr;gap:18px;align-items:center;margin-top:12px;}
+  .client-preview-app .snap-score-ring{width:122px;height:122px;border-radius:50%;display:grid;place-items:center;margin:auto;background:conic-gradient(var(--preview-blue) 0 34%,var(--preview-surface-2) 34% 100%);position:relative;}
+  .client-preview-app .snap-score-ring:after{content:"";position:absolute;inset:12px;border-radius:50%;background:var(--preview-surface);}
+  .client-preview-app .snap-score-ring strong{position:relative;z-index:1;font:600 31px Fraunces,serif;color:var(--preview-navy);}
+  .client-preview-app .snap-drivers{display:grid;gap:9px;}
+  .client-preview-app .snap-driver{display:grid;grid-template-columns:120px 1fr 32px;gap:8px;align-items:center;font-size:8.5px;color:var(--preview-navy);}
+  .client-preview-app .snap-track{height:7px;border-radius:999px;background:var(--preview-surface-2);overflow:hidden;}
+  .client-preview-app .snap-fill{height:100%;border-radius:999px;background:var(--preview-blue);}
+  .client-preview-app .snap-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-top:12px;}
+  .client-preview-app .snap-kpi{padding:12px;border:1px solid var(--preview-line);border-radius:9px;background:var(--preview-surface);}
+  .client-preview-app .snap-kpi strong{display:block;font:600 18px Fraunces,serif;color:var(--preview-navy);}
+  .client-preview-app .snap-kpi span{display:block;margin-top:3px;font-size:8px;color:var(--preview-muted);font-weight:700;}
+  .client-preview-app .snap-funnel{display:grid;gap:8px;margin-top:12px;}
+  .client-preview-app .snap-funnel-row{display:grid;grid-template-columns:120px 1fr 38px;gap:8px;align-items:center;font-size:8px;color:var(--preview-navy);}
+  .client-preview-app .snap-debtbar{display:flex;height:16px;margin-top:14px;border-radius:999px;overflow:hidden;background:var(--preview-surface-2);}
+  .client-preview-app .snap-seg:nth-child(1){background:var(--preview-navy)}
+  .client-preview-app .snap-seg:nth-child(2){background:var(--preview-blue)}
+  .client-preview-app .snap-seg:nth-child(3){background:color-mix(in srgb,var(--preview-blue) 60%,var(--preview-accent))}
+  .client-preview-app .snap-seg:nth-child(4){background:var(--preview-accent)}
+  .client-preview-app .snap-outcomes{display:grid;gap:7px;margin-top:12px;}
+  .client-preview-app .snap-outcome{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--preview-line);font-size:8.5px;color:var(--preview-navy);}
+  .client-preview-app .snap-outcome:last-child{border-bottom:0;}
+  .client-preview-app .snap-dot{width:7px;height:7px;border-radius:50%;background:var(--preview-accent);}
+  .client-preview-app .snap-opps{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-top:12px;}
+  .client-preview-app .snap-opp{padding:11px;border:1px solid var(--preview-line);border-radius:9px;background:var(--preview-surface-2);}
+  .client-preview-app .snap-opp strong{display:block;font:600 16px Fraunces,serif;color:var(--preview-navy);}
+  .client-preview-app .snap-opp span{display:block;margin-top:3px;font-size:8px;color:var(--preview-muted);font-weight:700;}
+  .client-preview-app .snap-footnote{margin-top:12px;font-size:8px;color:var(--preview-muted);text-align:right;}
+  @media(max-width:900px){
+    .client-preview-app .snap-impact-grid{grid-template-columns:repeat(3,1fr)}
+    .client-preview-app .snap-grid{grid-template-columns:1fr}
+    .client-preview-app .snap-kpis,.client-preview-app .snap-opps{grid-template-columns:repeat(2,1fr)}
+  }
+  @media(max-width:620px){
+    .client-preview-app .snap-body{padding:20px 14px 28px}
+    .client-preview-app .snap-wellness{grid-template-columns:1fr}
+    .client-preview-app .snap-impact-grid{grid-template-columns:repeat(2,1fr)}
+    .client-preview-app .snap-kpis,.client-preview-app .snap-opps{grid-template-columns:1fr}
+    .client-preview-app .snap-nav{display:none}
+  }
+
   .source-mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:820px;margin-bottom:16px;}
   .source-mode-card{display:flex;align-items:flex-start;gap:12px;text-align:left;border:1px solid var(--line);background:#fff;border-radius:13px;padding:15px 16px;cursor:pointer;font-family:inherit;color:var(--ink);transition:.16s;}
   .source-mode-card:hover{border-color:#cdb8f3;background:#fcfbff;}
@@ -194,21 +273,22 @@
   @media(max-width:820px){.ingestion-method-grid{grid-template-columns:1fr}.ingestion-method{width:100%}}
 </style>
 <link rel="stylesheet" href="/static/enterprise.css?v=2">
-  <link rel="stylesheet" href="/static/enterprise-v3.css?v=3">
-<link rel="stylesheet" href="/static/dark-theme-v2.css?v=4">
+  <link rel="stylesheet" href="/static/enterprise-v3.css?v=4">
+<link rel="stylesheet" href="/static/dark-theme-v2.css?v=6">
+<link rel="stylesheet" href="/static/the-fixer-brand.css?v=13">
 </head>
 <body data-portal-build="0.10.0">
 <div id="welcome-splash">
   <div class="welcome-splash-inner">
-    <img id="welcome-splash-logo" class="welcome-splash-logo" src="/static/logo-large.png" alt="empower-fin logo">
+    <img id="welcome-splash-logo" class="welcome-splash-logo efs-brand-logo" src="/static/the-fixer-logo.svg?v=6" alt="The Fixer logo">
     <div class="welcome-splash-spinner"></div>
     <div class="welcome-splash-greeting" id="welcome-splash-greeting">Welcome</div>
-    <div class="welcome-splash-sub">Loading Administration…</div>
+    <div class="welcome-splash-sub" id="welcome-splash-sub">The Fixer is getting things ready…</div>
   </div>
 </div>
 <script>setTimeout(function(){var e=document.getElementById('welcome-splash');if(e)e.classList.add('hide');},4500);</script>
 <div class="topbar"><div class="topbar-inner">
-  <img src="/static/logo.png" alt="empower-fin Dashboard Portal" style="height:30px;width:auto;">
+  <img src="/static/the-fixer-logo.svg?v=6" class="efs-brand-logo" alt="The Fixer" style="height:30px;width:auto;">
   <span class="pill">Administration</span>
   <div id="portal-nav" style="margin-left:auto;"></div>
   <div id="portal-account"></div>
@@ -476,7 +556,7 @@
           <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
             <button class="btn" onclick="saveInteg()">Save settings</button>
             <button class="btn btn-ghost" onclick="testInteg()">Test source</button>
-            <button class="btn" style="background:#b15be8;color:#fff;border-color:#b15be8;" onclick="syncNow()">Sync now</button>
+            <button class="btn" style="background:#2B1D73;color:#fff;border-color:#2B1D73;" onclick="syncNow()">Sync now</button>
             <button id="btn-refresh-now" class="btn btn-ghost" onclick="refreshNow(this)" title="Run the full governed purge, authoritative reload, snapshot rebuild and publish cycle now">Refresh now</button>
           </div>
           <div class="muted" style="margin-top:8px;max-width:820px;line-height:1.5;"><b>Sync now</b> applies incremental source changes. <b>Refresh now</b> runs the full purge-and-reload cycle; dashboard users keep seeing the last successful published data until the new refresh completes successfully.</div>
@@ -585,7 +665,8 @@
             </label>
             <div></div>
             <label style="display:flex;align-items:center;gap:9px;font-size:13px;font-weight:700;color:#32217c;cursor:pointer;"><input id="auto-digest-enabled" type="checkbox" style="width:17px;height:17px;"> Weekly engagement digest to admin alert emails</label>
-            <label style="display:flex;align-items:center;gap:9px;font-size:13px;font-weight:700;color:#32217c;cursor:pointer;"><input id="auto-score-enabled" type="checkbox" checked style="width:17px;height:17px;"> Email employer users when their score changes</label>\n            <label style="display:flex;align-items:flex-start;gap:9px;font-size:13px;font-weight:700;color:#7a5512;cursor:pointer;background:#fff8e8;border:1px solid #efd49b;border-radius:9px;padding:10px 12px;"><input id="synthetic-data-mode" type="checkbox" style="width:17px;height:17px;margin-top:1px;flex:0 0 auto;"> <span><strong>Mark all portal data as synthetic test data</strong><br><span style="font-weight:500;">When enabled, dashboards and portal views display a persistent warning that the figures are synthetic test data and must not be treated as factual information.</span></span></label>
+            <label style="display:flex;align-items:center;gap:9px;font-size:13px;font-weight:700;color:#32217c;cursor:pointer;"><input id="auto-score-enabled" type="checkbox" checked style="width:17px;height:17px;"> Email employer users when their score changes</label>
+            <label style="display:flex;align-items:flex-start;gap:9px;font-size:13px;font-weight:700;color:#7a5512;cursor:pointer;background:#fff8e8;border:1px solid #efd49b;border-radius:9px;padding:10px 12px;"><input id="synthetic-data-mode" type="checkbox" style="width:17px;height:17px;margin-top:1px;flex:0 0 auto;"> <span><strong>Mark all portal data as synthetic test data</strong><br><span style="font-weight:500;">When enabled, dashboards and portal views display a persistent warning that the figures are synthetic test data and must not be treated as factual information.</span></span></label>
           </div>
           <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
             <button class="btn" onclick="saveAutomations()">Save automation settings</button>
@@ -683,7 +764,7 @@
 const API = ""; // same origin
 let MANIFEST = null, CURRENT = null, LAST_BATCH = null;
 const AdminBrandTheme = window.BrandEngine ? BrandEngine.themeController() : null;
-const DEFAULT_PORTAL_BRAND = {accentColor:'7D2FA3',primaryColor:'B15BE8',navyColor:'2B1B68'};
+const DEFAULT_PORTAL_BRAND = {accentColor:'0FC79B',primaryColor:'0FC79B',navyColor:'2B1D73'};
 function applyAdminBrandTheme(){
   if(!AdminBrandTheme) return;
   // Administration always uses the canonical empower-fin palette. Partner
@@ -710,11 +791,29 @@ function handleWelcomeSplash(me){
   if(already){ el.classList.add('hide'); return; }
   const greet=document.getElementById('welcome-splash-greeting');
   const first=(me.name||'').trim().split(/\s+/)[0]||'there';
-  if(greet) greet.textContent='Hi '+first+' \uD83D\uDC4B';
+  const hour=new Date().getHours();
+  const daypart=hour<12?'Good morning':hour<18?'Good afternoon':'Good evening';
+  if(greet) greet.textContent=daypart+', '+first+' \uD83D\uDC4B';
+  const sub=document.getElementById('welcome-splash-sub');
+  if(sub) sub.textContent='The Fixer hopes you have a good day.';
   const logo=document.getElementById('welcome-splash-logo');
-  if(logo && me.theme && me.theme.logoDataUrl){ logo.src=me.theme.logoDataUrl; logo.setAttribute('data-custom-logo','1'); }
-  try{ sessionStorage.setItem('ef_splash_shown','1'); }catch(_){}
-  setTimeout(()=>el.classList.add('hide'), 700);
+  const privileged=['ADMIN','SUPERADMIN'].includes(String(me?.role||'').toUpperCase());
+  if(logo){
+    if(privileged){
+      logo.src=document.documentElement.classList.contains('portal-dark')
+        ? '/static/the-fixer-logo-reversed.svg?v=1'
+        : '/static/the-fixer-logo.svg?v=6';
+      logo.removeAttribute('data-custom-logo');
+    }else if(me.theme && me.theme.logoDataUrl){
+      logo.src=me.theme.logoDataUrl;
+      logo.setAttribute('data-custom-logo','1');
+    }
+  }
+  try{
+    sessionStorage.setItem('ef_splash_shown','1');
+    sessionStorage.removeItem('ef_fresh_login');
+  }catch(_){}
+  setTimeout(()=>el.classList.add('hide'), 1400);
 }
 
 function addNav(me){
@@ -1325,29 +1424,146 @@ function previewLogo(p){
     : `<div class="cp-logo" style="display:grid;place-items:center;background:${previewHex(p.accentColor,'B15BE8')};color:#fff;font-size:11px;font-weight:800;">${(p.displayName||p.name||'?').slice(0,2).toUpperCase()}</div>`;
 }
 function openClientPreview(id){
-  const p=PARTNERS.find(x=>x.id===id); if(!p) return;
-  const app=$('#client-preview-app');
-  const name=p.displayName||p.name||'Client dashboard';
-  app.dataset.partnerId=id;
-  applyClientPreviewTheme(p);
-  app.innerHTML=`<div class="cp-topbar">${previewLogo(p)}<span class="cp-brand">${name}</span><span class="cp-user">AD</span></div>
-    <div class="cp-body">
-      <div class="cp-eyebrow">Employer insights · financial wellbeing programme</div>
-      <h3>${name} workforce dashboard</h3>
-      <div class="cp-sub">${esc(p.tagline||'A clear view of how the financial wellbeing programme is landing across your workforce.')}</div>
-      <div class="cp-filters"><span class="cp-filter active">Programme to date</span><span class="cp-filter">Last 30 days</span><span class="cp-filter">All regions</span><span class="cp-filter">All income bands</span></div>
-      <div class="cp-grid">
-        <div class="cp-card cp-card-wide"><div class="cp-card-label">Workforce financial wellness score</div><div class="cp-score"><strong>72</strong><span>+8.4% this quarter</span></div><div class="cp-bars"><i style="height:35%;animation-delay:.04s"></i><i style="height:48%;animation-delay:.1s"></i><i style="height:43%;animation-delay:.16s"></i><i style="height:62%;animation-delay:.22s"></i><i style="height:69%;animation-delay:.28s"></i><i style="height:82%;animation-delay:.34s"></i><i style="height:91%;animation-delay:.4s"></i></div></div>
-        <div class="cp-card"><div class="cp-card-label">Executive summary</div><div class="cp-kpis"><div class="cp-kpi"><strong>1,284</strong><span>Employees reached</span></div><div class="cp-kpi"><strong>68%</strong><span>Activated</span></div><div class="cp-kpi"><strong>R184k</strong><span>Monthly saving</span></div></div></div>
-        <div class="cp-card"><div class="cp-card-label">Outcomes achieved</div><div class="cp-outcome"><i class="cp-dot"></i>Debt pressure reduced <b style="margin-left:auto">486</b></div><div class="cp-outcome"><i class="cp-dot"></i>Policies optimised <b style="margin-left:auto">219</b></div><div class="cp-outcome"><i class="cp-dot"></i>Employees better off <b style="margin-left:auto">74%</b></div></div>
+  const p=PARTNERS.find(x=>String(x.id)===String(id)); if(!p) return;
+  const app=$('#client-preview-app'); if(!app) return;
+  const name=esc(p.displayName||p.name||'Partner');
+  const partnerLabel=esc(p.displayName||p.name||'Partner');
+  const logo=p.logoDataUrl
+    ? `<img class="snap-partner-logo" src="${p.logoDataUrl}" alt="${partnerLabel} logo">`
+    : `<span class="snap-partner-fallback">${partnerLabel.slice(0,3).toUpperCase()}</span>`;
+
+  const score=72, enrolled=1284, monthly='R 184k', debt='R 63k', challenged=31, better=486, satisfaction='4.4/5';
+  const drivers=[
+    ['Engagement',68],['Cashflow relief',61],['Debt risk',54],['Insurance efficiency',73]
+  ];
+  const funnel=[
+    ['Eligible workforce',1284],['Enrolled',876],['Activated',644],['Completed a fix',486],['Advocates',219]
+  ];
+
+  app.innerHTML=`
+    <div class="snap-shell">
+      <div class="snap-topbar">
+        ${logo}
+        <span class="snap-powered">Powered by</span>
+        <span class="snap-fixer">The Fixer.</span>
+        <span class="snap-spacer"></span>
+        <div class="snap-nav"><span>Dashboard</span><span>Reports</span><span>Support</span></div>
+        <span class="snap-avatar">AD</span>
+      </div>
+
+      <div class="snap-body">
+        <div class="snap-head">
+          <div>
+            <div class="snap-eyebrow">Employer insights · financial wellbeing programme</div>
+            <h3>${name} workforce dashboard</h3>
+            <div class="snap-sub">${esc(p.tagline||'How the financial wellbeing programme is landing across your workforce, who is using it, the outcomes achieved and how employees rate the service.')}</div>
+          </div>
+          <div class="snap-actions"><button class="snap-btn">Schedule report</button><button class="snap-btn primary">Export PDF</button></div>
+        </div>
+
+        <div class="snap-period"><span>October 2026 (month to date)</span><span>18 newly enrolled</span><span>12 fixes completed</span><span>R 184k/mo savings</span><span>38 wage advances</span></div>
+        <div class="snap-banner"><b>Synthetic preview data.</b> This preview mirrors the live employer dashboard structure but uses safe dummy figures only.</div>
+
+        <div class="snap-filterbar">
+          <span class="snap-chip partner">${partnerLabel}</span>
+          <span class="snap-chip">Latest available period</span>
+          <span class="snap-chip">All regions</span>
+          <span class="snap-chip">All income bands</span>
+          <span class="snap-chip">${enrolled.toLocaleString()} enrolled</span>
+        </div>
+
+        <div class="snap-insight">
+          <div class="snap-insight-copy"><b>EXECUTIVE INSIGHT</b><br>Financial wellbeing score is ${score}/100, up 4 points versus the previous period. Monthly cash freed up is ${monthly}. Debt interventions and completed fixes continue to trend positively.</div>
+          <div class="snap-actions"><button class="snap-btn">Save view</button><button class="snap-btn">Quick actions</button></div>
+        </div>
+
+        <section class="snap-impact">
+          <div class="snap-impact-head"><h4>Financial wellbeing impact summary</h4><span class="snap-btn" style="background:#fff;color:var(--preview-navy);border:0">At a glance</span></div>
+          <div class="snap-impact-grid">
+            <div class="snap-impact-cell"><strong>${enrolled.toLocaleString()}</strong><span>employees enrolled</span></div>
+            <div class="snap-impact-cell"><strong>${monthly}</strong><span>monthly cashflow restored</span></div>
+            <div class="snap-impact-cell"><strong>${debt}</strong><span>debt under intervention</span></div>
+            <div class="snap-impact-cell"><strong>${challenged}</strong><span>prescribed debts challenged</span></div>
+            <div class="snap-impact-cell"><strong>${better}</strong><span>employees better off</span></div>
+            <div class="snap-impact-cell"><strong>${satisfaction}</strong><span>employee satisfaction</span></div>
+          </div>
+        </section>
+
+        <div class="snap-grid">
+          <section class="snap-card">
+            <div class="snap-card-title">Workforce financial wellness score</div>
+            <div class="snap-wellness">
+              <div class="snap-score-ring"><strong>${score}</strong></div>
+              <div class="snap-drivers">
+                ${drivers.map(([label,val])=>`<div class="snap-driver"><span>${label}</span><div class="snap-track"><div class="snap-fill" style="width:${val}%"></div></div><b>${val}</b></div>`).join('')}
+              </div>
+            </div>
+          </section>
+
+          <section class="snap-card">
+            <div class="snap-card-title">Engagement funnel</div>
+            <div class="snap-funnel">
+              ${funnel.map(([label,val],i)=>`<div class="snap-funnel-row"><span>${label}</span><div class="snap-track"><div class="snap-fill" style="width:${Math.max(18,100-i*18)}%"></div></div><b>${val}</b></div>`).join('')}
+            </div>
+          </section>
+        </div>
+
+        <div class="snap-kpis">
+          <div class="snap-kpi"><strong>68%</strong><span>programme activation</span></div>
+          <div class="snap-kpi"><strong>486</strong><span>employees better off</span></div>
+          <div class="snap-kpi"><strong>R 63k</strong><span>debt under active intervention</span></div>
+          <div class="snap-kpi"><strong>4.4/5</strong><span>employee satisfaction</span></div>
+        </div>
+
+        <div class="snap-grid">
+          <section class="snap-card">
+            <div class="snap-card-title">Debt pressure profile</div>
+            <div class="snap-debtbar"><span class="snap-seg" style="width:32%"></span><span class="snap-seg" style="width:28%"></span><span class="snap-seg" style="width:23%"></span><span class="snap-seg" style="width:17%"></span></div>
+            <div class="snap-outcomes">
+              <div class="snap-outcome"><i class="snap-dot"></i>High-interest unsecured debt <b style="margin-left:auto">32%</b></div>
+              <div class="snap-outcome"><i class="snap-dot"></i>Short-term credit exposure <b style="margin-left:auto">28%</b></div>
+              <div class="snap-outcome"><i class="snap-dot"></i>Collections / arrears <b style="margin-left:auto">23%</b></div>
+              <div class="snap-outcome"><i class="snap-dot"></i>Other observed pressure <b style="margin-left:auto">17%</b></div>
+            </div>
+          </section>
+
+          <section class="snap-card">
+            <div class="snap-card-title">Outcomes achieved</div>
+            <div class="snap-outcomes">
+              <div class="snap-outcome"><i class="snap-dot"></i>Debt pressure reduced <b style="margin-left:auto">486</b></div>
+              <div class="snap-outcome"><i class="snap-dot"></i>Policies optimised <b style="margin-left:auto">219</b></div>
+              <div class="snap-outcome"><i class="snap-dot"></i>Employees better off <b style="margin-left:auto">74%</b></div>
+              <div class="snap-outcome"><i class="snap-dot"></i>Positive service rating <b style="margin-left:auto">88%</b></div>
+            </div>
+          </section>
+        </div>
+
+        <section class="snap-card" style="margin-top:12px">
+          <div class="snap-card-title">Next best opportunities</div>
+          <div class="snap-opps">
+            <div class="snap-opp"><strong>R 28k</strong><span>debt restructuring opportunity</span></div>
+            <div class="snap-opp"><strong>143</strong><span>employees to re-engage</span></div>
+            <div class="snap-opp"><strong>R 17k</strong><span>insurance optimisation value</span></div>
+            <div class="snap-opp"><strong>92</strong><span>employees ready for next action</span></div>
+          </div>
+        </section>
+
+        <div class="snap-footnote">Synthetic dummy snapshot · structure mirrors the live employer dashboard</div>
       </div>
     </div>`;
+
+  app.dataset.partnerId=String(p.id);
+  applyClientPreviewTheme(p);
   $('#client-preview-title').textContent=`${name} · dashboard preview`;
-  $('#client-preview-overlay').classList.add('is-open'); document.body.style.overflow='hidden';
+  $('#client-preview-overlay').classList.add('is-open');
+  document.body.style.overflow='hidden';
 }
+
 function closeClientPreview(event){
   if(event && event.target!==$('#client-preview-overlay')) return;
-  $('#client-preview-overlay').classList.remove('is-open'); document.body.style.overflow='';
+  $('#client-preview-overlay').classList.remove('is-open');
+  const app=$('#client-preview-app'); if(app) delete app.dataset.partnerId;
+  document.body.style.overflow='';
 }
 if(typeof MutationObserver!=='undefined'){
   new MutationObserver(()=>{

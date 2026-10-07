@@ -19,7 +19,7 @@
 })(typeof self !== 'undefined' ? self : globalThis, function () {
   'use strict';
 
-  var ENGINE_VERSION = '1.1.0';
+  var ENGINE_VERSION = '1.4.0';
   var TAU = Math.PI * 2, DEG = 180 / Math.PI;
   var clamp = function (v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; };
 
@@ -165,7 +165,13 @@
     var maxSm = Math.max.apply(null, sm), peaks = [];
     for (i = 0; i < BINS; i++) {
       var prev = sm[(i + BINS - 1) % BINS], next = sm[(i + 1) % BINS];
-      if (sm[i] >= maxSm * 0.12 && sm[i] >= prev && sm[i] > next) peaks.push(i);
+      var localArea = bin[(i + BINS - 1) % BINS].area + bin[i].area + bin[(i + 1) % BINS].area;
+      // Preserve small but deliberate vivid logo accents (e.g. The Fixer's
+      // mint bar/full stop). Require at least ~1.2% of chromatic artwork area
+      // so isolated compression/noise pixels do not become brand colours.
+      if (sm[i] >= maxSm * 0.045 &&
+          localArea >= chromaArea * 0.012 &&
+          sm[i] >= prev && sm[i] > next) peaks.push(i);
     }
     if (!peaks.length) peaks.push(sm.indexOf(maxSm));
 
@@ -200,16 +206,51 @@
     var derivedSecondary = false;
     if (!sec) { sec = { L: dom.L, C: dom.C, h: (dom.h + 32) % 360, hex: lch(clamp(dom.L + 0.05, 0.3, 0.8), dom.C, (dom.h + 32) % 360), share: 0 }; derivedSecondary = true; }
 
-    // UI accent: dominant hue, forced to >= 4.5:1 against white (buttons carry white text)
-    var accent = ensureContrast(dom.hex, 'FFFFFF', 4.5);
-    // dark tone: a real dark chromatic cluster if the logo has one, else dominant hue at low lightness
-    var darkCl = clusters.filter(function (c) { return c.L < 0.38 && c.share >= 0.08; })[0];
+    // Semantic role assignment:
+    // Detect structural + accent pairs from physical colour share, not only
+    // score ordering. A small vivid accent can outrank a much larger dark
+    // structural colour because chroma is rewarded in the cluster score.
+    // The Fixer is the canonical example: violet is structural, mint is accent.
+    var structuralCluster = null, vividCluster = null;
+    if (!derivedSecondary) {
+      for (var si = 0; si < clusters.length; si++) {
+        var darkCandidate = clusters[si];
+        if (darkCandidate.L >= 0.55 || darkCandidate.share < 0.08) continue;
+        for (var vi = 0; vi < clusters.length; vi++) {
+          if (vi === si) continue;
+          var brightCandidate = clusters[vi];
+          if (brightCandidate.L <= darkCandidate.L + 0.10) continue;
+          if (brightCandidate.C < 0.06 || brightCandidate.share < 0.02) continue;
+          if (hueDist(brightCandidate.h, darkCandidate.h) < 40) continue;
+          if (darkCandidate.share < brightCandidate.share * 1.35) continue;
+          if (!structuralCluster || darkCandidate.share > structuralCluster.share) {
+            structuralCluster = darkCandidate;
+            vividCluster = brightCandidate;
+          }
+        }
+      }
+    }
+    var structuralDominant = !!(structuralCluster && vividCluster);
+
+    var accentCluster = structuralDominant ? vividCluster : dom;
+    var primaryCluster = structuralDominant ? structuralCluster : (derivedSecondary ? dom : sec);
+
+    // Preserve the logo's real accent colour. themeTokens() separately derives a
+    // contrast-safe UI accent for text/buttons, while --brand-vivid keeps this
+    // original colour for rules, indicators, chart highlights and decorative use.
+    var accent = accentCluster.hex.toUpperCase();
+    var primary = primaryCluster.hex.toUpperCase();
+
+    // dark tone: prefer the structural dominant where appropriate, otherwise a
+    // real dark chromatic cluster or a darkened dominant hue.
+    var darkCl = structuralDominant ? structuralCluster : clusters.filter(function (c) { return c.L < 0.38 && c.share >= 0.08; })[0];
     var navy = darkCl ? darkCl.hex : lch(Math.min(0.3, dom.L * 0.55), Math.min(dom.C * 0.85, 0.11), dom.h);
     navy = ensureContrast(navy, 'FFFFFF', 8); // white text on the brand bar must be AAA
 
     out.accentColor = accent;
-    out.primaryColor = derivedSecondary ? dom.hex.toUpperCase() : ensureContrast(sec.hex, 'FFFFFF', 3);
+    out.primaryColor = primary;
     out.navyColor = navy;
+    out.diagnostics.roleModel = structuralDominant ? 'dark-structural-plus-vivid-accent' : 'dominant-accent';
     out.palette = clusters.slice(0, 5).map(function (c, idx) {
       return { hex: c.hex, share: Math.round(c.share * 1000) / 1000, role: c === dom ? 'dominant' : (c === sec ? 'secondary' : 'minor') };
     });
@@ -251,7 +292,7 @@
   }
 
   /* ───────────── theme tokens ───────────── */
-  var LIGHT_STATIC = { '--white': '#ffffff', '--ink': '#241536', '--grey': '#5b6b7a', '--grey-l': '#617486', '--line': '#e8e1f7', '--line-soft': '#f0ecfb' };
+  var LIGHT_STATIC = { '--white': '#ffffff', '--ink': '#201B33', '--grey': '#59566A', '--grey-l': '#747083', '--line': '#DDD8EC', '--line-soft': '#EEEAF5' };
   var pound = function (h) { return '#' + String(h).replace(/^#/, ''); };
 
   /**
@@ -261,28 +302,68 @@
    */
   function themeTokens(theme, mode) {
     theme = theme || {};
-    var accent = String(theme.accentColor || theme.primaryColor || 'B15BE8').replace(/^#/, '');
+    var accent = String(theme.accentColor || theme.primaryColor || '0FC79B').replace(/^#/, '');
     var navy = String(theme.navyColor || theme.primaryColor || accent).replace(/^#/, '');
     var second = String(theme.primaryColor || accent).replace(/^#/, '');
-    if (!parseHex(accent)) accent = '5F756D'; if (!parseHex(navy)) navy = '17212B'; if (!parseHex(second)) second = accent;
+    if (!parseHex(accent)) accent = '0FC79B'; if (!parseHex(navy)) navy = '2B1D73'; if (!parseHex(second)) second = accent;
     var A = hexToLch(accent), N = hexToLch(navy), t = {};
 
     if (mode !== 'dark') {
       var a = ensureContrast(accent, 'FFFFFF', 4.5), n = ensureContrast(navy, 'FFFFFF', 7);
       var aL = hexToLch(a);
+      var P = hexToLch(second), midHue;
+      var dh = ((A.h - P.h + 540) % 360) - 180;
+      midHue = (P.h + dh * 0.48 + 360) % 360;
+      var bridge = lch(0.50, Math.min(Math.max((A.C + P.C) * 0.42, 0.045), 0.12), midHue);
+      var secondary = lch(clamp(P.L + 0.12, 0.38, 0.62), Math.min(Math.max(P.C * 0.72, 0.04), 0.12), (P.h + (dh >= 0 ? 12 : -12) + 360) % 360);
+      var accentSoft = lch(0.965, Math.min(A.C * 0.22, 0.035), A.h);
+      var primarySoft = lch(0.962, Math.min(P.C * 0.20, 0.035), P.h);
+      var surfaceBrand = lch(0.985, Math.min(P.C * 0.10, 0.018), P.h);
+      var lineBrand = lch(0.89, Math.min(P.C * 0.22, 0.035), P.h);
+      var surface0 = lch(0.995, Math.min(P.C * 0.055, 0.009), P.h);
+      var surface1 = lch(0.982, Math.min(P.C * 0.085, 0.014), P.h);
+      var surface2 = lch(0.958, Math.min(P.C * 0.13, 0.022), P.h);
+      var surface3 = lch(0.925, Math.min(P.C * 0.18, 0.03), P.h);
+
+      t['--surface-0'] = pound(surface0);
+      t['--surface-1'] = pound(surface1);
+      t['--surface-2'] = pound(surface2);
+      t['--surface-3'] = pound(surface3);
+      t['--surface-raised'] = '#FFFFFF';
+      t['--surface-subtle'] = pound(surface1);
+      t['--surface-mix-base'] = '#FFFFFF';
+      t['--text-strong'] = '#201B33';
+      t['--text-muted'] = '#696477';
+
       t['--blue'] = pound(a); t['--blue-d'] = pound(lch(aL.L - 0.08, aL.C, aL.h));
+      t['--brand-primary-raw'] = pound(navy);
+      t['--brand-accent-raw'] = pound(accent);
       t['--brand-primary'] = pound(n); t['--brand-primary-deep'] = pound(lch(hexToLch(n).L - 0.07, hexToLch(n).C, hexToLch(n).h));
-      t['--ice'] = pound(lch(0.955, Math.min(A.C * 0.22, 0.04), A.h)); t['--brand-soft'] = pound(lch(0.972, Math.min(A.C * 0.16, 0.03), A.h));
-      t['--brand-grad-1'] = pound(n); t['--brand-grad-2'] = pound(n); t['--brand-grad-3'] = pound(a); t['--brand-grad-4'] = pound(a); t['--brand-grad-5'] = pound(a);
-      t['--bar-bg'] = pound(n); t['--ent-paper'] = '#f6f4fb'; t['--brand-vivid'] = pound(accent);
+      t['--brand-secondary'] = pound(secondary);
+      t['--brand-bridge'] = pound(bridge);
+      t['--brand-accent-soft'] = pound(accentSoft);
+      t['--brand-primary-soft'] = pound(primarySoft);
+      t['--surface-brand'] = pound(surfaceBrand);
+      t['--line-brand'] = pound(lineBrand);
+      t['--ice'] = pound(accentSoft); t['--brand-soft'] = pound(primarySoft);
+      t['--brand-grad-1'] = pound(n);
+      t['--brand-grad-2'] = pound(mixHex(n, secondary.replace(/^#/,''), 0.35));
+      t['--brand-grad-3'] = pound(bridge);
+      t['--brand-grad-4'] = pound(a);
+      t['--brand-grad-5'] = pound(accent);
+      t['--bar-bg'] = pound(n); t['--ent-paper'] = pound(surfaceBrand); t['--brand-vivid'] = pound(accent);
       Object.keys(LIGHT_STATIC).forEach(function (k) { t[k] = LIGHT_STATIC[k]; });
       return t;
     }
 
     // dark: neutral scale tinted with the brand's dark-tone hue (low chroma so it reads as "dark", not "coloured")
     var hue = N.C > 0.02 ? N.h : A.h, tint = Math.min(0.035, Math.max(N.C, A.C * 0.4) * 0.45);
-    var bg = lch(0.175, tint, hue), surf = lch(0.225, tint, hue), surf2 = lch(0.265, tint, hue), ice = lch(0.30, tint * 1.2, hue);
-    var line = lch(0.36, tint * 1.1, hue), lineSoft = lch(0.29, tint, hue);
+    var bg = lch(0.155, tint * 0.72, hue);
+    var surf = lch(0.205, tint * 0.82, hue);
+    var surf2 = lch(0.245, tint * 0.90, hue);
+    var surf3 = lch(0.285, tint * 1.00, hue);
+    var ice = lch(0.31, tint * 1.15, hue);
+    var line = lch(0.34, tint * 0.95, hue), lineSoft = lch(0.275, tint * 0.82, hue);
     var ink = ensureContrast(lch(0.95, 0.01, hue), surf, 12), grey = ensureContrast(lch(0.80, 0.015, hue), surf, 7), greyL = ensureContrast(lch(0.70, 0.015, hue), surf, 4.6);
     var acc = ensureContrast(accent, surf, 4.5), accL = hexToLch(acc);
     var head = ensureContrast(lch(0.90, Math.min(N.C, 0.05) || 0.03, hue), surf, 9);
@@ -294,15 +375,44 @@
     var loadingLine = lch(0.56, tint * 0.60, hue);
     var loadingInk = ensureContrast(lch(0.97, 0.008, hue), loadingSurface, 5);
     var loadingMuted = ensureContrast(lch(0.84, 0.012, hue), loadingSurface, 4.5);
-    t['--dm-bg'] = pound(bg); t['--dm-surface'] = pound(surf); t['--dm-surface-2'] = pound(surf2); t['--dm-line'] = pound(line);
+    t['--dm-bg'] = pound(bg); t['--dm-surface'] = pound(surf); t['--dm-surface-2'] = pound(surf2); t['--dm-surface-3'] = pound(surf3); t['--dm-line'] = pound(line);
+    t['--surface-0'] = pound(bg);
+    t['--surface-1'] = pound(surf);
+    t['--surface-2'] = pound(surf2);
+    t['--surface-3'] = pound(surf3);
+    t['--surface-raised'] = pound(surf2);
+    t['--surface-subtle'] = pound(surf);
+    t['--surface-mix-base'] = pound(surf);
+    t['--text-strong'] = pound(ink);
+    t['--text-muted'] = pound(grey);
     t['--dm-loading-bg'] = pound(loadingBg); t['--dm-loading-surface'] = pound(loadingSurface); t['--dm-loading-line'] = pound(loadingLine);
     t['--dm-loading-ink'] = pound(loadingInk); t['--dm-loading-muted'] = pound(loadingMuted);
     t['--white'] = pound(surf); t['--ent-paper'] = pound(bg); t['--ink'] = pound(ink); t['--grey'] = pound(grey); t['--grey-l'] = pound(greyL);
     t['--line'] = pound(line); t['--line-soft'] = pound(lineSoft); t['--ice'] = pound(ice); t['--ice-2'] = pound(surf2); t['--brand-soft'] = pound(surf2);
+    var darkSecondary = lch(0.62, Math.min(Math.max(N.C * 0.55, 0.035), 0.09), (N.h + 14) % 360);
+    var darkBridgeHue = (N.h + ((((A.h - N.h + 540) % 360) - 180) * 0.5) + 360) % 360;
+    var darkBridge = lch(0.60, Math.min(Math.max((N.C + A.C) * 0.32, 0.035), 0.09), darkBridgeHue);
     t['--blue'] = pound(acc); t['--blue-d'] = pound(lch(Math.min(accL.L + 0.07, 0.92), accL.C, accL.h));
-    t['--brand-primary'] = pound(head); t['--brand-primary-deep'] = pound(bar); t['--bar-bg'] = pound(bar); t['--brand-vivid'] = pound(ensureContrast(accent, bar, 3));
+    t['--brand-primary'] = pound(head);
+    t['--brand-primary-raw'] = pound(navy);
+    t['--brand-primary-deep'] = pound(bar);
+    t['--bar-bg'] = pound(bar);
+    t['--brand-vivid'] = pound(ensureContrast(accent, bar, 3));
+    t['--brand-accent-raw'] = pound(accent);
+    t['--brand-secondary'] = pound(darkSecondary);
+    t['--brand-bridge'] = pound(darkBridge);
+    t['--brand-accent-soft'] = pound(lch(0.31, Math.min(A.C * 0.30, 0.05), A.h));
+    t['--brand-primary-soft'] = pound(lch(0.29, Math.min(N.C * 0.28, 0.05), N.h));
+    t['--surface-brand'] = pound(surf);
+    t['--line-brand'] = pound(line);
     t['--dm-on-accent'] = contrast('FFFFFF', acc) >= 4.5 ? '#ffffff' : '#0b0f19';
-    t['--brand-grad-1'] = pound(bar); t['--brand-grad-2'] = pound(bar); t['--brand-grad-3'] = pound(acc); t['--brand-grad-4'] = pound(acc); t['--brand-grad-5'] = pound(acc);
+    var darkMid = lch(0.34, Math.min(Math.max(N.C * 0.74, 0.045), 0.11), N.C > 0.02 ? N.h : A.h);
+    var darkAccent = lch(0.58, Math.min(Math.max(A.C * 0.72, 0.055), 0.13), A.h);
+    t['--brand-grad-1'] = pound(bar);
+    t['--brand-grad-2'] = pound(darkMid);
+    t['--brand-grad-3'] = pound(darkBridge);
+    t['--brand-grad-4'] = pound(darkAccent);
+    t['--brand-grad-5'] = pound(acc);
     t['--green-soft'] = '#153d2e'; t['--amber-soft'] = '#41321a'; t['--red-soft'] = '#45262a';
     return t;
   }
@@ -315,31 +425,135 @@
    */
   function deriveChartPalette(theme) {
     theme = theme || {};
-    var accent = String(theme.accentColor || theme.primaryColor || '5F756D').replace(/^#/, '');
-    var primary = String(theme.primaryColor || accent).replace(/^#/, '');
-    if (!parseHex(accent)) accent = '5F756D';
+    var accent = String(theme.accentColor || theme.primaryColor || '0FC79B').replace(/^#/, '');
+    var primary = String(theme.primaryColor || theme.navyColor || accent).replace(/^#/, '');
+    var navy = String(theme.navyColor || primary).replace(/^#/, '');
+    if (!parseHex(accent)) accent = '0FC79B';
     if (!parseHex(primary)) primary = accent;
-    var a = hexToLch(accent), p = hexToLch(primary);
-    var hue = a.C > 0.035 ? a.h : p.h;
-    var baseC = Math.min(Math.max(a.C, 0.055), 0.16);
-    var defs = {
-      engagement:[150,0.50,0.78], cashflow:[175,0.58,0.70],
-      debt:[25,0.50,0.62], insurance:[285,0.48,0.78],
-      workforce:[205,0.54,0.72], low:[150,0.58,0.68],
-      mid:[65,0.58,0.62], high:[5,0.55,0.62]
+    if (!parseHex(navy)) navy = primary;
+
+    var p = hexToLch(primary), a = hexToLch(accent);
+    var delta = ((a.h - p.h + 540) % 360) - 180;
+    var bridgeHue = (p.h + delta * 0.48 + 360) % 360;
+    var pNeighbor = (p.h + (delta >= 0 ? 18 : -18) + 360) % 360;
+    var aNeighbor = (a.h + (delta >= 0 ? -18 : 18) + 360) % 360;
+
+    // Five data colours: two anchor colours, two near-neighbours and one bridge.
+    // This feels authored from the logo rather than like a rainbow or a two-colour loop.
+    var engagement = ensureContrast(primary, 'FFFFFF', 3.4);
+    var cashflow = ensureContrast(accent, 'FFFFFF', 3.4);
+    var debt = ensureContrast(lch(0.50, Math.min(Math.max(p.C * 0.58, 0.045), 0.11), pNeighbor), 'FFFFFF', 3.4);
+    var insurance = ensureContrast(lch(0.52, Math.min(Math.max(a.C * 0.52, 0.045), 0.11), aNeighbor), 'FFFFFF', 3.4);
+    var workforce = ensureContrast(lch(0.48, Math.min(Math.max((p.C + a.C) * 0.38, 0.05), 0.11), bridgeHue), 'FFFFFF', 3.4);
+
+    return {
+      engagement:'#' + engagement,
+      cashflow:'#' + cashflow,
+      debt:'#' + debt,
+      insurance:'#' + insurance,
+      workforce:'#' + workforce,
+      low:'#187A4D',
+      mid:'#9A5B00',
+      high:'#B5391F'
     };
-    var out = {};
-    Object.keys(defs).forEach(function (key) {
-      var d = defs[key], cc = Math.min(d[2] * baseC, 0.18);
-      out[key] = '#' + ensureContrast(lch(d[1], cc, (hue + d[0] + 360) % 360), 'FFFFFF', 3.4);
-    });
-    var seen = {};
-    Object.keys(out).forEach(function (key, idx) {
-      var bare = out[key].replace(/^#/,'').toUpperCase();
-      if (seen[bare]) out[key] = '#' + ensureContrast(lch(0.54, 0.075, (hue + idx * 43) % 360), 'FFFFFF', 3.4);
-      seen[out[key].replace(/^#/,'').toUpperCase()] = true;
-    });
-    return out;
+  }
+
+  /**
+   * Build one coherent UI from two brands.
+   * Lead brand = partner identity. Endorser = The Fixer product DNA.
+   * The partner owns primary interaction/data colours; The Fixer influences
+   * surface temperature, focus/endorsement details and system-status accents.
+   */
+  function coBrandSystem(lead, endorser, mode) {
+    lead = lead || {};
+    endorser = endorser || { primaryColor:'2B1D73', accentColor:'0FC79B', navyColor:'2B1D73' };
+    mode = mode === 'dark' ? 'dark' : 'light';
+
+    function clean(v, fallback) {
+      v = String(v || fallback || '').replace(/^#/,'').toUpperCase();
+      return parseHex(v) ? v : String(fallback || '2B1D73').replace(/^#/,'').toUpperCase();
+    }
+    function circularHueMix(a,b,weightB) {
+      var ar=a*Math.PI/180, br=b*Math.PI/180;
+      var x=(1-weightB)*Math.cos(ar)+weightB*Math.cos(br);
+      var y=(1-weightB)*Math.sin(ar)+weightB*Math.sin(br);
+      var h=Math.atan2(y,x)*180/Math.PI;
+      return (h+360)%360;
+    }
+
+    var lp=clean(lead.primaryColor || lead.navyColor,'2B1D73');
+    var la=clean(lead.accentColor || lead.primaryColor,lp);
+    var ln=clean(lead.navyColor || lead.primaryColor,lp);
+    var ep=clean(endorser.primaryColor || endorser.navyColor,'2B1D73');
+    var ea=clean(endorser.accentColor || endorser.primaryColor,'0FC79B');
+
+    var Lp=hexToLch(lp), La=hexToLch(la), Ep=hexToLch(ep), Ea=hexToLch(ea);
+    var distances=[
+      hueDist(Lp.h,Ep.h),hueDist(Lp.h,Ea.h),
+      hueDist(La.h,Ep.h),hueDist(La.h,Ea.h)
+    ];
+    var closest=Math.min.apply(null,distances);
+    var relation=closest<16?'overlapping':closest<42?'analogous':closest<105?'separated':closest<155?'complementary':'opposed';
+
+    // Neutral hue is mostly partner-owned, with a subtle Fixer undertone so
+    // surfaces feel like one product instead of a skinned third-party portal.
+    var neutralHue=circularHueMix(Lp.h,Ep.h,0.16);
+    var neutralC=Math.min(0.020,Math.max(0.006,(Lp.C+Ep.C)*0.055));
+
+    var base=themeTokens({primaryColor:lp,accentColor:la,navyColor:ln},mode);
+    var charts=deriveChartPalette({primaryColor:lp,accentColor:la,navyColor:ln});
+
+    if(mode==='light'){
+      base['--surface-0']='#FFFFFF';
+      base['--surface-1']='#'+lch(0.985,neutralC*0.65,neutralHue);
+      base['--surface-2']='#'+lch(0.957,neutralC,neutralHue);
+      base['--surface-3']='#'+lch(0.920,neutralC*1.25,neutralHue);
+      base['--surface-raised']='#FFFFFF';
+      base['--surface-mix-base']='#FFFFFF';
+      base['--line-brand']='#'+lch(0.875,neutralC*1.25,neutralHue);
+    }else{
+      base['--surface-0']='#'+lch(0.145,neutralC*0.70,neutralHue);
+      base['--surface-1']='#'+lch(0.195,neutralC*0.90,neutralHue);
+      base['--surface-2']='#'+lch(0.238,neutralC*1.05,neutralHue);
+      base['--surface-3']='#'+lch(0.285,neutralC*1.15,neutralHue);
+      base['--surface-raised']=base['--surface-2'];
+      base['--surface-mix-base']=base['--surface-1'];
+      base['--line-brand']='#'+lch(0.335,neutralC*1.20,neutralHue);
+    }
+
+    // Product DNA: The Fixer endorsement remains visible without taking over
+    // the partner's buttons or charts.
+    var surface=String(base['--surface-1'] || (mode==='dark'?'#20202A':'#FFFFFF')).replace(/^#/,'');
+    var productAccent=ensureContrast(ea,surface,3.0);
+    var productPrimary=ensureContrast(ep,surface,3.0);
+    if(hueDist(La.h,Ea.h)<18){
+      productAccent=lch(mode==='dark'?0.72:0.43,Math.min(Math.max(Ea.C*0.72,0.055),0.13),Ea.h);
+      productAccent=ensureContrast(productAccent,surface,3.0);
+    }
+
+    base['--partner-primary']='#'+lp;
+    base['--partner-accent']='#'+la;
+    base['--partner-navy']='#'+ln;
+    base['--product-primary']='#'+productPrimary;
+    base['--product-accent']='#'+productAccent;
+    base['--system-focus']='#'+productAccent;
+    base['--system-progress']='#'+productAccent;
+    base['--cobrand-relation']=relation;
+
+    // Keep data partner-led. The Fixer gets one quiet system/endorsement role,
+    // not a forced chart slice.
+    return {
+      tokens:base,
+      charts:charts,
+      diagnostics:{
+        relation:relation,
+        closestHueDistance:Math.round(closest*10)/10,
+        leadPrimary:'#'+lp,
+        leadAccent:'#'+la,
+        endorserPrimary:'#'+ep,
+        endorserAccent:'#'+ea
+      }
+    };
   }
 
   /**
@@ -351,21 +565,31 @@
    *     charts : { '--chart-x': '#hex' } light-mode chart colours, lifted automatically for dark
    */
   function themeController() {
-    var st = { brand: null, light: null, charts: {} }, applied = [], started = false;
+    var st = { brand: null, endorser: null, coBrand: false, light: null, charts: {} }, applied = [], started = false;
     function render() {
       var docEl = document.documentElement, dark = docEl.classList.contains('portal-dark'), set = {}, k;
-      if (dark) set = themeTokens(st.brand, 'dark');
-      else if (st.light === 'engine') set = themeTokens(st.brand, 'light');
-      else if (st.light) for (k in st.light) set[k] = st.light[k];
-      var surface = dark ? set['--white'] : null;
-      for (k in st.charts) set[k] = dark ? forDark(st.charts[k], surface) : st.charts[k];
+      if (st.coBrand) {
+        var co = coBrandSystem(st.brand, st.endorser, dark ? 'dark' : 'light');
+        set = co.tokens;
+        for (k in co.charts) set['--chart-' + k] = dark ? forDark(co.charts[k], String(set['--surface-1']||set['--white']).replace(/^#/,'')) : co.charts[k];
+      } else {
+        if (dark) set = themeTokens(st.brand, 'dark');
+        else if (st.light === 'engine') set = themeTokens(st.brand, 'light');
+        else if (st.light) for (k in st.light) set[k] = st.light[k];
+        var surface = dark ? set['--white'] : null;
+        for (k in st.charts) set[k] = dark ? forDark(st.charts[k], surface) : st.charts[k];
+      }
       applied.forEach(function (a) { if (!(a in set)) docEl.style.removeProperty(a); });
       Object.keys(set).forEach(function (a) { docEl.style.setProperty(a, set[a]); });
       applied = Object.keys(set);
     }
     return {
       set: function (o) {
-        st.brand = o.brand || {}; st.light = o.light === undefined ? null : o.light; st.charts = o.charts || {};
+        st.brand = o.brand || {};
+        st.endorser = o.endorser || null;
+        st.coBrand = !!o.coBrand;
+        st.light = o.light === undefined ? null : o.light;
+        st.charts = o.charts || {};
         render();
         if (!started && typeof MutationObserver !== 'undefined') {
           started = true; new MutationObserver(render).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
@@ -379,7 +603,7 @@
   function forDark(hex, surfaceHex) { return '#' + ensureContrast(String(hex).replace(/^#/, ''), String(surfaceHex).replace(/^#/, ''), 3.2); }
 
   return {
-    VERSION: ENGINE_VERSION, analyzePixels: analyzePixels, extractFromImage: extractFromImage, deriveChartPalette: deriveChartPalette, themeTokens: themeTokens, themeController: themeController, forDark: forDark,
+    VERSION: ENGINE_VERSION, analyzePixels: analyzePixels, extractFromImage: extractFromImage, deriveChartPalette: deriveChartPalette, coBrandSystem: coBrandSystem, themeTokens: themeTokens, themeController: themeController, forDark: forDark,
     contrast: contrast, ensureContrast: ensureContrast, mixHex: mixHex, hexToLch: hexToLch, lch: lch, luminance: luminance
   };
 });
