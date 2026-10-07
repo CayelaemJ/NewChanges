@@ -1617,3 +1617,83 @@ html:not(.efs-default-brand) .topbar .portal-partner-mark img{
   .home-nav .home-fixer-logo{width:120px!important;min-width:120px!important;}
   .home-nav a[aria-label="The Fixer home"]{padding-inline:12px;}
 }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   PARTNER SCOPE OVERRIDES — FINAL CASCADE
+   The EFS shell may remain The Fixer for Admin/Super Admin, but everything
+   inside a selected branded employer view must resolve from that partner.
+   ═══════════════════════════════════════════════════════════════ */
+#employer-view[data-partner-theme="1"] .btn-primary,
+#employer-view[data-partner-theme="1"] button.btn-primary{
+  background:var(--blue)!important;
+  border-color:var(--blue)!important;
+  color:#fff!important;
+}
+#employer-view[data-partner-theme="1"] .btn-primary:hover:not(:disabled),
+#employer-view[data-partner-theme="1"] button.btn-primary:hover:not(:disabled){
+  background:var(--blue-d)!important;
+  border-color:var(--blue-d)!important;
+  color:#fff!important;
+}
+#employer-view[data-partner-theme="1"] .head h1,
+#employer-view[data-partner-theme="1"] .card-title,
+#employer-view[data-partner-theme="1"] .kpi-value,
+#employer-view[data-partner-theme="1"] .stat-cell .v,
+#employer-view[data-partner-theme="1"] .opp-n,
+#employer-view[data-partner-theme="1"] .ds-v{
+  color:var(--brand-primary)!important;
+}
+#employer-view[data-partner-theme="1"] .head-eyebrow,
+#employer-view[data-partner-theme="1"] #ctx-sub,
+#employer-view[data-partner-theme="1"] .data-fresh .dot{
+  color:var(--brand-vivid)!important;
+}
+#employer-view[data-partner-theme="1"] .filter-emp{
+  background:var(--brand-primary-raw,var(--brand-primary))!important;
+  border-color:var(--brand-primary-raw,var(--brand-primary))!important;
+  color:#fff!important;
+}
+#employer-view[data-partner-theme="1"] .exec-band{
+  background:
+    radial-gradient(circle at 90% 12%,color-mix(in srgb,var(--brand-vivid) 9%,transparent),transparent 16rem),
+    linear-gradient(118deg,
+      var(--brand-grad-1) 0%,
+      var(--brand-grad-2) 62%,
+      color-mix(in srgb,var(--brand-grad-3) 34%,var(--brand-grad-2)) 100%)!important;
+  border-color:color-mix(in srgb,var(--brand-vivid) 24%,var(--line-brand))!important;
+}
+#employer-view[data-partner-theme="1"] .exec-pulse{
+  background:var(--brand-vivid)!important;
+}
+#employer-view[data-partner-theme="1"] .exec-check{
+  background:color-mix(in srgb,var(--brand-vivid) 16%,transparent)!important;
+  color:var(--brand-vivid)!important;
+}
+#employer-view[data-partner-theme="1"] .kpi:nth-child(1)::before{background:var(--chart-engagement)!important;}
+#employer-view[data-partner-theme="1"] .kpi:nth-child(2)::before{background:var(--chart-cashflow)!important;}
+#employer-view[data-partner-theme="1"] .kpi:nth-child(3)::before{background:var(--chart-workforce)!important;}
+#employer-view[data-partner-theme="1"] .kpi:nth-child(4)::before{background:var(--chart-insurance)!important;}
+#employer-view[data-partner-theme="1"] .opp-foot,
+#employer-view[data-partner-theme="1"] .pf-banner{
+  background:linear-gradient(120deg,var(--brand-grad-1),var(--brand-grad-2) 72%,var(--brand-grad-3))!important;
+}
+#employer-view[data-partner-theme="1"] .metric-info,
+#employer-view[data-partner-theme="1"] .card-tag{
+  background:var(--brand-primary-soft)!important;
+  border-color:var(--line-brand)!important;
+  color:var(--brand-primary)!important;
+}
+
+/* Dark partner views must stay partner-coloured, not fall back to EFS indigo. */
+html.portal-dark #employer-view[data-partner-theme="1"] .exec-band{
+  background:
+    radial-gradient(circle at 90% 12%,color-mix(in srgb,var(--brand-vivid) 8%,transparent),transparent 16rem),
+    linear-gradient(118deg,var(--brand-grad-1),var(--brand-grad-2) 62%,var(--brand-grad-3))!important;
+}
+html.portal-dark #employer-view[data-partner-theme="1"] .btn-primary,
+html.portal-dark #employer-view[data-partner-theme="1"] button.btn-primary{
+  background:var(--blue)!important;
+  border-color:var(--blue)!important;
+  color:var(--dm-on-accent,#fff)!important;
+}
