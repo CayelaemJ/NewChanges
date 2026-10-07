@@ -76,6 +76,15 @@ function normaliseHex(value?: string | null, fallback = "#5f756d") {
   return /^#[0-9a-fA-F]{6}$/.test(hex) ? hex : fallback;
 }
 
+function partnerHeaderTone(theme?: Me["theme"]) {
+  const raw=String(theme?.navyColor||theme?.primaryColor||theme?.accentColor||"").replace(/^#/,"");
+  if(!/^[0-9a-fA-F]{6}$/.test(raw)) return "mid";
+  const rgb=[0,2,4].map(i=>parseInt(raw.slice(i,i+2),16)/255);
+  const lin=(c:number)=>c<=0.03928?c/12.92:Math.pow((c+0.055)/1.055,2.4);
+  const L=.2126*lin(rgb[0])+.7152*lin(rgb[1])+.0722*lin(rgb[2]);
+  return L<0.22?"dark":L>0.72?"light":"mid";
+}
+
 function LineChart({values,labels,previous=[],previousLabels=[],currentLabel="Selected period",previousLabel="Previous period",prefix="R "}:{values:number[];labels:string[];previous?:number[];previousLabels?:string[];currentLabel?:string;previousLabel?:string;prefix?:string}) {
   const current=values.map(Number).filter(Number.isFinite);
   const prior=previous.map(Number).filter(Number.isFinite);
@@ -202,7 +211,7 @@ function DashboardView({me}:{me:Me}) {
       <div className="topbar-inner">
         <div className="logo portal-brand-lockup">
           {(!defaultEfsShell && me.theme?.branded && me.theme?.logoDataUrl) ? (
-            <div className="portal-brand-partner">
+            <div className="portal-brand-partner" data-partner-header-tone={partnerHeaderTone(me.theme)}>
               <div className="portal-partner-mark">
                 <img src={me.theme.logoDataUrl} alt={(me.theme?.name||"Partner")+" logo"} data-custom-logo="1" />
               </div>
