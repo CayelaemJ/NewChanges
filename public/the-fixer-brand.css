@@ -1821,3 +1821,37 @@ html[data-theme="dark"].efs-default-brand #welcome-splash .welcome-splash-logo:n
     min-width:120px!important;
   }
 }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   ADMIN / USERS HEADER LOGO — COMPACT
+   These pages use a direct topbar image rather than the dashboard lock-up.
+   Keep the official mark at the digital minimum so it reads cleanly.
+   ═══════════════════════════════════════════════════════════════ */
+.efs-default-brand .topbar-inner > img.efs-brand-logo:not([data-custom-logo]){
+  width:120px!important;
+  min-width:120px!important;
+  max-width:120px!important;
+  height:auto!important;
+  flex:0 0 auto!important;
+  object-fit:contain!important;
+  background:transparent!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  filter:none!important;
+}
+html.efs-default-brand:not(.portal-dark) .topbar-inner > img.efs-brand-logo:not([data-custom-logo]){
+  content:url('/static/the-fixer-logo.svg?v=6')!important;
+}
+html.efs-default-brand.portal-dark .topbar-inner > img.efs-brand-logo:not([data-custom-logo]){
+  content:url('/static/the-fixer-logo-reversed.svg?v=1')!important;
+}
+@media(max-width:640px){
+  .efs-default-brand .topbar-inner > img.efs-brand-logo:not([data-custom-logo]){
+    width:120px!important;
+    min-width:120px!important;
+    max-width:120px!important;
+  }
+}
