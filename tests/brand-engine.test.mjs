@@ -60,7 +60,7 @@ for (const th of [{ accentColor: "009DA5", primaryColor: "FF8000", navyColor: "0
   ok(BE.contrast(D["--brand-primary"], D["--white"]) >= 9, "dark: headings >= 9:1");
   ok(BE.contrast("FFFFFF", D["--bar-bg"]) >= 12, "dark: white text on brand bar >= 12:1");
   ok(BE.contrast(D["--brand-vivid"], D["--bar-bg"]) >= 3, "dark: brand accent rule stays visible on the bar");
-  ok(BE.contrast(L["--brand-vivid"] , "FFFFFF") > 1 && L["--brand-vivid"].toLowerCase() === "#" + (th.accentColor || "B15BE8").toLowerCase(), "light: decorative accent keeps the brand's true colour");
+  ok(BE.contrast(L["--brand-vivid"] , "FFFFFF") > 1 && L["--brand-vivid"].toLowerCase() === "#" + (th.accentColor || "0FC79B").toLowerCase(), "light: decorative accent keeps the brand's true colour");
   ok(BE.hexToLch(D["--white"]).L < 0.3 && BE.hexToLch(D["--ent-paper"]).L < 0.22, "dark: surfaces are actually dark");
 }
 console.log(`Brand engine tests passed (${pass} assertions).`);
