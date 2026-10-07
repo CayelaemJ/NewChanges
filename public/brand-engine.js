@@ -19,7 +19,7 @@
 })(typeof self !== 'undefined' ? self : globalThis, function () {
   'use strict';
 
-  var ENGINE_VERSION = '1.2.0';
+  var ENGINE_VERSION = '1.3.0';
   var TAU = Math.PI * 2, DEG = 180 / Math.PI;
   var clamp = function (v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; };
 
@@ -299,8 +299,24 @@
       var primarySoft = lch(0.962, Math.min(P.C * 0.20, 0.035), P.h);
       var surfaceBrand = lch(0.985, Math.min(P.C * 0.10, 0.018), P.h);
       var lineBrand = lch(0.89, Math.min(P.C * 0.22, 0.035), P.h);
+      var surface0 = lch(0.995, Math.min(P.C * 0.055, 0.009), P.h);
+      var surface1 = lch(0.982, Math.min(P.C * 0.085, 0.014), P.h);
+      var surface2 = lch(0.958, Math.min(P.C * 0.13, 0.022), P.h);
+      var surface3 = lch(0.925, Math.min(P.C * 0.18, 0.03), P.h);
+
+      t['--surface-0'] = pound(surface0);
+      t['--surface-1'] = pound(surface1);
+      t['--surface-2'] = pound(surface2);
+      t['--surface-3'] = pound(surface3);
+      t['--surface-raised'] = '#FFFFFF';
+      t['--surface-subtle'] = pound(surface1);
+      t['--surface-mix-base'] = '#FFFFFF';
+      t['--text-strong'] = '#201B33';
+      t['--text-muted'] = '#696477';
 
       t['--blue'] = pound(a); t['--blue-d'] = pound(lch(aL.L - 0.08, aL.C, aL.h));
+      t['--brand-primary-raw'] = pound(navy);
+      t['--brand-accent-raw'] = pound(accent);
       t['--brand-primary'] = pound(n); t['--brand-primary-deep'] = pound(lch(hexToLch(n).L - 0.07, hexToLch(n).C, hexToLch(n).h));
       t['--brand-secondary'] = pound(secondary);
       t['--brand-bridge'] = pound(bridge);
@@ -321,8 +337,12 @@
 
     // dark: neutral scale tinted with the brand's dark-tone hue (low chroma so it reads as "dark", not "coloured")
     var hue = N.C > 0.02 ? N.h : A.h, tint = Math.min(0.035, Math.max(N.C, A.C * 0.4) * 0.45);
-    var bg = lch(0.175, tint, hue), surf = lch(0.225, tint, hue), surf2 = lch(0.265, tint, hue), ice = lch(0.30, tint * 1.2, hue);
-    var line = lch(0.36, tint * 1.1, hue), lineSoft = lch(0.29, tint, hue);
+    var bg = lch(0.155, tint * 0.72, hue);
+    var surf = lch(0.205, tint * 0.82, hue);
+    var surf2 = lch(0.245, tint * 0.90, hue);
+    var surf3 = lch(0.285, tint * 1.00, hue);
+    var ice = lch(0.31, tint * 1.15, hue);
+    var line = lch(0.34, tint * 0.95, hue), lineSoft = lch(0.275, tint * 0.82, hue);
     var ink = ensureContrast(lch(0.95, 0.01, hue), surf, 12), grey = ensureContrast(lch(0.80, 0.015, hue), surf, 7), greyL = ensureContrast(lch(0.70, 0.015, hue), surf, 4.6);
     var acc = ensureContrast(accent, surf, 4.5), accL = hexToLch(acc);
     var head = ensureContrast(lch(0.90, Math.min(N.C, 0.05) || 0.03, hue), surf, 9);
@@ -334,7 +354,16 @@
     var loadingLine = lch(0.56, tint * 0.60, hue);
     var loadingInk = ensureContrast(lch(0.97, 0.008, hue), loadingSurface, 5);
     var loadingMuted = ensureContrast(lch(0.84, 0.012, hue), loadingSurface, 4.5);
-    t['--dm-bg'] = pound(bg); t['--dm-surface'] = pound(surf); t['--dm-surface-2'] = pound(surf2); t['--dm-line'] = pound(line);
+    t['--dm-bg'] = pound(bg); t['--dm-surface'] = pound(surf); t['--dm-surface-2'] = pound(surf2); t['--dm-surface-3'] = pound(surf3); t['--dm-line'] = pound(line);
+    t['--surface-0'] = pound(bg);
+    t['--surface-1'] = pound(surf);
+    t['--surface-2'] = pound(surf2);
+    t['--surface-3'] = pound(surf3);
+    t['--surface-raised'] = pound(surf2);
+    t['--surface-subtle'] = pound(surf);
+    t['--surface-mix-base'] = pound(surf);
+    t['--text-strong'] = pound(ink);
+    t['--text-muted'] = pound(grey);
     t['--dm-loading-bg'] = pound(loadingBg); t['--dm-loading-surface'] = pound(loadingSurface); t['--dm-loading-line'] = pound(loadingLine);
     t['--dm-loading-ink'] = pound(loadingInk); t['--dm-loading-muted'] = pound(loadingMuted);
     t['--white'] = pound(surf); t['--ent-paper'] = pound(bg); t['--ink'] = pound(ink); t['--grey'] = pound(grey); t['--grey-l'] = pound(greyL);
@@ -343,7 +372,12 @@
     var darkBridgeHue = (N.h + ((((A.h - N.h + 540) % 360) - 180) * 0.5) + 360) % 360;
     var darkBridge = lch(0.60, Math.min(Math.max((N.C + A.C) * 0.32, 0.035), 0.09), darkBridgeHue);
     t['--blue'] = pound(acc); t['--blue-d'] = pound(lch(Math.min(accL.L + 0.07, 0.92), accL.C, accL.h));
-    t['--brand-primary'] = pound(head); t['--brand-primary-deep'] = pound(bar); t['--bar-bg'] = pound(bar); t['--brand-vivid'] = pound(ensureContrast(accent, bar, 3));
+    t['--brand-primary'] = pound(head);
+    t['--brand-primary-raw'] = pound(navy);
+    t['--brand-primary-deep'] = pound(bar);
+    t['--bar-bg'] = pound(bar);
+    t['--brand-vivid'] = pound(ensureContrast(accent, bar, 3));
+    t['--brand-accent-raw'] = pound(accent);
     t['--brand-secondary'] = pound(darkSecondary);
     t['--brand-bridge'] = pound(darkBridge);
     t['--brand-accent-soft'] = pound(lch(0.31, Math.min(A.C * 0.30, 0.05), A.h));
@@ -351,7 +385,13 @@
     t['--surface-brand'] = pound(surf);
     t['--line-brand'] = pound(line);
     t['--dm-on-accent'] = contrast('FFFFFF', acc) >= 4.5 ? '#ffffff' : '#0b0f19';
-    t['--brand-grad-1'] = pound(bar); t['--brand-grad-2'] = pound(bar); t['--brand-grad-3'] = pound(acc); t['--brand-grad-4'] = pound(acc); t['--brand-grad-5'] = pound(acc);
+    var darkMid = lch(0.34, Math.min(Math.max(N.C * 0.74, 0.045), 0.11), N.C > 0.02 ? N.h : A.h);
+    var darkAccent = lch(0.58, Math.min(Math.max(A.C * 0.72, 0.055), 0.13), A.h);
+    t['--brand-grad-1'] = pound(bar);
+    t['--brand-grad-2'] = pound(darkMid);
+    t['--brand-grad-3'] = pound(darkBridge);
+    t['--brand-grad-4'] = pound(darkAccent);
+    t['--brand-grad-5'] = pound(acc);
     t['--green-soft'] = '#153d2e'; t['--amber-soft'] = '#41321a'; t['--red-soft'] = '#45262a';
     return t;
   }
