@@ -5,7 +5,7 @@ const BE = globalThis.BrandEngine;
 const load = (n) => { const j = JSON.parse(readFileSync(new URL(`./fixtures/${n}.json`, import.meta.url))); return BE.analyzePixels(Buffer.from(j.data, "base64"), j.w, j.h); };
 const hue = (hex) => BE.hexToLch(hex).h, hd = (a, b) => { const d = Math.abs(a - b) % 360; return d > 180 ? 360 - d : d; };
 let pass = 0; const ok = (c, m) => { assert.ok(c, m); pass++; };
-ok(BE.VERSION === "1.3.0", "brand engine exposes a version for MLOps telemetry");
+ok(BE.VERSION === "1.4.0", "brand engine exposes a version for MLOps telemetry");
 
 // every result: valid hex, WCAG targets met
 for (const n of ["teal_orange_transparent", "red_on_white", "mono_black", "navy_gold_aa", "tiny_purple", "white_yellow_on_navy", "pastel_mint"]) {
