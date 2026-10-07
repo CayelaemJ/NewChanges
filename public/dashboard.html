@@ -3430,6 +3430,7 @@ function clearEmployerScopedTheme(){
     '--blue','--blue-d','--brand-primary','--brand-primary-raw','--brand-primary-deep','--brand-accent-raw','--ice','--ice-2','--brand-soft',
     '--brand-vivid','--bar-bg','--brand-secondary','--brand-bridge','--brand-accent-soft','--brand-primary-soft',
     '--surface-0','--surface-1','--surface-2','--surface-3','--surface-raised','--surface-subtle','--surface-mix-base','--text-strong','--text-muted','--line-brand',
+    '--partner-primary','--partner-accent','--partner-navy','--product-primary','--product-accent','--system-focus','--system-progress','--cobrand-relation',
     '--brand-grad-1','--brand-grad-2','--brand-grad-3','--brand-grad-4','--brand-grad-5',
     '--chart-engagement','--chart-cashflow','--chart-debt','--chart-insurance','--chart-workforce','--chart-low','--chart-mid','--chart-high',
     '--engagement-color','--cashflow-color','--debt-risk-color','--insurance-color','--eligible-workforce-color','--stress-low-color','--stress-mid-color','--stress-high-color'
@@ -3445,14 +3446,21 @@ function applyEmployerScopedTheme(theme){
   const primary=hex(theme.navyColor||theme.primaryColor||accent);
   const brand={accentColor:accent,primaryColor:hex(theme.primaryColor)||accent,navyColor:primary};
   const scopedMode=document.documentElement.classList.contains('portal-dark')?'dark':'light';
-  const tokens=(window.BrandEngine && BrandEngine.themeTokens) ? BrandEngine.themeTokens(brand,scopedMode) : {
+  const fixerBrand={accentColor:'#0FC79B',primaryColor:'#2B1D73',navyColor:'#2B1D73'};
+  const coBrand=(window.BrandEngine && BrandEngine.coBrandSystem)
+    ? BrandEngine.coBrandSystem(brand,fixerBrand,scopedMode)
+    : null;
+  const tokens=coBrand ? coBrand.tokens : ((window.BrandEngine && BrandEngine.themeTokens) ? BrandEngine.themeTokens(brand,scopedMode) : {
     '--blue':accent,'--blue-d':shade(accent,-18),'--brand-primary':primary,'--brand-primary-deep':shade(primary,-22),
     '--ice':tint(accent,92),'--brand-soft':tint(accent,94),'--brand-vivid':accent,
     '--brand-grad-1':primary,'--brand-grad-2':mix(primary,accent,.45),'--brand-grad-3':accent,
     '--brand-grad-4':mix(accent,'#ffffff',.28),'--brand-grad-5':mix(accent,'#ffffff',.55)
-  };
+  });
   Object.entries(tokens).forEach(([k,v])=>target.style.setProperty(k,String(v)));
-  const chartPalette=complementaryPalette(accent,primary);
+  const chartPalette=coBrand ? coBrand.charts : complementaryPalette(accent,primary);
+  if(coBrand && coBrand.diagnostics){
+    target.dataset.cobrandRelation=coBrand.diagnostics.relation||'';
+  }
   Object.entries(chartPalette).forEach(([k,v])=>target.style.setProperty('--chart-'+k,v));
   target.style.setProperty('--engagement-color','var(--chart-engagement)');
   target.style.setProperty('--cashflow-color','var(--chart-cashflow)');
