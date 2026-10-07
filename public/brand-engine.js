@@ -19,7 +19,7 @@
 })(typeof self !== 'undefined' ? self : globalThis, function () {
   'use strict';
 
-  var ENGINE_VERSION = '1.3.0';
+  var ENGINE_VERSION = '1.4.0';
   var TAU = Math.PI * 2, DEG = 180 / Math.PI;
   var clamp = function (v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; };
 
@@ -438,6 +438,104 @@
   }
 
   /**
+   * Build one coherent UI from two brands.
+   * Lead brand = partner identity. Endorser = The Fixer product DNA.
+   * The partner owns primary interaction/data colours; The Fixer influences
+   * surface temperature, focus/endorsement details and system-status accents.
+   */
+  function coBrandSystem(lead, endorser, mode) {
+    lead = lead || {};
+    endorser = endorser || { primaryColor:'2B1D73', accentColor:'0FC79B', navyColor:'2B1D73' };
+    mode = mode === 'dark' ? 'dark' : 'light';
+
+    function clean(v, fallback) {
+      v = String(v || fallback || '').replace(/^#/,'').toUpperCase();
+      return parseHex(v) ? v : String(fallback || '2B1D73').replace(/^#/,'').toUpperCase();
+    }
+    function circularHueMix(a,b,weightB) {
+      var ar=a*Math.PI/180, br=b*Math.PI/180;
+      var x=(1-weightB)*Math.cos(ar)+weightB*Math.cos(br);
+      var y=(1-weightB)*Math.sin(ar)+weightB*Math.sin(br);
+      var h=Math.atan2(y,x)*180/Math.PI;
+      return (h+360)%360;
+    }
+
+    var lp=clean(lead.primaryColor || lead.navyColor,'2B1D73');
+    var la=clean(lead.accentColor || lead.primaryColor,lp);
+    var ln=clean(lead.navyColor || lead.primaryColor,lp);
+    var ep=clean(endorser.primaryColor || endorser.navyColor,'2B1D73');
+    var ea=clean(endorser.accentColor || endorser.primaryColor,'0FC79B');
+
+    var Lp=hexToLch(lp), La=hexToLch(la), Ep=hexToLch(ep), Ea=hexToLch(ea);
+    var distances=[
+      hueDist(Lp.h,Ep.h),hueDist(Lp.h,Ea.h),
+      hueDist(La.h,Ep.h),hueDist(La.h,Ea.h)
+    ];
+    var closest=Math.min.apply(null,distances);
+    var relation=closest<16?'overlapping':closest<42?'analogous':closest<105?'separated':closest<155?'complementary':'opposed';
+
+    // Neutral hue is mostly partner-owned, with a subtle Fixer undertone so
+    // surfaces feel like one product instead of a skinned third-party portal.
+    var neutralHue=circularHueMix(Lp.h,Ep.h,0.16);
+    var neutralC=Math.min(0.020,Math.max(0.006,(Lp.C+Ep.C)*0.055));
+
+    var base=themeTokens({primaryColor:lp,accentColor:la,navyColor:ln},mode);
+    var charts=deriveChartPalette({primaryColor:lp,accentColor:la,navyColor:ln});
+
+    if(mode==='light'){
+      base['--surface-0']='#FFFFFF';
+      base['--surface-1']='#'+lch(0.985,neutralC*0.65,neutralHue);
+      base['--surface-2']='#'+lch(0.957,neutralC,neutralHue);
+      base['--surface-3']='#'+lch(0.920,neutralC*1.25,neutralHue);
+      base['--surface-raised']='#FFFFFF';
+      base['--surface-mix-base']='#FFFFFF';
+      base['--line-brand']='#'+lch(0.875,neutralC*1.25,neutralHue);
+    }else{
+      base['--surface-0']='#'+lch(0.145,neutralC*0.70,neutralHue);
+      base['--surface-1']='#'+lch(0.195,neutralC*0.90,neutralHue);
+      base['--surface-2']='#'+lch(0.238,neutralC*1.05,neutralHue);
+      base['--surface-3']='#'+lch(0.285,neutralC*1.15,neutralHue);
+      base['--surface-raised']=base['--surface-2'];
+      base['--surface-mix-base']=base['--surface-1'];
+      base['--line-brand']='#'+lch(0.335,neutralC*1.20,neutralHue);
+    }
+
+    // Product DNA: The Fixer endorsement remains visible without taking over
+    // the partner's buttons or charts.
+    var surface=String(base['--surface-1'] || (mode==='dark'?'#20202A':'#FFFFFF')).replace(/^#/,'');
+    var productAccent=ensureContrast(ea,surface,3.0);
+    var productPrimary=ensureContrast(ep,surface,3.0);
+    if(hueDist(La.h,Ea.h)<18){
+      productAccent=lch(mode==='dark'?0.72:0.43,Math.min(Math.max(Ea.C*0.72,0.055),0.13),Ea.h);
+      productAccent=ensureContrast(productAccent,surface,3.0);
+    }
+
+    base['--partner-primary']='#'+lp;
+    base['--partner-accent']='#'+la;
+    base['--partner-navy']='#'+ln;
+    base['--product-primary']='#'+productPrimary;
+    base['--product-accent']='#'+productAccent;
+    base['--system-focus']='#'+productAccent;
+    base['--system-progress']='#'+productAccent;
+    base['--cobrand-relation']=relation;
+
+    // Keep data partner-led. The Fixer gets one quiet system/endorsement role,
+    // not a forced chart slice.
+    return {
+      tokens:base,
+      charts:charts,
+      diagnostics:{
+        relation:relation,
+        closestHueDistance:Math.round(closest*10)/10,
+        leadPrimary:'#'+lp,
+        leadAccent:'#'+la,
+        endorserPrimary:'#'+ep,
+        endorserAccent:'#'+ea
+      }
+    };
+  }
+
+  /**
    * Browser controller: owns the <html> inline custom properties and re-renders whenever the
    * page toggles the `portal-dark` class, so light/dark always derive from the same brand.
    *   set({ brand, light, charts })
@@ -474,7 +572,7 @@
   function forDark(hex, surfaceHex) { return '#' + ensureContrast(String(hex).replace(/^#/, ''), String(surfaceHex).replace(/^#/, ''), 3.2); }
 
   return {
-    VERSION: ENGINE_VERSION, analyzePixels: analyzePixels, extractFromImage: extractFromImage, deriveChartPalette: deriveChartPalette, themeTokens: themeTokens, themeController: themeController, forDark: forDark,
+    VERSION: ENGINE_VERSION, analyzePixels: analyzePixels, extractFromImage: extractFromImage, deriveChartPalette: deriveChartPalette, coBrandSystem: coBrandSystem, themeTokens: themeTokens, themeController: themeController, forDark: forDark,
     contrast: contrast, ensureContrast: ensureContrast, mixHex: mixHex, hexToLch: hexToLch, lch: lch, luminance: luminance
   };
 });
