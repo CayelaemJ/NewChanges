@@ -5,7 +5,7 @@ const BE = globalThis.BrandEngine;
 const load = (n) => { const j = JSON.parse(readFileSync(new URL(`./fixtures/${n}.json`, import.meta.url))); return BE.analyzePixels(Buffer.from(j.data, "base64"), j.w, j.h); };
 const hue = (hex) => BE.hexToLch(hex).h, hd = (a, b) => { const d = Math.abs(a - b) % 360; return d > 180 ? 360 - d : d; };
 let pass = 0; const ok = (c, m) => { assert.ok(c, m); pass++; };
-ok(BE.VERSION === "1.2.0", "brand engine exposes a version for MLOps telemetry");
+ok(BE.VERSION === "1.3.0", "brand engine exposes a version for MLOps telemetry");
 
 // every result: valid hex, WCAG targets met
 for (const n of ["teal_orange_transparent", "red_on_white", "mono_black", "navy_gold_aa", "tiny_purple", "white_yellow_on_navy", "pastel_mint"]) {
@@ -64,7 +64,7 @@ for (const th of [{accentColor:"009DA5",primaryColor:"FF8000",navyColor:"0B3C40"
 // theme tokens
 for (const th of [{ accentColor: "009DA5", primaryColor: "FF8000", navyColor: "0B3C40" }, { accentColor: "B15BE8", navyColor: "330A36" }, { accentColor: "FFC800", navyColor: "0C235A" }, {}]) {
   const L = BE.themeTokens(th, "light"), D = BE.themeTokens(th, "dark");
-  for (const k of ["--brand-secondary","--brand-bridge","--brand-accent-soft","--brand-primary-soft","--surface-brand","--line-brand"]) {
+  for (const k of ["--brand-secondary","--brand-bridge","--brand-accent-soft","--brand-primary-soft","--surface-brand","--line-brand","--surface-0","--surface-1","--surface-2","--surface-3","--surface-raised","--surface-subtle","--surface-mix-base","--text-strong","--text-muted"]) {
     ok(/^#[0-9A-F]{6}$/i.test(L[k]), `light: tonal token ${k} is a valid derived colour`);
     ok(/^#[0-9A-F]{6}$/i.test(D[k]), `dark: tonal token ${k} is a valid derived colour`);
   }
