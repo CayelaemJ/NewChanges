@@ -317,3 +317,113 @@ table tbody tr:hover{background:var(--ice)!important;}
   border-color:color-mix(in srgb,var(--brand-primary) 30%,white)!important;
   background:color-mix(in srgb,var(--brand-primary) 8%,white)!important;
 }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   BRAND ENGINE 2.0 — TONAL COMPOSITION
+   The logo provides anchors; the engine supplies hierarchy, tonal surfaces
+   and a related data family so pages feel art-directed rather than recoloured.
+   ═══════════════════════════════════════════════════════════════ */
+:root{
+  --brand-secondary:var(--brand-primary);
+  --brand-bridge:var(--blue);
+  --brand-accent-soft:var(--ice);
+  --brand-primary-soft:var(--brand-soft);
+  --surface-brand:var(--ent-paper);
+  --line-brand:var(--line);
+}
+
+body{
+  background:
+    radial-gradient(circle at 84% 7%,color-mix(in srgb,var(--brand-accent) 5%,transparent) 0,transparent 24rem),
+    linear-gradient(180deg,color-mix(in srgb,var(--brand-primary) 4%,transparent),transparent 290px),
+    var(--surface-brand,#F8F7FB);
+}
+
+.head-eyebrow{
+  color:var(--brand-bridge)!important;
+}
+.head h1 .emp,.head h1{
+  text-wrap:balance;
+}
+
+.filters{
+  background:color-mix(in srgb,var(--surface-brand) 48%,white)!important;
+  border-color:var(--line-brand)!important;
+}
+.filter-tag,.filter-month{
+  background:color-mix(in srgb,var(--brand-primary-soft) 24%,white)!important;
+}
+.filter-tag:hover,.filter-month:hover{
+  background:color-mix(in srgb,var(--brand-accent-soft) 42%,white)!important;
+  border-color:color-mix(in srgb,var(--brand-bridge) 32%,var(--line))!important;
+}
+
+/* KPI cards use a related family rather than repeating one accent four times. */
+.kpi:nth-child(1)::before,.portal-kpi:nth-child(1)::before{background:var(--chart-engagement)!important;}
+.kpi:nth-child(2)::before,.portal-kpi:nth-child(2)::before{background:var(--chart-cashflow)!important;}
+.kpi:nth-child(3)::before,.portal-kpi:nth-child(3)::before{background:var(--chart-workforce)!important;}
+.kpi:nth-child(4)::before,.portal-kpi:nth-child(4)::before{background:var(--chart-insurance)!important;}
+
+.kpi:nth-child(1) .kpi-ico,.portal-kpi:nth-child(1) .kpi-ico{background:color-mix(in srgb,var(--chart-engagement) 10%,white)!important;color:var(--chart-engagement)!important;}
+.kpi:nth-child(2) .kpi-ico,.portal-kpi:nth-child(2) .kpi-ico{background:color-mix(in srgb,var(--chart-cashflow) 10%,white)!important;color:var(--chart-cashflow)!important;}
+.kpi:nth-child(3) .kpi-ico,.portal-kpi:nth-child(3) .kpi-ico{background:color-mix(in srgb,var(--chart-workforce) 10%,white)!important;color:var(--chart-workforce)!important;}
+.kpi:nth-child(4) .kpi-ico,.portal-kpi:nth-child(4) .kpi-ico{background:color-mix(in srgb,var(--chart-insurance) 10%,white)!important;color:var(--chart-insurance)!important;}
+.kpi:nth-child(1) .kpi-ico svg *{stroke:var(--chart-engagement)!important;}
+.kpi:nth-child(2) .kpi-ico svg *{stroke:var(--chart-cashflow)!important;}
+.kpi:nth-child(3) .kpi-ico svg *{stroke:var(--chart-workforce)!important;}
+.kpi:nth-child(4) .kpi-ico svg *{stroke:var(--chart-insurance)!important;}
+
+/* Editorial bands remain recognisably branded but gain depth from related tones. */
+.exec-band{
+  background:
+    linear-gradient(118deg,
+      var(--brand-primary-deep) 0%,
+      var(--brand-primary) 66%,
+      color-mix(in srgb,var(--brand-primary) 72%,var(--brand-bridge)) 100%)!important;
+}
+.exec-band::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,.025) 48%,transparent 100%);
+  pointer-events:none;
+}
+.opp-foot,.pf-banner{
+  background:
+    linear-gradient(120deg,
+      var(--brand-primary-deep),
+      var(--brand-primary) 70%,
+      color-mix(in srgb,var(--brand-primary) 76%,var(--brand-bridge)))!important;
+}
+
+/* Opportunity cards rotate through the derived brand family. */
+.opp-card:nth-child(1)::after{background:var(--chart-engagement)!important;}
+.opp-card:nth-child(2)::after{background:var(--chart-cashflow)!important;}
+.opp-card:nth-child(3)::after{background:var(--chart-workforce)!important;}
+.opp-card:nth-child(4)::after{background:var(--chart-insurance)!important;}
+.opp-card:nth-child(1) .opp-ico{background:color-mix(in srgb,var(--chart-engagement) 10%,white)!important;color:var(--chart-engagement)!important;}
+.opp-card:nth-child(2) .opp-ico{background:color-mix(in srgb,var(--chart-cashflow) 10%,white)!important;color:var(--chart-cashflow)!important;}
+.opp-card:nth-child(3) .opp-ico{background:color-mix(in srgb,var(--chart-workforce) 10%,white)!important;color:var(--chart-workforce)!important;}
+.opp-card:nth-child(4) .opp-ico{background:color-mix(in srgb,var(--chart-insurance) 10%,white)!important;color:var(--chart-insurance)!important;}
+
+/* Value strips should read as one composition, not four identical cells. */
+.stat-strip .stat-cell:nth-child(1){background:color-mix(in srgb,var(--brand-primary-soft) 32%,white)!important;}
+.stat-strip .stat-cell:nth-child(2){background:color-mix(in srgb,var(--brand-accent-soft) 32%,white)!important;}
+.stat-strip .stat-cell:nth-child(3){background:color-mix(in srgb,var(--surface-brand) 56%,white)!important;}
+.stat-strip .stat-cell:nth-child(4){background:color-mix(in srgb,var(--brand-primary-soft) 18%,white)!important;}
+
+/* Section tags are deliberately quieter than the data itself. */
+.card-tag{
+  background:color-mix(in srgb,var(--brand-primary-soft) 72%,white)!important;
+  color:color-mix(in srgb,var(--brand-primary) 88%,black)!important;
+  border-color:var(--line-brand)!important;
+}
+
+/* Brand accent is expressive, not a universal fill. */
+.exec-pulse,.data-fresh .dot{
+  background:var(--brand-vivid)!important;
+}
+.metric-info{
+  background:color-mix(in srgb,var(--brand-primary-soft) 74%,white)!important;
+}
