@@ -807,7 +807,7 @@
     <img id="welcome-splash-logo" class="welcome-splash-logo efs-brand-logo" src="/static/the-fixer-logo.svg?v=6" alt="The Fixer logo">
     <div class="welcome-splash-spinner"></div>
     <div class="welcome-splash-greeting" id="welcome-splash-greeting">Welcome</div>
-    <div class="welcome-splash-sub">Loading your dashboard…</div>
+    <div class="welcome-splash-sub" id="welcome-splash-sub">The Fixer is getting things ready…</div>
   </div>
 </div>
 <script>setTimeout(function(){var e=document.getElementById('welcome-splash');if(e)e.classList.add('hide');},4500);</script>
@@ -3651,7 +3651,11 @@ function handleWelcomeSplash(me){
   if(already){ el.classList.add('hide'); return; }
   var greet=document.getElementById('welcome-splash-greeting');
   var first=(me.name||'').trim().split(/\s+/)[0]||'there';
-  if(greet) greet.textContent='Hi '+first+' \uD83D\uDC4B';
+  var hour=new Date().getHours();
+  var daypart=hour<12?'Good morning':hour<18?'Good afternoon':'Good evening';
+  if(greet) greet.textContent=daypart+', '+first+' \uD83D\uDC4B';
+  var sub=document.getElementById('welcome-splash-sub');
+  if(sub) sub.textContent='The Fixer hopes you have a good day.';
   var logo=document.getElementById('welcome-splash-logo');
   var privileged=['ADMIN','SUPERADMIN'].includes(String(me?.role||'').toUpperCase());
   if(logo){
@@ -3665,8 +3669,11 @@ function handleWelcomeSplash(me){
       logo.setAttribute('data-custom-logo','1');
     }
   }
-  try{ sessionStorage.setItem('ef_splash_shown','1'); }catch(_){}
-  setTimeout(function(){ el.classList.add('hide'); }, 700);
+  try{
+    sessionStorage.setItem('ef_splash_shown','1');
+    sessionStorage.removeItem('ef_fresh_login');
+  }catch(_){}
+  setTimeout(function(){ el.classList.add('hide'); }, 1400);
 }
 
 function addAuthBar(me){
