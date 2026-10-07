@@ -268,7 +268,7 @@ const $=s=>document.querySelector(s);
 const escHtml=value=>String(value??'').replace(/[&<>\"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[ch]));
 let EMPLOYERS=[], ME=null;
 const UsersBrandTheme=window.BrandEngine?BrandEngine.themeController():null;
-const DEFAULT_PORTAL_BRAND={accentColor:'7D2FA3',primaryColor:'B15BE8',navyColor:'2B1B68'};
+const DEFAULT_PORTAL_BRAND={accentColor:'0FC79B',primaryColor:'0FC79B',navyColor:'2B1D73'};
 function applyUsersBrandTheme(){
   if(!UsersBrandTheme) return;
   UsersBrandTheme.set({brand:DEFAULT_PORTAL_BRAND,light:null});
