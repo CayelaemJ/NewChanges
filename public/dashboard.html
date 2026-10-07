@@ -3375,7 +3375,7 @@ function restoreDefaultPortalIdentity(){
   const partnerBrand=document.getElementById('portal-brand-partner');
   const partnerLogo=document.getElementById('portal-partner-logo');
   if(defaultBrand) defaultBrand.hidden=false;
-  if(partnerBrand) partnerBrand.hidden=true;
+  if(partnerBrand){ partnerBrand.hidden=true; partnerBrand.removeAttribute('data-partner-header-tone'); }
   if(partnerLogo){ partnerLogo.removeAttribute('src'); partnerLogo.removeAttribute('data-custom-logo'); partnerLogo.alt=''; }
   const brandName=document.getElementById('channel-brand-name'); if(brandName) brandName.textContent='';
   document.querySelectorAll('.pdf-brand img').forEach(img=>{
@@ -3407,6 +3407,22 @@ function applyDefaultPortalTheme(){
   root.setProperty('--stress-high-color','var(--chart-high)');
   restoreDefaultPortalIdentity();
 }
+function partnerHeaderTone(theme){
+  const raw=String((theme&& (theme.navyColor||theme.primaryColor||theme.accentColor))||'').replace(/^#/,'');
+  if(!/^[0-9a-fA-F]{6}$/.test(raw)) return 'mid';
+  const r=parseInt(raw.slice(0,2),16)/255,g=parseInt(raw.slice(2,4),16)/255,b=parseInt(raw.slice(4,6),16)/255;
+  const lin=c=>c<=0.03928?c/12.92:Math.pow((c+0.055)/1.055,2.4);
+  const L=.2126*lin(r)+.7152*lin(g)+.0722*lin(b);
+  if(L<0.22) return 'dark';
+  if(L>0.72) return 'light';
+  return 'mid';
+}
+function applyPartnerHeaderLogoMode(theme){
+  const lockup=document.getElementById('portal-brand-partner');
+  if(!lockup) return;
+  lockup.setAttribute('data-partner-header-tone',partnerHeaderTone(theme));
+}
+
 function clearEmployerScopedTheme(){
   const target=document.getElementById('employer-view');
   if(!target) return;
@@ -3505,6 +3521,7 @@ function applyTheme(theme, user){
   const partnerBrand=document.getElementById('portal-brand-partner');
   const partnerLogo=document.getElementById('portal-partner-logo');
   if(theme.logoDataUrl){
+    applyPartnerHeaderLogoMode(theme);
     if(defaultBrand) defaultBrand.hidden=true;
     if(partnerBrand) partnerBrand.hidden=false;
     if(partnerLogo){
