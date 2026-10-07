@@ -201,7 +201,7 @@ button[aria-busy="true"]{opacity:.75;cursor:progress}
    correct for the built-in (dark) empower-fin wordmark. A white plate keeps any
    uploaded logo legible on the dark brand bar. */
 .topbar img[data-custom-logo],.pub-header img[data-custom-logo],.auth-side img[data-custom-logo]{
-  filter:none!important;opacity:1!important;background:#fff;padding:4px 10px;border-radius:4px;
+  filter:none!important;opacity:1!important;background:transparent!important;padding:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;
   height:34px;width:auto;max-width:200px;object-fit:contain}
 html .welcome-splash-logo[data-custom-logo]{filter:none!important}
 
