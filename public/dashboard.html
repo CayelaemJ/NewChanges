@@ -3366,15 +3366,60 @@ function applyDefaultPortalTheme(){
   root.setProperty('--stress-high-color','var(--chart-high)');
   restoreDefaultPortalIdentity();
 }
+function clearEmployerScopedTheme(){
+  const target=document.getElementById('employer-view');
+  if(!target) return;
+  const keys=[
+    '--blue','--blue-d','--brand-primary','--brand-primary-deep','--ice','--ice-2','--brand-soft',
+    '--brand-vivid','--bar-bg','--brand-grad-1','--brand-grad-2','--brand-grad-3','--brand-grad-4','--brand-grad-5',
+    '--chart-engagement','--chart-cashflow','--chart-debt','--chart-insurance','--chart-workforce','--chart-low','--chart-mid','--chart-high',
+    '--engagement-color','--cashflow-color','--debt-risk-color','--insurance-color','--eligible-workforce-color','--stress-low-color','--stress-mid-color','--stress-high-color'
+  ];
+  keys.forEach(k=>target.style.removeProperty(k));
+  target.removeAttribute('data-partner-theme');
+}
+function applyEmployerScopedTheme(theme){
+  const target=document.getElementById('employer-view');
+  if(!target || !theme || theme.branded===false){ clearEmployerScopedTheme(); return; }
+  const hex=c=>c?('#'+String(c).replace(/^#/,'')):null;
+  const accent=hex(theme.accentColor||theme.primaryColor||'#0FC79B');
+  const primary=hex(theme.navyColor||theme.primaryColor||accent);
+  const brand={accentColor:accent,primaryColor:hex(theme.primaryColor)||accent,navyColor:primary};
+  const tokens=(window.BrandEngine && BrandEngine.themeTokens) ? BrandEngine.themeTokens(brand,'light') : {
+    '--blue':accent,'--blue-d':shade(accent,-18),'--brand-primary':primary,'--brand-primary-deep':shade(primary,-22),
+    '--ice':tint(accent,92),'--brand-soft':tint(accent,94),'--brand-vivid':accent,
+    '--brand-grad-1':primary,'--brand-grad-2':mix(primary,accent,.45),'--brand-grad-3':accent,
+    '--brand-grad-4':mix(accent,'#ffffff',.28),'--brand-grad-5':mix(accent,'#ffffff',.55)
+  };
+  Object.entries(tokens).forEach(([k,v])=>target.style.setProperty(k,String(v)));
+  const chartPalette=complementaryPalette(accent,primary);
+  Object.entries(chartPalette).forEach(([k,v])=>target.style.setProperty('--chart-'+k,v));
+  target.style.setProperty('--engagement-color','var(--chart-engagement)');
+  target.style.setProperty('--cashflow-color','var(--chart-cashflow)');
+  target.style.setProperty('--debt-risk-color','var(--chart-debt)');
+  target.style.setProperty('--insurance-color','var(--chart-insurance)');
+  target.style.setProperty('--eligible-workforce-color','var(--chart-workforce)');
+  target.style.setProperty('--stress-low-color','var(--chart-low)');
+  target.style.setProperty('--stress-mid-color','var(--chart-mid)');
+  target.style.setProperty('--stress-high-color','var(--chart-high)');
+  target.setAttribute('data-partner-theme','1');
+}
 function applyTheme(theme, user){
   const root=document.documentElement.style;
   const privileged=user && ['ADMIN','SUPERADMIN'].includes(String(user.role||'').toUpperCase());
-  // No selected partner/employer brand means the original empower-fin design.
-  // Admin/Superadmin control-plane screens also keep that original palette.
-  if(privileged || !theme || theme.branded===false){
+  // Admin/Superadmin keep the EFS/The Fixer shell, but the selected employer
+  // dashboard is allowed to render with that employer's partner branding.
+  if(privileged){
+    applyDefaultPortalTheme();
+    applyEmployerScopedTheme(theme);
+    return;
+  }
+  if(!theme || theme.branded===false){
+    clearEmployerScopedTheme();
     applyDefaultPortalTheme();
     return;
   }
+  clearEmployerScopedTheme();
 
   const hex=c=>c?('#'+String(c).replace(/^#/,'')):null;
   const baseName='empower-fin Dashboard Portal';
