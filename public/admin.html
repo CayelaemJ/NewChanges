@@ -1424,7 +1424,7 @@ function previewLogo(p){
     : `<div class="cp-logo" style="display:grid;place-items:center;background:${previewHex(p.accentColor,'B15BE8')};color:#fff;font-size:11px;font-weight:800;">${(p.displayName||p.name||'?').slice(0,2).toUpperCase()}</div>`;
 }
 function openClientPreview(id){
-  const p=partners.find(x=>String(x.id)===String(id)); if(!p) return;
+  const p=PARTNERS.find(x=>String(x.id)===String(id)); if(!p) return;
   const app=$('#client-preview-app'); if(!app) return;
   const name=esc(p.displayName||p.name||'Partner');
   const partnerLabel=esc(p.displayName||p.name||'Partner');
@@ -1552,8 +1552,8 @@ function openClientPreview(id){
       </div>
     </div>`;
 
-  const pv=previewVars(p);
-  Object.entries(pv.vars).forEach(([key,value])=>app.style.setProperty(key,value));
+  app.dataset.partnerId=String(p.id);
+  applyClientPreviewTheme(p);
   $('#client-preview-title').textContent=`${name} · dashboard preview`;
   $('#client-preview-overlay').classList.add('is-open');
   document.body.style.overflow='hidden';
@@ -1561,7 +1561,9 @@ function openClientPreview(id){
 
 function closeClientPreview(event){
   if(event && event.target!==$('#client-preview-overlay')) return;
-  $('#client-preview-overlay').classList.remove('is-open'); document.body.style.overflow='';
+  $('#client-preview-overlay').classList.remove('is-open');
+  const app=$('#client-preview-app'); if(app) delete app.dataset.partnerId;
+  document.body.style.overflow='';
 }
 if(typeof MutationObserver!=='undefined'){
   new MutationObserver(()=>{
