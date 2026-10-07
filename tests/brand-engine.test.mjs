@@ -39,12 +39,18 @@ r = load("pastel_mint"); ok(BE.contrast(BE.themeTokens(r,"light")["--blue"], "FF
   // synthetic fixture filled the entire perimeter violet, so background
   // detection quite reasonably stripped the structural colour as a backdrop.
   const w=120,h=60,p=Buffer.alloc(w*h*4);
-  for(let y=8;y<h-8;y++){
-    for(let x=8;x<w-8;x++){
-      const i=y*w+x;
-      const mint=((x+y*3)%13===0); // ~7.7% vivid accent within the artwork
-      const o=i*4, c=mint?[0x0F,0xC7,0x9B]:[0x2B,0x1D,0x73];
-      p[o]=c[0];p[o+1]=c[1];p[o+2]=c[2];p[o+3]=255;
+  // Large violet wordmark body.
+  for(let y=10;y<50;y++){
+    for(let x=8;x<104;x++){
+      const i=y*w+x,o=i*4;
+      p[o]=0x2B;p[o+1]=0x1D;p[o+2]=0x73;p[o+3]=255;
+    }
+  }
+  // Distinct mint accent, matching the real logo's separate bar/full-stop role.
+  for(let y=18;y<42;y++){
+    for(let x=104;x<114;x++){
+      const i=y*w+x,o=i*4;
+      p[o]=0x0F;p[o+1]=0xC7;p[o+2]=0x9B;p[o+3]=255;
     }
   }
   const fx=BE.analyzePixels(p,w,h);
