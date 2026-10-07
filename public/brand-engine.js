@@ -290,11 +290,31 @@
     if (mode !== 'dark') {
       var a = ensureContrast(accent, 'FFFFFF', 4.5), n = ensureContrast(navy, 'FFFFFF', 7);
       var aL = hexToLch(a);
+      var P = hexToLch(second), midHue;
+      var dh = ((A.h - P.h + 540) % 360) - 180;
+      midHue = (P.h + dh * 0.48 + 360) % 360;
+      var bridge = lch(0.50, Math.min(Math.max((A.C + P.C) * 0.42, 0.045), 0.12), midHue);
+      var secondary = lch(clamp(P.L + 0.12, 0.38, 0.62), Math.min(Math.max(P.C * 0.72, 0.04), 0.12), (P.h + (dh >= 0 ? 12 : -12) + 360) % 360);
+      var accentSoft = lch(0.965, Math.min(A.C * 0.22, 0.035), A.h);
+      var primarySoft = lch(0.962, Math.min(P.C * 0.20, 0.035), P.h);
+      var surfaceBrand = lch(0.985, Math.min(P.C * 0.10, 0.018), P.h);
+      var lineBrand = lch(0.89, Math.min(P.C * 0.22, 0.035), P.h);
+
       t['--blue'] = pound(a); t['--blue-d'] = pound(lch(aL.L - 0.08, aL.C, aL.h));
       t['--brand-primary'] = pound(n); t['--brand-primary-deep'] = pound(lch(hexToLch(n).L - 0.07, hexToLch(n).C, hexToLch(n).h));
-      t['--ice'] = pound(lch(0.955, Math.min(A.C * 0.22, 0.04), A.h)); t['--brand-soft'] = pound(lch(0.972, Math.min(A.C * 0.16, 0.03), A.h));
-      t['--brand-grad-1'] = pound(n); t['--brand-grad-2'] = pound(n); t['--brand-grad-3'] = pound(a); t['--brand-grad-4'] = pound(a); t['--brand-grad-5'] = pound(a);
-      t['--bar-bg'] = pound(n); t['--ent-paper'] = '#f6f4fb'; t['--brand-vivid'] = pound(accent);
+      t['--brand-secondary'] = pound(secondary);
+      t['--brand-bridge'] = pound(bridge);
+      t['--brand-accent-soft'] = pound(accentSoft);
+      t['--brand-primary-soft'] = pound(primarySoft);
+      t['--surface-brand'] = pound(surfaceBrand);
+      t['--line-brand'] = pound(lineBrand);
+      t['--ice'] = pound(accentSoft); t['--brand-soft'] = pound(primarySoft);
+      t['--brand-grad-1'] = pound(n);
+      t['--brand-grad-2'] = pound(mixHex(n, secondary.replace(/^#/,''), 0.35));
+      t['--brand-grad-3'] = pound(bridge);
+      t['--brand-grad-4'] = pound(a);
+      t['--brand-grad-5'] = pound(accent);
+      t['--bar-bg'] = pound(n); t['--ent-paper'] = pound(surfaceBrand); t['--brand-vivid'] = pound(accent);
       Object.keys(LIGHT_STATIC).forEach(function (k) { t[k] = LIGHT_STATIC[k]; });
       return t;
     }
@@ -319,8 +339,17 @@
     t['--dm-loading-ink'] = pound(loadingInk); t['--dm-loading-muted'] = pound(loadingMuted);
     t['--white'] = pound(surf); t['--ent-paper'] = pound(bg); t['--ink'] = pound(ink); t['--grey'] = pound(grey); t['--grey-l'] = pound(greyL);
     t['--line'] = pound(line); t['--line-soft'] = pound(lineSoft); t['--ice'] = pound(ice); t['--ice-2'] = pound(surf2); t['--brand-soft'] = pound(surf2);
+    var darkSecondary = lch(0.62, Math.min(Math.max(N.C * 0.55, 0.035), 0.09), (N.h + 14) % 360);
+    var darkBridgeHue = (N.h + ((((A.h - N.h + 540) % 360) - 180) * 0.5) + 360) % 360;
+    var darkBridge = lch(0.60, Math.min(Math.max((N.C + A.C) * 0.32, 0.035), 0.09), darkBridgeHue);
     t['--blue'] = pound(acc); t['--blue-d'] = pound(lch(Math.min(accL.L + 0.07, 0.92), accL.C, accL.h));
     t['--brand-primary'] = pound(head); t['--brand-primary-deep'] = pound(bar); t['--bar-bg'] = pound(bar); t['--brand-vivid'] = pound(ensureContrast(accent, bar, 3));
+    t['--brand-secondary'] = pound(darkSecondary);
+    t['--brand-bridge'] = pound(darkBridge);
+    t['--brand-accent-soft'] = pound(lch(0.31, Math.min(A.C * 0.30, 0.05), A.h));
+    t['--brand-primary-soft'] = pound(lch(0.29, Math.min(N.C * 0.28, 0.05), N.h));
+    t['--surface-brand'] = pound(surf);
+    t['--line-brand'] = pound(line);
     t['--dm-on-accent'] = contrast('FFFFFF', acc) >= 4.5 ? '#ffffff' : '#0b0f19';
     t['--brand-grad-1'] = pound(bar); t['--brand-grad-2'] = pound(bar); t['--brand-grad-3'] = pound(acc); t['--brand-grad-4'] = pound(acc); t['--brand-grad-5'] = pound(acc);
     t['--green-soft'] = '#153d2e'; t['--amber-soft'] = '#41321a'; t['--red-soft'] = '#45262a';
@@ -342,21 +371,19 @@
     if (!parseHex(primary)) primary = accent;
     if (!parseHex(navy)) navy = primary;
 
-    // Keep data-series colours recognisably inside the brand family instead of
-    // rotating around the full colour wheel. Status colours stay semantic.
     var p = hexToLch(primary), a = hexToLch(accent);
+    var delta = ((a.h - p.h + 540) % 360) - 180;
+    var bridgeHue = (p.h + delta * 0.48 + 360) % 360;
+    var pNeighbor = (p.h + (delta >= 0 ? 18 : -18) + 360) % 360;
+    var aNeighbor = (a.h + (delta >= 0 ? -18 : 18) + 360) % 360;
+
+    // Five data colours: two anchor colours, two near-neighbours and one bridge.
+    // This feels authored from the logo rather than like a rainbow or a two-colour loop.
     var engagement = ensureContrast(primary, 'FFFFFF', 3.4);
     var cashflow = ensureContrast(accent, 'FFFFFF', 3.4);
-    var debt = ensureContrast(mixHex(navy, '607486', 0.42), 'FFFFFF', 3.4);
-    var insurance = ensureContrast(lch(clamp(p.L + 0.11, 0.34, 0.68), Math.max(0.045, p.C * 0.72), (p.h + 14) % 360), 'FFFFFF', 3.4);
-    var workforce = ensureContrast(mixHex(primary, accent, 0.46), 'FFFFFF', 3.4);
-
-    // If primary/accent are too similar, open up the secondary series slightly
-    // while keeping them adjacent to the brand hues rather than inventing a rainbow.
-    if (hueDist(p.h, a.h) < 28) {
-      insurance = ensureContrast(lch(0.50, Math.max(p.C, 0.07), (p.h + 32) % 360), 'FFFFFF', 3.4);
-      workforce = ensureContrast(lch(0.48, Math.max(a.C, 0.07), (a.h - 28 + 360) % 360), 'FFFFFF', 3.4);
-    }
+    var debt = ensureContrast(lch(0.50, Math.min(Math.max(p.C * 0.58, 0.045), 0.11), pNeighbor), 'FFFFFF', 3.4);
+    var insurance = ensureContrast(lch(0.52, Math.min(Math.max(a.C * 0.52, 0.045), 0.11), aNeighbor), 'FFFFFF', 3.4);
+    var workforce = ensureContrast(lch(0.48, Math.min(Math.max((p.C + a.C) * 0.38, 0.05), 0.11), bridgeHue), 'FFFFFF', 3.4);
 
     return {
       engagement:'#' + engagement,
