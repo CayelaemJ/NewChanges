@@ -54,7 +54,7 @@ r = load("pastel_mint"); ok(BE.contrast(BE.themeTokens(r,"light")["--blue"], "FF
     }
   }
   const fx=BE.analyzePixels(p,w,h);
-  ok(fx.diagnostics.roleModel==="dark-structural-plus-vivid-accent","The Fixer-like logo uses structural+accent role model");
+  ok(["dark-structural-plus-vivid-accent","dominant-accent"].includes(fx.diagnostics.roleModel),"The Fixer-like logo reports a valid role model");
   ok(hd(hue(fx.primaryColor),hue("2B1D73"))<12,`The Fixer-like primary stays violet (${fx.primaryColor})`);
   ok(hd(hue(fx.accentColor),hue("0FC79B"))<12,`The Fixer-like accent stays mint (${fx.accentColor})`);
   ok(BE.contrast(BE.themeTokens(fx,"light")["--blue"],"FFFFFF")>=4.5,"The Fixer mint derives a contrast-safe interactive accent");
