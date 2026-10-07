@@ -19,7 +19,7 @@
 })(typeof self !== 'undefined' ? self : globalThis, function () {
   'use strict';
 
-  var ENGINE_VERSION = '1.1.0';
+  var ENGINE_VERSION = '1.2.0';
   var TAU = Math.PI * 2, DEG = 180 / Math.PI;
   var clamp = function (v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; };
 
