@@ -804,7 +804,7 @@
 <!-- ════════════════════════ WELCOME SPLASH ════════════════════════ -->
 <div id="welcome-splash">
   <div class="welcome-splash-inner">
-    <img id="welcome-splash-logo" class="welcome-splash-logo" src="/static/the-fixer-logo.svg" alt="The Fixer logo">
+    <img id="welcome-splash-logo" class="welcome-splash-logo" src="/static/the-fixer-logo.svg" class="efs-brand-logo" alt="The Fixer logo">
     <div class="welcome-splash-spinner"></div>
     <div class="welcome-splash-greeting" id="welcome-splash-greeting">Welcome</div>
     <div class="welcome-splash-sub">Loading your dashboard…</div>
@@ -816,7 +816,7 @@
 <div class="topbar">
   <div class="topbar-inner">
     <div class="logo">
-      <img src="/static/the-fixer-logo.svg" alt="The Fixer" style="height:32px;width:auto;"><span id="channel-brand-name" style="font:800 13px Manrope,sans-serif;color:var(--brand-primary);white-space:nowrap;"></span>
+      <img src="/static/the-fixer-logo.svg" class="efs-brand-logo" alt="The Fixer" style="height:32px;width:auto;"><span id="channel-brand-name" style="font:800 13px Manrope,sans-serif;color:var(--brand-primary);white-space:nowrap;"></span>
     </div>
     <div class="topbar-divider"></div>
     <div class="audience-switch" id="audience-switch">
@@ -836,7 +836,7 @@
 
   <div class="pdf-print-header" aria-hidden="true">
     <div class="pdf-brand">
-      <img src="/static/the-fixer-logo.svg" alt="The Fixer logo">
+      <img src="/static/the-fixer-logo.svg" class="efs-brand-logo" alt="The Fixer logo">
       <div>
         <div class="pdf-kicker">empower-fin · Workforce Financial Wellbeing</div>
         <div class="pdf-title" id="pdf-report-title">Employer Insights</div>
@@ -3367,6 +3367,7 @@ function restoreDefaultPortalIdentity(){
   document.title='empower-fin Dashboard Portal';
 }
 function applyDefaultPortalTheme(){
+  document.documentElement.classList.add('efs-default-brand');
   const root=document.documentElement.style;
   if(BrandTheme){
     BrandTheme.set({brand:DEFAULT_PORTAL_BRAND,light:null,charts:DEFAULT_PORTAL_CHARTS});
@@ -3441,6 +3442,7 @@ function applyTheme(theme, user){
     return;
   }
   clearEmployerScopedTheme();
+  document.documentElement.classList.remove('efs-default-brand');
 
   const hex=c=>c?('#'+String(c).replace(/^#/,'')):null;
   const baseName='empower-fin Dashboard Portal';
