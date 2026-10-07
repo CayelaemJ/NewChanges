@@ -82,11 +82,11 @@ body.auth{display:grid!important;grid-template-columns:minmax(320px,46%) 1fr;min
 /* Sign-in dark mode: keep the split-screen hierarchy, but do not turn
    authentication into a near-black interstitial. Login defines these tokens;
    fallbacks keep other auth surfaces safe if they are ever reused. */
-html[data-theme="dark"] body.auth{background:var(--auth-dark-shell,#393440)!important}
+html[data-theme="dark"] body.auth{background:var(--auth-dark-shell,#141226)!important}
 html[data-theme="dark"] .auth-main{
   background:
     radial-gradient(760px 460px at 72% 8%,color-mix(in srgb,var(--ent-brass) 8%,transparent),transparent 66%),
-    var(--auth-dark-shell,#393440)!important
+    var(--auth-dark-shell,#141226)!important
 }
 html[data-theme="dark"] .auth-side{
   background:linear-gradient(165deg,
@@ -97,14 +97,14 @@ html[data-theme="dark"] .auth-side p{color:#e1d9e8!important}
 html[data-theme="dark"] .auth-side ul{color:#eee8f2!important}
 html[data-theme="dark"] .auth-side small{color:#c9bdd6!important}
 html[data-theme="dark"] .auth-main .card{
-  background:var(--auth-dark-surface,#4a4351)!important;
-  border-color:var(--auth-dark-line,#706679)!important;
+  background:var(--auth-dark-surface,#1E1B33)!important;
+  border-color:var(--auth-dark-line,#3D3856)!important;
   border-top-color:var(--ent-brass)!important;
   box-shadow:0 16px 44px rgba(20,16,24,.20)!important
 }
 html[data-theme="dark"] .auth-main input:not([type=checkbox]):not([type=radio]){
-  background:var(--auth-dark-input,#39343f)!important;
-  border-color:var(--auth-dark-line,#706679)!important;
+  background:var(--auth-dark-input,#17152A)!important;
+  border-color:var(--auth-dark-line,#3D3856)!important;
   color:#fbf9fc!important
 }
 html[data-theme="dark"] .auth-main input::placeholder{color:#aaa1b1!important}
