@@ -17,6 +17,7 @@ type Me = {
 type BrandEngine = {
   themeController: () => { set: (options: { brand?: { accentColor?: string; primaryColor?: string; navyColor?: string }; light?: "engine" | null; charts?: Record<string,string> }) => void };
   deriveChartPalette: (theme: { accentColor?: string; primaryColor?: string; navyColor?: string }) => Record<string,string>;
+  themeTokens: (theme: { accentColor?: string; primaryColor?: string; navyColor?: string }, mode: "light"|"dark") => Record<string,string>;
 };
 declare global { interface Window { BrandEngine?: BrandEngine } }
 
@@ -185,15 +186,12 @@ function DashboardView({me}:{me:Me}) {
   const contentPrimary=normaliseHex(contentTheme.primaryColor,brandPrimary);
   const contentNavy=normaliseHex(contentTheme.navyColor,brandNavy);
   const contentAccent=normaliseHex(contentTheme.accentColor,brandAccent);
-  const contentCharts=window.BrandEngine?.deriveChartPalette({accentColor:contentAccent,primaryColor:contentPrimary,navyColor:contentNavy}) ?? {};
+  const contentBrand={accentColor:contentAccent,primaryColor:contentPrimary,navyColor:contentNavy};
+  const contentCharts=window.BrandEngine?.deriveChartPalette(contentBrand) ?? {};
+  const contentTokens=window.BrandEngine?.themeTokens(contentBrand,darkMode?"dark":"light") ?? {};
   const contentThemeStyle: CSSProperties = {
-    "--brand-primary":contentNavy,
-    "--brand-primary-deep":contentNavy,
+    ...contentTokens,
     "--brand-navy":contentNavy,
-    "--brand-accent":contentAccent,
-    "--brand-vivid":contentAccent,
-    "--blue":contentAccent,
-    "--blue-d":contentPrimary,
     ...Object.fromEntries(Object.entries(contentCharts).map(([key,value])=>[`--chart-${key.replace(/^--chart-/,"")}`,value]))
   } as CSSProperties;
 
