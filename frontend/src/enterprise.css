@@ -2999,3 +2999,61 @@ html.efs-default-brand:not(.portal-dark) .dashboard-shell{
     padding-inline:12px!important;
   }
 }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   PARTNER-LED CO-BRANDING — REACT
+   ═══════════════════════════════════════════════════════════════ */
+.dashboard-shell .portal-brand-lockup{display:flex;align-items:center;min-width:0;}
+.dashboard-shell .portal-brand-default,
+.dashboard-shell .portal-brand-partner{align-items:center;}
+.dashboard-shell .portal-brand-default{display:flex;}
+.dashboard-shell .portal-brand-partner{display:flex;gap:12px;}
+.dashboard-shell .portal-partner-mark{display:flex;align-items:center;min-width:0;}
+.dashboard-shell .portal-partner-mark img{
+  display:block;
+  max-height:34px;
+  max-width:150px;
+  width:auto;
+  height:auto;
+  object-fit:contain;
+  filter:none!important;
+}
+.dashboard-shell .portal-cobrand-rule{width:1px;height:32px;background:#2B1D73;flex:0 0 auto;}
+.dashboard-shell .portal-powered-by{
+  font:700 9.5px 'Manrope',sans-serif;
+  letter-spacing:.04em;
+  white-space:nowrap;
+  color:rgba(255,255,255,.82);
+}
+.dashboard-shell .portal-fixer-panel{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#fff;
+  padding:10px 12px;
+  min-height:44px;
+  box-sizing:border-box;
+}
+.dashboard-shell .portal-fixer-secondary{
+  width:120px!important;
+  min-width:120px!important;
+  height:auto!important;
+  content:url('/static/the-fixer-logo.svg?v=6')!important;
+  background:transparent!important;
+  border:0!important;
+  padding:0!important;
+  box-shadow:none!important;
+}
+@media(max-width:820px){
+  .dashboard-shell .portal-brand-partner{gap:8px;}
+  .dashboard-shell .portal-powered-by{display:none;}
+  .dashboard-shell .portal-cobrand-rule{height:28px;}
+  .dashboard-shell .portal-fixer-panel{padding:8px 10px;min-height:40px;}
+  .dashboard-shell .portal-partner-mark img{max-width:110px;max-height:30px;}
+}
+@media(max-width:560px){
+  .dashboard-shell .portal-fixer-panel,
+  .dashboard-shell .portal-cobrand-rule{display:none;}
+  .dashboard-shell .portal-partner-mark img{max-width:120px;}
+}
