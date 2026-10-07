@@ -24,7 +24,7 @@ h1,h2,h3,.h-serif{font-family:'Source Serif 4',Georgia,serif!important;font-weig
 .topbar .nav-link{border-radius:3px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;font-size:11px}
 .topbar .nav-link:hover,.topbar .nav-link.active{background:rgba(255,255,255,.08)!important;color:#fff!important}
 .topbar-divider{background:rgba(255,255,255,.18)!important}
-.topbar img{filter:brightness(0) invert(1);opacity:.95}
+.topbar img:not(.efs-brand-logo):not([data-custom-logo]){filter:brightness(0) invert(1);opacity:.95}
 .topbar .nav-emp{background:rgba(255,255,255,.07)!important;border:1px solid rgba(255,255,255,.22)!important;color:#fff!important;border-radius:3px!important}
 .topbar .nav-emp option{color:#101a2b}
 
@@ -62,7 +62,7 @@ body.auth{display:grid!important;grid-template-columns:minmax(320px,46%) 1fr;min
 .auth-side::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(255,255,255,.035) 0 1px,transparent 1px 22px);pointer-events:none}
 .auth-side::after{content:"";position:absolute;left:56px;top:0;width:56px;height:4px;background:var(--ent-brass)}
 .auth-side>*{position:relative}
-.auth-side img{height:34px;width:auto;filter:brightness(0) invert(1)}
+.auth-side img{height:34px;width:auto}.auth-side img:not(.efs-brand-logo):not([data-custom-logo]){filter:brightness(0) invert(1)}
 .auth-side h2{font-size:36px;line-height:1.15;color:#fff!important;max-width:14em;margin-bottom:18px}
 .auth-side p{color:#cdc4ea;font-size:15px;max-width:30em}
 .auth-side ul{list-style:none;margin-top:32px;display:grid;gap:12px;color:#e4def6;font-size:13.5px}
@@ -136,7 +136,7 @@ button.btn.btn-primary:hover,.btn.btn-primary:hover{background:var(--ent-navy-2)
 .sticky-cta{display:none}
 .pub-header{background:var(--ent-navy);box-shadow:inset 0 -3px 0 var(--ent-brass);color:#fff}
 .pub-header .in{max-width:1040px;margin:0 auto;padding:0 24px;height:64px;display:flex;align-items:center;justify-content:space-between;gap:16px}
-.pub-header img{height:28px;width:auto;filter:brightness(0) invert(1)}
+.pub-header img{height:28px;width:auto}.pub-header img:not(.efs-brand-logo):not([data-custom-logo]){filter:brightness(0) invert(1)}
 .pub-header nav{display:flex;gap:6px;align-items:center}
 .pub-header nav a{color:#ddd5f3;text-decoration:none;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;padding:8px 10px;border-radius:3px}
 .pub-header nav a:hover{background:rgba(255,255,255,.1);color:#fff}
