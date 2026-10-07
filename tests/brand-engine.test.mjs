@@ -35,11 +35,17 @@ r = load("pastel_mint"); ok(BE.contrast(BE.themeTokens(r,"light")["--blue"], "FF
 // The Fixer-style role model: a large dark structural colour plus a smaller
 // bright accent must map to primary/navy + accent rather than being reversed.
 {
-  const w=100,h=100,p=Buffer.alloc(w*h*4);
-  for(let i=0;i<w*h;i++){
-    const mint=(i%12===0); // ~8.3% accent, distributed so perimeter is not a flat background
-    const o=i*4, c=mint?[0x0F,0xC7,0x9B]:[0x2B,0x1D,0x73];
-    p[o]=c[0];p[o+1]=c[1];p[o+2]=c[2];p[o+3]=255;
+  // Transparent perimeter mirrors the supplied SVG/PNG artwork. The previous
+  // synthetic fixture filled the entire perimeter violet, so background
+  // detection quite reasonably stripped the structural colour as a backdrop.
+  const w=120,h=60,p=Buffer.alloc(w*h*4);
+  for(let y=8;y<h-8;y++){
+    for(let x=8;x<w-8;x++){
+      const i=y*w+x;
+      const mint=((x+y*3)%13===0); // ~7.7% vivid accent within the artwork
+      const o=i*4, c=mint?[0x0F,0xC7,0x9B]:[0x2B,0x1D,0x73];
+      p[o]=c[0];p[o+1]=c[1];p[o+2]=c[2];p[o+3]=255;
+    }
   }
   const fx=BE.analyzePixels(p,w,h);
   ok(fx.diagnostics.roleModel==="dark-structural-plus-vivid-accent","The Fixer-like logo uses structural+accent role model");
