@@ -3509,11 +3509,16 @@ function applyTheme(theme, user){
     root.setProperty('--brand-grad-4', mix(accent,'#ffffff',.28));
     root.setProperty('--brand-grad-5', mix(accent,'#ffffff',.55));
   }
-  const chartPalette = complementaryPalette(accent, primary);
+  const partnerBrand={ accentColor:accent, primaryColor:hex(theme.primaryColor)||accent, navyColor:primary };
+  const fixerBrand={ accentColor:'#0FC79B', primaryColor:'#2B1D73', navyColor:'#2B1D73' };
+  const coBrand=(window.BrandEngine && BrandEngine.coBrandSystem)
+    ? BrandEngine.coBrandSystem(partnerBrand,fixerBrand,document.documentElement.classList.contains('portal-dark')?'dark':'light')
+    : null;
+  const chartPalette = coBrand ? coBrand.charts : complementaryPalette(accent, primary);
   if(BrandTheme){
-    const charts={}; Object.entries(chartPalette).forEach(([k,v])=>{ charts['--chart-'+k]=v; });
-    BrandTheme.set({ brand:{ accentColor:accent, primaryColor:hex(theme.primaryColor)||accent, navyColor:primary }, light:'engine', charts });
+    BrandTheme.set({ brand:partnerBrand, endorser:fixerBrand, coBrand:true, light:'engine', charts:{} });
   } else {
+    if(coBrand) Object.entries(coBrand.tokens).forEach(([key,value])=>root.setProperty(key,String(value)));
     Object.entries(chartPalette).forEach(([key,value])=>root.setProperty('--chart-'+key,value));
   }
   root.setProperty('--engagement-color','var(--chart-engagement)');
