@@ -2145,3 +2145,380 @@ body{
 .metric-info{
   background:color-mix(in srgb,var(--brand-primary-soft) 74%,white)!important;
 }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   ANALYTIC COMPONENT REDESIGN — richer, less widget-like
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Wellness score becomes an executive diagnostic composition. */
+.wellness-card{
+  overflow:hidden;
+  border-top:0!important;
+  background:
+    linear-gradient(180deg,color-mix(in srgb,var(--brand-primary-soft) 18%,white),white 34%)!important;
+}
+.wellness-card .card-hd{
+  padding:20px 22px 16px;
+}
+.wellness-inner{
+  grid-template-columns:minmax(220px, .75fr) minmax(0, 2.25fr)!important;
+  gap:24px!important;
+  align-items:stretch!important;
+}
+.wellness-left{
+  display:flex!important;
+  flex-direction:column!important;
+  justify-content:center!important;
+  min-height:300px;
+  padding:26px 24px!important;
+  border:1px solid var(--line-brand)!important;
+  border-radius:18px!important;
+  background:
+    radial-gradient(circle at 50% 12%,color-mix(in srgb,var(--brand-vivid) 9%,transparent),transparent 34%),
+    linear-gradient(155deg,color-mix(in srgb,var(--brand-primary-soft) 58%,white),white 68%)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.8);
+}
+.wellness-left svg{
+  width:min(190px,90%)!important;
+  filter:drop-shadow(0 8px 16px color-mix(in srgb,var(--brand-primary) 12%,transparent));
+}
+.wellness-band{
+  margin-top:10px!important;
+  align-self:center;
+}
+.wellness-delta{
+  color:var(--brand-primary)!important;
+}
+.wellness-note{
+  color:var(--grey)!important;
+  max-width:28ch!important;
+}
+.wellness-right{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:14px!important;
+}
+.wd-row{
+  display:flex!important;
+  flex-direction:column!important;
+  gap:14px!important;
+  min-width:0;
+  padding:18px 18px 16px!important;
+  border:1px solid var(--line-brand)!important;
+  border-radius:16px!important;
+  background:
+    linear-gradient(180deg,color-mix(in srgb,var(--driver-color) 7%,white),white 64%)!important;
+  box-shadow:0 8px 24px rgba(29,22,62,.045);
+  position:relative;
+  overflow:hidden;
+}
+.wd-row::before{
+  content:"";
+  position:absolute;
+  inset:0 auto 0 0;
+  width:4px;
+  background:var(--driver-color);
+}
+.wd-row::after{
+  content:"";
+  position:absolute;
+  right:-26px;
+  top:-30px;
+  width:92px;
+  height:92px;
+  border-radius:50%;
+  background:color-mix(in srgb,var(--driver-color) 7%,transparent);
+  pointer-events:none;
+}
+.wd-top{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:16px;
+}
+.wd-name{
+  color:var(--ink)!important;
+  font-size:13.5px!important;
+  line-height:1.25!important;
+  letter-spacing:-.1px;
+}
+.wd-name small{
+  margin-top:5px!important;
+  color:var(--grey-l)!important;
+  line-height:1.35!important;
+}
+.wd-val{
+  flex:0 0 auto;
+  font-family:'Fraunces',serif!important;
+  font-size:29px!important;
+  line-height:.95!important;
+  letter-spacing:-.8px!important;
+  color:var(--driver-color)!important;
+  text-align:right!important;
+}
+.wd-val span{
+  display:block;
+  margin-top:4px;
+  font-family:'Manrope',sans-serif;
+  font-size:8.5px;
+  font-weight:800;
+  letter-spacing:.04em;
+  color:var(--grey-l);
+}
+.wd-track{
+  height:7px!important;
+  background:color-mix(in srgb,var(--driver-color) 9%,white)!important;
+  border-radius:999px!important;
+  overflow:visible!important;
+  position:relative;
+}
+.wd-track::after{
+  content:"";
+  position:absolute;
+  left:50%;
+  top:-3px;
+  width:1px;
+  height:13px;
+  background:color-mix(in srgb,var(--grey-l) 35%,transparent);
+}
+.wd-fill{
+  height:7px!important;
+  border-radius:999px!important;
+  box-shadow:0 0 0 2px color-mix(in srgb,var(--driver-color) 9%,transparent);
+}
+.wd-foot{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+.wd-state{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  font-size:9.5px;
+  font-weight:800;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+  color:var(--driver-state);
+}
+.wd-state i{
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:var(--driver-state);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--driver-state) 12%,transparent);
+}
+.wd-scale{
+  display:flex;
+  gap:15px;
+  color:var(--grey-l);
+  font-size:8px;
+  font-weight:700;
+}
+.wd-scale b{font-weight:700;}
+
+/* KPI row: stronger identity and asymmetry without noisy decoration. */
+.kpi{
+  min-height:164px;
+  padding:19px 19px 17px!important;
+  border-radius:16px!important;
+  background:linear-gradient(145deg,white 58%,color-mix(in srgb,var(--brand-primary-soft) 20%,white))!important;
+}
+.kpi::before{
+  width:3px!important;
+  top:16px!important;
+  bottom:16px!important;
+  left:0!important;
+  border-radius:0 4px 4px 0;
+}
+.kpi-label{
+  font-size:10.5px!important;
+  text-transform:uppercase;
+  letter-spacing:.07em!important;
+  color:var(--grey-l)!important;
+}
+.kpi-value{
+  margin-top:22px;
+  font-size:38px!important;
+}
+.kpi-sub{
+  padding-right:38%;
+  line-height:1.35;
+}
+.kpi-spark{
+  width:42%!important;
+  height:62px!important;
+  right:-2px!important;
+  bottom:6px!important;
+  opacity:.75!important;
+}
+
+/* Funnel: step progression rather than five coloured rectangles. */
+.funnel{
+  counter-reset:funnelStep;
+}
+.funnel-row{
+  position:relative;
+  padding:10px 12px 10px 44px;
+  border-radius:12px;
+  transition:background .15s ease;
+}
+.funnel-row:hover{
+  background:color-mix(in srgb,var(--surface-brand) 58%,white);
+}
+.funnel-row::before{
+  counter-increment:funnelStep;
+  content:counter(funnelStep);
+  position:absolute;
+  left:8px;
+  top:50%;
+  transform:translateY(-50%);
+  width:24px;
+  height:24px;
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  background:var(--brand-primary-soft);
+  color:var(--brand-primary);
+  font-size:9px;
+  font-weight:900;
+}
+.funnel-bar-bg{
+  height:18px!important;
+  border-radius:999px!important;
+  border:0!important;
+  background:color-mix(in srgb,var(--line-brand) 28%,white)!important;
+}
+.funnel-bar{
+  border-radius:999px!important;
+  padding-left:9px!important;
+  font-size:9.5px!important;
+}
+
+/* Debt profile becomes a clearer composition. */
+.dp-bar{
+  height:18px!important;
+  border:0!important;
+  border-radius:999px!important;
+  gap:3px;
+  background:transparent!important;
+}
+.dp-seg{
+  border-radius:999px;
+}
+.dp-legend{
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:10px!important;
+}
+.dp-leg{
+  grid-template-columns:12px 1fr auto!important;
+  padding:12px 13px;
+  border:1px solid var(--line-brand);
+  border-radius:12px;
+  background:color-mix(in srgb,var(--surface-brand) 50%,white);
+}
+.dp-leg .dp-pct{
+  grid-column:3;
+  width:auto!important;
+  padding:2px 7px;
+  border-radius:999px;
+  background:var(--brand-primary-soft);
+  color:var(--brand-primary)!important;
+}
+.dp-bal{
+  grid-column:2/4;
+  margin-top:2px;
+  font-family:'Fraunces',serif;
+  font-size:17px!important;
+}
+
+/* Stress cards: data first, severity second. */
+.stress-grid{
+  gap:12px!important;
+}
+.stress-cell{
+  min-height:128px;
+  border-left:0!important;
+  border-top:3px solid var(--t)!important;
+  border-radius:15px!important;
+  padding:18px!important;
+  background:
+    linear-gradient(160deg,color-mix(in srgb,var(--t) 7%,white),white 58%)!important;
+}
+.stress-v{
+  font-size:24px!important;
+  margin-top:15px!important;
+}
+.stress-d{line-height:1.4!important;}
+
+/* Ratings: no more two identical mint slabs. */
+.rating-share-pill{
+  border-radius:14px!important;
+  border:1px solid var(--line-brand)!important;
+  background:linear-gradient(135deg,color-mix(in srgb,var(--brand-accent-soft) 64%,white),white)!important;
+}
+.rating-share-pill + .rating-share-pill{
+  background:linear-gradient(135deg,color-mix(in srgb,var(--brand-primary-soft) 68%,white),white)!important;
+}
+.rating-share-pill .v{
+  color:var(--brand-primary)!important;
+}
+.rating-share-pill:first-of-type .v{
+  color:var(--chart-cashflow)!important;
+}
+
+/* Risk list gets more executive density. */
+.risk-row{
+  grid-template-columns:6px 1fr auto!important;
+  padding:13px 14px!important;
+  margin:0 -2px;
+  border-bottom:0!important;
+  border-radius:11px;
+}
+.risk-row:nth-child(odd){
+  background:color-mix(in srgb,var(--surface-brand) 54%,white);
+}
+.risk-bar{
+  height:42px!important;
+}
+.risk-n{
+  font-family:'Fraunces',serif;
+  font-size:21px!important;
+}
+
+/* Opportunity cards have differentiated surfaces, not only a coloured top rule. */
+.opp-card{
+  min-height:166px;
+  padding:20px!important;
+  border-radius:16px!important;
+}
+.opp-card:nth-child(1){background:linear-gradient(150deg,color-mix(in srgb,var(--chart-engagement) 7%,white),white 64%)!important;}
+.opp-card:nth-child(2){background:linear-gradient(150deg,color-mix(in srgb,var(--chart-cashflow) 7%,white),white 64%)!important;}
+.opp-card:nth-child(3){background:linear-gradient(150deg,color-mix(in srgb,var(--chart-workforce) 7%,white),white 64%)!important;}
+.opp-card:nth-child(4){background:linear-gradient(150deg,color-mix(in srgb,var(--chart-insurance) 7%,white),white 64%)!important;}
+.opp-card::after{
+  height:4px!important;
+  left:18px!important;
+  right:18px!important;
+  top:0!important;
+  border-radius:0 0 4px 4px;
+}
+.opp-n{
+  font-size:25px!important;
+}
+
+/* Keep all of the above usable on narrower layouts. */
+@media(max-width:1080px){
+  .wellness-inner{grid-template-columns:1fr!important;}
+  .wellness-left{min-height:auto!important;}
+  .wellness-right{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+}
+@media(max-width:720px){
+  .wellness-right{grid-template-columns:1fr!important;}
+  .wd-row{padding:15px!important;}
+  .kpi-sub{padding-right:0!important;}
+  .kpi-spark{opacity:.45!important;width:50%!important;}
+  .dp-legend{grid-template-columns:1fr!important;}
+}
