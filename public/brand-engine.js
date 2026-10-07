@@ -165,7 +165,13 @@
     var maxSm = Math.max.apply(null, sm), peaks = [];
     for (i = 0; i < BINS; i++) {
       var prev = sm[(i + BINS - 1) % BINS], next = sm[(i + 1) % BINS];
-      if (sm[i] >= maxSm * 0.12 && sm[i] >= prev && sm[i] > next) peaks.push(i);
+      var localArea = bin[(i + BINS - 1) % BINS].area + bin[i].area + bin[(i + 1) % BINS].area;
+      // Preserve small but deliberate vivid logo accents (e.g. The Fixer's
+      // mint bar/full stop). Require at least ~1.2% of chromatic artwork area
+      // so isolated compression/noise pixels do not become brand colours.
+      if (sm[i] >= maxSm * 0.045 &&
+          localArea >= chromaArea * 0.012 &&
+          sm[i] >= prev && sm[i] > next) peaks.push(i);
     }
     if (!peaks.length) peaks.push(sm.indexOf(maxSm));
 
