@@ -128,9 +128,9 @@ function DashboardView({me}:{me:Me}) {
   const [income,setIncome]=useState("all"); const [site,setSite]=useState("all"); const [periodOptions,setPeriodOptions]=useState<string[]>([]);
   const [selectedEmployerId,setSelectedEmployerId]=useState(me.employers?.[0]?.id??""); const [loading,setLoading]=useState(true); const [error,setError]=useState("");
   const employer=me.employers?.find(e=>e.id===selectedEmployerId)??me.employers?.[0];
-  const brandPrimary = normaliseHex(me.theme?.primaryColor, "#2b1b68");
+  const brandPrimary = normaliseHex(me.theme?.primaryColor, "#2B1D73");
   const brandNavy = normaliseHex(me.theme?.navyColor, "#0d2a47");
-  const brandAccent = normaliseHex(me.theme?.accentColor, "#7d2fa3");
+  const brandAccent = normaliseHex(me.theme?.accentColor, "#087F65");
   const chartPalette = useMemo(() => window.BrandEngine?.deriveChartPalette({accentColor: brandAccent, primaryColor: brandPrimary, navyColor: brandNavy}) ?? {}, [brandAccent, brandPrimary, brandNavy]);
   const themeStyle: CSSProperties = {
     "--brand-primary": brandPrimary,
@@ -184,7 +184,7 @@ function DashboardView({me}:{me:Me}) {
   return <main className="dashboard-shell" style={themeStyle}>
     <div className="topbar">
       <div className="topbar-inner">
-        <div className="logo"><img src={me.theme?.logoDataUrl||"/static/logo.png"} alt={me.theme?.name||"empower-fin Dashboard Portal"} data-custom-logo={me.theme?.logoDataUrl?"1":undefined} /><span className="logo-text">{me.theme?.name||""}</span></div>
+        <div className="logo"><img src={me.theme?.logoDataUrl||"/static/the-fixer-logo.svg"} alt={me.theme?.name||"empower-fin Dashboard Portal"} data-custom-logo={me.theme?.logoDataUrl?"1":undefined} /><span className="logo-text">{me.theme?.name||""}</span></div>
         <div className="topbar-divider" />
         <div className="audience-switch"><button className="on" type="button">Employer view</button><button type="button" disabled>Portfolio view</button></div>
         <div className="topbar-spacer" />
