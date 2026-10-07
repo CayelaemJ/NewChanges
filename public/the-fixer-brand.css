@@ -1380,3 +1380,114 @@ html.portal-dark .sync-toast{
   color:#29233A!important;
   border-color:#D9D5E1!important;
 }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   THE FIXER GUIDELINES v1.0 COMPLIANCE
+   Full-colour on light. Approved reversed artwork on dark.
+   Never recolour, filter, shadow, outline, box or distort the logo.
+   ═══════════════════════════════════════════════════════════════ */
+img.efs-brand-logo:not([data-custom-logo]){
+  width:144px!important;
+  min-width:120px!important;
+  height:auto!important;
+  max-width:none!important;
+  filter:none!important;
+  opacity:1!important;
+  background:transparent!important;
+  border:0!important;
+  border-radius:0!important;
+  padding:0!important;
+  box-shadow:none!important;
+  transform:none!important;
+  outline:0!important;
+}
+
+/* 2x clear space: the full stop is ~5% of wordmark width, so 14px around
+   a 144px digital mark safely preserves >= 2x in the application header. */
+.efs-default-brand .topbar .logo:has(.efs-brand-logo:not([data-custom-logo])),
+.efs-default-brand .topbar-inner:has(> .efs-brand-logo:not([data-custom-logo])){
+  padding-left:14px!important;
+  padding-right:14px!important;
+}
+
+/* White / very light backgrounds -> full-colour primary artwork. */
+html.efs-default-brand:not(.portal-dark) img.efs-brand-logo:not([data-custom-logo]){
+  content:url('/static/the-fixer-logo.svg?v=6');
+}
+
+/* Fixer Indigo / other dark backgrounds -> approved reversed artwork.
+   No white plate: the guideline explicitly prohibits enclosing the logo in boxes. */
+html.efs-default-brand.portal-dark img.efs-brand-logo:not([data-custom-logo]),
+html[data-theme="dark"].efs-default-brand img.efs-brand-logo:not([data-custom-logo]){
+  content:url('/static/the-fixer-logo-reversed.svg?v=1');
+  background:transparent!important;
+  border:0!important;
+  border-radius:0!important;
+  padding:0!important;
+  box-shadow:none!important;
+}
+
+/* The login brand panel is Fixer Indigo in both modes, so it always uses reversed. */
+html.efs-default-brand .auth-side #side-logo.efs-brand-logo:not([data-custom-logo]){
+  content:url('/static/the-fixer-logo-reversed.svg?v=1')!important;
+  background:transparent!important;
+  border:0!important;
+  border-radius:0!important;
+  padding:0!important;
+  box-shadow:none!important;
+  width:144px!important;
+  height:auto!important;
+}
+
+/* Sign-in card / light public surfaces use primary artwork unless the surface is dark. */
+html.efs-default-brand:not([data-theme="dark"]) .auth-main .efs-brand-logo:not([data-custom-logo]),
+html.efs-default-brand:not([data-theme="dark"]) .logo .efs-brand-logo:not([data-custom-logo]){
+  content:url('/static/the-fixer-logo.svg?v=6');
+}
+
+/* Digital minimum is 120px. Never collapse the official mark below it. */
+@media(max-width:640px){
+  img.efs-brand-logo:not([data-custom-logo]){
+    width:120px!important;
+    min-width:120px!important;
+    height:auto!important;
+  }
+  .efs-default-brand .topbar .logo:has(.efs-brand-logo:not([data-custom-logo])),
+  .efs-default-brand .topbar-inner:has(> .efs-brand-logo:not([data-custom-logo])){
+    padding-left:12px!important;
+    padding-right:12px!important;
+  }
+}
+
+/* Default EFS colour roles from the guideline:
+   Indigo anchors trust; green is emphasis, actions and progress. */
+html.efs-default-brand .btn-primary,
+html.efs-default-brand button.btn-primary{
+  background:#0FC79B!important;
+  border-color:#0FC79B!important;
+  color:#2B1D73!important;
+}
+html.efs-default-brand .btn-primary:hover:not(:disabled),
+html.efs-default-brand button.btn-primary:hover:not(:disabled){
+  background:#0DB58D!important;
+  border-color:#0DB58D!important;
+  color:#21145D!important;
+}
+html.efs-default-brand :is(.progress,.progress-bar,.funnel-bar,.wd-fill)[data-positive="1"]{
+  background:#0FC79B!important;
+}
+
+/* White is the main light ground; lilac is support, not a dominant wash. */
+html.efs-default-brand:not(.portal-dark){
+  --ent-paper:#FFFFFF;
+  --surface-brand:#FFFFFF;
+  --surface-0:#FFFFFF;
+  --surface-1:#FAF9FD;
+  --surface-2:#F1EFF9;
+  --brand-primary-soft:#F1EFF9;
+  --brand-soft:#F1EFF9;
+}
+html.efs-default-brand:not(.portal-dark) body{
+  background:#FFFFFF!important;
+}
