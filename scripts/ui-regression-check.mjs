@@ -140,7 +140,7 @@ for (const page of ["dashboard", "admin", "users"]) {
 }
 must(read("public/the-fixer-brand.css").includes("THE FIXER GUIDELINES v1.0 COMPLIANCE") && read("public/the-fixer-brand.css").includes("the-fixer-logo-reversed.svg") && read("public/the-fixer-logo-reversed.svg").includes("99.607849%"), "dark backgrounds must use the approved reversed The Fixer artwork, not a boxed full-colour logo");
 must(read("public/the-fixer-brand.css").includes("min-width:120px") && read("public/the-fixer-brand.css").includes("padding-left:14px"), "official logo must respect digital minimum size and clear-space treatment");
-must(pages.dashboard.includes("portal-brand-partner") && pages.dashboard.includes("portal-powered-by") && pages.dashboard.includes("portal-fixer-secondary"), "partner-led dashboards must retain a secondary Powered by The Fixer lock-up");
+must(pages.dashboard.includes("portal-brand-partner") && !pages.dashboard.includes("portal-powered-by") && !pages.dashboard.includes("portal-fixer-secondary"), "custom partner dashboards must be partner-only with no Powered by The Fixer attribution");
 must(read("public/the-fixer-brand.css").includes(".portal-brand-default[hidden]{display:none!important;}"), "default co-brand block must actually disappear when partner branding is active");
 {
   const applyThemeBlock=pages.dashboard.split("function applyTheme(theme, user){")[1]?.split("window.addEventListener('portal-theme-change'")[0]||"";
@@ -152,7 +152,7 @@ must(read("public/the-fixer-brand.css").includes("PARTNER HEADER — NO WHITE FI
 must(read("public/dark-theme-v2.css").includes("the-fixer-logo-reversed.svg?v=1") && read("public/the-fixer-brand.css").includes("DARK LOADING LOGO — FINAL"), "dark loading splash must use approved reversed The Fixer artwork");
 must(!read("public/dark-theme-v2.css").includes("welcome-splash-logo {\n  background:#fff;"), "dark loading splash logo must not be boxed on a white plate");
 must(read("public/the-fixer-brand.css").includes("padding:0!important") && read("public/the-fixer-brand.css").includes("border-radius:0!important"), "uploaded logos must not receive artificial padding or rounded badge treatment");
-must(read("public/the-fixer-brand.css").includes("PARTNER-LED CO-BRANDING") && read("public/the-fixer-brand.css").includes("background:#FFFFFF"), "partner-colour headers must protect The Fixer on a flat white panel");
+must(!read("public/admin.html").includes("snap-powered") && !read("public/admin.html").includes("snap-fixer"), "custom partner preview must not render Powered by The Fixer attribution");
 must(read("public/home.html").includes("the-fixer-logo-reversed.svg?v=1") && read("public/home.html").includes("home-fixer-logo"), "homepage indigo header must use the approved reversed White + Green logo");
 must(read("public/the-fixer-brand.css").includes("HOME HEADER GUIDELINE FIX") && read("public/the-fixer-brand.css").includes("filter:none!important"), "homepage reversed logo must be protected from legacy white-out filters");
 must(read("docs/THE_FIXER_BRAND_RELEASE_CHECKLIST.md").includes("Minimum digital logo width") && read("docs/THE_FIXER_BRAND_RELEASE_CHECKLIST.md").includes("Approval"), "brand release checklist must cover minimum size and approval requirements");
