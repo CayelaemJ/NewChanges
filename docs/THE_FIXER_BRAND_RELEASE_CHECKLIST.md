@@ -41,13 +41,13 @@ This checklist is intentionally limited to rules stated in the supplied guidelin
 - [ ] Dark mode uses the approved reversed logo.
 
 ## 5. Partner-led portal
-- [ ] Partner brand leads.
-- [ ] The Fixer appears as a secondary mark.
-- [ ] The Fixer mark remains at or above the 120 px digital minimum.
-- [ ] “Powered by” / other descriptor is plain text; it is never built into either logo.
-- [ ] Each logo keeps its own colours, clear space and brand rules.
-- [ ] On an arbitrary partner-colour header, The Fixer uses a flat white panel with full clear space rather than being recoloured.
+- [ ] Partner brand leads and is the only visible brand identity inside the custom partner UI.
+- [ ] Do not render “Powered by The Fixer” or a secondary The Fixer logo inside custom partner portals.
+- [ ] The Fixer remains the default identity for Admin/Super Admin and the non-partner product shell.
+- [ ] Partner logo keeps its own colours, clear space and brand rules.
 - [ ] Admin/Super Admin control-plane shell remains The Fixer while employer content may preview/use the selected partner theme.
+
+> Product decision: custom partner portals intentionally omit The Fixer attribution even though the supplied partner guideline describes co-branding arrangements.
 
 ## 6. Joint co-branding
 - [ ] Logos appear side-by-side.

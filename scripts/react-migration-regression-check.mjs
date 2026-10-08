@@ -36,8 +36,7 @@ const checks = [
   ["No decorative gradient treatment in React dashboard", !app.includes("gradient")],
   ["Neutral-first palette replaces saturated violet utility classes", !/violet-(50|100|200|300|400|500|600|700|800|900|950)/.test(app)],
   ["Full-value typography remains intact", app.includes(`Intl.NumberFormat("en-ZA"`) && !app.includes("/ 1_000")],
-  ["Partner-led co-branding exists", app.includes("portal-brand-partner") && app.includes("portal-fixer-secondary") && app.includes("Powered by")],
-  ["The Fixer secondary mark uses official asset", app.includes('/static/the-fixer-logo.svg?v=6')],
+  ["Partner custom UI is partner-only", app.includes("portal-brand-partner") && !app.includes("portal-fixer-secondary") && !app.includes("Powered by")],
 ];
 
 let failed = 0;

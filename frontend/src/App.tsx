@@ -215,11 +215,6 @@ function DashboardView({me}:{me:Me}) {
               <div className="portal-partner-mark">
                 <img src={me.theme.logoDataUrl} alt={(me.theme?.name||"Partner")+" logo"} data-custom-logo="1" />
               </div>
-              <span className="portal-cobrand-rule" aria-hidden="true" />
-              <span className="portal-powered-by">Powered by</span>
-              <span className="portal-fixer-panel">
-                <img className="efs-brand-logo portal-fixer-secondary" src="/static/the-fixer-logo.svg?v=6" alt="The Fixer" />
-              </span>
             </div>
           ) : (
             <div className="portal-brand-default">
