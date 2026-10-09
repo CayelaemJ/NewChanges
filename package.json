@@ -46,7 +46,8 @@
     "check:react": "npm run check:frontend:typecheck && node scripts/react-migration-regression-check.mjs",
     "check:frontend:typecheck": "tsc -p frontend/tsconfig.json --noEmit",
     "check:daily-refresh": "node scripts/daily-refresh-regression-check.mjs",
-    "test:config": "tsx tests/config.test.ts"
+    "test:config": "tsx tests/config.test.ts",
+    "db:baseline": "prisma migrate resolve --applied 00000000000000_baseline"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.2",

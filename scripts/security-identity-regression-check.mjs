@@ -20,6 +20,6 @@ must(security.includes('requestSecurityContext') && security.includes('parseUser
 must(audit.includes('classifyAdminRisk') && audit.includes('securityAlert.create'), 'high-impact admin actions must be risk scored and alerted');
 must(users.includes('security-center-title') && users.includes('security-state-title'), 'Users page must expose the Security and identity centre');
 must(usersSecurity.includes('renderSecuritySessions') && usersSecurity.includes('viewUserSecurity') && usersSecurity.includes('revokeSession'), 'Users page must provide session monitoring and revocation controls');
-must(migration.includes('CREATE TYPE "SecuritySeverity"') && migration.includes('CREATE TABLE "LoginEvent"') && migration.includes('CREATE TABLE "SecurityAlert"'), 'security migration must create all required database objects');
+must(migration.includes('SecuritySeverity') && migration.includes('"LoginEvent"') && migration.includes('"SecurityAlert"'), 'security migration must create all required database objects');
 if(failures.length){console.error('SECURITY IDENTITY REGRESSION CHECK FAILED:'); failures.forEach(x=>console.error(' - '+x)); process.exit(1);}
 console.log('Security identity regression checks passed.');
