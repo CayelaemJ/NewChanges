@@ -26,6 +26,7 @@ The application start command must remain independent of schema deployment so th
 At minimum:
 
 ```env
+NODE_ENV=production
 DATABASE_URL=postgresql://...
 ADMIN_EMAIL=you@company.com
 ADMIN_PASSWORD=choose-a-strong-password
@@ -34,9 +35,49 @@ COOKIE_SECURE=true
 
 Railway supplies `PORT`.
 
+Startup validates configuration and **refuses to start** when a required value
+is missing or malformed (for example a missing `DATABASE_URL` in production, an
+invalid `PUBLIC_BASE_URL`, or a non-boolean `COOKIE_SECURE`). Optional settings
+(for example a missing `CONTACT_EMAIL`) log a warning and degrade gracefully.
+See `src/config.ts` for the full list.
+
 Additional production configuration includes the public base URL, contact/legal settings and SMTP configuration where those capabilities are enabled.
 
 See [.env.example](../.env.example) for the repository's configuration template.
+
+## Schema deployment
+
+Production uses **versioned migrations**, not `db push`:
+
+```text
+pre-deploy: npm run db:deploy
+  → prisma migrate deploy
+```
+
+The migration history lives in `prisma/migrations/`. `00000000000000_baseline`
+captures the schema as it existed when migrations were introduced; the earlier
+timestamped migrations are idempotent and become no-ops once the baseline is
+applied.
+
+**Existing database (previously managed with `prisma db push`)**
+
+The deploy script detects a database that already has the application schema
+but no `_prisma_migrations` history and automatically marks the baseline as
+applied before running `migrate deploy`. To do this manually:
+
+```bash
+npm run db:baseline   # prisma migrate resolve --applied 00000000000000_baseline
+```
+
+**Escape hatch**
+
+If a migration-based deploy must be backed out, set `DB_DEPLOY_MODE=push` to
+restore the previous `prisma db push` behaviour. Do not leave this set long
+term — new schema changes should be added as migrations.
+
+Future schema changes must be added as a new migration
+(`prisma migrate dev --name ...` against a development database), reviewed, and
+committed. Destructive changes must be explicitly planned.
 
 ## External SQL source
 
@@ -67,9 +108,13 @@ Run the database deployment step as a release/pre-deploy operation before starti
 After deployment verify:
 
 ```text
-GET /health
+GET /health       # readiness — returns 200 only when the database is reachable
+GET /health/live  # liveness — process is up, no dependency check
 GET /version
 ```
+
+`railway.json` uses `/health` as the deploy healthcheck, so an instance with an
+unreachable database fails the check instead of reporting healthy.
 
 Then exercise authentication and the main dashboard flow.
 

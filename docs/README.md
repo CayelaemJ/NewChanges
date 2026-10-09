@@ -33,6 +33,8 @@ The repository README is the short entry point. This directory contains the deep
 | [Security assessment](../SECURITY_ASSESSMENT.md) | Current security/operational control register |
 | [Production readiness](../PRODUCTION_READINESS.md) | Production-readiness pass and release gate |
 | [Production readiness gaps](PRODUCTION_READINESS_GAPS.md) | Verified-green state and outstanding blockers/backlog |
+| [Operations hardening](OPERATIONS_HARDENING.md) | Secrets/rotation, DB least privilege, backup drill, observability, retention |
+| [MFA and CSP plan](MFA_AND_CSP_PLAN.md) | Scoped plans for admin MFA and a strict Content-Security-Policy |
 | [South Africa compliance](../SOUTH_AFRICA_COMPLIANCE.md) | South Africa compliance notes |
 | [Security policy](../SECURITY.md) | Vulnerability reporting and security baseline |
 

@@ -76,6 +76,8 @@ This is an engineering security assessment, not a certification and not a substi
 
 The following status is based on repository evidence only. A feature or procedure is not complete until its production configuration and evidence are recorded. `PARTIAL` means some application or repository groundwork exists, not that the operational control is effective.
 
+For the current remediation status of these controls and the related engineering gaps, see [docs/PRODUCTION_READINESS_GAPS.md](docs/PRODUCTION_READINESS_GAPS.md). Operational procedures (secrets rotation, DB least privilege, backup drill, observability) are in [docs/OPERATIONS_HARDENING.md](docs/OPERATIONS_HARDENING.md).
+
 | # | Control | Status | Evidence in this repository | Closure evidence required |
 |---|---|---|---|---|
 | 1 | External security test | OPEN | This assessment contains a proposed test scope; it explicitly says no independent test has been performed. | Dated report from an independent tester, authorized scope and production perimeter, findings owner/severity, remediation evidence, and retest results. Track unresolved critical/high findings as a release blocker. |

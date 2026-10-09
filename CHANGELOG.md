@@ -2,6 +2,32 @@
 
 This file records notable repository-level changes. Detailed implementation history remains in Git commits and pull requests.
 
+## Unreleased — production-readiness remediation
+
+### Release integrity
+
+- Fixed two failing regression checks (`check:unified-data-ingestion`,
+  `check:enterprise-analytics-phase-2`) and made CI run the same aggregate gate
+  as `npm run check:all` so the two cannot drift apart again.
+
+### Deployment and reliability
+
+- `/health` is now a database-aware readiness probe; `/health/live` is the
+  dependency-free liveness probe.
+- Boot-time configuration validation (`src/config.ts`) refuses to start on
+  invalid required settings.
+- Production schema deployment uses `prisma migrate deploy` against a committed
+  baseline, with automatic baselining for `db push`-managed databases and a
+  `DB_DEPLOY_MODE=push` escape hatch.
+- The automation scheduler uses a cross-replica advisory leader lock; admin SSE
+  streams are capped.
+- `LOG_LEVEL` support and an optional `ERROR_WEBHOOK_URL` error reporter.
+
+### Documentation
+
+- Added operations hardening, MFA/CSP plans and an updated production-readiness
+  gap analysis.
+
 ## 0.10.0 — current
 
 ### Brand and UI

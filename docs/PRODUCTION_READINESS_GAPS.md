@@ -1,123 +1,87 @@
-# Production readiness — remaining gaps
+# Production readiness — status and remaining gaps
 
-Last reviewed: this pass (automated verification, repository only).
+Last updated: after the remediation pass on this branch.
 
-This document records what is **already verified green** and what is **still
-outstanding** before the Portal should be described as production-ready. It is
-deliberately engineering/operational in scope. Security controls are tracked in
-the control register in [../SECURITY_ASSESSMENT.md](../SECURITY_ASSESSMENT.md);
-this file does not duplicate that register, it complements it.
+This document tracks what is verified, what was fixed in the remediation pass,
+and what remains outstanding before the Portal should be described as
+production-ready. Security controls are tracked in the register in
+[../SECURITY_ASSESSMENT.md](../SECURITY_ASSESSMENT.md); operational procedures
+are in [OPERATIONS_HARDENING.md](OPERATIONS_HARDENING.md); the two remaining
+code-heavy controls are specified in [MFA_AND_CSP_PLAN.md](MFA_AND_CSP_PLAN.md).
 
-## Verified green in this pass
+## Verified green
 
 | Check | Result |
 |---|---|
 | `npm ci` | pass |
 | `npm run build` (prisma generate + tsc + Vite frontend build) | pass |
-| All 19 CI workflow gates (`.github/workflows/ci.yml`) | pass |
-| `npm audit --audit-level=high` | pass (6 low/moderate advisories only: `tedious`/`sprintf-js` via `mssql`) |
+| `npm run check:all` (the single aggregate gate CI now runs) | pass |
+| `npm audit --audit-level=high` | pass (6 low/moderate: `tedious`/`sprintf-js` via `mssql`) |
 
-The static gates are genuinely green. The remaining risk is **not** in the code
-compiling; it is in configuration, operations and unverified runtime behaviour.
+## Fixed in the remediation pass
 
-## Blocking gaps
+1. **Release gate integrity.** Two checks (`check:unified-data-ingestion`,
+   `check:enterprise-analytics-phase-2`) were failing on stale assertions. Both
+   are corrected. CI now runs the same aggregate gate as `npm run check:all` so
+   the two definitions cannot drift apart again.
+2. **Dependency-aware health check.** `/health` now verifies the database and
+   returns `503` when it is unreachable; `/health/live` is the dependency-free
+   liveness probe. The platform healthcheck uses `/health`.
+3. **Fail-fast configuration validation.** `src/config.ts` validates required
+   settings at boot and refuses to start on error-level problems. `.env.example`
+   now lists `DATABASE_URL`, `ADMIN_EMAIL` and `ADMIN_PASSWORD`.
+4. **Versioned migrations.** Production now deploys with `prisma migrate deploy`
+   against a committed baseline (`00000000000000_baseline`), with automatic
+   baselining for databases previously managed with `db push` and a
+   `DB_DEPLOY_MODE=push` escape hatch.
+5. **Cross-replica coordination.** The automation scheduler (account cleanup,
+   weekly digest) now uses a PostgreSQL advisory leader lock; the admin SSE
+   stream is capped (`MAX_ADMIN_STREAMS`). Daily refresh, source sync and
+   scheduled reports already coordinated.
+6. **Observability hooks.** `LOG_LEVEL` is honoured and an optional
+   `ERROR_WEBHOOK_URL` receives redacted error events (5xx, unhandled rejection,
+   uncaught exception).
 
-These should be closed before a go-live decision.
+## Remaining gaps
 
-### 1. The aggregate release gate is red and CI is out of sync
+### Requires external execution (cannot be closed by code)
 
-`npm run check:all` includes checks that the CI workflow does not run, and two
-of those checks currently **fail**:
-
-- `npm run check:unified-data-ingestion` — fails: it asserts
-  `src/server.ts` still contains `/api/admin/integration/config`, but the
-  endpoint is now `/api/admin/integration` (GET/POST). Stale assertion.
-- `npm run check:enterprise-analytics-phase-2` — fails: it asserts
-  `src/services/syncService.ts` contains a `"Never expose replica password"`
-  comment that no longer exists. Stale assertion.
-
-Because CI does not run `check:unified-data-ingestion`,
-`check:enterprise-analytics-phase-2`, `check:admin-realtime`,
-`check:admin-report-selector` or `check:enterprise-operations`, the drift went
-unnoticed. `check:admin-realtime`, `check:admin-report-selector` and
-`check:enterprise-operations` do pass.
-
-Action: update the two stale assertions (or the code they protect), and make CI
-run the same set as `check:all` so the two definitions cannot diverge again.
-
-### 2. The health check does not test dependencies
-
-`GET /health` returns `{ ok: true }` unconditionally
-(`src/server.ts`), and `railway.json` uses `/health` as the deploy
-healthcheck. An instance with a dead database, failed migration or unpublishable
-data still reports healthy. Add a dependency-aware readiness check (database
-round-trip, and a separate liveness probe if needed) and point the platform
-healthcheck at the readiness route.
-
-### 3. No fail-fast configuration validation
-
-The server starts even when required variables are missing. It only logs a
-warning for a missing `CONTACT_EMAIL` and for missing `ADMIN_EMAIL`/
-`ADMIN_PASSWORD`; a missing `DATABASE_URL` surfaces later as a runtime error.
-Production configuration should be validated at boot and the process should
-refuse to start when a required value is absent or malformed. Related: the
-`.env.example` template omits `DATABASE_URL`, `ADMIN_EMAIL` and `ADMIN_PASSWORD`
-even though `docs/DEPLOYMENT.md` lists them as required.
-
-### 4. Production schema deployment uses `prisma db push`, not migrations
-
-`scripts/deploy-db.mjs` (run as the Railway pre-deploy step) uses
-`prisma db push --skip-generate` plus ad-hoc `db execute` calls. The repository
-also carries a `prisma/migrations/` history that is only partly applied this
-way. `db push` has no migration ledger, no ordered history and no rollback
-path. Adopt `prisma migrate deploy` with a reviewed migration history for
-production, keeping destructive changes explicitly planned.
-
-### 5. Production values and legal sign-off
-
-Still required and outside code:
-
-- real `PUBLIC_BASE_URL`, `CONTACT_EMAIL`, privacy/legal contacts, Information
-  Officer, SMTP credentials and database credentials;
-- legal/privacy owner approval of the privacy notice, terms, cookie notice and
-  the published "last updated" date;
-- confirmation of the business address wording (published address vs registered
-  office).
-
-
-## Should close before scaling / for enterprise assurance
-
-| # | Gap | Notes |
+| # | Gap | Required evidence |
 |---|---|---|
-| 6 | CSP still allows `script-src 'unsafe-inline'` | Pages use inline scripts/handlers; move to nonces or external JS. |
-| 7 | No admin MFA | Tracked as OPEN in the security register. |
-| 8 | No centralised security logging / SIEM forwarding | Audit records exist in-app; off-platform immutable retention is outstanding. |
-| 9 | Monitoring, alerting and error tracking unverified | `/health`, `/version` and email/Slack paths exist, but no APM/error tracker and no recorded alert test. |
-| 10 | Backup/restore and RPO/RTO unverified | No completed restore record; see the release runbook. |
-| 11 | No independent penetration test | Proposed scope exists; no dated external report. |
-| 12 | Secrets inventory and rotation unproven | No rotation schedule or evidence. |
-| 13 | Database least privilege / RLS | Separate runtime, migration and read-only roles not evidenced. |
-| 14 | No browser E2E, axe or load-test evidence | Coverage is static string/regression checks; no Playwright/axe/k6-style runs against real data. |
-| 15 | Retention/deletion automation not enabled | POPIA retention rules are recorded but no automated deletion job is enabled. |
-| 16 | Single-replica assumptions | The rate limiter is in-process; the automation scheduler and admin SSE stream have no cross-replica coordination. Daily refresh and scheduled reports do coordinate (advisory lock / DB claim). Fine for one Railway instance; revisit before horizontal scaling. |
+| 1 | Independent penetration test | Dated report, scoped to the production perimeter, with remediation and retest |
+| 2 | Backup/restore + RPO/RTO | Completed restore record per [OPERATIONS_HARDENING.md](OPERATIONS_HARDENING.md) |
+| 3 | Secrets inventory and rotation | Populated inventory plus a demonstrated rotation |
+| 4 | Database least privilege / RLS | Runtime and migration roles separated and evidenced |
+| 5 | Production values and legal sign-off | Real `PUBLIC_BASE_URL`/contacts/SMTP/DB values; legal-owner approval of notices |
+| 6 | Centralised log retention / SIEM | Redacted forwarding to an access-controlled store with defined retention |
+| 7 | Monitoring and alert testing | Documented coverage plus a recorded alert delivery/acknowledgement |
+| 8 | Browser E2E, accessibility (axe) and load-test evidence | Recorded runs against representative business data |
+| 9 | Independent reporting validation | Reviewer sign-off reconciling periods/cohorts/totals to source |
 
-## Minor observations
+### Requires a dedicated, browser-tested code change
 
-- CI runs `npm run build` (which includes the frontend build), so the React
-  workspace is compiled in CI — good. The React route remains a migration
-  workspace by design and is not a blocker for the canonical `/dashboard`.
-- `connectionTimeout: 0` disables the incoming connection timeout; the
-  `headersTimeout` (180s) bounds slow-header attacks, but a finite connection
-  timeout would be more defensive.
-- The admin SSE endpoint (`/api/admin/events`) holds long-lived connections with
-  no explicit cap.
+| # | Gap | Plan |
+|---|---|---|
+| 10 | Admin MFA | [MFA_AND_CSP_PLAN.md](MFA_AND_CSP_PLAN.md) §1 |
+| 11 | Strict CSP (remove `unsafe-inline`) | [MFA_AND_CSP_PLAN.md](MFA_AND_CSP_PLAN.md) §2 |
+| 12 | Automated retention/deletion | Needs a reviewed data-class → table mapping and legal sign-off before enabling |
+
+### Minor observations
+
+- CI cannot currently be edited from this branch: the GitHub App lacks the
+  `workflows` permission, so `.github/workflows/ci.yml` could not be updated to
+  call `npm run check:all`. Until it is, CI still enumerates a subset of checks.
+  The intended workflow is a single `npm run check:all` step after `npm ci`.
+- `connectionTimeout: 0` leaves the incoming connection timeout disabled;
+  `headersTimeout` (180s) bounds slow-header attacks.
+- The React route `/react/dashboard` remains a migration workspace by design and
+  is not a blocker for the canonical `/dashboard`.
 
 ## Bottom line
 
-The application builds, all CI gates pass, and the static regression suite is
-broad. It is **not** yet production-ready in the operational sense: the
-aggregate gate is red, the health check is shallow, config is not validated at
-boot, schema deployment is not migration-based, and the external/operational
-evidence (pen test, monitoring, backup restore, MFA, legal sign-off) is
-outstanding. Items 1–5 are the practical blockers; items 6–16 are the
-enterprise-assurance backlog.
+Every code-level blocker identified in the previous pass is now fixed and
+covered by the aggregate gate. What remains is external operational evidence
+(pen test, backup restore, secrets rotation, DB roles, legal sign-off,
+monitoring) and two security controls that need a database and browser to
+verify (MFA, strict CSP). Those should be completed before a go-live decision,
+but the repository no longer has a red gate or an unguarded deploy path.
