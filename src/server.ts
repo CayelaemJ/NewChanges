@@ -14,6 +14,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
+import { assertValidConfig } from "./config.js";
 import { prisma, snapshotEmployer, getDashboardPayload, getPublishedDashboardPayload, getPublishedDashboardState, publishedDashboardEmployerIds, monthKey } from "./services/snapshotBuilder.js";
 import { REPORT_FORMATS, LOAD_ORDER, getFormat } from "./services/reportFormats.js";
 import { csvTemplate, xlsxTemplate, formatManifest } from "./services/templateGenerator.js";
@@ -413,7 +414,22 @@ app.get("/users", async (req, reply) => {
   return serveHtml(reply, "users.html");
 });
 
-app.get("/health", async () => ({ ok: true }));
+// Liveness: the process is up. Dependency-free so it never flaps on a
+// transient database blip.
+app.get("/health/live", async () => ({ ok: true }));
+
+// Readiness: used as the platform healthcheck. Verifies the database is
+// reachable so a dead database or a failed migration cannot report a healthy
+// deployment (the old /health always returned ok:true).
+app.get("/health", async (req, reply) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    return { ok: true, db: "up" };
+  } catch (err) {
+    req.log.error({ err }, "health check failed: database unreachable");
+    return reply.code(503).send({ ok: false, db: "down" });
+  }
+});
 // lets you confirm the NEW build is live: should report the live-dashboard version
 app.get("/version", async () => ({ product: "empower-fin Dashboard Portal", version: "0.10.0", contractVersion: "2.6", coreSourceFeeds: 10, sourceModes: ["API", "SQL"], sqlDialects: ["POSTGRESQL", "MSSQL", "MYSQL"], channelPartners: true, scheduledReports: true, emailDelivery: "SMTP", portfolioEmployerFilter: true, portfolioMetricHelp: true, employerMetricHelp: true, uiNavigation: "account-dropdown-v2", routes: ["/login", "/dashboard", "/admin", "/users"] }));
 
@@ -1963,6 +1979,8 @@ setInterval(() => {
 // Register all routes before opening the listener.
   if (!CONTACT_EMAIL) app.log.warn("CONTACT_EMAIL is not set: the contact form is disabled and legal pages show a placeholder contact.");
   app.log.info({ portalVersion: "0.10.0", publicDir: PUBLIC_DIR }, "starting empower-fin Dashboard Portal");
+assertValidConfig(process.env, app.log);
+
 app.listen({ port: PORT, host: "0.0.0.0" })
   .then(async () => { await bootstrapAdmin(); await ensureSectionDefaults(); startSyncScheduler(app); startReportScheduler(app);
 startDailyRefresh(); startAutomationScheduler(app); app.log.info(`empower-fin Dashboard Portal on :${PORT}`); })

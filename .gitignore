@@ -4,3 +4,6 @@ dist
 .env.*
 *.log
 !.env.example
+
+# Generated React build output (built during deploy)
+public/react/

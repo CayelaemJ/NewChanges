@@ -37,7 +37,7 @@ const required = [
   [admin, 'syncLogFailureDetail', 'admin surfaces the exact failed dependency step from sync history'],
   [admin, 'Blocked downstream:', 'admin exposes downstream steps blocked by a failed dependency'],
   [server, '/api/admin/reports/:key/upload', 'governed file upload endpoint remains present'],
-  [server, '/api/admin/integration/config', 'integration configuration endpoint remains present'],
+  [server, '/api/admin/integration', 'integration configuration endpoint remains present'],
   [importer, 'detectFormat(opts.filename)', 'file format detection remains active'],
 ];
 

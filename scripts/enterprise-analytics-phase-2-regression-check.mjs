@@ -27,7 +27,8 @@ assert.match(adapter, /Read replica is required/);
 assert.match(sync, /workloadClass/);
 assert.match(sync, /useReplica/);
 assert.match(sync, /sourceAnalyticsReplicaMaxLagSeconds/);
-assert.match(sync, /Never expose replica password|never expose replica password/i);
+// The public sync config must strip the replica password (never return it to the client).
+assert.match(sync, /sourceAnalyticsReplicaPassword,\s*\.\.\.safe/);
 
 assert.match(server, /\/api\/admin\/integration\/replica-health/);
 assert.match(server, /workloadClass/);

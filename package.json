@@ -24,7 +24,7 @@
     "check:production": "node scripts/production-readiness-check.mjs",
     "check:brand": "node tests/brand-engine.test.mjs",
     "test:score": "node scripts/run-score-test.mjs",
-    "check:all": "npm run check:admin-realtime && npm run check:admin-report-selector && npm run check:unified-data-ingestion && npm run check:enterprise-analytics-phase-2 && npm run build && npm run check:production && npm run check:security && npm run check:ui && npm run check:imports && npm run check:scheduling && npm run check:security-identity && npm run check:security-operations && npm run check:security-governance && npm run check:south-africa-compliance && npm run check:enterprise && npm run test:score && npm audit --audit-level=high",
+    "check:all": "npm run check:admin-realtime && npm run check:admin-report-selector && npm run check:unified-data-ingestion && npm run check:enterprise-analytics-phase-2 && npm run check:enterprise-operations && npm run test:config && npm run build && npm run check:production && npm run check:security && npm run check:ui && npm run check:imports && npm run check:scheduling && npm run check:daily-refresh && npm run check:security-identity && npm run check:security-operations && npm run check:security-governance && npm run check:south-africa-compliance && npm run check:enterprise && npm run check:role-perspective && npm run check:react && npm run test:score && npm audit --audit-level=high",
     "check:accessibility": "node scripts/accessibility-regression-check.mjs",
     "check:performance": "node scripts/performance-regression-check.mjs",
     "check:enterprise": "npm run check:period-comparison && npm run check:accessibility && npm run check:performance && npm run check:brand && npm run check:mlops && npm run check:mlops-data-quality",
@@ -45,7 +45,8 @@
     "frontend:build": "npm install --prefix frontend --no-audit --no-fund && npm run build --prefix frontend",
     "check:react": "npm run check:frontend:typecheck && node scripts/react-migration-regression-check.mjs",
     "check:frontend:typecheck": "tsc -p frontend/tsconfig.json --noEmit",
-    "check:daily-refresh": "node scripts/daily-refresh-regression-check.mjs"
+    "check:daily-refresh": "node scripts/daily-refresh-regression-check.mjs",
+    "test:config": "tsx tests/config.test.ts"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.2",
