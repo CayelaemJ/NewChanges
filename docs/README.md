@@ -32,6 +32,7 @@ The repository README is the short entry point. This directory contains the deep
 | [Security hardening review](HARDENING_REVIEW.md) | Historical hardening and security review |
 | [Security assessment](../SECURITY_ASSESSMENT.md) | Current security/operational control register |
 | [Production readiness](../PRODUCTION_READINESS.md) | Production-readiness pass and release gate |
+| [Production readiness gaps](PRODUCTION_READINESS_GAPS.md) | Verified-green state and outstanding blockers/backlog |
 | [South Africa compliance](../SOUTH_AFRICA_COMPLIANCE.md) | South Africa compliance notes |
 | [Security policy](../SECURITY.md) | Vulnerability reporting and security baseline |
 
