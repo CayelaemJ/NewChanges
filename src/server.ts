@@ -15,6 +15,8 @@ import { dirname, join } from "node:path";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { assertValidConfig } from "./config.js";
+import { runWithLeaderLock, LEADER_LOCKS } from "./services/leaderLock.js";
+import { reportErrorWebhook } from "./services/errorReporter.js";
 import { prisma, snapshotEmployer, getDashboardPayload, getPublishedDashboardPayload, getPublishedDashboardState, publishedDashboardEmployerIds, monthKey } from "./services/snapshotBuilder.js";
 import { REPORT_FORMATS, LOAD_ORDER, getFormat } from "./services/reportFormats.js";
 import { csvTemplate, xlsxTemplate, formatManifest } from "./services/templateGenerator.js";
@@ -49,7 +51,7 @@ const PUBLIC_DIR = [join(__dirname, "public"), join(__dirname, "..", "public")]
 const MAX_UPLOAD_BYTES = Number(process.env.UPLOAD_MAX_BYTES ?? 50 * 1024 * 1024);
 
 const app = Fastify({
-  logger: { redact: ["req.headers.authorization", "req.headers.cookie", "res.headers[\"set-cookie\"]"] },
+  logger: { level: process.env.LOG_LEVEL ?? "info", redact: ["req.headers.authorization", "req.headers.cookie", "res.headers[\"set-cookie\"]"] },
   // Behind Railway's proxy, req.ip is the proxy unless this is enabled, which
   // collapsed every visitor into a single rate-limit bucket.
   trustProxy: process.env.TRUST_PROXY === "false" ? false : true,
@@ -98,6 +100,8 @@ function applySecurityHeaders(reply: FastifyReply) {
 }
 
 const rateBuckets = new Map<string, { count: number; resetAt: number }>();
+const MAX_ADMIN_STREAMS = Number(process.env.MAX_ADMIN_STREAMS ?? 200);
+let activeAdminStreams = 0;
 const RATE_WINDOW_MS = 60_000;
 const RATE_LIMIT = 240;
 const AUTH_RATE_LIMIT = 12;
@@ -188,8 +192,15 @@ setInterval(() => {
 
 app.setErrorHandler((error, req, reply) => {
   req.log.error({ err: error, method: req.method, url: req.url }, "unhandled request error");
-  if (reply.sent) return;
   const status = Number((error as any)?.statusCode);
+  if (!(status >= 400 && status < 500)) {
+    void reportErrorWebhook({
+      level: "error",
+      message: error instanceof Error ? error.message : String(error),
+      context: { method: req.method, url: req.url.split("?")[0], status: 500 },
+    });
+  }
+  if (reply.sent) return;
   if (status >= 400 && status < 500) { const message = error instanceof Error ? error.message : "request rejected"; return reply.code(status).send({ error: message }); }
   return reply.code(500).send({ error: "internal server error" });
 });
@@ -537,6 +548,12 @@ app.get("/api/admin/events", async (req, reply) => {
   const query = (req.query ?? {}) as { jobId?: string };
   const jobId = typeof query.jobId === "string" ? query.jobId.trim().slice(0, 120) : "";
   if (!jobId) return reply.code(400).send({ error: "jobId is required" });
+  // Bound the number of long-lived SSE connections so a single instance cannot
+  // exhaust its file descriptors if many admin tabs are left open.
+  if (activeAdminStreams >= MAX_ADMIN_STREAMS) {
+    return reply.code(503).send({ error: "too many live event streams; close some admin tabs and retry" });
+  }
+  activeAdminStreams++;
 
   reply.hijack();
   const res = reply.raw;
@@ -559,9 +576,13 @@ app.get("/api/admin/events", async (req, reply) => {
     try { res.write(`: heartbeat ${Date.now()}\n\n`); } catch {}
   }, 15000);
 
+  let closed = false;
   const close = () => {
+    if (closed) return;
+    closed = true;
     clearInterval(heartbeat);
     unsubscribe();
+    activeAdminStreams = Math.max(0, activeAdminStreams - 1);
   };
   req.raw.once("close", close);
   req.raw.once("aborted", close);
@@ -1849,8 +1870,14 @@ function startSyncScheduler(app: any) {
 function startAutomationScheduler(app: any) {
   const CHECK_MS = 60 * 60 * 1000; // hourly is plenty — both checks are self-gated by date thresholds
   const tick = async () => {
-    try { await runStaleAccountCheck(); } catch (e) { app.log.error(e); }
-    try { await runWeeklyDigestIfDue(); } catch (e) { app.log.error(e); }
+    // Only one replica runs the cleanup/digest for a given tick, so scaling out
+    // cannot send duplicate digest emails or double-deactivate accounts.
+    try {
+      await runWithLeaderLock(LEADER_LOCKS.AUTOMATION, async () => {
+        try { await runStaleAccountCheck(); } catch (e) { app.log.error(e); }
+        try { await runWeeklyDigestIfDue(); } catch (e) { app.log.error(e); }
+      });
+    } catch (e) { app.log.error(e); }
   };
   setInterval(tick, CHECK_MS);
   setTimeout(tick, 45000);
@@ -1959,7 +1986,17 @@ app.get<{ Querystring: { period?: string; quarter?: string; range?: "30d" | "qua
   },
 );
 
-process.on("unhandledRejection", (reason) => app.log.error({ err: reason }, "unhandled promise rejection"));
+process.on("unhandledRejection", (reason) => {
+  app.log.error({ err: reason }, "unhandled promise rejection");
+  void reportErrorWebhook({ level: "error", message: reason instanceof Error ? reason.message : String(reason), context: { kind: "unhandledRejection" } });
+});
+// A stray synchronous throw must be logged and reported before the process
+// exits; the platform restart policy brings the instance back.
+process.on("uncaughtException", (error) => {
+  app.log.fatal({ err: error }, "uncaught exception");
+  void reportErrorWebhook({ level: "fatal", message: error instanceof Error ? error.message : String(error), context: { kind: "uncaughtException" } });
+  setTimeout(() => process.exit(1), 1000).unref();
+});
 for (const sig of ["SIGTERM", "SIGINT"] as const) {
   process.once(sig, () => {
     app.log.info({ sig }, "shutting down");
