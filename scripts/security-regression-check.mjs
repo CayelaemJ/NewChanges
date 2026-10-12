@@ -13,9 +13,15 @@ assert.match(server, /cross-origin request rejected/);
 assert.match(server, /AUTH_RATE_LIMIT/);
 assert.match(server, /canViewEmployer\(user, req\.params\.employerId\)/);
 assert.match(auth, /timingSafeEqual/);
+assert.match(auth, /parts\.length !== 2/, 'malformed hashes must not be accepted');
+assert.match(auth, /\^\[0-9a-fA-F\]\{128\}\$/, 'stored digest must be strictly validated');
+assert.match(auth, /catch \{\s*return false;\s*\}/, 'scrypt failures must fail authentication safely');
 assert.match(auth, /digestSetupToken/);
 assert.match(users, /password must be at least 12 characters/);
 assert.match(users, /destroyAllSessionsForUser\(userId\)/);
+assert.match(users, /const accessChanged = patch\.role !== undefined/, 'role changes must revoke sessions');
+assert.match(users, /patch\.employerIds !== undefined/, 'employer scope changes must revoke sessions');
+assert.match(users, /if \(accessChanged\) await destroyAllSessionsForUser\(userId\);/, 'session revocation must precede permission changes');
 assert.match(dashboard, /dashboard\.css/);
 assert.doesNotMatch(dashboard, /responsive-v1\.css|responsive-v2\.css|ui-enhance-v1\.css|ui-enhance-v2\.css/);
 assert.match(server, /trustProxy/);
@@ -59,3 +65,10 @@ assert.match(fs.readFileSync("src/services/sourceAdapter.ts", "utf8"), /redirect
 
 assert.match(fs.readFileSync("public/dashboard.css", "utf8"), /Canonical mobile stabilization/);
 assert.match(fs.readFileSync("public/dashboard.css", "utf8"), /max-width: 640px/);
+
+// Proxy trust must be explicitly enabled and constrained to a single ingress hop.
+assert.match(server, /trustProxy: \(address: string, hop: number\) => process\.env\.TRUST_PROXY === "true" && hop === 1/);
+assert.doesNotMatch(server, /String\(req\.headers\["x-forwarded-proto"\]/);
+
+// Each API report request must re-check its destination before fetching.
+assert.match(fs.readFileSync("src/services/sourceAdapter.ts", "utf8"), /await assertSafeApiBaseUrl\(url\.toString\(\)\)/);

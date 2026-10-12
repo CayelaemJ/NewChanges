@@ -264,6 +264,9 @@ async function createApiAdapter(config: IntegrationSourceConfig): Promise<Source
     if (window?.since) url.searchParams.set("since", window.since.toISOString());
     if (window?.through) url.searchParams.set("through", window.through.toISOString());
 
+    // Revalidate immediately before each request; a pinned connection or egress firewall
+    // is still required to eliminate the DNS lookup-to-connect race completely.
+    await assertSafeApiBaseUrl(url.toString());
     const response = await fetch(url, {
       headers: token
         ? { Authorization: `Bearer ${token}`, Accept: "application/json" }

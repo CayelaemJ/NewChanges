@@ -155,6 +155,14 @@ export async function updateUser(userId: string, patch: {
   name?: string; role?: Role; active?: boolean; employerIds?: string[]; partnerId?: string | null;
   revokedReason?: string; revokedBy?: string;
 }) {
+  // Invalidate every session before modifying authorisation scope. This fails
+  // closed even if a later database write fails partway through the update.
+  // Affected users must authenticate again after their permissions change.
+  const accessChanged = patch.role !== undefined ||
+    patch.active !== undefined ||
+    patch.employerIds !== undefined ||
+    Object.prototype.hasOwnProperty.call(patch, "partnerId");
+  if (accessChanged) await destroyAllSessionsForUser(userId);
   if (patch.employerIds) {
     // replace links wholesale
     await prisma.userEmployer.deleteMany({ where: { userId } });
@@ -183,7 +191,6 @@ export async function updateUser(userId: string, patch: {
     },
     include: { links: { include: { employer: { select: { id: true, name: true } } } } },
   });
-  if (patch.active === false) await destroyAllSessionsForUser(userId); // end access immediately
   return sanitize(user);
 }
 
