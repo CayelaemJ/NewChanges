@@ -51,7 +51,7 @@ const app = Fastify({
   logger: { redact: ["req.headers.authorization", "req.headers.cookie", "res.headers[\"set-cookie\"]"] },
   // Behind Railway's proxy, req.ip is the proxy unless this is enabled, which
   // collapsed every visitor into a single rate-limit bucket.
-  trustProxy: process.env.TRUST_PROXY === "false" ? false : true,
+  trustProxy: process.env.TRUST_PROXY === "true" ? 1 : false,
   bodyLimit: 8 * 1024 * 1024, // JSON bodies (partner logos are data URLs); file uploads are streamed via multipart and capped separately
   connectionTimeout: 0,
   keepAliveTimeout: 75_000,
@@ -137,7 +137,7 @@ app.addHook("onRequest", async (req, reply) => {
     const referer = req.headers.referer;
     if (!authHeader) {
       const hasSessionCookie = Boolean(req.cookies?.session);
-      const forwardedProto = String(req.headers["x-forwarded-proto"] || req.protocol).split(",")[0].trim();
+      const forwardedProto = req.protocol;
       const configuredOrigin = String(process.env.PUBLIC_BASE_URL || "").replace(/\/$/, "");
       const expectedOrigin = configuredOrigin || `${forwardedProto}://${req.headers.host}`;
       const suppliedOrigin = origin || (() => { try { return new URL(referer as string).origin; } catch { return ""; } })();
