@@ -65,3 +65,7 @@ assert.match(fs.readFileSync("src/services/sourceAdapter.ts", "utf8"), /redirect
 
 assert.match(fs.readFileSync("public/dashboard.css", "utf8"), /Canonical mobile stabilization/);
 assert.match(fs.readFileSync("public/dashboard.css", "utf8"), /max-width: 640px/);
+
+// Proxy trust must be explicitly enabled and constrained to a single ingress hop.
+assert.match(server, /trustProxy: process\.env\.TRUST_PROXY === "true" \? 1 : false/);
+assert.doesNotMatch(server, /String\(req\.headers\["x-forwarded-proto"\]/);
