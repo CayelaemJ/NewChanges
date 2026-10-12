@@ -1747,25 +1747,34 @@ function renderSections(){
     </div>`;
   }).join('');
 }
+async function saveSectionChange(key, patch){
+  try {
+    const response = await fetch(`${API}/api/admin/sections/${encodeURIComponent(key)}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(patch)});
+    if(!response.ok){const data=await response.json().catch(()=>({}));throw new Error(data.error||'Could not save section permissions');}
+    await loadSections();
+    showToast('Section permissions saved.','ok');
+  } catch(error){
+    showToast(error.message||'Could not save section permissions','err');
+    await loadSections();
+  }
+}
 async function toggleSectionEnabled(key,enabled){
-  await fetch(`${API}/api/admin/sections/${key}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({enabled})});
-  loadSections();
+  await saveSectionChange(key,{enabled});
 }
 async function toggleSectionRole(key,role,checked){
-  const section = SECTIONS.find(s=>s.key===key); if(!section) return;
-  const roles = new Set(section.allowedRoles);
+  const section=SECTIONS.find(s=>s.key===key); if(!section) return;
+  const roles=new Set(section.allowedRoles);
   if(checked) roles.add(role); else roles.delete(role);
-  await fetch(`${API}/api/admin/sections/${key}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({allowedRoles:[...roles]})});
-  loadSections();
+  await saveSectionChange(key,{allowedRoles:[...roles]});
 }
 async function grantSection(key){
   const userId=$('#sec-u-'+key).value; if(!userId) return;
-  await fetch(`${API}/api/admin/sections/${key}/grant`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userId})});
-  loadSections();
+  try {await apiOk(`${API}/api/admin/sections/${encodeURIComponent(key)}/grant`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userId})});await loadSections();}
+  catch(error){showToast(error.message||'Could not grant access','err');}
 }
 async function revokeSection(key,userId){
-  await fetch(`${API}/api/admin/sections/${key}/revoke`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userId})});
-  loadSections();
+  try {await apiOk(`${API}/api/admin/sections/${encodeURIComponent(key)}/revoke`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userId})});await loadSections();}
+  catch(error){showToast(error.message||'Could not revoke access','err');}
 }
 
 
