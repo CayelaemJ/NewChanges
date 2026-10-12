@@ -51,7 +51,7 @@ const app = Fastify({
   logger: { redact: ["req.headers.authorization", "req.headers.cookie", "res.headers[\"set-cookie\"]"] },
   // Behind Railway's proxy, req.ip is the proxy unless this is enabled, which
   // collapsed every visitor into a single rate-limit bucket.
-  trustProxy: process.env.TRUST_PROXY === "true" ? 1 : false,
+  trustProxy: (address: string, hop: number) => process.env.TRUST_PROXY === "true" && hop === 1,
   bodyLimit: 8 * 1024 * 1024, // JSON bodies (partner logos are data URLs); file uploads are streamed via multipart and capped separately
   connectionTimeout: 0,
   keepAliveTimeout: 75_000,
