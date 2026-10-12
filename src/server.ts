@@ -137,7 +137,6 @@ app.addHook("onRequest", async (req, reply) => {
     const referer = req.headers.referer;
     if (!authHeader) {
       const hasSessionCookie = Boolean(req.cookies?.session);
-      const forwardedProto = req.protocol;
       const configuredOrigin = String(process.env.PUBLIC_BASE_URL || "").replace(/\/$/, "");
       const suppliedOrigin = origin || (() => { try { return new URL(referer as string).origin; } catch { return ""; } })();
       // TLS may terminate at Railway before Fastify sees the request. Compare the
