@@ -32,7 +32,7 @@ export async function ensureSectionDefaults() {
   for (const def of SECTION_DEFS) {
     await prisma.dashboardSection.upsert({
       where: { key: def.key },
-      update: { label: def.label, allowedRoles: ALL_ROLES }, // keep the label current and include all supported roles
+      update: { label: def.label }, // preserve saved visibility permissions across restarts
       create: { key: def.key, label: def.label, enabled: true, allowedRoles: ALL_ROLES },
     });
   }
