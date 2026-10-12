@@ -67,7 +67,7 @@ assert.match(fs.readFileSync("public/dashboard.css", "utf8"), /Canonical mobile 
 assert.match(fs.readFileSync("public/dashboard.css", "utf8"), /max-width: 640px/);
 
 // Proxy trust must be explicitly enabled and constrained to a single ingress hop.
-assert.match(server, /trustProxy: process\.env\.TRUST_PROXY === "true" \? 1 : false/);
+assert.match(server, /trustProxy: \(address: string, hop: number\) => process\.env\.TRUST_PROXY === "true" && hop === 1/);
 assert.doesNotMatch(server, /String\(req\.headers\["x-forwarded-proto"\]/);
 
 // Each API report request must re-check its destination before fetching.
