@@ -3473,11 +3473,11 @@ function applyTheme(theme, user){
   window.__dashboardActiveUser=user||null;
   const root=document.documentElement.style;
   const privileged=user && ['ADMIN','SUPERADMIN'].includes(String(user.role||'').toUpperCase());
-  // Admin/Superadmin keep the EFS/The Fixer shell, but the selected employer
-  // dashboard is allowed to render with that employer's partner branding.
+  // Admin/Superadmin must retain the original EFS/The Fixer interface
+  // regardless of selected employer or channel-partner filters.
   if(privileged){
+    clearEmployerScopedTheme();
     applyDefaultPortalTheme();
-    applyEmployerScopedTheme(theme);
     return;
   }
   if(!theme || theme.branded===false){
@@ -3554,8 +3554,8 @@ function applyTheme(theme, user){
 window.addEventListener('portal-theme-change',()=>{
   const t=window.__dashboardActiveTheme, u=window.__dashboardActiveUser;
   if(u && ['ADMIN','SUPERADMIN'].includes(String(u.role||'').toUpperCase())){
+    clearEmployerScopedTheme();
     applyDefaultPortalTheme();
-    applyEmployerScopedTheme(t);
   }else if(t && t.branded!==false){
     applyTheme(t,u);
   }else{
