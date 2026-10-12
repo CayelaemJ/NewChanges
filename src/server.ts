@@ -139,15 +139,24 @@ app.addHook("onRequest", async (req, reply) => {
       const hasSessionCookie = Boolean(req.cookies?.session);
       const forwardedProto = req.protocol;
       const configuredOrigin = String(process.env.PUBLIC_BASE_URL || "").replace(/\/$/, "");
-      const expectedOrigin = configuredOrigin || `${forwardedProto}://${req.headers.host}`;
       const suppliedOrigin = origin || (() => { try { return new URL(referer as string).origin; } catch { return ""; } })();
+      // TLS may terminate at Railway before Fastify sees the request. Compare the
+      // browser origin to the externally requested host, not the internal HTTP
+      // protocol. Never accept a different hostname just because it uses HTTPS.
+      const requestHost = String(req.headers.host || "").toLowerCase();
+      const sameHostOrigin = (() => {
+        try {
+          const parsed = new URL(suppliedOrigin);
+          return parsed.host.toLowerCase() === requestHost &&
+            (parsed.protocol === "https:" || (req.protocol === "http" && parsed.protocol === "http:"));
+        } catch { return false; }
+      })();
       // Browser session requests must prove same-origin. Bearer-token clients
       // remain usable without Origin/Referer because they have no browser cookie.
       if (hasSessionCookie && !suppliedOrigin) return reply.code(403).send({ error: "same-origin request required" });
       // A custom domain plus the platform domain (or a preview URL) are both legitimate; a cross-site
       // attacker's Origin can never equal the host this request was addressed to.
-      const hostOrigin = `${forwardedProto}://${req.headers.host}`;
-      if (suppliedOrigin && suppliedOrigin !== expectedOrigin && suppliedOrigin !== hostOrigin) {
+      if (suppliedOrigin && !sameHostOrigin && suppliedOrigin !== configuredOrigin) {
         return reply.code(403).send({ error: "cross-origin request rejected" });
       }
     }
