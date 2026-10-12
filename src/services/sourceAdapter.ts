@@ -13,6 +13,7 @@
 import { LOAD_ORDER, getFormat } from "./reportFormats.js";
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
+import { Agent } from "undici";
 
 export type SourceMode = "API" | "SQL";
 export type SqlDialect = "POSTGRESQL" | "MSSQL" | "MYSQL";
@@ -213,15 +214,34 @@ function normalizeSqlRows(reportKey: string, rows: Record<string, unknown>[]): R
 }
 
 function privateOrLocalAddress(address: string): boolean {
-  if (isIP(address) === 6) {
-    const a = address.toLowerCase();
-    return a === "::1" || a.startsWith("fc") || a.startsWith("fd") || a.startsWith("fe8") || a.startsWith("fe9") || a.startsWith("fea") || a.startsWith("feb") || a.startsWith("::ffff:127.") || a.startsWith("::ffff:10.") || a.startsWith("::ffff:192.168.") || a.startsWith("::ffff:172.16.");
+  const family = isIP(address);
+  if (family === 6) {
+    const normalized = address.toLowerCase();
+    if (normalized.startsWith("::ffff:")) {
+      const mapped = normalized.slice(7);
+      if (isIP(mapped) === 4) return privateOrLocalAddress(mapped);
+      // IPv4-mapped addresses may also be represented as hexadecimal IPv6.
+      return true;
+    }
+    // Only publicly routable IPv6 unicast (2000::/3) is permitted.
+    return !/^[23][0-9a-f]{0,3}:/.test(normalized);
   }
-  if (isIP(address) === 4) {
-    const [a,b] = address.split(".").map(Number);
-    return a === 10 || a === 127 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127) || a === 0;
+  if (family === 4) {
+    const [a, b] = address.split(".").map(Number);
+    // Deny non-global ranges, including CGNAT, documentation, multicast and reserved.
+    return a === 0 || a === 10 || a === 127 || a >= 224 ||
+      (a === 100 && b >= 64 && b <= 127) ||
+      (a === 169 && b === 254) ||
+      (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && (b === 0 || b === 168)) ||
+      (a === 198 && (b === 18 || b === 19)) ||
+      (a === 192 && b === 0) ||
+      (a === 192 && b === 88) ||
+      (a === 198 && b === 51) ||
+      (a === 203 && b === 0) ||
+      a === 255;
   }
-  return false;
+  return true;
 }
 
 async function assertSafeApiBaseUrl(raw: string): Promise<string> {
@@ -257,6 +277,16 @@ async function createApiAdapter(config: IntegrationSourceConfig): Promise<Source
   if (!rawBaseUrl) throw new Error("No API base URL configured.");
   const baseUrl = await assertSafeApiBaseUrl(rawBaseUrl);
   const token = process.env.SOURCE_API_TOKEN || config.authToken || null;
+  const apiAgent = new Agent({ connect: { lookup: (hostname, options, callback) => {
+    lookup(hostname, { all: true }).then(addresses => {
+      if (!addresses.length || addresses.some(a => privateOrLocalAddress(a.address))) {
+        callback(new Error("API source resolved to a blocked network address."), "", 4);
+        return;
+      }
+      const address = addresses[0];
+      callback(null, address.address, address.family);
+    }).catch(error => callback(error, "", 4));
+  } } });
 
   async function fetchReport(reportKey: string, window?: SourceWindow): Promise<SourceFetchResult> {
     const root = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
@@ -270,6 +300,7 @@ async function createApiAdapter(config: IntegrationSourceConfig): Promise<Source
         : { Accept: "application/json" },
       signal: AbortSignal.timeout(60_000),
       redirect: "error",
+      dispatcher: apiAgent,
     });
     if (!response.ok) throw new Error(`HTTP ${response.status} from ${reportKey} endpoint`);
 
