@@ -30,15 +30,24 @@ export function hashPassword(plain: string): string {
   return `v2$${salt}:${hash}`;
 }
 export function verifyPassword(plain: string, stored: string): boolean {
+  // Treat corrupted or untrusted persisted password hashes as a failed login,
+  // never as an uncaught scrypt error or a reason to allocate unbounded memory.
+  if (typeof plain !== "string" || typeof stored !== "string" || stored.length > 512) return false;
   const v2 = stored.startsWith("v2$");
   const encoded = v2 ? stored.slice(3) : stored;
-  const [salt, hash] = encoded.split(":");
-  if (!salt || !hash) return false;
-  const candidate = v2
-    ? scryptSync(plain, salt, 64, { N: SCRYPT_N, r: SCRYPT_R, p: SCRYPT_P, maxmem: SCRYPT_MAXMEM })
-    : scryptSync(plain, salt, 64);
-  const original = Buffer.from(hash, "hex");
-  return candidate.length === original.length && timingSafeEqual(candidate, original);
+  const parts = encoded.split(":");
+  if (parts.length !== 2) return false;
+  const [salt, hash] = parts;
+  if (!salt || salt.length > 128 || !/^[0-9a-fA-F]{128}$/.test(hash)) return false;
+  try {
+    const candidate = v2
+      ? scryptSync(plain, salt, 64, { N: SCRYPT_N, r: SCRYPT_R, p: SCRYPT_P, maxmem: SCRYPT_MAXMEM })
+      : scryptSync(plain, salt, 64);
+    const original = Buffer.from(hash, "hex");
+    return timingSafeEqual(candidate, original);
+  } catch {
+    return false;
+  }
 }
 
 // Setup/reset tokens are high-entropy secrets. Store only a SHA-256 digest so
