@@ -1131,6 +1131,41 @@ app.post<{ Body: { confirm?: string } }>("/api/admin/reset-all", async (req, rep
   }
 });
 
+// Live database diagnostics: admin-only. Never expose connection strings or credentials.
+app.get("/api/admin/database-status", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  reply.header("Cache-Control", "no-store");
+  const configured = process.env.DATABASE_URL;
+  if (!configured) return { status: "red", provider: "Unconfigured", database: "Unknown", checkedAt: new Date().toISOString(), message: "DATABASE_URL is missing" };
+  let provider = "Other PostgreSQL";
+  let expectedDatabase = "";
+  try {
+    const url = new URL(configured);
+    const hostname = url.hostname.toLowerCase();
+    provider = hostname === "neon.tech" || hostname.endsWith(".neon.tech") ? "Neon" :
+      hostname === "railway.internal" || hostname.endsWith(".railway.internal") || hostname.endsWith(".railway.app") || hostname.endsWith(".rlwy.net") ? "Railway PostgreSQL" :
+      hostname.endsWith(".render.com") || hostname.endsWith(".render.internal") ? "Render PostgreSQL" : "Other PostgreSQL";
+    expectedDatabase = decodeURIComponent(url.pathname.slice(1));
+  } catch {
+    return { status: "red", provider: "Invalid configuration", database: "Unknown", checkedAt: new Date().toISOString(), message: "DATABASE_URL cannot be parsed" };
+  }
+  const started = Date.now();
+  try {
+    // The same Prisma client used by authentication and ordinary user requests.
+    const rows = await prisma.$queryRaw<Array<{ database: string }>>`SELECT current_database() AS database`;
+    const latencyMs = Date.now() - started;
+    const database = rows[0]?.database || "Unknown";
+    const mismatch = !!expectedDatabase && database !== expectedDatabase;
+    return { status: mismatch ? "red" : latencyMs > 1500 ? "yellow" : "green", provider, database,
+      latencyMs, checkedAt: new Date().toISOString(),
+      message: mismatch ? "Connected database differs from configured database" : latencyMs > 1500 ? "Slow database response" : "Live query succeeded" };
+  } catch (error) {
+    req.log.error({ err: error }, "admin database status probe failed");
+    return { status: "red", provider, database: "Unverified", latencyMs: Date.now() - started,
+      checkedAt: new Date().toISOString(), message: "Database query failed" };
+  }
+});
+
 // ── External integration (API or direct SQL pull & sync) — admin only ──
 app.get("/api/admin/integration", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
