@@ -11,7 +11,7 @@ This document is a chronological audit trail of **proposed and merged pull reque
 - **#98 — Render standby:** added Render blueprint, `STANDBY_MODE=true` suppression for startup bootstrap/schedulers, read-only PostgreSQL DR comparison script, and DR preflight guide.
 - **#101 — snapshot copy and reconciliation:** added manual PostgreSQL 18 `pg_dump` / `pg_restore` runner and read-only parity / append-only event reconciliation tools. These scripts are NOT configured for routine automatic production deployment.
 - **#99 — closed, not merged:** identity-only migration approach was superseded by completed whole-application PostgreSQL copy.
-- **#97 — independent job-visibility fixes:** tracked separately; merge/CI status should not be inferred from the database PRs.
+- **#97 — job visibility and scheduling fixes:** merged after fixing nullable integration-state TypeScript errors; GitHub CI for head commit `8549fc5` completed successfully. Job state remains process-local, not a cross-host durable queue.
 
 **Operational changes verified through connected platforms:**
 - Railway source `railway` was 590,886,591 bytes (about 563 MiB), 49 tables, 4 users. Source remained unchanged during the first backup/restore.
