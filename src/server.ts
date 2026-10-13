@@ -1552,9 +1552,11 @@ app.get<{
     const sections = await sectionsForUser(user);
     if (!sections.voiceOfEmployee) payload.chat = { available: false };
     const userTheme = await themeForUser(user.id);
-    payload.theme = !isAdminRole(user) && userTheme.branded
+    // The administrative control plane must retain its own neutral/default UI,
+    // regardless of which employer or partner is selected in dashboard filters.
+    payload.theme = isAdminRole(user)
       ? userTheme
-      : await themeForEmployer(employerId);
+      : (userTheme.branded ? userTheme : await themeForEmployer(employerId));
     payload.syncStatus = usePublished
       ? syncStatusForPublishedSnapshot(syncStatus, published?.capturedAt ?? null)
       : syncStatus;
@@ -1943,7 +1945,11 @@ app.get<{ Querystring: { period?: string; quarter?: string; range?: "30d" | "qua
     if (!payload) return sendPublishedDashboardUnavailable(reply, syncStatus);
     const sections = await sectionsForUser(user);
     if (!sections.voiceOfEmployee) payload.chat = { available: false };
-    payload.theme = await themeForEmployer(employer.id);
+    // Keep the fallback dashboard consistent with the employer-specific route.
+    const userTheme = await themeForUser(user.id);
+    payload.theme = isAdminRole(user)
+      ? userTheme
+      : (userTheme.branded ? userTheme : await themeForEmployer(employer.id));
     payload.syncStatus = usePublished
       ? syncStatusForPublishedSnapshot(syncStatus, published?.capturedAt ?? null)
       : syncStatus;
