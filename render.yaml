@@ -1,0 +1,25 @@
+# Independent disaster recovery instance. No migrations or automatic jobs.
+# Connect an external durable PostgreSQL instance; do NOT use free Render Postgres
+# for production: free databases expire after 30 days.
+services:
+  - type: web
+    name: newchanges-standby
+    runtime: docker
+    repo: https://github.com/CayelaemJ/NewChanges
+    branch: main
+    region: frankfurt
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    autoDeployTrigger: off
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: STANDBY_MODE
+        value: "true"
+      - key: DATABASE_URL
+        sync: false
+      - key: PUBLIC_BASE_URL
+        sync: false
+      - key: COOKIE_SECURE
+        value: "true"
