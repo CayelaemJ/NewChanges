@@ -33,7 +33,7 @@ must(syncSource.includes("detectSourceChanges") && syncSource.includes("SOURCE_C
 must(server.includes("Source database changes detected; running incremental sync") && server.includes("SOURCE_CHANGE_POLL_SECONDS"), "runtime scheduler must trigger incremental sync from detected SQL changes");
 must(server.includes("_max: { lastSourceUpdatedAt: true }"), "dashboard versioning must advance only when the source watermark advances");
 must(admin.includes("Live SQL change detection is active every") && admin.includes("Bulk writes process up to"), "Administration must explain change detection and bulk-write throughput");
-must(dashboard.includes("setInterval(checkSourceVersion,30000)"), "visible dashboards must re-check the source version within 30 seconds");
+must(dashboard.includes("setInterval(checkSourceVersion,180000)"), "traffic saver dashboards must re-check the source version within 3 minutes");
 
 if (failures.length) {
   console.error("PERFORMANCE REGRESSION CHECK FAILED:");
