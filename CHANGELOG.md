@@ -1,8 +1,29 @@
 # NewChanges — comprehensive change log
 
-> **Updated:** 12 October 2026 (expanded engineering history)  |  **Repository:** [CayelaemJ/NewChanges](https://github.com/CayelaemJ/NewChanges)  |  **History covered:** PR #1 through PR #89 (all 82 PR records returned by GitHub).
+> **Updated:** 13 October 2026 (expanded engineering history)  |  **Repository:** [CayelaemJ/NewChanges](https://github.com/CayelaemJ/NewChanges)  |  **History covered:** PR #1 through PR #89 (all 82 PR records returned by GitHub).
 
 This document is a chronological audit trail of **proposed and merged pull requests**, not a claim that every PR was deployed or production-verified. **Merged** means incorporated in the repository; **Closed, not merged** means the proposal was not incorporated through that PR; **Open** means still proposed. A merge alone does not certify a successful Railway deployment, completed source refresh, or production readiness. The current project version shown in previous documentation was **0.10.0**; PR numbers are not semantic versions.
+
+## 13 October 2026 — Independent standby, Neon shared database and DR verification (PRs #98, #100, #101)
+
+**Repository changes merged:**
+- **#100 — full PostgreSQL consolidation:** added `GET /ready` with database connectivity checking, a read-only sizing SQL report, full migration runbook, and updated UI regression assertion; published [the verified cutover and failover-gates report](docs/NEON_SHARED_DB_CUTOVER_2026-10-13.md).
+- **#98 — Render standby:** added Render blueprint, `STANDBY_MODE=true` suppression for startup bootstrap/schedulers, read-only PostgreSQL DR comparison script, and DR preflight guide.
+- **#101 — snapshot copy and reconciliation:** added manual PostgreSQL 18 `pg_dump` / `pg_restore` runner and read-only parity / append-only event reconciliation tools. These scripts are NOT configured for routine automatic production deployment.
+- **#99 — closed, not merged:** identity-only migration approach was superseded by completed whole-application PostgreSQL copy.
+- **#97 — independent job-visibility fixes:** tracked separately; merge/CI status should not be inferred from the database PRs.
+
+**Operational changes verified through connected platforms:**
+- Railway source `railway` was 590,886,591 bytes (about 563 MiB), 49 tables, 4 users. Source remained unchanged during the first backup/restore.
+- First successful full custom-format PostgreSQL 18 backup was compressed to 22,636,088 bytes inside a temporary one-off job, then restored into Neon `newchanges`. Job-local backup was deleted at exit; **not** an enduring offsite backup.
+- A named Neon snapshot was created and all 49 application tables and 4 user rows were verified. Subsequent read-only table-count audit found two diverged event tables; final event reconciliation inserted missing records by ID (2 `AnalyticsEvent`, 81 `DataAccessEvent` at execution time).
+- Render was configured against Neon main and reported a live deploy; Railway production switched to Neon and Prisma startup logs confirmed the external `newchanges` database. One-time migration runner was deleted.
+- A sample of 81 Railway HTTP requests returned 200. **Full authenticated login/write and cross-host state checks, failover/failback tests and an independent external backup were not yet demonstrated**.
+- Railway still retains original production PostgreSQL and separate Testing/Playground PostgreSQL instances, pending dependency review and backup validation. No claim of automatic health-routed traffic failover.
+
+**Follow-up:** finish production readiness checks, configure health-aware routing and backups, only then decommission verified unused Railway database services/volumes.
+
+---
 
 ## Executive history
 
