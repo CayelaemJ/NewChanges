@@ -51,7 +51,7 @@ for (const f of ['robots.txt', 'sitemap.xml']) assert.match(server, new RegExp(f
 for (const a of ['og-image.png', 'favicon.ico', 'apple-touch-icon.png', 'site.webmanifest', 'shell.js', 'enterprise.css']) assert.ok(fs.existsSync(`public/${a}`), a);
 // v0.10.0 review fixes
 assert.doesNotMatch(server, /public, max-age=31536000/, 'unversioned static assets must not get a one-year cache');
-assert.match(server, /hostOrigin/, 'CSRF check must accept the request host origin as well as PUBLIC_BASE_URL');
+assert.match(server, /sameHostOrigin/, "CSRF must compare against the actual request host");
 assert.match(fs.readFileSync('src/services/partnerService.ts', 'utf8'), /name is required \(max 120 characters\)/, 'createPartner must validate input');
 assert.match(server, /could not create partner/, 'partner create must return 400 on invalid input');
 assert.match(server, /could not update partner/, 'partner update must return 400 on invalid input');
@@ -72,3 +72,8 @@ assert.doesNotMatch(server, /String\(req\.headers\["x-forwarded-proto"\]/);
 
 // Each API report request must re-check its destination before fetching.
 assert.match(fs.readFileSync("src/services/sourceAdapter.ts", "utf8"), /await assertSafeApiBaseUrl\(url\.toString\(\)\)/);
+
+assert.ok(server.includes("const hasSessionCookie = /(?:^|;\\s*)session=/"), "cookie-based CSRF guard must check the raw Cookie header");
+assert.ok(server.includes("if (hasSessionCookie || !req.headers.authorization)"), "Authorization header must not bypass cookie CSRF validation");
+assert.equal((server.match(/payload\\.theme = isAdminRole\\(user\\)/g) || []).length, 2, "both dashboard routes must keep admin branding stable");
+assert.ok(fs.readFileSync("src/services/sectionService.ts", "utf8").includes("VALID_ROLES.has(role)"), "role permissions must be validated");
