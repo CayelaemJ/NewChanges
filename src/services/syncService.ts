@@ -906,7 +906,7 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
     message: note,
     feedCount: LOAD_ORDER.length,
   });
-  return { ok: status !== "FAILED", status, sourceMode: mode, note, throughAt, touchedEmployers: [...touchedEmployers], summary };
+  return { ok: status === "OK", status, sourceMode: mode, note, throughAt, touchedEmployers: [...touchedEmployers], summary };
 }
 
 export async function testConnection(patch: IntegrationConfigPatch = {}) {
