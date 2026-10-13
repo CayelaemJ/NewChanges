@@ -21,3 +21,8 @@ Railway primary app + Render standby app → one independent **PostgreSQL** prim
 
 ## Privacy
 Users, sessions, passwords and employer information are sensitive: never log connection strings or include dumps in GitHub. Review POPIA cross-border storage/transfer implications for South Africa.
+
+## 2026-10-13 destination verification
+Created **Neon project `wild-base-70222190` (`newchanges-primary-pg18`)** in Frankfurt with PostgreSQL 18.6. Confirmed `newchanges` database contains **zero application tables**. The destination remains isolated and its free storage cap is **1 GiB**; it is not yet ready to receive production data. Older `snowy-flower-31527242` is PostgreSQL 17 and should not be used for the untested downgrade. No production Railway or Render secrets were changed.
+
+The migration MUST STOP if measured source data plus growth headroom exceeds 1 GiB. Measure actual source size through a secure operator-controlled SQL session or approved runtime; Railway's connected integration exposes variable names but redacts the source connection value.
