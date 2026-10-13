@@ -421,7 +421,18 @@ app.get("/users", async (req, reply) => {
   return serveHtml(reply, "users.html");
 });
 
+// Keep lightweight liveness independent of upstream outages.
 app.get("/health", async () => ({ ok: true }));
+// Load balancers must only send authenticated traffic to a DB-ready instance.
+app.get("/ready", async (_req, reply) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    return { ok: true, database: "reachable" };
+  } catch (err) {
+    app.log.warn({ err }, "readiness failed: application PostgreSQL unavailable");
+    return reply.code(503).send({ ok: false, database: "unavailable" });
+  }
+});
 // lets you confirm the NEW build is live: should report the live-dashboard version
 app.get("/version", async () => ({ product: "empower-fin Dashboard Portal", version: "0.10.0", contractVersion: "2.6", coreSourceFeeds: 10, sourceModes: ["API", "SQL"], sqlDialects: ["POSTGRESQL", "MSSQL", "MYSQL"], channelPartners: true, scheduledReports: true, emailDelivery: "SMTP", portfolioEmployerFilter: true, portfolioMetricHelp: true, employerMetricHelp: true, uiNavigation: "account-dropdown-v2", routes: ["/login", "/dashboard", "/admin", "/users"] }));
 

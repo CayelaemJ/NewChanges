@@ -163,9 +163,9 @@ must(read("public/admin.html").includes("BrandEngine.extractFromImage"), "admin 
 must(
   server.includes("themeForEmployer") &&
   server.includes("const userTheme = await themeForUser(user.id);") &&
-  server.includes("!isAdminRole(user) && userTheme.branded") &&
-  server.includes("await themeForEmployer(employerId)") &&
-  server.includes("payload.theme = await themeForEmployer(employer.id)"),
+  server.includes("payload.theme = isAdminRole(user)") &&
+  server.includes("(userTheme.branded ? userTheme : await themeForEmployer(employerId))") &&
+  server.includes("(userTheme.branded ? userTheme : await themeForEmployer(employer.id))"),
   "dashboard APIs must preserve an assigned user's partner theme and otherwise publish the selected employer's white-label theme"
 );
 must(pages.dashboard.includes("applyTheme(live.theme, me)") && pages.dashboard.includes("applyEmployerScopedTheme(theme)"), "dashboard must apply the selected employer partner theme to employer content");
