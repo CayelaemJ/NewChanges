@@ -73,11 +73,15 @@ export function startSyncJob(trigger: "manual" | "scheduled" = "manual"): string
           });
         },
       });
+      // runSync reports ordered-feed failures as a result rather than throwing.
+      // PARTIAL is not a successful sync: later dependent feeds were blocked.
+      const complete = job.result?.status === "OK" && job.result?.ok === true;
       update(job, jobId, {
-        status: "DONE",
-        phase: "COMPLETE",
+        status: complete ? "DONE" : "FAILED",
+        phase: complete ? "COMPLETE" : "FAILED",
         progress: 100,
-        message: job.result?.note || "Synchronisation complete",
+        message: job.result?.note || (complete ? "Synchronisation complete" : "Synchronisation failed"),
+        ...(!complete ? { error: job.result?.error || job.result?.note || "Source synchronisation did not complete" } : {}),
       });
     } catch (e: any) {
       update(job, jobId, {
