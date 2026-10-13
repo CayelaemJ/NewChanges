@@ -1,5 +1,27 @@
 # NewChanges semantic layer recovery — implementation plan
 
+## Non-negotiable priorities (in order)
+1. **Speed:** dashboard actions should use precomputed versioned results or memory hits, not scan large raw tables. Measure p50/p95 latency.
+2. **Cost:** minimise Neon transfer and compute, not just request counts. No PostgreSQL writes on normal GETs, no duplicate schedulers, no full rebuild when unchanged. Measure bytes transferred, writes, compute usage and cache hit rate.
+3. **Latest data:** continuously detect source changes, durably capture them, then atomically publish refreshed semantic partitions. Trigger invalidation from source version/watermark, not an arbitrary cache expiry. Display the last processed source watermark and freshness lag. A 5-minute TTL alone is NOT real-time freshness.
+
+## Operational policy
+- **Read path:** serve an immutable in-memory snapshot first; bounded miss handling. Do not query Neon once per widget/filter if a usable same-version semantic snapshot exists.
+- **Write path:** only genuine business/source changes go through durable deduplicated batches; no analytics/pageview writes under emergency traffic saver.
+- **Refresh:** one scheduler owner, incremental updates and coalescing; no periodic complete rebuild unless explicitly requested or reconciliation needs it.
+- **Consistency:** Railway and Render must have the same published semantic version. Local RAM is a cache, never the sole durable copy.
+- **Failover:** serve last known good snapshot with visibly stale state during an outage; never falsely label stale data as current.
+- **Safety:** preserve durable user writes, access control and audit requirements. Do not acknowledge undurable captured source events.
+
+## Acceptance targets to measure (provisional, not achieved)
+- p95 cached dashboard read under 300ms at normal pilot load.
+- >95% dashboard requests served without raw PostgreSQL data scans.
+- Under 60 seconds from an observed source change to published semantic snapshot when upstream capabilities and capacity permit; otherwise show measured lag.
+- No PostgreSQL writes from ordinary dashboard GETs.
+- Traffic/compute daily budget measured under representative load; alert before Neon quota exhaustion.
+- No lost acknowledged events on restart or provider failure.
+
+
 Status: **work in progress / not approved for merge**.
 
 ## Phase 1 — Stabilize current workloads (first changes in this PR)
