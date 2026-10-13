@@ -75,5 +75,5 @@ assert.match(fs.readFileSync("src/services/sourceAdapter.ts", "utf8"), /await as
 
 assert.ok(server.includes("const hasSessionCookie = /(?:^|;\\s*)session=/"), "cookie-based CSRF guard must check the raw Cookie header");
 assert.ok(server.includes("if (hasSessionCookie || !req.headers.authorization)"), "Authorization header must not bypass cookie CSRF validation");
-assert.equal((server.match(/payload\\.theme = isAdminRole\\(user\\)/g) || []).length, 2, "both dashboard routes must keep admin branding stable");
+assert.equal(server.split("payload.theme = isAdminRole(user)").length - 1, 2, "both dashboard routes must keep admin branding stable");
 assert.ok(fs.readFileSync("src/services/sectionService.ts", "utf8").includes("VALID_ROLES.has(role)"), "role permissions must be validated");
