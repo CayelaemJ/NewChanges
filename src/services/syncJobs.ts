@@ -22,6 +22,10 @@ const JOB_TTL_MS = 30 * 60 * 1000;
 
 function update(job: SyncJob, jobId: string, patch: Partial<SyncJob>) {
   Object.assign(job, patch, { updatedAt: new Date().toISOString() });
+  if ((job.status === "DONE" || job.status === "FAILED") && !job.timer) {
+    job.timer = setTimeout(() => syncJobs.delete(jobId), JOB_TTL_MS);
+    job.timer.unref();
+  }
   publishAdminEvent("job.progress", {
     status: job.status,
     phase: job.phase,
@@ -36,7 +40,8 @@ function update(job: SyncJob, jobId: string, patch: Partial<SyncJob>) {
 
 export function startSyncJob(trigger: "manual" | "scheduled" = "manual"): string {
   const jobId = randomUUID();
-  const timer = setTimeout(() => syncJobs.delete(jobId), JOB_TTL_MS);
+  // Keep in-flight jobs observable even when a sync takes longer than 30 minutes.
+  const timer = null as unknown as NodeJS.Timeout;
   const job: SyncJob = {
     status: "PENDING",
     phase: "QUEUED",
