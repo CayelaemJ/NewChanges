@@ -10,7 +10,7 @@ services:
     region: frankfurt
     plan: free
     dockerfilePath: ./Dockerfile
-    healthCheckPath: /health
+    healthCheckPath: /ready
     autoDeployTrigger: off
     envVars:
       - key: NODE_ENV
