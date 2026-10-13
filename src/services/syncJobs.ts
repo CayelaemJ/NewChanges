@@ -14,7 +14,7 @@ export interface SyncJob {
   detail?: any;
   result?: any;
   error?: string;
-  timer: NodeJS.Timeout;
+  timer: NodeJS.Timeout | null;
 }
 
 const syncJobs = new Map<string, SyncJob>();
@@ -41,7 +41,7 @@ function update(job: SyncJob, jobId: string, patch: Partial<SyncJob>) {
 export function startSyncJob(trigger: "manual" | "scheduled" = "manual"): string {
   const jobId = randomUUID();
   // Keep in-flight jobs observable even when a sync takes longer than 30 minutes.
-  const timer = null as unknown as NodeJS.Timeout;
+  const timer = null;
   const job: SyncJob = {
     status: "PENDING",
     phase: "QUEUED",
