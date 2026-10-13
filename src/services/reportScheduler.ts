@@ -485,8 +485,8 @@ export async function runDueReports(logger?: { info?: Function; error?: Function
     select: { lastSyncStatus: true },
   });
   if (["REBUILDING", "PARTIAL", "FAILED", "FULL_REFRESH_FAILED", "FULL_REFRESH_PRECHECK_FAILED"].includes(String(refresh?.lastSyncStatus || ""))) {
-    logger?.info?.({ refreshStatus: refresh.lastSyncStatus }, "scheduled reports deferred until dashboard data is publishable");
-    return { checked: 0, deferred: true, refreshStatus: refresh.lastSyncStatus };
+    logger?.info?.({ refreshStatus: refresh?.lastSyncStatus }, "scheduled reports deferred until dashboard data is publishable");
+    return { checked: 0, deferred: true, refreshStatus: refresh?.lastSyncStatus };
   }
   const now = new Date();
   const due = await prisma.reportSchedule.findMany({ where: { active: true, nextRunAt: { lte: now } }, orderBy: { nextRunAt: "asc" }, take: 25 });
