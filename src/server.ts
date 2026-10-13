@@ -1989,6 +1989,20 @@ setInterval(() => {
   if (!CONTACT_EMAIL) app.log.warn("CONTACT_EMAIL is not set: the contact form is disabled and legal pages show a placeholder contact.");
   app.log.info({ portalVersion: "0.10.0", publicDir: PUBLIC_DIR }, "starting empower-fin Dashboard Portal");
 app.listen({ port: PORT, host: "0.0.0.0" })
-  .then(async () => { await bootstrapAdmin(); await ensureSectionDefaults(); startSyncScheduler(app); startReportScheduler(app);
-startDailyRefresh(); startAutomationScheduler(app); app.log.info(`empower-fin Dashboard Portal on :${PORT}`); })
+  .then(async () => {
+    // Standby instances must not run independent scheduled imports, mail or
+    // daily purges. Keep these disabled unless explicitly enabled.
+    const standby = process.env.STANDBY_MODE === "true";
+    if (!standby) {
+      await bootstrapAdmin();
+      await ensureSectionDefaults();
+      startSyncScheduler(app);
+      startReportScheduler(app);
+      startDailyRefresh();
+      startAutomationScheduler(app);
+    } else {
+      app.log.warn("STANDBY_MODE enabled: background schedulers and bootstrap writes are disabled");
+    }
+    app.log.info(`empower-fin Dashboard Portal on :${PORT}`);
+  })
   .catch((err) => { app.log.error(err); process.exit(1); });
