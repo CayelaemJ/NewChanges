@@ -86,6 +86,17 @@ must(server.includes("sendPublishedDashboardUnavailable") && server.includes('re
 must(dashboard.includes("Purging & rebuilding") && dashboard.includes("Purged & overwritten"), "dashboard must visibly distinguish rebuilding from a completed purge-and-overwrite refresh");
 must(dashboard.includes("still showing the last successful data") && dashboard.includes("Reason:"), "dashboard must preserve charts and surface the refresh failure reason");
 
+
+// Job lifecycle and delivery checks: terminal statuses must be truthful and
+// a running job must not expire from the poller on a wall-clock timer.
+const genericJobs = read("src/services/asyncJobs.ts");
+const sourceJobs = read("src/services/syncJobs.ts");
+must(genericJobs.includes('const success = result?.status === "OK" && result?.ok === true'), "legacy sync runner must not report a partial feed as DONE");
+must(genericJobs.includes('job.status = "FAILED";\n      job.result = {\n        batchId: opts.batchId'), "upload exceptions must fail the job rather than return DONE");
+must(genericJobs.includes('if ((job.status === "DONE" || job.status === "FAILED") && !job.timer)'), "generic jobs must start retention only at terminal status");
+must(sourceJobs.includes('if ((job.status === "DONE" || job.status === "FAILED") && !job.timer)'), "source jobs must start retention only at terminal status");
+must(reports.includes('["REBUILDING", "PARTIAL", "FAILED", "FULL_REFRESH_FAILED", "FULL_REFRESH_PRECHECK_FAILED"].includes(String(refresh?.lastSyncStatus || ""))'), "due reports must defer on all unpublishable source states");
+
 if (failures.length) {
   console.error("Daily refresh regression check failed:\n- " + failures.join("\n- "));
   process.exit(1);
