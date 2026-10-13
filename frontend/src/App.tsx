@@ -411,7 +411,7 @@ function AdminView({me}:{me:Me}) {
       try{ await load(); } finally { refreshBusy.current=false; }
     };
     refresh();
-    const id=window.setInterval(refresh,30000);
+    const id=window.setInterval(refresh,180000);
     return()=>{active=false;window.clearInterval(id);};
   },[]);
 

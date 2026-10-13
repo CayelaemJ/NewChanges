@@ -125,7 +125,7 @@
   }
   function start() {
     refresh().then(refreshDatabase);
-    timer = setInterval(() => { refresh().then(refreshDatabase); }, 10000);
+    timer = setInterval(() => { refresh().then(refreshDatabase); }, 60000);
     document.addEventListener("visibilitychange", () => { if (!document.hidden) refresh().then(refreshDatabase); });
     window.addEventListener("efs:source-status-refresh", refresh);
   }

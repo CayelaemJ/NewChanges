@@ -840,6 +840,7 @@ app.get("/api/admin/users/revoked", async (req, reply) => {
 app.post<{ Body: { type: "PAGEVIEW" | "SCROLL_DEPTH" | "SESSION_END" | "CTA_CLICK" | "FORM_SUBMIT" | "OUTBOUND_CLICK" | "CLIENT_ERROR"; path: string; value?: number } }>(
   "/api/analytics/event",
   async (req, reply) => {
+    if (process.env.TRAFFIC_SAVER_MODE !== "false") return { ok: true }; // emergency: disable nonessential analytics DB reads/writes
     const user = await currentUser(req); // best-effort — allow anonymous beacons to no-op rather than 401 spam
     const b = req.body ?? ({} as any);
     const EVENT_TYPES = ["PAGEVIEW", "SCROLL_DEPTH", "SESSION_END", "CTA_CLICK", "FORM_SUBMIT", "OUTBOUND_CLICK", "CLIENT_ERROR"];
@@ -2013,6 +2014,7 @@ for (const sig of ["SIGTERM", "SIGINT"] as const) {
 }
 // Close expired sessions for history, then prune only old ended records.
 setInterval(() => {
+  if (process.env.TRAFFIC_SAVER_MODE !== "false") return;
   const now = new Date();
   const cutoff = new Date(Date.now() - 180 * 864e5);
   prisma.session.updateMany({ where: { expiresAt: { lt: now }, endedAt: null }, data: { endedAt: now } })
@@ -2031,10 +2033,14 @@ app.listen({ port: PORT, host: "0.0.0.0" })
     if (!standby) {
       await bootstrapAdmin();
       await ensureSectionDefaults();
-      startSyncScheduler(app);
-      startReportScheduler(app);
-      startDailyRefresh();
-      startAutomationScheduler(app);
+      if (process.env.TRAFFIC_SAVER_MODE === "false") {
+        startSyncScheduler(app);
+        startReportScheduler(app);
+        startDailyRefresh();
+        startAutomationScheduler(app);
+      } else {
+        app.log.warn("TRAFFIC_SAVER_MODE: automatic sync, daily refresh and background jobs paused; manual admin actions remain available");
+      }
     } else {
       app.log.warn("STANDBY_MODE enabled: background schedulers and bootstrap writes are disabled");
     }
