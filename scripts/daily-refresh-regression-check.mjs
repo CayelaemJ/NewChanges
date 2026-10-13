@@ -12,8 +12,15 @@ const sourceAdapter = read("src/services/sourceAdapter.ts");
 const admin = read("public/admin.html");
 const users = read("public/users.html");
 const sourceStatus = read("public/admin-source-status.js");
+const syncJobs = read("src/services/syncJobs.ts");
 
 const failures = [];
+mustSyncStatusGuards();
+
+function mustSyncStatusGuards() {
+  if (!sync.includes('return { ok: status === "OK", status,')) throw new Error("partial source sync must return ok=false");
+  if (!syncJobs.includes('job.result?.status === "OK" && job.result?.ok === true')) throw new Error("sync job must not report PARTIAL or FAILED as DONE");
+}
 const must = (ok, message) => { if (!ok) failures.push(message); };
 
 must(daily.includes('process.env.DAILY_REFRESH_CRON ?? "0 0 * * *"'), "daily refresh must default to 00:00");
