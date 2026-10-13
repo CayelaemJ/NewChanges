@@ -103,10 +103,14 @@
       window.SECURITY_ACCESS=window.SECURITY_ACCESS.slice(0,5);
       window.SESSION_SUMMARY=new Map();
       window.SECURITY_SESSIONS.forEach(function(s){
-        const prev=window.SESSION_SUMMARY.get(s.user.id)||{count:0,lastSeenAt:null};
+        // Historical or revoked sessions can outlive their associated user.
+        // One incomplete record must not prevent the security centre rendering.
+        const userId=s?.user?.id;
+        if(!userId)return;
+        const prev=window.SESSION_SUMMARY.get(userId)||{count:0,lastSeenAt:null};
         prev.count+=1;
         if(!prev.lastSeenAt||new Date(s.lastSeenAt)>new Date(prev.lastSeenAt))prev.lastSeenAt=s.lastSeenAt;
-        window.SESSION_SUMMARY.set(s.user.id,prev);
+        window.SESSION_SUMMARY.set(userId,prev);
       });
       if($("#sec-live"))$("#sec-live").textContent=String(overview.activeSessions??window.SECURITY_SESSIONS.filter(function(s){return s.active;}).length);
       if($("#sec-failed"))$("#sec-failed").textContent=String(overview.failedLogins24h??0);
