@@ -47,12 +47,20 @@ export async function listSections() {
   });
 }
 
+const VALID_ROLES = new Set(ALL_ROLES.split(","));
+
 export async function updateSection(key: string, patch: { enabled?: boolean; allowedRoles?: string[] }) {
+  if (!patch || typeof patch !== "object" || Array.isArray(patch)) throw new Error("invalid section settings");
+  if (patch.enabled !== undefined && typeof patch.enabled !== "boolean") throw new Error("enabled must be a boolean");
+  if (patch.allowedRoles !== undefined &&
+    (!Array.isArray(patch.allowedRoles) || !patch.allowedRoles.every((role) => typeof role === "string" && VALID_ROLES.has(role)))) {
+    throw new Error("allowedRoles must contain recognised user roles");
+  }
   return prisma.dashboardSection.update({
     where: { key },
     data: {
       ...(patch.enabled !== undefined ? { enabled: patch.enabled } : {}),
-      ...(patch.allowedRoles ? { allowedRoles: patch.allowedRoles.join(",") } : {}),
+      ...(patch.allowedRoles !== undefined ? { allowedRoles: [...new Set(patch.allowedRoles)].join(",") } : {}),
     },
   });
 }
