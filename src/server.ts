@@ -840,6 +840,7 @@ app.get("/api/admin/users/revoked", async (req, reply) => {
 app.post<{ Body: { type: "PAGEVIEW" | "SCROLL_DEPTH" | "SESSION_END" | "CTA_CLICK" | "FORM_SUBMIT" | "OUTBOUND_CLICK" | "CLIENT_ERROR"; path: string; value?: number } }>(
   "/api/analytics/event",
   async (req, reply) => {
+    if (process.env.TRAFFIC_SAVER_MODE !== "false") return { ok: true }; // emergency: disable nonessential analytics DB reads/writes
     const user = await currentUser(req); // best-effort — allow anonymous beacons to no-op rather than 401 spam
     const b = req.body ?? ({} as any);
     const EVENT_TYPES = ["PAGEVIEW", "SCROLL_DEPTH", "SESSION_END", "CTA_CLICK", "FORM_SUBMIT", "OUTBOUND_CLICK", "CLIENT_ERROR"];
