@@ -17,7 +17,8 @@ const JOB_TTL_MS = 30 * 60 * 1000;
 
 function startJob(map: Map<string, any>, type: string) {
   const id = randomUUID();
-  const timer = setTimeout(() => map.delete(id), JOB_TTL_MS);
+  // Start retention only once the job is terminal; a long import must stay pollable.
+  const timer: NodeJS.Timeout | null = null;
   map.set(id, {
     status: "PENDING",
     phase: "QUEUED",
@@ -38,6 +39,11 @@ function startJob(map: Map<string, any>, type: string) {
 
 function updateJob(job: any, jobId: string, jobType: string, patch: Record<string, unknown>) {
   Object.assign(job, patch, { updatedAt: new Date().toISOString() });
+  if ((job.status === "DONE" || job.status === "FAILED") && !job.timer) {
+    const map = jobType === "upload" ? uploadJobs : jobType === "commit" ? commitJobs : syncJobs;
+    job.timer = setTimeout(() => map.delete(jobId), JOB_TTL_MS);
+    job.timer.unref();
+  }
   publishAdminEvent("job.progress", {
     status: job.status,
     phase: job.phase,
@@ -126,7 +132,7 @@ export function startUploadJob(opts: any) {
         message: "Import complete",
       });
     } catch (e: any) {
-      job.status = "DONE";
+      job.status = "FAILED";
       job.result = {
         batchId: opts.batchId || "unknown",
         status: "ERROR",
@@ -139,6 +145,7 @@ export function startUploadJob(opts: any) {
         preview: [],
       };
       updateJob(job, jobId, "upload", {
+        error: e?.message || String(e),
         phase: "FAILED",
         progress: 100,
         message: "Import failed",
@@ -228,12 +235,14 @@ export function startSyncJob(trigger: "manual" | "scheduled" = "manual") {
           });
         },
       });
-      job.status = "DONE";
+      const success = result?.status === "OK" && result?.ok === true;
+      job.status = success ? "DONE" : "FAILED";
       job.result = result;
       updateJob(job, jobId, "sync", {
-        phase: "COMPLETE",
+        phase: success ? "COMPLETE" : "FAILED",
         progress: 100,
-        message: "Synchronisation complete",
+        message: result?.note || (success ? "Synchronisation complete" : "Synchronisation failed"),
+        ...(!success ? { error: result?.error || result?.note || "Source sync did not complete" } : {}),
       });
     } catch (e: any) {
       job.status = "FAILED";
