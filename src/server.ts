@@ -132,12 +132,12 @@ app.addHook("onRequest", async (req, reply) => {
   // application. Bearer-token API clients are exempt because they don't carry
   // the browser session cookie and can legitimately omit Origin/Referer.
   if (req.method !== "GET" && req.method !== "HEAD" && path.startsWith("/api/")) {
-    const authHeader = req.headers.authorization;
     const origin = req.headers.origin;
     const referer = req.headers.referer;
-    if (!authHeader) {
-      const hasSessionCookie = Boolean(req.cookies?.session);
-      const configuredOrigin = String(process.env.PUBLIC_BASE_URL || "").replace(/\/$/, "");
+    // Check the raw cookie header: @fastify/cookie's hook can run after this hook.
+    // Authorization must not exempt requests that also carry a session cookie.
+    const hasSessionCookie = /(?:^|;\s*)session=/.test(String(req.headers.cookie || ""));
+    if (hasSessionCookie || !req.headers.authorization) {
       const suppliedOrigin = origin || (() => { try { return new URL(referer as string).origin; } catch { return ""; } })();
       // TLS may terminate at Railway before Fastify sees the request. Compare the
       // browser origin to the externally requested host, not the internal HTTP
@@ -155,7 +155,7 @@ app.addHook("onRequest", async (req, reply) => {
       if (hasSessionCookie && !suppliedOrigin) return reply.code(403).send({ error: "same-origin request required" });
       // A custom domain plus the platform domain (or a preview URL) are both legitimate; a cross-site
       // attacker's Origin can never equal the host this request was addressed to.
-      if (suppliedOrigin && !sameHostOrigin && suppliedOrigin !== configuredOrigin) {
+      if (suppliedOrigin && !sameHostOrigin) {
         return reply.code(403).send({ error: "cross-origin request rejected" });
       }
     }
