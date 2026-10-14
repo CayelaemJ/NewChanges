@@ -80,4 +80,9 @@ assert(governance.includes('update: { validation, validatedAt: now }'), "source 
 const queueHealth = read("../src/services/semanticQueueHealth.ts");
 assert(queueHealth.includes("semanticRefreshJob.groupBy"), "MLOps queue health must aggregate without raw dashboard scans");
 assert(server.includes('"/api/admin/mlops/semantic-queue-health"'), "Admin queue health endpoint required");
+const shadow=read("../src/services/semanticShadowWorker.ts");
+assert(shadow.includes('ENABLE_SEMANTIC_SHADOW_WORKER'), "shadow worker must be opt in");
+assert(shadow.includes('getPublishedDashboardPayload'), "shadow worker must use last published payload, never raw source scans");
+assert(shadow.includes('finishSemanticRefresh'), "worker must complete durable queue jobs");
+assert(!server.includes("processOneShadowSemanticRefresh("), "web server must not accidentally start shadow worker");
 console.log("Source synchronization safety regression checks passed.");
