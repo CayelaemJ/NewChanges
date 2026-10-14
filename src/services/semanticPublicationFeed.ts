@@ -4,22 +4,22 @@
 import { prisma } from "./snapshotBuilder.js";
 
 export async function readSemanticPublicationChanges(input:{
-  after?:string;limit?:number;employerIds?:string[];
+  afterId?:string;limit?:number;employerIds?:string[];
 }) {
   const limit=Math.max(1,Math.min(100,Math.floor(input.limit??50)));
-  const after=input.after ? new Date(input.after) : null;
-  if (after && !Number.isFinite(after.getTime())) throw new Error("Invalid publication cursor");
+  const after=input.afterId ? await prisma.semanticPublicationAudit.findUnique({where:{id:input.afterId},select:{id:true,createdAt:true}}) : null;
+  if(input.afterId && !after) throw new Error("Unknown publication cursor");
   const employers=[...new Set(input.employerIds??[])];
   if(employers.length>200) throw new Error("Employer filter exceeds limit");
   const rows=await prisma.semanticPublicationAudit.findMany({
     where:{
-      ...(after?{createdAt:{gt:after}}:{}),
+      ...(after?{OR:[{createdAt:{gt:after.createdAt}},{createdAt:after.createdAt,id:{gt:after.id}}]}:{}),
       ...(employers.length?{employerId:{in:employers}}:{}),
     },
     select:{id:true,employerId:true,period:true,partitionKey:true,nextManifestId:true,action:true,createdAt:true},
     orderBy:[{createdAt:"asc"},{id:"asc"}],
     take:limit,
   });
-  return { changes:rows, nextCursor:rows.at(-1)?.createdAt.toISOString()??input.after??null,
+  return { changes:rows, nextCursor:rows.at(-1)?.id??input.afterId??null,
     servingEnabled:false, transport:"DURABLE_POLL" };
 }
