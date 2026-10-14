@@ -22,7 +22,7 @@ function identity(input: any) {
   };
 }
 
-function sourceFingerprint(config: any) {
+export function sourceFingerprint(config: any) {
   return createHash("sha256").update(JSON.stringify(identity(config))).digest("hex");
 }
 
