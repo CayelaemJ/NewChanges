@@ -1005,33 +1005,19 @@ async function syncNow(){
   }
 }
 async function refreshNow(btn){
-  if(!confirm('Run an authoritative full refresh now?\n\nThe connected source will be treated as truth. Previous cursors, MLOps decisions and stale-write comparisons will not gate this rebuild. All 10 feeds are read from the beginning, the source-derived model is rewritten, and a new dashboard is published only after the full rebuild succeeds.\n\nDashboard users continue seeing the last successful published dashboard while this runs.')) return;
-  const original=btn?.textContent||'Refresh now';
-  if(btn){ btn.disabled=true; btn.textContent='Refreshing…'; }
-  $('#integ-result').innerHTML = '<div class="banner ok">Saving settings and preflighting the source…</div>';
+  if(!confirm('Run a safe incremental sync of the 10 canonical feeds? Only changes since the saved source cursors will be fetched. Existing dashboard records are not purged.')) return;
+  const original=btn?.textContent||'Sync changes now';
+  if(btn){ btn.disabled=true; btn.textContent='Syncing…'; }
+  $('#integ-result').innerHTML = '<div class="banner ok">Synchronising changed records without resetting source cursors…</div>';
   try{
-    const saveBody=integrationDraft();
-    const saveResp=await fetch(`${API}/api/admin/integration`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(saveBody)});
-    const saved=await saveResp.json().catch(()=>({}));
-    if(!saveResp.ok) throw new Error(saved.error||'Could not save settings before refresh');
-    $('#integ-token').value=''; $('#integ-sql-password').value='';
-
-    $('#integ-result').innerHTML = '<div class="banner ok">Full refresh started. The last successful dashboard remains published while source data is rebuilt…</div>';
+    // Do not implicitly overwrite the live connection with unsaved form fields.
+    // Use Save / Test connection before syncing to a new source.
     const r=await fetch(`${API}/api/admin/integration/refresh`,{method:'POST'});
     const d=await r.json().catch(()=>({}));
-    if(!r.ok || !d.ok) throw new Error(d.error||d.note||'Full refresh failed');
-    if(d.status==='ALREADY_RUNNING'){
-      $('#integ-result').innerHTML = '<div class="banner ok">A full refresh is already running on another application instance. The last successful dashboard remains visible until it publishes.</div>';
-      return;
-    }
-    const detail=[
-      d.purgedRows!=null ? `${Number(d.purgedRows).toLocaleString('en-ZA')} source rows purged` : null,
-      d.overwrittenRows!=null ? `${Number(d.overwrittenRows).toLocaleString('en-ZA')} rows committed` : null,
-      d.publishedDashboards!=null ? `${Number(d.publishedDashboards).toLocaleString('en-ZA')} dashboard snapshot${Number(d.publishedDashboards)===1?'':'s'} published` : null,
-    ].filter(Boolean).join(' · ');
-    $('#integ-result').innerHTML = `<div class="banner ok">✓ Full refresh completed and published.${detail?' '+esc(detail)+'.':''}</div>`;
+    if(!r.ok || !d.ok) throw new Error(d.error||d.note||'Incremental sync failed');
+    $('#integ-result').innerHTML = `<div class="banner ok">✓ Incremental sync completed. ${esc(d.note||'Changes processed without deleting existing dashboard records.')}</div>`;
   }catch(e){
-    $('#integ-result').innerHTML = `<div class="banner err">✕ Refresh did not publish a new dashboard. The last successful dashboard remains visible. Reason: ${esc(e.message)}</div>`;
+    $('#integ-result').innerHTML = `<div class="banner err">✕ Incremental sync failed. Existing dashboard data was not purged. Reason: ${esc(e.message)}</div>`;
   }finally{
     if(btn){ btn.disabled=false; btn.textContent=original; }
     loadInteg();
