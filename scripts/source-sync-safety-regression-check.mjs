@@ -56,4 +56,13 @@ for (const model of ["SemanticPublicationPointer", "SemanticPublicationAudit"]) 
 assert(gates.includes("storageVerified: false, sha256Verified: false"), "semantic publication must fail closed without object storage verification");
 assert(gates.includes("evaluatePublicationGates"), "semantic publication gates required");
 assert(server.includes('"/api/admin/mlops/semantic-publications/:manifestId/readiness"'), "Admin readiness endpoint required");
+const queue = read("../src/services/semanticRefreshQueue.ts");
+const storage = read("../src/services/semanticObjectVerification.ts");
+assert(schema.includes("model SemanticRefreshJob {"), "Durable semantic queue schema required");
+assert(queue.includes("skipDuplicates:true"), "Coalesced queue must deduplicate writes");
+assert(queue.includes("FOR UPDATE SKIP LOCKED"), "Workers must avoid competing claims");
+assert(queue.includes('"leasedUntil"'), "Worker lease required");
+assert(storage.includes('redirect:"error"'), "External object requests must not follow redirects");
+assert(storage.includes('actual!==expected'), "Object must pass independent SHA-256 verification");
+assert(storage.includes('persisted.byteLength!==input.content.byteLength'), "Object length must be verified");
 console.log("Source synchronization safety regression checks passed.");
