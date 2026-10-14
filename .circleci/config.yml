@@ -1,0 +1,71 @@
+version: 2.1
+
+# CI independent of GitHub-hosted Actions billing.
+# Connect this private GitHub repository to CircleCI (free plan) to activate.
+jobs:
+  verify:
+    docker:
+      - image: cimg/node:22.14
+    resource_class: small
+    working_directory: ~/newchanges
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - npm-v1-{{ checksum "package-lock.json" }}
+      - run:
+          name: Install locked dependencies
+          command: npm ci --no-audit --no-fund
+      - save_cache:
+          key: npm-v1-{{ checksum "package-lock.json" }}
+          paths:
+            - ~/.npm
+      - run:
+          name: Generate Prisma and build backend and frontend
+          command: npm run build
+          no_output_timeout: 10m
+      - run:
+          name: Semantic integration and source safeguards
+          command: |
+            npm run check:source-sync-safety
+            npm run check:semantic-planner
+            npm run check:semantic-storage
+            npm run check:source-vault
+            npm run check:source-continuity
+            npm run check:source-reconciliation
+      - run:
+          name: API, data and dashboard regressions
+          command: |
+            npm run check:production
+            npm run check:security
+            npm run check:ui
+            npm run check:imports
+            npm run check:scheduling
+            npm run check:daily-refresh
+            npm run check:react
+            npm run check:role-perspective
+      - run:
+          name: Data quality, platform and UI tests
+          command: |
+            npm run test:score
+            npm run check:brand
+            npm run check:mlops
+            npm run check:mlops-data-quality
+            npm run check:accessibility
+            npm run check:performance
+            npm run check:security-identity
+            npm run check:security-operations
+            npm run check:security-governance
+            npm run check:south-africa-compliance
+            npm run check:period-comparison
+      - run:
+          name: Dependency vulnerability audit
+          command: npm audit --audit-level=high
+      - store_test_results:
+          path: test-results
+          when: always
+
+workflows:
+  verify_pull_requests_and_main:
+    jobs:
+      - verify

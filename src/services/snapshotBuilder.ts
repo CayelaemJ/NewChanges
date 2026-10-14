@@ -15,7 +15,11 @@ const prisma = new PrismaClient();
 // Short-lived server-side cache: dashboard reads are read-heavy and the same
 // cohort is commonly requested repeatedly while users move between tabs.
 // Keep this deliberately small so slicer changes remain effectively real-time.
-const DASHBOARD_CACHE_TTL_MS = 60_000;
+// Adjustable emergency read-model TTL; clamped to 1–30 minutes to bound staleness.
+// Published refresh paths still invalidate affected employer cache entries.
+const DASHBOARD_CACHE_TTL_MS = Math.min(30 * 60_000, Math.max(60_000,
+  Number(process.env.SEMANTIC_CACHE_TTL_MS) || 5 * 60_000));
+const SEMANTIC_PERSIST_ON_READ = process.env.SEMANTIC_PERSIST_ON_READ === "true";
 const DASHBOARD_CACHE_SCHEMA = "financial-comparison-v3";
 const dashboardCache = new Map<string, { expiresAt: number; payload: any }>();
 const PUBLISHED_DASHBOARD_CACHE_KEY = "__published_dashboard_v1__";
@@ -980,12 +984,16 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
       select: { name: true },
       orderBy: { name: "asc" },
     }),
-    prisma.employeeVersion.findMany({
-      where: { employee: { employerId }, siteName: { not: null } },
-      select: { siteName: true },
-      distinct: ["siteName"],
-      orderBy: { siteName: "asc" },
-    }),
+    // Prisma distinct de-duplicates in the client and transfers every historical
+    // EmployeeVersion row. Push DISTINCT into PostgreSQL to avoid massive egress.
+    prisma.$queryRaw<Array<{ siteName: string }>>`
+      SELECT DISTINCT ev."siteName"
+      FROM "EmployeeVersion" ev
+      JOIN "Employee" e ON e.id = ev."employeeId"
+      WHERE e."employerId" = ${employerId}
+        AND ev."siteName" IS NOT NULL
+      ORDER BY ev."siteName" ASC
+    `,
   ]);
   const sites = [...new Set([
     ...allSiteRows.map((row: any) => row.name),
@@ -1569,9 +1577,10 @@ export async function getDashboardPayload(employerId: string, query: DashboardQu
 
   const payload = await buildDashboardPayload(employerId, query);
   dashboardCache.set(key, { expiresAt: now + DASHBOARD_CACHE_TTL_MS, payload });
-  // Persist every explicit period/cohort result. A cold cohort pays the
-  // calculation cost once; every subsequent user sees the read-model path.
-  if (query.period && query.range == null) {
+  // Do NOT write a cache row on ordinary dashboard reads by default.
+  // Snapshot publication/refresh owns durable read-model writes; an explicit
+  // opt-in preserves the legacy on-read warming behaviour if needed.
+  if (SEMANTIC_PERSIST_ON_READ && query.period && query.range == null) {
     try { await persistDashboardCache(employerId, query, payload); } catch { /* cache failure must never break dashboard */ }
   }
   if (dashboardCache.size > 250) {
@@ -1643,13 +1652,20 @@ async function warmDashboardCohorts(employerId: string, periods: string[]): Prom
   });
   const sites = [...new Set(employees.map((e: any) => e.site?.name).filter(Boolean))] as string[];
   const incomes = [...new Set(employees.map((e: any) => e.incomeBand).filter(Boolean))] as string[];
+  // Hard budget even when explicitly enabled. Avoid the site × income
+  // Cartesian explosion; uncommon combinations are filled on demand.
+  const MAX_PREWARM_QUERIES = 24;
   const queries: DashboardQuery[] = [];
-  // Warm the combinations users can actually select. Keep concurrency low so
-  // Railway Hobby is not flooded with hundreds of simultaneous heavy queries.
   for (const period of periods) {
-    for (const site of sites) queries.push({ period, site });
-    for (const income of incomes) queries.push({ period, income });
-    for (const site of sites) for (const income of incomes) queries.push({ period, site, income });
+    if (queries.length >= MAX_PREWARM_QUERIES) break;
+    for (const site of sites) {
+      if (queries.length >= MAX_PREWARM_QUERIES) break;
+      queries.push({ period, site });
+    }
+    for (const income of incomes) {
+      if (queries.length >= MAX_PREWARM_QUERIES) break;
+      queries.push({ period, income });
+    }
   }
   for (let i = 0; i < queries.length; i += 2) {
     await Promise.all(queries.slice(i, i + 2).map(async (query) => {
@@ -1663,15 +1679,18 @@ export async function snapshotEmployer(employerId: string, period: string = curr
   // Imported data invalidates the persistent read model. The next snapshot
   // rebuilds it from the authoritative source tables.
   await prisma.dashboardCohortCache.deleteMany({ where: { employerId, cacheKey: { not: PUBLISHED_DASHBOARD_CACHE_KEY } } });
-  for (const k of [...dashboardCache.keys()]) if (k.startsWith(`[\"${employerId}\"`)) dashboardCache.delete(k);
+  for (const k of [...dashboardCache.keys()]) if (k.includes(`,\"${employerId}\",`)) dashboardCache.delete(k);
   const payload: any = await buildDashboardPayload(employerId, { period });
   const persisted = await persistScoreSnapshot(employerId, period, payload);
   if (persisted) {
     await buildMonthlySnapshots(employerId, currentPeriod());
-    const periods = await monthsWithData(employerId);
-    // Warm historical monthly cohorts after the authoritative snapshots exist.
-    // This work is intentionally outside the interactive request path.
-    await warmDashboardCohorts(employerId, periods);
+    // Cohort prewarming is opt-in: the old site × income × every historical
+    // month Cartesian product caused unbounded query volume and Neon egress.
+    // Missing cohorts are computed and persisted on first request instead.
+    if (process.env.DASHBOARD_COHORT_PREWARM === "true") {
+      const periods = (await monthsWithData(employerId)).sort().reverse().slice(0, 2);
+      await warmDashboardCohorts(employerId, periods);
+    }
   }
   return { ok: true, persisted, period, asAt: payload.filterContext.asAt, scoreReady: payload.wellness.complete };
 }
