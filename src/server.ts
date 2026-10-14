@@ -23,6 +23,7 @@ import { startSyncJob, getSyncJob } from "./services/syncJobs.js";
 import { stageValidatedGeneration, listSourceGenerations, getSemanticPublicationStatus } from "./services/sourceGovernance.js";
 import { semanticPublicationReadiness } from "./services/semanticPublicationGates.js";
 import { getSemanticQueueHealth } from "./services/semanticQueueHealth.js";
+import { readSemanticPublicationChanges } from "./services/semanticPublicationFeed.js";
 import { startDailyRefresh, triggerRefreshNow } from "./services/dailyRefresh.js";
 import { getConfig as getSyncConfig, saveConfig as saveSyncConfig, publicConfig as publicSyncConfig, testConnection as testSyncConnection, runSync, recentSyncLogs, detectSourceChanges, previewSourceSwitch, SOURCE_CHANGE_POLL_SECONDS } from "./services/syncService.js";
 import { listPartners, createPartner, updatePartner, deletePartner, assignUserToPartner, assignEmployerToPartner, themeForUser, themeForEmployer, themeForSlug } from "./services/partnerService.js";
@@ -1241,6 +1242,12 @@ app.get("/api/admin/integration/generations", async (req, reply) => {
 app.get<{ Params: { manifestId: string } }>("/api/admin/mlops/semantic-publications/:manifestId/readiness", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
   return semanticPublicationReadiness(req.params.manifestId);
+});
+
+app.get<{ Querystring: { afterId?:string; limit?:string } }>("/api/admin/mlops/semantic-publication-changes", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  try { return await readSemanticPublicationChanges({afterId:req.query?.afterId,limit:Number(req.query?.limit??50)}); }
+  catch(error:any) { return reply.code(400).send({error:error?.message||"Invalid cursor"}); }
 });
 
 app.get("/api/admin/mlops/semantic-queue-health", async (req, reply) => {
