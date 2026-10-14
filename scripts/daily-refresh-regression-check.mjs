@@ -26,6 +26,10 @@ const scheduled = daily.slice(daily.indexOf("export function startDailyRefresh()
 const incrementalBootstrap = server.slice(server.indexOf('const standby = process.env.STANDBY_MODE'),server.indexOf('app.log.info(`empower-fin Dashboard Portal'));
 must(incrementalBootstrap.includes('process.env.ENABLE_AUTHORITATIVE_INCREMENTAL_SCHEDULER === "true"'), "incremental scheduler must require explicit activation in saver mode");
 must(incrementalBootstrap.includes('if (!standby)') && incrementalBootstrap.includes('startSyncScheduler(app)'), "standby instances must not launch the ingestion scheduler");
+const sqlNoChangeSkip = server.indexOf('if (changes.supported && !changes.changed && cfg.lastSuccessfulSyncAt)');
+const heartbeatDue = server.indexOf('const dueAfter = cfg.lastSyncAt');
+must(sqlNoChangeSkip > 0 && sqlNoChangeSkip < heartbeatDue && server.includes('SQL source watermarks unchanged; skipping costly heartbeat extraction'), "unchanged SQL watermarks must bypass all ten-feed scheduled heartbeat extractions");
+
 must(scheduled.includes('ENABLE_DAILY_INCREMENTAL_RECONCILIATION !== "true"'), "redundant daily polling must remain disabled by default");
 
 must(scheduled.includes('runSync("scheduled")'), "scheduled refresh must run incremental sync");
