@@ -909,6 +909,54 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
   return { ok: status === "OK", status, sourceMode: mode, note, throughAt, touchedEmployers: [...touchedEmployers], summary };
 }
 
+/**
+ * Read-only preflight for a proposed source connection. No cursor changes,
+ * integrationConfig writes, raw imports or dashboard invalidation.
+ * Explicitly report source identity changes so Admin can require a cutover.
+ */
+export async function previewSourceSwitch(patch: IntegrationConfigPatch = {}) {
+  const saved = await getConfig();
+  const safePatch: IntegrationConfigPatch = { ...patch };
+  if (!safePatch.authToken) delete safePatch.authToken;
+  if (!safePatch.sqlPassword) delete safePatch.sqlPassword;
+  const candidate = { ...saved, ...safePatch };
+  const active = effectiveSourceConfig(saved);
+  const proposed = effectiveSourceConfig(candidate);
+  const sourceIdentity = (c: typeof active) => JSON.stringify([
+    configuredSourceMode(c),
+    c.baseUrl ?? null, c.sqlDialect ?? null, c.sqlHost ?? null,
+    c.sqlPort ?? null, c.sqlDatabase ?? null, c.sqlSchema ?? null,
+    c.sqlViewPrefix ?? null,
+  ]);
+  const sourceChanged = sourceIdentity(active) !== sourceIdentity(proposed);
+  let adapter: Awaited<ReturnType<typeof createSourceAdapter>> | null = null;
+  try {
+    adapter = await createSourceAdapter(candidate);
+    const test = await adapter.test();
+    const watermarks: Array<{ reportKey: string; newest: string | null }> = [];
+    if (adapter.mode === "SQL" && adapter.watermark) {
+      for (const reportKey of LOAD_ORDER) {
+        const w = await adapter.watermark(reportKey);
+        watermarks.push({ reportKey, newest: w.newest });
+      }
+    }
+    return {
+      ok: true, sourceChanged, requiresCutover: sourceChanged,
+      canReuseCurrentCursors: !sourceChanged,
+      testedFeeds: adapter.mode === "SQL" ? LOAD_ORDER.length : 1,
+      mode: adapter.mode, watermarks,
+      note: sourceChanged
+        ? "Candidate passed read-only validation. Source identity changed: activation must reconcile source keys and reset or translate checkpoints in a controlled cutover. Existing data was not purged."
+        : "Source identity unchanged. Connection preflight passed without modifying data or checkpoints.",
+      details: test.details ?? null,
+    };
+  } catch (error: any) {
+    return { ok: false, sourceChanged, requiresCutover: sourceChanged, error: error?.message ?? String(error) };
+  } finally {
+    await adapter?.close().catch(() => {});
+  }
+}
+
 export async function testConnection(patch: IntegrationConfigPatch = {}) {
   const saved = await getConfig();
   const cleanPatch: IntegrationConfigPatch = { ...patch };
