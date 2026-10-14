@@ -1470,3 +1470,27 @@ model SemanticPublicationAudit {
   createdAt    DateTime @default(now())
   @@index([employerId, period, partitionKey, createdAt])
 }
+
+
+// Durable coalesced semantic refresh work: unique idempotency key prevents
+// browser traffic or duplicate hosts from enqueuing equivalent recomputes.
+model SemanticRefreshJob {
+  id                 String   @id @default(cuid())
+  idempotencyKey     String   @unique
+  generationId       String
+  employerId         String
+  period             String
+  partitionKey       String   @default("all")
+  sourceWatermark    DateTime
+  changedFeeds       Json
+  status             String   @default("PENDING") // PENDING RUNNING COMPLETED FAILED
+  attempts           Int      @default(0)
+  availableAt        DateTime @default(now())
+  leasedUntil        DateTime?
+  workerId           String?
+  lastError          String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  @@index([status, availableAt])
+  @@index([generationId, employerId, period])
+}
