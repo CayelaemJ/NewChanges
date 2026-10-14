@@ -8,7 +8,7 @@ import { getConfig, previewSourceSwitch, openIncrementalSyncLease, closeIncremen
 import { openSourceSettings } from "./sourceConnectionVault.js";
 import { sourceFingerprint } from "./sourceGovernance.js";
 
-function verifyContinuity(
+export function verifyContinuity(
   active: {cursors:Array<{reportKey:string;digest:string|null;rowCount:number|null;lastSourceUpdatedAt:Date|null}>},
   target: {cursors:Array<{reportKey:string;digest:string|null;rowCount:number|null;lastSourceUpdatedAt:Date|null}>},
 ) {
