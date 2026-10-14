@@ -277,29 +277,25 @@ async function refreshWithRetry(label: string, fn: () => Promise<any>) {
 }
 
 export function startDailyRefresh() {
+  // Safe default: keep normal refreshes incremental. A destructive rebuild
+  // remains available only through the explicit, confirmed reset endpoint.
   const schedule = process.env.DAILY_REFRESH_CRON ?? "0 0 * * *";
-  if ((process.env.DAILY_REFRESH_MODE ?? "app").toLowerCase() === "sqlproc") {
-    console.warn(
-      "DAILY_REFRESH_MODE=sqlproc is ignored for the authoritative daily refresh; the validated app pipeline is required so every configured report is reloaded.",
-    );
-  }
-
+  if (!cron.validate(schedule)) throw new Error("Invalid DAILY_REFRESH_CRON");
   cron.schedule(
     schedule,
     async () => {
       try {
-        await refreshWithRetry("Daily full source refresh", () => runAuthoritativeFullRefresh("scheduled"));
+        await runSync("scheduled");
       } catch (error: any) {
         console.error(
-          `[${new Date().toISOString()}] Daily full refresh failed after retries:`,
+          `[${new Date().toISOString()}] Scheduled incremental refresh failed:`,
           error?.message ?? error,
         );
       }
     },
     { timezone: REFRESH_TIMEZONE },
   );
-
-  console.log(`Daily authoritative refresh scheduled (${schedule}, timezone: ${REFRESH_TIMEZONE}, mode: purge+overwrite)`);
+  console.log(`Scheduled incremental refresh enabled (${schedule}, timezone: ${REFRESH_TIMEZONE}); full reset remains manual only`);
 }
 
 // Manual trigger — wired to POST /api/admin/integration/refresh (admin only).
