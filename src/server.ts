@@ -26,7 +26,7 @@ import { getSemanticQueueHealth } from "./services/semanticQueueHealth.js";
 import { readSemanticPublicationChanges } from "./services/semanticPublicationFeed.js";
 import { publicSemanticStorageHealth } from "./services/semanticStorageSettings.js";
 import { readPublishedSemanticPartition } from "./services/semanticCanaryRead.js";
-import { activateEquivalentSource } from "./services/sourceActivation.js";
+import { activateEquivalentSource, bootstrapExistingSource } from "./services/sourceActivation.js";
 import { startDailyRefresh, triggerRefreshNow } from "./services/dailyRefresh.js";
 import { getConfig as getSyncConfig, saveConfig as saveSyncConfig, publicConfig as publicSyncConfig, testConnection as testSyncConnection, runSync, recentSyncLogs, detectSourceChanges, previewSourceSwitch, SOURCE_CHANGE_POLL_SECONDS } from "./services/syncService.js";
 import { listPartners, createPartner, updatePartner, deletePartner, assignUserToPartner, assignEmployerToPartner, themeForUser, themeForEmployer, themeForSlug } from "./services/partnerService.js";
@@ -1257,6 +1257,22 @@ app.post<{ Body: { targetGenerationId?:string; expectedActiveGenerationId?:strin
     }catch(error:any){
       return reply.code(409).send({ok:false,error:error?.message||"Source cutover was not safe"});
     }
+  },
+);
+
+app.post<{ Body: { reason?:string;confirm?:string } }>(
+  "/api/admin/integration/bootstrap-source",
+  async (req,reply)=>{
+    const admin=await requireAdmin(req,reply);
+    if(!admin)return;
+    if(admin.role!=="SUPERADMIN")return reply.code(403).send({error:"superadmin only"});
+    try{
+      const result=await bootstrapExistingSource({
+        actor:admin.id,reason:String(req.body?.reason||""),confirm:String(req.body?.confirm||""),
+      });
+      logAdminAction(admin,"source.bootstrap",result.note,{detail:result});
+      return result;
+    }catch(error:any){return reply.code(409).send({ok:false,error:error?.message||"Bootstrap failed"});}
   },
 );
 
