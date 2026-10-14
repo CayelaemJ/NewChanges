@@ -10,10 +10,10 @@ export const SOURCE_SETTING_KEYS = [
   "sqlMaxRowsPerReport",
 ] as const;
 
-export function pickSourceSettings(input: Record<string, unknown>): IntegrationConfigPatch {
+export function pickSourceSettings(input: object): IntegrationConfigPatch {
   const result: Record<string, unknown> = {};
   for (const key of SOURCE_SETTING_KEYS) {
-    if (Object.prototype.hasOwnProperty.call(input,key) && input[key] !== undefined) result[key]=input[key];
+    if (Object.prototype.hasOwnProperty.call(input,key) && (input as Record<string, unknown>)[key] !== undefined) result[key]=(input as Record<string, unknown>)[key];
   }
   return result as IntegrationConfigPatch;
 }
