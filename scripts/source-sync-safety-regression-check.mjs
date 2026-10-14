@@ -85,4 +85,8 @@ assert(shadow.includes('ENABLE_SEMANTIC_SHADOW_WORKER'), "shadow worker must be 
 assert(shadow.includes('getPublishedDashboardPayload'), "shadow worker must use last published payload, never raw source scans");
 assert(shadow.includes('finishSemanticRefresh'), "worker must complete durable queue jobs");
 assert(!server.includes("processOneShadowSemanticRefresh("), "web server must not accidentally start shadow worker");
+assert(sync.includes('ENABLE_SEMANTIC_SHADOW_ENQUEUE'), "shadow enqueue must be explicitly opt-in");
+assert(sync.includes('generation?.state !== "ACTIVE"'), "shadow enqueue must validate the assigned source generation");
+assert(sync.includes('trigger !== "full-refresh"'), "full source reset must not produce shadow incremental work");
+assert(sync.includes('summary.semanticShadowQueue'), "shadow queue failures must remain independently observable");
 console.log("Source synchronization safety regression checks passed.");
