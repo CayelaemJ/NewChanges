@@ -2,10 +2,6 @@ import { readFileSync } from "node:fs";
 
 const read = (path) => readFileSync(path, "utf8");
 const daily = read("src/services/dailyRefresh.ts");
-const scheduled = daily.slice(daily.indexOf("export function startDailyRefresh()"),daily.indexOf("// Manual trigger"));
-must(scheduled.includes('runSync("scheduled")'), "scheduled refresh must run incremental sync");
-must(!scheduled.includes('runAuthoritativeFullRefresh('), "scheduled refresh must not run a destructive full refresh");
-
 const sync = read("src/services/syncService.ts");
 const imports = read("src/services/importService.ts");
 const snapshots = read("src/services/snapshotBuilder.ts");
@@ -26,6 +22,11 @@ function mustSyncStatusGuards() {
   if (!syncJobs.includes('job.result?.status === "OK" && job.result?.ok === true')) throw new Error("sync job must not report PARTIAL or FAILED as DONE");
 }
 const must = (ok, message) => { if (!ok) failures.push(message); };
+const scheduled = daily.slice(daily.indexOf("export function startDailyRefresh()"),daily.indexOf("// Manual trigger"));
+must(scheduled.includes('runSync("scheduled")'), "scheduled refresh must run incremental sync");
+must(!scheduled.includes('runAuthoritativeFullRefresh('), "scheduled refresh must not run a destructive full refresh");
+
+
 
 must(daily.includes('process.env.DAILY_REFRESH_CRON ?? "0 0 * * *"'), "daily refresh must default to 00:00");
 must(daily.includes('process.env.DAILY_REFRESH_TIMEZONE ?? "Africa/Johannesburg"'), "daily refresh must default to Africa/Johannesburg");
