@@ -2043,16 +2043,23 @@ function startSyncScheduler(app: any) {
         return;
       }
 
-      // Heartbeat reconciliation. For SQL this is a safety net; for API it is
-      // the normal polling mechanism because a portable DB watermark is not
-      // available through an arbitrary HTTP API.
+      // Never pay for a ten-feed SQL extraction when a trusted source
+      // watermark says nothing has changed. Earlier hourly heartbeats
+      // re-read hundreds of thousands of unchanged rows: costly and needless.
+      // A first-time source with no successful import still gets bootstrapped.
+      // Real deletions must arrive as versioned is_deleted tombstones.
+      if (changes.supported && !changes.changed && cfg.lastSuccessfulSyncAt) {
+        app.log.info("SQL source watermarks unchanged; skipping costly heartbeat extraction");
+        return;
+      }
+
+      // Unsupported source watermark (typically API), or first-time SQL
+      // bootstrap: retain the configured scheduled reconciliation fallback.
       const dueAfter = cfg.lastSyncAt
         ? new Date(cfg.lastSyncAt).getTime() + cfg.scheduleHours * 3600 * 1000
         : 0;
       if (Date.now() >= dueAfter) {
-        app.log.info(changes.supported
-          ? "No new SQL watermark detected; running scheduled heartbeat reconciliation…"
-          : "Running scheduled external source sync…");
+        app.log.info("Running scheduled fallback source reconciliation…");
         const r = await runSync("scheduled");
         app.log.info(`Scheduled sync: ${r.status ?? "done"}`);
         reportFailure(r);
