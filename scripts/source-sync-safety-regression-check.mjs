@@ -89,4 +89,9 @@ assert(sync.includes('ENABLE_SEMANTIC_SHADOW_ENQUEUE'), "shadow enqueue must be 
 assert(sync.includes('generation?.state !== "ACTIVE"'), "shadow enqueue must validate the assigned source generation");
 assert(sync.includes('trigger !== "full-refresh"'), "full source reset must not produce shadow incremental work");
 assert(sync.includes('summary.semanticShadowQueue'), "shadow queue failures must remain independently observable");
+const pubfeed=read("../src/services/semanticPublicationFeed.ts");
+assert(pubfeed.includes("semanticPublicationAudit.findMany"),"cross-instance notification must be durable");
+assert(pubfeed.includes("afterId"),"durable publication feed needs stable cursor");
+assert(server.includes('"/api/admin/mlops/semantic-publication-changes"'),"publication notification endpoint required");
+assert(read("../src/services/semanticHistoricalDependencies.ts").includes("Historical refresh budget exceeded"),"Historical dependencies must be bounded");
 console.log("Source synchronization safety regression checks passed.");
