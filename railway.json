@@ -6,7 +6,7 @@
   },
   "deploy": {
     "preDeployCommand": [
-      "npm run db:deploy"
+      "./node_modules/.bin/tsx scripts/smoke-semantic-storage.ts"
     ],
     "startCommand": "npm start",
     "healthcheckPath": "/health",
