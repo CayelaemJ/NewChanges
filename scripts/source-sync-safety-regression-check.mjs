@@ -77,4 +77,7 @@ assert(pipeline.includes('putAndVerifySemanticObject'), "semantic publish requir
 assert(pipeline.includes('publishVerifiedSemanticManifest'), "semantic publish requires atomic pointer transaction");
 assert(pipeline.includes('evaluatePublicationGates'), "semantic publish requires data quality gates");
 assert(governance.includes('update: { validation, validatedAt: now }'), "source revalidation must not demote an active source");
+const queueHealth = read("../src/services/semanticQueueHealth.ts");
+assert(queueHealth.includes("semanticRefreshJob.groupBy"), "MLOps queue health must aggregate without raw dashboard scans");
+assert(server.includes('"/api/admin/mlops/semantic-queue-health"'), "Admin queue health endpoint required");
 console.log("Source synchronization safety regression checks passed.");
