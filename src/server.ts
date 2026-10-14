@@ -1714,9 +1714,28 @@ app.get<{
     };
     const usePublished = dashboardUsesPublishedSnapshot(syncStatus);
     const published = usePublished ? await getPublishedDashboardState(employerId) : null;
-    const payload: any = usePublished
+    // Opt-in, exact-period semantic read. Never replace filtered dashboards
+    // until their site, income and historical parity is independently tested.
+    let semanticPayload: any = null;
+    if (!usePublished &&
+        process.env.ENABLE_SEMANTIC_DASHBOARD_SERVING === "true" &&
+        process.env.ENABLE_SEMANTIC_CANARY_READ === "true" &&
+        req.query.period && !req.query.quarter &&
+        (!req.query.site || req.query.site === "all") &&
+        (!req.query.income || req.query.income === "all")) {
+      try {
+        const semantic = await readPublishedSemanticPartition({
+          employerId, period: req.query.period, partitionKey: "all",
+        });
+        semanticPayload = semantic?.payload ?? null;
+        if (semanticPayload) reply.header("X-Semantic-Version", semantic!.version);
+      } catch (error: any) {
+        req.log.warn({ message: error?.message }, "semantic read failed; retaining proven dashboard fallback");
+      }
+    }
+    const payload: any = semanticPayload ?? (usePublished
       ? await getPublishedDashboardPayload(employerId, query)
-      : await getDashboardPayload(employerId, query);
+      : await getDashboardPayload(employerId, query));
     if (!payload) return sendPublishedDashboardUnavailable(reply, syncStatus);
     const sections = await sectionsForUser(user);
     if (!sections.voiceOfEmployee) payload.chat = { available: false };
