@@ -30,4 +30,12 @@ assert(!react.includes('api("/api/admin/integration/refresh",{method:"POST"})'),
 const legacyRefresh = legacy.slice(legacy.indexOf("async function refreshNow(btn){"), legacy.indexOf("function syncLogFailureDetail"));
 assert(!legacyRefresh.includes("saveBody=integrationDraft()"), "sync must not silently switch the configured database");
 assert(legacyRefresh.includes("incremental sync"), "legacy refresh must explain safe incremental behavior");
+const sync = read("../src/services/syncService.ts");
+assert(server.includes('"/api/admin/integration/preview-switch"'), "candidate preflight endpoint must exist");
+assert(sync.includes("export async function previewSourceSwitch"), "staged preview must be supported");
+const preview = sync.slice(sync.indexOf("export async function previewSourceSwitch"), sync.indexOf("export async function testConnection"));
+assert(preview.includes("adapter.test()"), "preflight must validate canonical view schemas");
+assert(preview.includes("adapter.watermark(reportKey)"), "preflight should check source freshness without importing");
+assert(!preview.includes("saveConfig(") && !preview.includes("runSync(") && !preview.includes("deleteMany("), "preflight cannot mutate source or dashboard data");
+assert(preview.includes("canReuseCurrentCursors: !sourceChanged"), "new source must not silently reuse old checkpoints");
 console.log("Source synchronization safety regression checks passed.");
