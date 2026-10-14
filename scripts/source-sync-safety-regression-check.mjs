@@ -98,4 +98,7 @@ const storageSettings=read("../src/services/semanticStorageSettings.ts");
 assert(storageSettings.includes('secretAccessKey'),"Server-side storage credentials required");
 assert(storageSettings.includes('secretsReturned:false'),"Storage health must never expose credentials");
 assert(server.includes('"/api/admin/mlops/semantic-storage-health"'),"Admin-only storage health required");
+assert(server.includes('"/api/dashboard/semantic-version-changes"'), "Signed-in users need scoped version notifications");
+assert(server.includes('employerIds: ids === null ? undefined : ids'), "Semantic user polling must be permission-scoped");
+assert(server.includes('ids !== null && ids.length === 0'), "Users without employers cannot view events");
 console.log("Source synchronization safety regression checks passed.");
