@@ -21,8 +21,9 @@ export function presignS3Request(input:{method:"GET"|"PUT";key:string;now?:Date;
   const stamp=now.toISOString().replace(/[:-]|\.\d{3}/g,"");
   const day=stamp.slice(0,8);
   const base=new URL(c.endpoint);
-  const host=base.host;
-  const canonicalPath=[...base.pathname.split("/").filter(Boolean),c.bucket,...input.key.split("/")].map(encode).join("/");
+  const virtualHost=c.urlStyle==="virtual-host";
+  const host=virtualHost ? `${c.bucket}.${base.host}` : base.host;
+  const canonicalPath=[...base.pathname.split("/").filter(Boolean),...(virtualHost?[]:[c.bucket]),...input.key.split("/")].map(encode).join("/");
   const scope=`${day}/${c.region}/s3/aws4_request`;
   const parameters:Record<string,string>={
     "X-Amz-Algorithm":"AWS4-HMAC-SHA256",
@@ -35,7 +36,7 @@ export function presignS3Request(input:{method:"GET"|"PUT";key:string;now?:Date;
   const path="/"+canonicalPath;
   const canonical=`${input.method}\n${path}\n${query}\nhost:${host}\n\nhost\nUNSIGNED-PAYLOAD`;
   const signature=createHmac("sha256",signingKey(c.secretAccessKey,day,c.region)).update(`AWS4-HMAC-SHA256\n${stamp}\n${scope}\n${sha(canonical)}`).digest("hex");
-  return `${base.origin}${path}?${query}&X-Amz-Signature=${signature}`;
+  return `${base.protocol}//${host}${path}?${query}&X-Amz-Signature=${signature}`;
 }
 export function createSemanticStorageBroker(env:NodeJS.ProcessEnv=process.env):SemanticStorageBroker {
   loadSemanticStorageSettings(env);
