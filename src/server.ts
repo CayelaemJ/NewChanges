@@ -25,6 +25,7 @@ import { semanticPublicationReadiness } from "./services/semanticPublicationGate
 import { getSemanticQueueHealth } from "./services/semanticQueueHealth.js";
 import { readSemanticPublicationChanges } from "./services/semanticPublicationFeed.js";
 import { publicSemanticStorageHealth } from "./services/semanticStorageSettings.js";
+import { readPublishedSemanticPartition } from "./services/semanticCanaryRead.js";
 import { startDailyRefresh, triggerRefreshNow } from "./services/dailyRefresh.js";
 import { getConfig as getSyncConfig, saveConfig as saveSyncConfig, publicConfig as publicSyncConfig, testConnection as testSyncConnection, runSync, recentSyncLogs, detectSourceChanges, previewSourceSwitch, SOURCE_CHANGE_POLL_SECONDS } from "./services/syncService.js";
 import { listPartners, createPartner, updatePartner, deletePartner, assignUserToPartner, assignEmployerToPartner, themeForUser, themeForEmployer, themeForSlug } from "./services/partnerService.js";
@@ -1263,6 +1264,31 @@ app.get<{ Querystring: { afterId?: string; limit?: string } }>("/api/dashboard/s
     return reply.code(400).send({ error: error?.message ?? "Invalid semantic version cursor" });
   }
 });
+
+app.get<{ Params: { employerId: string }; Querystring: { period?: string } }>(
+  "/api/employers/:employerId/semantic-canary",
+  async (req, reply) => {
+    const user = await requireUser(req, reply);
+    if (!user) return;
+    if (!canViewEmployer(user, req.params.employerId))
+      return reply.code(403).send({ error: "no access to this employer" });
+    const period = String(req.query?.period || "");
+    if (period.length !== 7 || !/^\\d{4}-\\d{2}$/.test(period))
+      return reply.code(400).send({ error: "invalid period" });
+    if (process.env.ENABLE_SEMANTIC_CANARY_READ !== "true")
+      return reply.code(503).send({ error: "canary disabled" });
+    try {
+      const result = await readPublishedSemanticPartition({
+        employerId: req.params.employerId, period, partitionKey: "all",
+      });
+      if (!result) return reply.code(404).send({ error: "no published semantic partition" });
+      return result;
+    } catch (error: any) {
+      req.log.error({ message: error?.message }, "semantic canary read unavailable");
+      return reply.code(503).send({ error: "semantic canary unavailable" });
+    }
+  },
+);
 
 app.get("/api/admin/mlops/semantic-storage-health", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
