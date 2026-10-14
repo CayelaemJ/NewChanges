@@ -1402,6 +1402,7 @@ model SourceGeneration {
   updatedAt       DateTime @updatedAt
   cursors         SourceGenerationCursor[]
   manifests       SemanticSnapshotManifest[]
+  credentialVault SourceConnectionVault?
 
   @@index([state, updatedAt])
 }
@@ -1493,4 +1494,27 @@ model SemanticRefreshJob {
   updatedAt          DateTime @updatedAt
   @@index([status, availableAt])
   @@index([generationId, employerId, period])
+}
+
+// Source credentials are encrypted using a deployment-managed 256-bit key.
+// Only the source generation ID, not any credential, is exposed by Admin APIs.
+model SourceConnectionVault {
+  generationId String @id
+  nonce        String
+  ciphertext   String @db.Text
+  authTag      String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  generation   SourceGeneration @relation(fields: [generationId], references: [id], onDelete: Restrict)
+}
+
+model SourceActivationAudit {
+  id                   String @id @default(cuid())
+  previousGenerationId String?
+  nextGenerationId     String
+  actor                String
+  reason               String
+  action               String
+  createdAt            DateTime @default(now())
+  @@index([nextGenerationId, createdAt])
 }
