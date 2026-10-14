@@ -1245,6 +1245,25 @@ app.get<{ Params: { manifestId: string } }>("/api/admin/mlops/semantic-publicati
   return semanticPublicationReadiness(req.params.manifestId);
 });
 
+// Permission-scoped publication version polling for signed-in dashboard users.
+// Never returns payloads or private storage URLs. Existing dashboard reads
+// remain unchanged until the semantic-serving rollout is approved.
+app.get<{ Querystring: { afterId?: string; limit?: string } }>("/api/dashboard/semantic-version-changes", async (req, reply) => {
+  const user = await requireUser(req, reply);
+  if (!user) return;
+  const ids = allowedEmployerIds(user);
+  try {
+    if (ids !== null && ids.length === 0) return { changes: [], nextCursor: req.query?.afterId ?? null, servingEnabled: false };
+    return await readSemanticPublicationChanges({
+      afterId: req.query?.afterId,
+      limit: Number(req.query?.limit ?? 50),
+      employerIds: ids === null ? undefined : ids,
+    });
+  } catch(error: any) {
+    return reply.code(400).send({ error: error?.message ?? "Invalid semantic version cursor" });
+  }
+});
+
 app.get("/api/admin/mlops/semantic-storage-health", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
   return publicSemanticStorageHealth();
