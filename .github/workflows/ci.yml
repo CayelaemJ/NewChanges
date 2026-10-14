@@ -19,6 +19,10 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      - run: npm run check:source-sync-safety
+      - run: npm run check:semantic-planner
+      - run: npm run check:semantic-storage
+      - run: npm run check:source-vault
       - run: npm run check:production
       - run: npm run check:security
       - run: npm run check:ui
