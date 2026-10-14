@@ -99,6 +99,11 @@ export interface IntegrationConfigPatch {
 }
 
 export async function saveConfig(patch: IntegrationConfigPatch) {
+  const current = await getConfig();
+  const identityFields = ["sourceMode","baseUrl","sqlHost","sqlPort","sqlDatabase","sqlSchema","sqlViewPrefix","sqlDialect"] as const;
+  if (current.enabled && identityFields.some(key => patch[key] !== undefined && String(patch[key] ?? "") !== String(current[key] ?? ""))) {
+    throw new Error("Use staged source cutover for active database identity changes; live cursors remain unchanged.");
+  }
   const data: any = { ...patch };
   if (patch.authToken === "" || patch.authToken == null) delete data.authToken;
   if (patch.sqlPassword === "" || patch.sqlPassword == null) delete data.sqlPassword;
