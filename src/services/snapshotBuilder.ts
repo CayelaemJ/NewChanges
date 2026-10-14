@@ -1647,13 +1647,20 @@ async function warmDashboardCohorts(employerId: string, periods: string[]): Prom
   });
   const sites = [...new Set(employees.map((e: any) => e.site?.name).filter(Boolean))] as string[];
   const incomes = [...new Set(employees.map((e: any) => e.incomeBand).filter(Boolean))] as string[];
+  // Hard budget even when explicitly enabled. Avoid the site × income
+  // Cartesian explosion; uncommon combinations are filled on demand.
+  const MAX_PREWARM_QUERIES = 24;
   const queries: DashboardQuery[] = [];
-  // Warm the combinations users can actually select. Keep concurrency low so
-  // Railway Hobby is not flooded with hundreds of simultaneous heavy queries.
   for (const period of periods) {
-    for (const site of sites) queries.push({ period, site });
-    for (const income of incomes) queries.push({ period, income });
-    for (const site of sites) for (const income of incomes) queries.push({ period, site, income });
+    if (queries.length >= MAX_PREWARM_QUERIES) break;
+    for (const site of sites) {
+      if (queries.length >= MAX_PREWARM_QUERIES) break;
+      queries.push({ period, site });
+    }
+    for (const income of incomes) {
+      if (queries.length >= MAX_PREWARM_QUERIES) break;
+      queries.push({ period, income });
+    }
   }
   for (let i = 0; i < queries.length; i += 2) {
     await Promise.all(queries.slice(i, i + 2).map(async (query) => {
