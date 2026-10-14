@@ -20,7 +20,8 @@ const prisma = new PrismaClient();
 type Json = Prisma.InputJsonValue;
 const CURSOR_OVERLAP_MS = 5 * 60 * 1000;
 const CLOCK_SKEW_TOLERANCE_MS = 5 * 60 * 1000;
-export const SOURCE_CHANGE_POLL_SECONDS = Math.max(15, Math.min(3600, Number(process.env.SOURCE_CHANGE_POLL_SECONDS ?? 30) || 30));
+// Five-minute default avoids expensive ten-feed SQL watermark checks every 30s.
+export const SOURCE_CHANGE_POLL_SECONDS = Math.max(60, Math.min(3600, Number(process.env.SOURCE_CHANGE_POLL_SECONDS ?? 300) || 300));
 const pendingSnapshotEmployers = new Set<string>();
 let snapshotDrainScheduled = false;
 
