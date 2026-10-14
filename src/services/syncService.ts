@@ -713,7 +713,7 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
         // Only inspect canonical rows after their transactional import succeeds.
         // Planning is opt-in and bounded; failures must not invalidate live sync.
         if (process.env.ENABLE_SEMANTIC_SHADOW_ENQUEUE === "true" && trigger !== "full-refresh" &&
-            !historicalPlanningError && (committed.inserted + committed.updated + committed.deleted > 0)) {
+            !historicalPlanningError && (committed.inserted + committed.updated + committed.deleted + (committed.historyRows ?? 0) > 0)) {
           try {
             const { partitionsFromCanonicalSourceRows } = await import("./semanticSourceChangePlanner.js");
             historicalShadowPartitions.push(...partitionsFromCanonicalSourceRows(
@@ -894,7 +894,7 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
       const period = new Date().toISOString().slice(0, 7);
       const changedFeeds = Object.keys(summary).filter(key =>
         ["employers","workforce_snapshots","employees","platform_users","journeys","debt_accounts","policies","ratings","referrals","salary_advances"].includes(key) &&
-        (Number(summary[key]?.inserted || 0) + Number(summary[key]?.updated || 0) + Number(summary[key]?.deleted || 0)) > 0);
+        (Number(summary[key]?.inserted || 0) + Number(summary[key]?.updated || 0) + Number(summary[key]?.deleted || 0) + Number(summary[key]?.historyRows || 0)) > 0);
       if (historicalPlanningError) throw new Error("Historical dependency proof unavailable: " + historicalPlanningError);
       if (changedFeeds.length) {
         const { mergeAndExpandSemanticPartitions } = await import("./semanticSourceChangePlanner.js");
