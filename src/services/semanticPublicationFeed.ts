@@ -6,7 +6,9 @@ import { prisma } from "./snapshotBuilder.js";
 export async function readSemanticPublicationChanges(input:{
   afterId?:string;limit?:number;employerIds?:string[];
 }) {
-  const limit=Math.max(1,Math.min(100,Math.floor(input.limit??50)));
+  const requested = input.limit ?? 50;
+  if (!Number.isFinite(requested)) throw new Error("Invalid publication page size");
+  const limit=Math.max(1,Math.min(100,Math.floor(requested)));
   const after=input.afterId ? await prisma.semanticPublicationAudit.findUnique({where:{id:input.afterId},select:{id:true,createdAt:true}}) : null;
   if(input.afterId && !after) throw new Error("Unknown publication cursor");
   const employers=[...new Set(input.employerIds??[])];
