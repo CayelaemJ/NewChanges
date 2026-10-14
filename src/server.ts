@@ -21,6 +21,7 @@ import { uploadAndValidate, commitBatch, revertBatch } from "./services/importSe
 import { startUploadJob, getUploadJob, startCommitJob, getCommitJob } from "./services/asyncJobs.js";
 import { startSyncJob, getSyncJob } from "./services/syncJobs.js";
 import { stageValidatedGeneration, listSourceGenerations, getSemanticPublicationStatus } from "./services/sourceGovernance.js";
+import { semanticPublicationReadiness } from "./services/semanticPublicationGates.js";
 import { startDailyRefresh, triggerRefreshNow } from "./services/dailyRefresh.js";
 import { getConfig as getSyncConfig, saveConfig as saveSyncConfig, publicConfig as publicSyncConfig, testConnection as testSyncConnection, runSync, recentSyncLogs, detectSourceChanges, previewSourceSwitch, SOURCE_CHANGE_POLL_SECONDS } from "./services/syncService.js";
 import { listPartners, createPartner, updatePartner, deletePartner, assignUserToPartner, assignEmployerToPartner, themeForUser, themeForEmployer, themeForSlug } from "./services/partnerService.js";
@@ -1234,6 +1235,11 @@ app.post<{ Body: Record<string, unknown> }>("/api/admin/integration/stage-source
 app.get("/api/admin/integration/generations", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
   return { generations: await listSourceGenerations() };
+});
+
+app.get<{ Params: { manifestId: string } }>("/api/admin/mlops/semantic-publications/:manifestId/readiness", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  return semanticPublicationReadiness(req.params.manifestId);
 });
 
 app.get("/api/admin/mlops/semantic-publications", async (req, reply) => {
