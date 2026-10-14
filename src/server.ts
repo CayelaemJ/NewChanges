@@ -1226,6 +1226,20 @@ app.post<{ Body: Record<string, unknown> }>("/api/admin/integration/test", async
 // browser polls /api/admin/sync-jobs/:jobId. Pulling and validating a full
 // dataset from an external source can take minutes and must never hold the
 // HTTP connection (and the admin UI) open until it finishes.
+// Read-only source change detection. Does not change sync cursors or dashboard facts.
+app.get("/api/admin/integration/changes", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  return detectSourceChanges();
+});
+
+// Non-destructive manual sync. This keeps the existing source data in place,
+// fetches incremental source changes, and never resets integration cursors.
+app.post("/api/admin/integration/sync-now", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  const jobId = startSyncJob("manual");
+  return reply.code(202).send({ ok: true, status: "ACCEPTED", jobId });
+});
+
 app.post("/api/admin/integration/sync", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
   const jobId = startSyncJob("manual");
@@ -1253,13 +1267,12 @@ app.get<{ Params: { jobId: string } }>(
   },
 );
 
-// Manual run of the same authoritative purge-and-overwrite pipeline used by
-// the 00:00 Africa/Johannesburg refresh. The validated app pipeline is always
-// used because the legacy SQL procedure does not reload every canonical feed.
+// Compatibility path for the existing Admin refresh button.
+// Ordinary refreshes must NEVER purge facts or reset source cursors.
 app.post("/api/admin/integration/refresh", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
-  const result = await triggerRefreshNow();
-  if (!result?.ok) return reply.code(500).send(result);
+  const result = await runSync("manual");
+  if (!result?.ok) return reply.code(409).send(result);
   return result;
 });
 
