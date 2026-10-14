@@ -176,6 +176,40 @@ function DashboardView({me}:{me:Me}) {
     }).finally(()=>{ if(!controller.signal.aborted) setLoading(false); });
     return ()=>controller.abort();
   },[query,employer?.id]);
+  // Low-cost, opt-in live updates. The API disables polling by default,
+  // so ordinary users do not create extra Neon traffic before rollout.
+  useEffect(()=>{
+    if(!employer?.id)return;
+    let cancelled=false;
+    let cursor:string|null=null;
+    let initialized=false;
+    let polling=false;
+    let timer:number|undefined;
+    const check=async()=>{
+      if(cancelled||polling||document.visibilityState!=="visible")return;
+      polling=true;
+      try {
+        const suffix=cursor?"?afterId="+encodeURIComponent(cursor)+"&limit=50":"?limit=50";
+        const changes=await api<{changes:Array<{employerId:string}>;nextCursor:string|null}>("/api/dashboard/semantic-version-changes"+suffix);
+        if(cancelled)return;
+        cursor=changes.nextCursor??cursor;
+        if(initialized&&changes.changes?.some(change=>change.employerId===employer.id)){
+          const refreshed=await api<Dashboard>("/api/employers/"+encodeURIComponent(employer.id)+"/dashboard?"+query);
+          if(!cancelled)setData(refreshed);
+        }
+        initialized=true;
+      }catch {
+        // Keep the last good dashboard if a notification or refresh fails.
+      }finally{polling=false;}
+    };
+    api<{pollingEnabled:boolean}>("/api/dashboard/semantic-features")
+      .then(features=>{
+        if(cancelled||!features.pollingEnabled)return;
+        void check();
+        timer=window.setInterval(()=>void check(),60_000);
+      }).catch(()=>{});
+    return ()=>{cancelled=true;if(timer!==undefined)window.clearInterval(timer);};
+  },[employer?.id,query]);
   useEffect(()=>{if(!employer?.id)return;api<string[]>(`/api/employers/${encodeURIComponent(employer.id)}/periods`).then(rows=>setPeriodOptions(Array.isArray(rows)?rows:[])).catch(()=>setPeriodOptions([]));},[employer?.id]);
 
   if(!employer)return <Card className="mx-auto mt-20 max-w-2xl"><CardHeader><CardTitle>No employer data available</CardTitle><CardDescription>Your authenticated role has no employer assignment.</CardDescription></CardHeader></Card>;
