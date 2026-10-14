@@ -22,12 +22,12 @@ function mustSyncStatusGuards() {
   if (!syncJobs.includes('job.result?.status === "OK" && job.result?.ok === true')) throw new Error("sync job must not report PARTIAL or FAILED as DONE");
 }
 const must = (ok, message) => { if (!ok) failures.push(message); };
+const scheduled = daily.slice(daily.indexOf("export function startDailyRefresh()"),daily.indexOf("// Manual trigger"));
 const incrementalBootstrap = server.slice(server.indexOf('const standby = process.env.STANDBY_MODE'),server.indexOf('app.log.info(`empower-fin Dashboard Portal'));
 must(incrementalBootstrap.includes('process.env.ENABLE_AUTHORITATIVE_INCREMENTAL_SCHEDULER === "true"'), "incremental scheduler must require explicit activation in saver mode");
 must(incrementalBootstrap.includes('if (!standby)') && incrementalBootstrap.includes('startSyncScheduler(app)'), "standby instances must not launch the ingestion scheduler");
 must(scheduled.includes('ENABLE_DAILY_INCREMENTAL_RECONCILIATION !== "true"'), "redundant daily polling must remain disabled by default");
 
-const scheduled = daily.slice(daily.indexOf("export function startDailyRefresh()"),daily.indexOf("// Manual trigger"));
 must(scheduled.includes('runSync("scheduled")'), "scheduled refresh must run incremental sync");
 must(!scheduled.includes('runAuthoritativeFullRefresh('), "scheduled refresh must not run a destructive full refresh");
 
