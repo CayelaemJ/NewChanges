@@ -15,8 +15,27 @@ async function fetchBounded(url:string, init:RequestInit, maxBytes:number) {
   if(!res.ok) throw new Error(`Object storage response: ${res.status}`);
   const advertised=Number(res.headers.get("content-length")||0);
   if(advertised>maxBytes) throw new Error("External storage object exceeds byte limit");
-  const content=new Uint8Array(await res.arrayBuffer());
-  if(content.byteLength>maxBytes) throw new Error("External storage object exceeds byte limit");
+  if (!res.body) throw new Error("Storage response was empty");
+  const reader=res.body.getReader();
+  const chunks:Uint8Array[]=[];
+  let bytes=0;
+  try {
+    while(true) {
+      const {done,value}=await reader.read();
+      if(done) break;
+      bytes+=value.byteLength;
+      if(bytes>maxBytes) {
+        await reader.cancel().catch(()=>{});
+        throw new Error("External storage object exceeds byte limit");
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const content=new Uint8Array(bytes);
+  let offset=0;
+  for(const chunk of chunks) {content.set(chunk,offset);offset+=chunk.byteLength;}
   return content;
 }
 
