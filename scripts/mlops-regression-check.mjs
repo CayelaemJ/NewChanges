@@ -9,6 +9,12 @@ must(schema.includes("model MLOpsEvent") && schema.includes("model MLOpsModel"),
 must(migration.includes('"MLOpsEvent"') && migration.includes('"MLOpsModel"'),"MLOps migration must create both tables");
 for(const name of ["runMLOpsAssessment","recordMLOpsFeedback","registerMLOpsModel","promoteMLOpsModel","rollbackMLOpsModel"]) must(service.includes(name),`MLOps service missing ${name}`);
 for(const route of ["/api/admin/mlops/assessment/:employerId","/api/admin/mlops/models","/api/admin/mlops/feedback"]) must(server.includes(route),`MLOps API missing ${route}`);
+must(service.includes("pg_advisory_xact_lock"),"Model activation must serialise competing writers");
+must(service.includes('operation === "ROLLBACK" && !current'),"Rollback must require a current active model");
+must(service.includes('candidate.status !== "RETIRED"'),"Rollback must only restore a retired model");
+must(service.includes('candidate.status !== "SHADOW"'),"Promotion must only activate a shadow model");
+must(service.includes('"MODEL_ROLLBACK"') && service.includes('"MODEL_PROMOTION"'),"Lifecycle changes must leave model event records");
+must(service.includes("previousVersion: current?.version"),"Lifecycle audit must preserve previous version");
 must(service.includes("dataQuality") && service.includes("drift") && service.includes("anomaly") && service.includes("forecast"),"assessment must cover quality, drift, anomaly and forecasting");
 must(brand.includes("BRAND_UPLOAD") && brand.includes("BRAND_CORRECTION"),"brand learner must emit upload and correction telemetry");
 if(failures.length){console.error("MLOps regression check failed:\\n- "+failures.join("\\n- "));process.exit(1);}
