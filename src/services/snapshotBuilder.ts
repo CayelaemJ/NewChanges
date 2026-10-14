@@ -980,12 +980,16 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
       select: { name: true },
       orderBy: { name: "asc" },
     }),
-    prisma.employeeVersion.findMany({
-      where: { employee: { employerId }, siteName: { not: null } },
-      select: { siteName: true },
-      distinct: ["siteName"],
-      orderBy: { siteName: "asc" },
-    }),
+    // Prisma distinct de-duplicates in the client and transfers every historical
+    // EmployeeVersion row. Push DISTINCT into PostgreSQL to avoid massive egress.
+    prisma.$queryRaw<Array<{ siteName: string }>>`
+      SELECT DISTINCT ev."siteName"
+      FROM "EmployeeVersion" ev
+      JOIN "Employee" e ON e.id = ev."employeeId"
+      WHERE e."employerId" = ${employerId}
+        AND ev."siteName" IS NOT NULL
+      ORDER BY ev."siteName" ASC
+    `,
   ]);
   const sites = [...new Set([
     ...allSiteRows.map((row: any) => row.name),
@@ -1668,10 +1672,13 @@ export async function snapshotEmployer(employerId: string, period: string = curr
   const persisted = await persistScoreSnapshot(employerId, period, payload);
   if (persisted) {
     await buildMonthlySnapshots(employerId, currentPeriod());
-    const periods = await monthsWithData(employerId);
-    // Warm historical monthly cohorts after the authoritative snapshots exist.
-    // This work is intentionally outside the interactive request path.
-    await warmDashboardCohorts(employerId, periods);
+    // Cohort prewarming is opt-in: the old site × income × every historical
+    // month Cartesian product caused unbounded query volume and Neon egress.
+    // Missing cohorts are computed and persisted on first request instead.
+    if (process.env.DASHBOARD_COHORT_PREWARM === "true") {
+      const periods = (await monthsWithData(employerId)).sort().reverse().slice(0, 2);
+      await warmDashboardCohorts(employerId, periods);
+    }
   }
   return { ok: true, persisted, period, asAt: payload.filterContext.asAt, scoreReady: payload.wellness.complete };
 }
