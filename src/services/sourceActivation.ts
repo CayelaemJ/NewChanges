@@ -6,7 +6,7 @@ import { LOAD_ORDER } from "./reportFormats.js";
 import { sourceEnvironmentLocked, createSourceAdapter } from "./sourceAdapter.js";
 import { getConfig, previewSourceSwitch, openIncrementalSyncLease, closeIncrementalSyncLease } from "./syncService.js";
 import { openSourceSettings } from "./sourceConnectionVault.js";
-import { sourceFingerprint } from "./sourceGovernance.js";
+import { sourceFingerprint, stageValidatedGeneration } from "./sourceGovernance.js";
 
 export function verifyContinuity(
   active: {cursors:Array<{reportKey:string;digest:string|null;rowCount:number|null;lastSourceUpdatedAt:Date|null;reconciledAt:Date|null}>},
@@ -121,4 +121,48 @@ export async function activateEquivalentSource(input:{
   }finally{
     await closeIncrementalSyncLease(lease);
   }
+}
+
+/** Register the current live source without touching its connection or facts.
+ * One-time bootstrap is needed before equivalent candidate comparison.
+ */
+export async function bootstrapExistingSource(input:{actor:string;reason:string;confirm:string}) {
+  if(process.env.ENABLE_GOVERNED_SOURCE_CUTOVER!=="true") throw new Error("Governed cutover is disabled");
+  if(input.confirm!=="BOOTSTRAP"||!input.actor.trim()||!input.reason.trim())
+    throw new Error("Explicit BOOTSTRAP confirmation, actor and reason required");
+  if(!process.env.SOURCE_CONNECTION_VAULT_KEY||sourceEnvironmentLocked()||
+     process.env.SOURCE_SQL_PASSWORD||process.env.SOURCE_API_TOKEN)
+    throw new Error("A governed credential vault without environment-locked source secrets is required");
+  const lease=await openIncrementalSyncLease();
+  if(!lease) throw new Error("Source synchronization is currently running");
+  try {
+    const config=await getConfig();
+    if(!config.enabled) throw new Error("The existing source is not enabled");
+    if(await prisma.sourceGeneration.findFirst({where:{state:"ACTIVE"}}))
+      throw new Error("An active source generation already exists");
+    const staged=await stageValidatedGeneration({});
+    if(!staged.ok||!staged.generationId||!staged.credentialsStaged)
+      throw new Error("Active source failed validation or vault registration");
+    const current=await prisma.integrationCursor.findMany({where:{reportKey:{in:LOAD_ORDER}}});
+    if(current.length!==LOAD_ORDER.length)
+      throw new Error("All ten active integration cursors must exist before bootstrap");
+    await prisma.$transaction(async tx=>{
+      const fresh=await tx.sourceGeneration.findUnique({where:{id:staged.generationId}});
+      if(!fresh||fresh.state!=="VALIDATED"||fresh.fingerprint!==sourceFingerprint(config))
+        throw new Error("Bootstrap candidate identity changed during validation");
+      for(const cursor of current){
+        await tx.sourceGenerationCursor.upsert({
+          where:{generationId_reportKey:{generationId:fresh.id,reportKey:cursor.reportKey}},
+          create:{generationId:fresh.id,reportKey:cursor.reportKey,lastSourceUpdatedAt:cursor.lastSourceUpdatedAt},
+          update:{lastSourceUpdatedAt:cursor.lastSourceUpdatedAt},
+        });
+      }
+      await tx.sourceGeneration.update({where:{id:fresh.id},data:{state:"ACTIVE",activatedAt:new Date()}});
+      await tx.sourceActivationAudit.create({data:{
+        nextGenerationId:fresh.id,actor:input.actor,reason:input.reason,action:"BOOTSTRAP",
+      }});
+    },{isolationLevel:"Serializable",timeout:20_000});
+    return {ok:true,generationId:staged.generationId,reconciliationPending:true,
+      note:"Existing source registered. Historical facts and live connection unchanged; full feed reconciliation remains required before any switch."};
+  }finally {await closeIncrementalSyncLease(lease);}
 }
