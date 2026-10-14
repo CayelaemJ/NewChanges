@@ -279,6 +279,10 @@ async function refreshWithRetry(label: string, fn: () => Promise<any>) {
 export function startDailyRefresh() {
   // Safe default: keep normal refreshes incremental. A destructive rebuild
   // remains available only through the explicit, confirmed reset endpoint.
+  // The short-interval SQL watermark scheduler in server.ts already supplies
+  // the normal incremental refresh. Keep this extra daily reconciliation OFF
+  // unless an operator explicitly wants a once-daily secondary check.
+  if (process.env.ENABLE_DAILY_INCREMENTAL_RECONCILIATION !== "true") return;
   const schedule = process.env.DAILY_REFRESH_CRON ?? "0 0 * * *";
   if (!cron.validate(schedule)) throw new Error("Invalid DAILY_REFRESH_CRON");
   cron.schedule(
