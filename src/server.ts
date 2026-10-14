@@ -20,8 +20,15 @@ import { csvTemplate, xlsxTemplate, formatManifest } from "./services/templateGe
 import { uploadAndValidate, commitBatch, revertBatch } from "./services/importService.js";
 import { startUploadJob, getUploadJob, startCommitJob, getCommitJob } from "./services/asyncJobs.js";
 import { startSyncJob, getSyncJob } from "./services/syncJobs.js";
+import { stageValidatedGeneration, listSourceGenerations, getSemanticPublicationStatus } from "./services/sourceGovernance.js";
+import { semanticPublicationReadiness } from "./services/semanticPublicationGates.js";
+import { getSemanticQueueHealth } from "./services/semanticQueueHealth.js";
+import { readSemanticPublicationChanges } from "./services/semanticPublicationFeed.js";
+import { publicSemanticStorageHealth } from "./services/semanticStorageSettings.js";
+import { readPublishedSemanticPartition } from "./services/semanticCanaryRead.js";
+import { activateEquivalentSource, bootstrapExistingSource } from "./services/sourceActivation.js";
 import { startDailyRefresh, triggerRefreshNow } from "./services/dailyRefresh.js";
-import { getConfig as getSyncConfig, saveConfig as saveSyncConfig, publicConfig as publicSyncConfig, testConnection as testSyncConnection, runSync, recentSyncLogs, detectSourceChanges, SOURCE_CHANGE_POLL_SECONDS } from "./services/syncService.js";
+import { getConfig as getSyncConfig, saveConfig as saveSyncConfig, publicConfig as publicSyncConfig, testConnection as testSyncConnection, runSync, recentSyncLogs, detectSourceChanges, previewSourceSwitch, SOURCE_CHANGE_POLL_SECONDS } from "./services/syncService.js";
 import { listPartners, createPartner, updatePartner, deletePartner, assignUserToPartner, assignEmployerToPartner, themeForUser, themeForEmployer, themeForSlug } from "./services/partnerService.js";
 import { login, resolveSession, destroySession, destroySessionById, destroyAllSessionsForUser, canViewEmployer, canAccessModule, allowedEmployerIds, AuthUser, isAdminRole } from "./services/authService.js";
 import { createUser, listUsers, updateUser, resetPassword, completeSetup, deactivateSelf, listRevokedUsers, deleteUserPermanently, requestPasswordReset } from "./services/userService.js";
@@ -1217,6 +1224,149 @@ app.post<{ Body: {
   },
 );
 
+// Validate a prospective SQL/API source without activating it or rewriting data.
+// Candidate registration preserves existing source configuration and all
+// active integration cursors. No automatic activation or destructive reimport.
+app.post<{ Body: Record<string, unknown> }>("/api/admin/integration/stage-source", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  try {
+    const result = await stageValidatedGeneration((req.body || {}) as any);
+    return reply.code(result.ok ? 201 : 400).send(result);
+  } catch (error: any) {
+    return reply.code(400).send({ ok: false, error: error?.message || "Unable to stage candidate source" });
+  }
+});
+
+// Only verified equivalent datasets can switch without rebuilding data.
+// Incomplete/mismatched digests must fail closed. This endpoint is disabled
+// without the governed-cutover feature flag and is SUPERADMIN-only.
+app.post<{ Body: { targetGenerationId?:string; expectedActiveGenerationId?:string; reason?:string; confirm?:string } }>(
+  "/api/admin/integration/activate-equivalent-source",
+  async (req, reply) => {
+    const admin=await requireAdmin(req,reply);
+    if(!admin)return;
+    if(admin.role!=="SUPERADMIN")return reply.code(403).send({error:"superadmin only"});
+    try {
+      const result=await activateEquivalentSource({
+        targetGenerationId:String(req.body?.targetGenerationId||""),
+        expectedActiveGenerationId:String(req.body?.expectedActiveGenerationId||""),
+        actor:admin.id,reason:String(req.body?.reason||""),confirm:String(req.body?.confirm||""),
+      });
+      logAdminAction(admin,"source.equivalent_cutover",result.note,{detail:result});
+      return result;
+    }catch(error:any){
+      return reply.code(409).send({ok:false,error:error?.message||"Source cutover was not safe"});
+    }
+  },
+);
+
+app.post<{ Body: { reason?:string;confirm?:string } }>(
+  "/api/admin/integration/bootstrap-source",
+  async (req,reply)=>{
+    const admin=await requireAdmin(req,reply);
+    if(!admin)return;
+    if(admin.role!=="SUPERADMIN")return reply.code(403).send({error:"superadmin only"});
+    try{
+      const result=await bootstrapExistingSource({
+        actor:admin.id,reason:String(req.body?.reason||""),confirm:String(req.body?.confirm||""),
+      });
+      logAdminAction(admin,"source.bootstrap",result.note,{detail:result});
+      return result;
+    }catch(error:any){return reply.code(409).send({ok:false,error:error?.message||"Bootstrap failed"});}
+  },
+);
+
+app.get("/api/admin/integration/generations", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  return { generations: await listSourceGenerations() };
+});
+
+app.get<{ Params: { manifestId: string } }>("/api/admin/mlops/semantic-publications/:manifestId/readiness", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  return semanticPublicationReadiness(req.params.manifestId);
+});
+
+// Permission-scoped publication version polling for signed-in dashboard users.
+// Never returns payloads or private storage URLs. Existing dashboard reads
+// remain unchanged until the semantic-serving rollout is approved.
+app.get("/api/dashboard/semantic-features", async (req, reply) => {
+  if (!(await requireUser(req, reply))) return;
+  return {
+    pollingEnabled: process.env.ENABLE_SEMANTIC_LIVE_NOTIFICATIONS === "true",
+    servingEnabled: false,
+  };
+});
+
+app.get<{ Querystring: { afterId?: string; limit?: string } }>("/api/dashboard/semantic-version-changes", async (req, reply) => {
+  const user = await requireUser(req, reply);
+  if (!user) return;
+  const ids = allowedEmployerIds(user);
+  try {
+    if (ids !== null && ids.length === 0) return { changes: [], nextCursor: req.query?.afterId ?? null, servingEnabled: false };
+    return await readSemanticPublicationChanges({
+      afterId: req.query?.afterId,
+      limit: Number(req.query?.limit ?? 50),
+      employerIds: ids === null ? undefined : ids,
+      initializeAtLatest: !req.query?.afterId,
+    });
+  } catch(error: any) {
+    return reply.code(400).send({ error: error?.message ?? "Invalid semantic version cursor" });
+  }
+});
+
+app.get<{ Params: { employerId: string }; Querystring: { period?: string } }>(
+  "/api/employers/:employerId/semantic-canary",
+  async (req, reply) => {
+    const user = await requireUser(req, reply);
+    if (!user) return;
+    if (user.role !== "SUPERADMIN") return reply.code(403).send({ error: "superadmin diagnostic only" });
+    if (!canViewEmployer(user, req.params.employerId))
+      return reply.code(403).send({ error: "no access to this employer" });
+    const period = String(req.query?.period || "");
+    if (!/^[0-9]{4}-(0[1-9]|1[0-2])$/.test(period))
+      return reply.code(400).send({ error: "invalid period" });
+    if (process.env.ENABLE_SEMANTIC_CANARY_READ !== "true")
+      return reply.code(503).send({ error: "canary disabled" });
+    try {
+      const result = await readPublishedSemanticPartition({
+        employerId: req.params.employerId, period, partitionKey: "all",
+      });
+      if (!result) return reply.code(404).send({ error: "no published semantic partition" });
+      return result;
+    } catch (error: any) {
+      req.log.error({ message: error?.message }, "semantic canary read unavailable");
+      return reply.code(503).send({ error: "semantic canary unavailable" });
+    }
+  },
+);
+
+app.get("/api/admin/mlops/semantic-storage-health", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  return publicSemanticStorageHealth();
+});
+
+app.get<{ Querystring: { afterId?:string; limit?:string } }>("/api/admin/mlops/semantic-publication-changes", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  try { return await readSemanticPublicationChanges({afterId:req.query?.afterId,limit:Number(req.query?.limit??50)}); }
+  catch(error:any) { return reply.code(400).send({error:error?.message||"Invalid cursor"}); }
+});
+
+app.get("/api/admin/mlops/semantic-queue-health", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  return getSemanticQueueHealth();
+});
+
+app.get("/api/admin/mlops/semantic-publications", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  return getSemanticPublicationStatus();
+});
+
+app.post<{ Body: Record<string, unknown> }>("/api/admin/integration/preview-switch", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  const result = await previewSourceSwitch((req.body || {}) as any);
+  return reply.code(result.ok ? 200 : 400).send(result);
+});
+
 app.post<{ Body: Record<string, unknown> }>("/api/admin/integration/test", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
   return testSyncConnection((req.body || {}) as any);
@@ -1226,6 +1376,20 @@ app.post<{ Body: Record<string, unknown> }>("/api/admin/integration/test", async
 // browser polls /api/admin/sync-jobs/:jobId. Pulling and validating a full
 // dataset from an external source can take minutes and must never hold the
 // HTTP connection (and the admin UI) open until it finishes.
+// Read-only source change detection. Does not change sync cursors or dashboard facts.
+app.get("/api/admin/integration/changes", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  return detectSourceChanges();
+});
+
+// Non-destructive manual sync. This keeps the existing source data in place,
+// fetches incremental source changes, and never resets integration cursors.
+app.post("/api/admin/integration/sync-now", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  const jobId = startSyncJob("manual");
+  return reply.code(202).send({ ok: true, status: "ACCEPTED", jobId });
+});
+
 app.post("/api/admin/integration/sync", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
   const jobId = startSyncJob("manual");
@@ -1253,13 +1417,12 @@ app.get<{ Params: { jobId: string } }>(
   },
 );
 
-// Manual run of the same authoritative purge-and-overwrite pipeline used by
-// the 00:00 Africa/Johannesburg refresh. The validated app pipeline is always
-// used because the legacy SQL procedure does not reload every canonical feed.
+// Compatibility path for the existing Admin refresh button.
+// Ordinary refreshes must NEVER purge facts or reset source cursors.
 app.post("/api/admin/integration/refresh", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
-  const result = await triggerRefreshNow();
-  if (!result?.ok) return reply.code(500).send(result);
+  const result = await runSync("manual");
+  if (!result?.ok) return reply.code(409).send(result);
   return result;
 });
 
@@ -1592,9 +1755,28 @@ app.get<{
     };
     const usePublished = dashboardUsesPublishedSnapshot(syncStatus);
     const published = usePublished ? await getPublishedDashboardState(employerId) : null;
-    const payload: any = usePublished
+    // Opt-in, exact-period semantic read. Never replace filtered dashboards
+    // until their site, income and historical parity is independently tested.
+    let semanticPayload: any = null;
+    if (!usePublished &&
+        process.env.ENABLE_SEMANTIC_DASHBOARD_SERVING === "true" &&
+        process.env.ENABLE_SEMANTIC_CANARY_READ === "true" &&
+        req.query.period && !req.query.quarter &&
+        (!req.query.site || req.query.site === "all") &&
+        (!req.query.income || req.query.income === "all")) {
+      try {
+        const semantic = await readPublishedSemanticPartition({
+          employerId, period: req.query.period, partitionKey: "all",
+        });
+        semanticPayload = semantic?.payload ?? null;
+        if (semanticPayload) reply.header("X-Semantic-Version", semantic!.version);
+      } catch (error: any) {
+        req.log.warn({ message: error?.message }, "semantic read failed; retaining proven dashboard fallback");
+      }
+    }
+    const payload: any = semanticPayload ?? (usePublished
       ? await getPublishedDashboardPayload(employerId, query)
-      : await getDashboardPayload(employerId, query);
+      : await getDashboardPayload(employerId, query));
     if (!payload) return sendPublishedDashboardUnavailable(reply, syncStatus);
     const sections = await sectionsForUser(user);
     if (!sections.voiceOfEmployee) payload.chat = { available: false };
@@ -2043,6 +2225,14 @@ app.listen({ port: PORT, host: "0.0.0.0" })
       }
     } else {
       app.log.warn("STANDBY_MODE enabled: background schedulers and bootstrap writes are disabled");
+    }
+    // Disposable Playground-only diagnostics. Never run during production serving.
+    if (process.env.RAILWAY_ENVIRONMENT_NAME === "Playground and new ideas" &&
+        process.env.SEMANTIC_STORAGE_SMOKE_TEST === "true") {
+      void import("./services/semanticStorageProbe.js")
+        .then(({ runPlaygroundStorageProbe }) => runPlaygroundStorageProbe())
+        .then(result => app.log.info({ result }, "Playground semantic S3 verification succeeded"))
+        .catch(error => app.log.error({ message: error instanceof Error ? error.message : String(error) }, "Playground semantic S3 verification failed"));
     }
     app.log.info(`empower-fin Dashboard Portal on :${PORT}`);
   })

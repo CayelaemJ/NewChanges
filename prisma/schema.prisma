@@ -1385,3 +1385,136 @@ model AchievableTarget {
 
   @@index([employerId, driver, effectiveFrom])
 }
+
+
+// Non-destructive source cutover control plane. Credentials are NOT stored here;
+// they remain in the existing secret-managed connection configuration.
+model SourceGeneration {
+  id              String   @id @default(cuid())
+  fingerprint     String   @unique
+  sourceMode      String
+  endpointLabel   String
+  state           String   @default("CANDIDATE") // CANDIDATE | VALIDATED | ACTIVE | RETIRED
+  validation      Json?
+  validatedAt     DateTime?
+  activatedAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  cursors         SourceGenerationCursor[]
+  manifests       SemanticSnapshotManifest[]
+  credentialVault SourceConnectionVault?
+
+  @@index([state, updatedAt])
+}
+
+// Each source generation has independent feed checkpoints. The legacy
+// IntegrationCursor remains active until a validated generation cutover ships.
+model SourceGenerationCursor {
+  id                    String   @id @default(cuid())
+  generationId          String
+  reportKey             String
+  lastSourceUpdatedAt   DateTime?
+  reconciledAt          DateTime?
+  rowCount              Int?
+  digest                String?
+  generation            SourceGeneration @relation(fields: [generationId], references: [id], onDelete: Restrict)
+  @@unique([generationId, reportKey])
+}
+
+// Metadata for externally durable, immutable semantic partitions.
+// Store object keys and hashes, not bulky dashboard JSON or raw PII.
+model SemanticSnapshotManifest {
+  id                String   @id @default(cuid())
+  generationId      String
+  employerId        String
+  period            String
+  partitionKey      String
+  version           String
+  objectKey         String
+  contentSha256     String
+  sourceWatermark   DateTime?
+  state             String   @default("STAGED") // STAGED | PUBLISHED | RETIRED
+  bytes             Int
+  validatedAt       DateTime?
+  publishedAt       DateTime?
+  createdAt         DateTime @default(now())
+  generation        SourceGeneration @relation(fields: [generationId], references: [id], onDelete: Restrict)
+  @@unique([generationId, employerId, period, partitionKey, version])
+  @@index([employerId, period, state])
+  @@index([generationId, state])
+}
+
+
+// Atomic semantic publication pointer. One pointer per employer and partition.
+// A transaction swaps this reference only after all quality and storage checks.
+model SemanticPublicationPointer {
+  id          String   @id @default(cuid())
+  employerId  String
+  period      String
+  partitionKey String
+  manifestId  String
+  generationId String
+  updatedAt   DateTime @updatedAt
+  @@unique([employerId, period, partitionKey])
+  @@index([generationId])
+}
+
+model SemanticPublicationAudit {
+  id           String   @id @default(cuid())
+  employerId   String
+  period       String
+  partitionKey String
+  previousManifestId String?
+  nextManifestId String
+  action       String
+  reason       String
+  createdAt    DateTime @default(now())
+  @@index([employerId, period, partitionKey, createdAt])
+}
+
+
+// Durable coalesced semantic refresh work: unique idempotency key prevents
+// browser traffic or duplicate hosts from enqueuing equivalent recomputes.
+model SemanticRefreshJob {
+  id                 String   @id @default(cuid())
+  idempotencyKey     String   @unique
+  generationId       String
+  employerId         String
+  period             String
+  partitionKey       String   @default("all")
+  sourceWatermark    DateTime
+  changedFeeds       Json
+  status             String   @default("PENDING") // PENDING RUNNING COMPLETED FAILED
+  attempts           Int      @default(0)
+  availableAt        DateTime @default(now())
+  leasedUntil        DateTime?
+  workerId           String?
+  lastError          String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  @@index([status, availableAt])
+  @@index([generationId, employerId, period])
+}
+
+// Source credentials are encrypted using a deployment-managed 256-bit key.
+// Only the source generation ID, not any credential, is exposed by Admin APIs.
+model SourceConnectionVault {
+  generationId String @id
+  nonce        String
+  ciphertext   String @db.Text
+  authTag      String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  generation   SourceGeneration @relation(fields: [generationId], references: [id], onDelete: Restrict)
+}
+
+model SourceActivationAudit {
+  id                   String @id @default(cuid())
+  previousGenerationId String?
+  nextGenerationId     String
+  actor                String
+  reason               String
+  action               String
+  createdAt            DateTime @default(now())
+  @@index([nextGenerationId, createdAt])
+}

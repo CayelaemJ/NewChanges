@@ -176,6 +176,40 @@ function DashboardView({me}:{me:Me}) {
     }).finally(()=>{ if(!controller.signal.aborted) setLoading(false); });
     return ()=>controller.abort();
   },[query,employer?.id]);
+  // Low-cost, opt-in live updates. The API disables polling by default,
+  // so ordinary users do not create extra Neon traffic before rollout.
+  useEffect(()=>{
+    if(!employer?.id)return;
+    let cancelled=false;
+    let cursor:string|null=null;
+    let initialized=false;
+    let polling=false;
+    let timer:number|undefined;
+    const check=async()=>{
+      if(cancelled||polling||document.visibilityState!=="visible")return;
+      polling=true;
+      try {
+        const suffix=cursor?"?afterId="+encodeURIComponent(cursor)+"&limit=50":"?limit=50";
+        const changes=await api<{changes:Array<{employerId:string}>;nextCursor:string|null}>("/api/dashboard/semantic-version-changes"+suffix);
+        if(cancelled)return;
+        cursor=changes.nextCursor??cursor;
+        if(initialized&&changes.changes?.some(change=>change.employerId===employer.id)){
+          const refreshed=await api<Dashboard>("/api/employers/"+encodeURIComponent(employer.id)+"/dashboard?"+query);
+          if(!cancelled)setData(refreshed);
+        }
+        initialized=true;
+      }catch {
+        // Keep the last good dashboard if a notification or refresh fails.
+      }finally{polling=false;}
+    };
+    api<{pollingEnabled:boolean}>("/api/dashboard/semantic-features")
+      .then(features=>{
+        if(cancelled||!features.pollingEnabled)return;
+        void check();
+        timer=window.setInterval(()=>void check(),60_000);
+      }).catch(()=>{});
+    return ()=>{cancelled=true;if(timer!==undefined)window.clearInterval(timer);};
+  },[employer?.id,query]);
   useEffect(()=>{if(!employer?.id)return;api<string[]>(`/api/employers/${encodeURIComponent(employer.id)}/periods`).then(rows=>setPeriodOptions(Array.isArray(rows)?rows:[])).catch(()=>setPeriodOptions([]));},[employer?.id]);
 
   if(!employer)return <Card className="mx-auto mt-20 max-w-2xl"><CardHeader><CardTitle>No employer data available</CardTitle><CardDescription>Your authenticated role has no employer assignment.</CardDescription></CardHeader></Card>;
@@ -461,7 +495,7 @@ function AdminView({me}:{me:Me}) {
         </section>}
 
         {tab==="integrations"&&<section className="admin-section mt-5 grid gap-px border-y border-[var(--brand-line)] bg-[var(--brand-line)] lg:grid-cols-2">
-          <Card><CardHeader><SectionHeading title="Live data integration" description="Connection state, schedule and governed sync controls."/></CardHeader><CardContent><div className="grid gap-3">{[["Source type",integration?.sourceType],["Enabled",integration?.enabled==null?"Not available":integration.enabled?"Enabled":"Disabled"],["Schedule",integration?.scheduleHours==null?"Not available":number(integration.scheduleHours)+" hours"],["Last successful sync",integration?.lastSuccessAt?new Date(integration.lastSuccessAt).toLocaleString("en-ZA"):"Not available"],["Analytics mode",ops?.integration?.analyticsMode]].map(([l,v])=><div className="flex flex-col gap-1 rounded-md border border-slate-200 p-4 sm:flex-row sm:justify-between"><span className="text-xs text-slate-500">{l as string}</span><b className="break-words text-sm text-slate-900">{v==null?"Not available":String(v)}</b></div>)}</div><div className="mt-4 flex flex-wrap gap-2"><Button disabled={busy==="sync"} onClick={sync}>{busy==="sync"?"Syncing...":"Sync now"}</Button><Button variant="outline" onClick={()=>action("test",()=>api("/api/admin/integration/test",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({})}))}>Test connection</Button><Button variant="outline" onClick={()=>action("refresh",()=>api("/api/admin/integration/refresh",{method:"POST"}))}>Refresh health</Button></div></CardContent></Card>
+          <Card><CardHeader><SectionHeading title="Live data integration" description="Connection state, schedule and governed sync controls."/></CardHeader><CardContent><div className="grid gap-3">{[["Source type",integration?.sourceType],["Enabled",integration?.enabled==null?"Not available":integration.enabled?"Enabled":"Disabled"],["Schedule",integration?.scheduleHours==null?"Not available":number(integration.scheduleHours)+" hours"],["Last successful sync",integration?.lastSuccessAt?new Date(integration.lastSuccessAt).toLocaleString("en-ZA"):"Not available"],["Analytics mode",ops?.integration?.analyticsMode]].map(([l,v])=><div className="flex flex-col gap-1 rounded-md border border-slate-200 p-4 sm:flex-row sm:justify-between"><span className="text-xs text-slate-500">{l as string}</span><b className="break-words text-sm text-slate-900">{v==null?"Not available":String(v)}</b></div>)}</div><div className="mt-4 flex flex-wrap gap-2"><Button disabled={busy==="sync"} onClick={sync}>{busy==="sync"?"Syncing...":"Sync now"}</Button><Button variant="outline" onClick={()=>action("test",()=>api("/api/admin/integration/test",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({})}))}>Test connection</Button><Button variant="outline" onClick={()=>action("changes",()=>api("/api/admin/integration/changes"))}>Check source changes</Button></div></CardContent></Card>
           <Card><CardHeader><SectionHeading title="Integration logs" description="Recent sync activity and outcomes."/></CardHeader><CardContent><IntegrationLogs/></CardContent></Card>
         </section>}
 

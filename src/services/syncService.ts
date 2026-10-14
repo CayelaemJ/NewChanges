@@ -99,6 +99,11 @@ export interface IntegrationConfigPatch {
 }
 
 export async function saveConfig(patch: IntegrationConfigPatch) {
+  const current = await getConfig();
+  const identityFields = ["sourceMode","baseUrl","sqlHost","sqlPort","sqlDatabase","sqlSchema","sqlViewPrefix","sqlDialect"] as const;
+  if (current.enabled && identityFields.some(key => patch[key] !== undefined && String(patch[key] ?? "") !== String(current[key] ?? ""))) {
+    throw new Error("Use staged source cutover for active database identity changes; live cursors remain unchanged.");
+  }
   const data: any = { ...patch };
   if (patch.authToken === "" || patch.authToken == null) delete data.authToken;
   if (patch.sqlPassword === "" || patch.sqlPassword == null) delete data.sqlPassword;
@@ -269,7 +274,7 @@ const FULL_REFRESH_LOCK_A = 0x454653; // must match dailyRefresh.ts
 const SOURCE_SYNC_COORDINATION_LOCK_B = 79;
 const SOURCE_INCREMENTAL_MUTEX_B = 80;
 
-async function openIncrementalSyncLease() {
+export async function openIncrementalSyncLease() {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) throw new Error("DATABASE_URL is required for source-sync coordination.");
   const client = new Client({ connectionString });
@@ -302,7 +307,7 @@ async function openIncrementalSyncLease() {
   }
 }
 
-async function closeIncrementalSyncLease(client: Client | null) {
+export async function closeIncrementalSyncLease(client: Client | null) {
   if (!client) return;
   try {
     await client.query(
@@ -856,6 +861,34 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
     }
   }
 
+  // Shadow-only durable handoff. Do not alter the serving dashboard path.
+  // Historical dependency expansion is not yet complete, therefore only
+  // enqueue current-period shadow work when an explicitly ACTIVE generation
+  // has been assigned to this worker by the operator.
+  if (!anyFailed && trigger !== "full-refresh" && touchedEmployers.size &&
+      process.env.ENABLE_SEMANTIC_SHADOW_ENQUEUE === "true") {
+    try {
+      const generationId = process.env.SEMANTIC_ACTIVE_SOURCE_GENERATION_ID;
+      if (!generationId) throw new Error("SEMANTIC_ACTIVE_SOURCE_GENERATION_ID is required");
+      const generation = await prisma.sourceGeneration.findUnique({ where: { id: generationId } });
+      if (generation?.state !== "ACTIVE") throw new Error("Semantic source generation must be ACTIVE");
+      const { enqueueSemanticRefresh } = await import("./semanticRefreshQueue.js");
+      const period = new Date().toISOString().slice(0, 7);
+      const changedFeeds = Object.keys(summary).filter(key =>
+        ["employers","workforce_snapshots","employees","platform_users","journeys","debt_accounts","policies","ratings","referrals","salary_advances"].includes(key) &&
+        (Number(summary[key]?.inserted || 0) + Number(summary[key]?.updated || 0) + Number(summary[key]?.deleted || 0)) > 0);
+      if (changedFeeds.length) {
+        const result = await enqueueSemanticRefresh(generationId, throughAt,
+          [...touchedEmployers].map(employerId => ({ employerId, period, feeds: changedFeeds, deleted: changedFeeds.some(key => Number(summary[key]?.deleted || 0) > 0) })));
+        summary.semanticShadowQueue = { ...result, generationId, period, mode: "SHADOW_ONLY" };
+      }
+    } catch (error: any) {
+      // Shadow sidecar failures must not falsify a successfully committed sync.
+      summary.semanticShadowQueue = { error: error?.message || String(error), mode: "SHADOW_ONLY" };
+      console.error("[sync] shadow semantic queue handoff failed:", error);
+    }
+  }
+
   if (!anyFailed) {
     await emitSyncProgress(options, {
       phase: "REBUILDING_DASHBOARD",
@@ -907,6 +940,54 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
     feedCount: LOAD_ORDER.length,
   });
   return { ok: status === "OK", status, sourceMode: mode, note, throughAt, touchedEmployers: [...touchedEmployers], summary };
+}
+
+/**
+ * Read-only preflight for a proposed source connection. No cursor changes,
+ * integrationConfig writes, raw imports or dashboard invalidation.
+ * Explicitly report source identity changes so Admin can require a cutover.
+ */
+export async function previewSourceSwitch(patch: IntegrationConfigPatch = {}) {
+  const saved = await getConfig();
+  const safePatch: IntegrationConfigPatch = { ...patch };
+  if (!safePatch.authToken) delete safePatch.authToken;
+  if (!safePatch.sqlPassword) delete safePatch.sqlPassword;
+  const candidate = { ...saved, ...safePatch };
+  const active = effectiveSourceConfig(saved);
+  const proposed = effectiveSourceConfig(candidate);
+  const sourceIdentity = (c: typeof active) => JSON.stringify([
+    configuredSourceMode(c),
+    c.baseUrl ?? null, c.sqlDialect ?? null, c.sqlHost ?? null,
+    c.sqlPort ?? null, c.sqlDatabase ?? null, c.sqlSchema ?? null,
+    c.sqlViewPrefix ?? null,
+  ]);
+  const sourceChanged = sourceIdentity(active) !== sourceIdentity(proposed);
+  let adapter: Awaited<ReturnType<typeof createSourceAdapter>> | null = null;
+  try {
+    adapter = await createSourceAdapter(candidate);
+    const test = await adapter.test();
+    const watermarks: Array<{ reportKey: string; newest: string | null }> = [];
+    if (adapter.mode === "SQL" && adapter.watermark) {
+      for (const reportKey of LOAD_ORDER) {
+        const w = await adapter.watermark(reportKey);
+        watermarks.push({ reportKey, newest: w.newest });
+      }
+    }
+    return {
+      ok: true, sourceChanged, requiresCutover: sourceChanged,
+      canReuseCurrentCursors: !sourceChanged,
+      testedFeeds: adapter.mode === "SQL" ? LOAD_ORDER.length : 1,
+      mode: adapter.mode, watermarks,
+      note: sourceChanged
+        ? "Candidate passed read-only validation. Source identity changed: activation must reconcile source keys and reset or translate checkpoints in a controlled cutover. Existing data was not purged."
+        : "Source identity unchanged. Connection preflight passed without modifying data or checkpoints.",
+      details: test.details ?? null,
+    };
+  } catch (error: any) {
+    return { ok: false, sourceChanged, requiresCutover: sourceChanged, error: error?.message ?? String(error) };
+  } finally {
+    await adapter?.close().catch(() => {});
+  }
 }
 
 export async function testConnection(patch: IntegrationConfigPatch = {}) {
