@@ -51,13 +51,11 @@ export async function activateEquivalentSource(input:{
     verifyContinuity(current,target);
     // An old source cannot be restored after new source changes without a
     // fresh reconciliation. Prevent stale rollback from dropping updates.
-    if(rollback) {
-      for(const feed of LOAD_ORDER) {
-        const activeCheckpoint=current.cursors.find(x=>x.reportKey===feed)?.lastSourceUpdatedAt;
-        const liveCheckpoint=liveCursors.find(x=>x.reportKey===feed)?.lastSourceUpdatedAt;
-        if((activeCheckpoint?.getTime()??null)!==(liveCheckpoint?.getTime()??null))
-          throw new Error("Source has advanced since cutover; rollback requires new reconciliation");
-      }
+    for(const feed of LOAD_ORDER) {
+      const activeCheckpoint=current.cursors.find(x=>x.reportKey===feed)?.lastSourceUpdatedAt;
+      const liveCheckpoint=liveCursors.find(x=>x.reportKey===feed)?.lastSourceUpdatedAt;
+      if((activeCheckpoint?.getTime()??null)!==(liveCheckpoint?.getTime()??null))
+        throw new Error("Source cursors advanced since reconciliation; cutover requires a new proof");
     }
     const candidate=openSourceSettings(target.id,target.credentialVault);
     if(sourceFingerprint({...config,...candidate})!==target.fingerprint)
