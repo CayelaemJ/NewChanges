@@ -1,7 +1,6 @@
 // Durable refresh work queue: enqueue only after source records commit.
 // Duplicate hosts share one idempotency key and claim jobs with SKIP LOCKED.
 import { createHash } from "node:crypto";
-import { Prisma } from "@prisma/client";
 import { prisma } from "./snapshotBuilder.js";
 import type { RefreshPartition } from "./semanticRefreshPlanner.js";
 
@@ -36,6 +35,17 @@ export async function claimSemanticRefresh(workerId:string, leaseSeconds=120) {
     RETURNING id,"generationId","employerId",period,"partitionKey","sourceWatermark"
   `;
   return rows[0] ?? null;
+}
+
+// Recover crash-expired leases and surface exhausted jobs rather than allowing
+// them to remain RUNNING or PENDING forever and disappear from worker claims.
+export async function reconcileExpiredSemanticRefreshLeases() {
+  const now=new Date();
+  const exhausted=await prisma.semanticRefreshJob.updateMany({
+    where:{attempts:{gte:5},status:{in:["PENDING","RUNNING"]},OR:[{leasedUntil:null},{leasedUntil:{lt:now}}]},
+    data:{status:"FAILED",leasedUntil:null,workerId:null,lastError:"Retry limit exhausted; manual review required"},
+  });
+  return {failed:exhausted.count};
 }
 
 export async function finishSemanticRefresh(id:string,workerId:string,success:boolean,error?:string) {
