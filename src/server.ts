@@ -20,6 +20,7 @@ import { csvTemplate, xlsxTemplate, formatManifest } from "./services/templateGe
 import { uploadAndValidate, commitBatch, revertBatch } from "./services/importService.js";
 import { startUploadJob, getUploadJob, startCommitJob, getCommitJob } from "./services/asyncJobs.js";
 import { startSyncJob, getSyncJob } from "./services/syncJobs.js";
+import { stageValidatedGeneration, listSourceGenerations, getSemanticPublicationStatus } from "./services/sourceGovernance.js";
 import { startDailyRefresh, triggerRefreshNow } from "./services/dailyRefresh.js";
 import { getConfig as getSyncConfig, saveConfig as saveSyncConfig, publicConfig as publicSyncConfig, testConnection as testSyncConnection, runSync, recentSyncLogs, detectSourceChanges, previewSourceSwitch, SOURCE_CHANGE_POLL_SECONDS } from "./services/syncService.js";
 import { listPartners, createPartner, updatePartner, deletePartner, assignUserToPartner, assignEmployerToPartner, themeForUser, themeForEmployer, themeForSlug } from "./services/partnerService.js";
@@ -1218,6 +1219,28 @@ app.post<{ Body: {
 );
 
 // Validate a prospective SQL/API source without activating it or rewriting data.
+// Candidate registration preserves existing source configuration and all
+// active integration cursors. No automatic activation or destructive reimport.
+app.post<{ Body: Record<string, unknown> }>("/api/admin/integration/stage-source", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  try {
+    const result = await stageValidatedGeneration((req.body || {}) as any);
+    return reply.code(result.ok ? 201 : 400).send(result);
+  } catch (error: any) {
+    return reply.code(400).send({ ok: false, error: error?.message || "Unable to stage candidate source" });
+  }
+});
+
+app.get("/api/admin/integration/generations", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  return { generations: await listSourceGenerations() };
+});
+
+app.get("/api/admin/mlops/semantic-publications", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  return getSemanticPublicationStatus();
+});
+
 app.post<{ Body: Record<string, unknown> }>("/api/admin/integration/preview-switch", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
   const result = await previewSourceSwitch((req.body || {}) as any);
