@@ -856,6 +856,34 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
     }
   }
 
+  // Shadow-only durable handoff. Do not alter the serving dashboard path.
+  // Historical dependency expansion is not yet complete, therefore only
+  // enqueue current-period shadow work when an explicitly ACTIVE generation
+  // has been assigned to this worker by the operator.
+  if (!anyFailed && trigger !== "full-refresh" && touchedEmployers.size &&
+      process.env.ENABLE_SEMANTIC_SHADOW_ENQUEUE === "true") {
+    try {
+      const generationId = process.env.SEMANTIC_ACTIVE_SOURCE_GENERATION_ID;
+      if (!generationId) throw new Error("SEMANTIC_ACTIVE_SOURCE_GENERATION_ID is required");
+      const generation = await prisma.sourceGeneration.findUnique({ where: { id: generationId } });
+      if (generation?.state !== "ACTIVE") throw new Error("Semantic source generation must be ACTIVE");
+      const { enqueueSemanticRefresh } = await import("./semanticRefreshQueue.js");
+      const period = new Date().toISOString().slice(0, 7);
+      const changedFeeds = Object.keys(summary).filter(key =>
+        ["employers","workforce_snapshots","employees","platform_users","journeys","debt_accounts","policies","ratings","referrals","salary_advances"].includes(key) &&
+        (Number(summary[key]?.inserted || 0) + Number(summary[key]?.updated || 0) + Number(summary[key]?.deleted || 0)) > 0);
+      if (changedFeeds.length) {
+        const result = await enqueueSemanticRefresh(generationId, throughAt,
+          [...touchedEmployers].map(employerId => ({ employerId, period, feeds: changedFeeds, deleted: changedFeeds.some(key => Number(summary[key]?.deleted || 0) > 0) })));
+        summary.semanticShadowQueue = { ...result, generationId, period, mode: "SHADOW_ONLY" };
+      }
+    } catch (error: any) {
+      // Shadow sidecar failures must not falsify a successfully committed sync.
+      summary.semanticShadowQueue = { error: error?.message || String(error), mode: "SHADOW_ONLY" };
+      console.error("[sync] shadow semantic queue handoff failed:", error);
+    }
+  }
+
   if (!anyFailed) {
     await emitSyncProgress(options, {
       phase: "REBUILDING_DASHBOARD",
