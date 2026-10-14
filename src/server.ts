@@ -1273,7 +1273,7 @@ app.get<{ Params: { employerId: string }; Querystring: { period?: string } }>(
     if (!canViewEmployer(user, req.params.employerId))
       return reply.code(403).send({ error: "no access to this employer" });
     const period = String(req.query?.period || "");
-    if (period.length !== 7 || !/^\\d{4}-\\d{2}$/.test(period))
+    if (!/^[0-9]{4}-(0[1-9]|1[0-2])$/.test(period))
       return reply.code(400).send({ error: "invalid period" });
     if (process.env.ENABLE_SEMANTIC_CANARY_READ !== "true")
       return reply.code(503).send({ error: "canary disabled" });
