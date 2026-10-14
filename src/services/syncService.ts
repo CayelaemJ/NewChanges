@@ -274,7 +274,7 @@ const FULL_REFRESH_LOCK_A = 0x454653; // must match dailyRefresh.ts
 const SOURCE_SYNC_COORDINATION_LOCK_B = 79;
 const SOURCE_INCREMENTAL_MUTEX_B = 80;
 
-async function openIncrementalSyncLease() {
+export async function openIncrementalSyncLease() {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) throw new Error("DATABASE_URL is required for source-sync coordination.");
   const client = new Client({ connectionString });
@@ -307,7 +307,7 @@ async function openIncrementalSyncLease() {
   }
 }
 
-async function closeIncrementalSyncLease(client: Client | null) {
+export async function closeIncrementalSyncLease(client: Client | null) {
   if (!client) return;
   try {
     await client.query(
