@@ -71,4 +71,10 @@ assert(publisher.includes('semanticPublicationAudit.create'), "Every publication
 assert(publisher.includes("expectedPreviousManifestId"), "Publisher must prevent overwriting concurrently published versions");
 assert(publisher.includes("expectedCurrentManifestId"), "Rollback must require the expected live version");
 assert(!server.includes('"/api/admin/mlops/semantic-publications/publish"'), "Unsafe external publication endpoint forbidden");
+const pipeline=read("../src/services/semanticObjectPipeline.ts");
+assert(pipeline.includes('ENABLE_SEMANTIC_OBJECT_PUBLISH'), "semantic serving must be opt-in");
+assert(pipeline.includes('putAndVerifySemanticObject'), "semantic publish requires verified external storage");
+assert(pipeline.includes('publishVerifiedSemanticManifest'), "semantic publish requires atomic pointer transaction");
+assert(pipeline.includes('evaluatePublicationGates'), "semantic publish requires data quality gates");
+assert(governance.includes('update: { validation, validatedAt: now }'), "source revalidation must not demote an active source");
 console.log("Source synchronization safety regression checks passed.");
