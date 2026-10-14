@@ -1442,3 +1442,31 @@ model SemanticSnapshotManifest {
   @@index([employerId, period, state])
   @@index([generationId, state])
 }
+
+
+// Atomic semantic publication pointer. One pointer per employer and partition.
+// A transaction swaps this reference only after all quality and storage checks.
+model SemanticPublicationPointer {
+  id          String   @id @default(cuid())
+  employerId  String
+  period      String
+  partitionKey String
+  manifestId  String
+  generationId String
+  updatedAt   DateTime @updatedAt
+  @@unique([employerId, period, partitionKey])
+  @@index([generationId])
+}
+
+model SemanticPublicationAudit {
+  id           String   @id @default(cuid())
+  employerId   String
+  period       String
+  partitionKey String
+  previousManifestId String?
+  nextManifestId String
+  action       String
+  reason       String
+  createdAt    DateTime @default(now())
+  @@index([employerId, period, partitionKey, createdAt])
+}
