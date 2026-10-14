@@ -26,6 +26,7 @@ import { getSemanticQueueHealth } from "./services/semanticQueueHealth.js";
 import { readSemanticPublicationChanges } from "./services/semanticPublicationFeed.js";
 import { publicSemanticStorageHealth } from "./services/semanticStorageSettings.js";
 import { readPublishedSemanticPartition } from "./services/semanticCanaryRead.js";
+import { activateEquivalentSource } from "./services/sourceActivation.js";
 import { startDailyRefresh, triggerRefreshNow } from "./services/dailyRefresh.js";
 import { getConfig as getSyncConfig, saveConfig as saveSyncConfig, publicConfig as publicSyncConfig, testConnection as testSyncConnection, runSync, recentSyncLogs, detectSourceChanges, previewSourceSwitch, SOURCE_CHANGE_POLL_SECONDS } from "./services/syncService.js";
 import { listPartners, createPartner, updatePartner, deletePartner, assignUserToPartner, assignEmployerToPartner, themeForUser, themeForEmployer, themeForSlug } from "./services/partnerService.js";
@@ -1235,6 +1236,29 @@ app.post<{ Body: Record<string, unknown> }>("/api/admin/integration/stage-source
     return reply.code(400).send({ ok: false, error: error?.message || "Unable to stage candidate source" });
   }
 });
+
+// Only verified equivalent datasets can switch without rebuilding data.
+// Incomplete/mismatched digests must fail closed. This endpoint is disabled
+// without the governed-cutover feature flag and is SUPERADMIN-only.
+app.post<{ Body: { targetGenerationId?:string; expectedActiveGenerationId?:string; reason?:string; confirm?:string } }>(
+  "/api/admin/integration/activate-equivalent-source",
+  async (req, reply) => {
+    const admin=await requireAdmin(req,reply);
+    if(!admin)return;
+    if(admin.role!=="SUPERADMIN")return reply.code(403).send({error:"superadmin only"});
+    try {
+      const result=await activateEquivalentSource({
+        targetGenerationId:String(req.body?.targetGenerationId||""),
+        expectedActiveGenerationId:String(req.body?.expectedActiveGenerationId||""),
+        actor:admin.id,reason:String(req.body?.reason||""),confirm:String(req.body?.confirm||""),
+      });
+      logAdminAction(admin,"source.equivalent_cutover",result.note,{detail:result});
+      return result;
+    }catch(error:any){
+      return reply.code(409).send({ok:false,error:error?.message||"Source cutover was not safe"});
+    }
+  },
+);
 
 app.get("/api/admin/integration/generations", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
