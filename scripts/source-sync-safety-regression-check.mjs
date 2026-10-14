@@ -101,4 +101,17 @@ assert(server.includes('"/api/admin/mlops/semantic-storage-health"'),"Admin-only
 assert(server.includes('"/api/dashboard/semantic-version-changes"'), "Signed-in users need scoped version notifications");
 assert(server.includes('employerIds: ids === null ? undefined : ids'), "Semantic user polling must be permission-scoped");
 assert(server.includes('ids !== null && ids.length === 0'), "Users without employers cannot view events");
+const activation=read("../src/services/sourceActivation.ts");
+const reconciliation=read("../src/services/sourceReconciliation.ts");
+assert(activation.includes('ENABLE_GOVERNED_SOURCE_CUTOVER'),"Cutover must be explicitly enabled");
+assert(activation.includes('verifyContinuity(current,target)'),"Activation requires ten-feed continuity proofs");
+assert(activation.includes('isolationLevel:"Serializable"'),"Activation must atomically swap credentials and cursors");
+assert(activation.includes('sourceActivationAudit.create'),"Every cutover requires an audit record");
+assert(reconciliation.includes('fingerprintCanonicalRecords'),"Source content must be cryptographically reconciled");
+assert(reconciliation.includes('Source generation status changed'),"Reconciliation must fail on concurrent source changes");
+assert(server.includes('"/api/admin/integration/activate-equivalent-source"'),"Guarded activation endpoint required");
+assert(server.includes('"/api/admin/integration/bootstrap-source"'),"Existing source bootstrap endpoint required");
+assert(legacy.includes('onclick="previewCandidateSource()"'),"Existing Admin needs candidate preview control");
+assert(legacy.includes('onclick="stageCandidateSource()"'),"Existing Admin needs encrypted candidate staging control");
+assert(!legacy.includes('Refresh now</b> runs the full purge'),"Admin must not misrepresent incremental refresh");
 console.log("Source synchronization safety regression checks passed.");
