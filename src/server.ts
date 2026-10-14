@@ -21,7 +21,7 @@ import { uploadAndValidate, commitBatch, revertBatch } from "./services/importSe
 import { startUploadJob, getUploadJob, startCommitJob, getCommitJob } from "./services/asyncJobs.js";
 import { startSyncJob, getSyncJob } from "./services/syncJobs.js";
 import { startDailyRefresh, triggerRefreshNow } from "./services/dailyRefresh.js";
-import { getConfig as getSyncConfig, saveConfig as saveSyncConfig, publicConfig as publicSyncConfig, testConnection as testSyncConnection, runSync, recentSyncLogs, detectSourceChanges, SOURCE_CHANGE_POLL_SECONDS } from "./services/syncService.js";
+import { getConfig as getSyncConfig, saveConfig as saveSyncConfig, publicConfig as publicSyncConfig, testConnection as testSyncConnection, runSync, recentSyncLogs, detectSourceChanges, previewSourceSwitch, SOURCE_CHANGE_POLL_SECONDS } from "./services/syncService.js";
 import { listPartners, createPartner, updatePartner, deletePartner, assignUserToPartner, assignEmployerToPartner, themeForUser, themeForEmployer, themeForSlug } from "./services/partnerService.js";
 import { login, resolveSession, destroySession, destroySessionById, destroyAllSessionsForUser, canViewEmployer, canAccessModule, allowedEmployerIds, AuthUser, isAdminRole } from "./services/authService.js";
 import { createUser, listUsers, updateUser, resetPassword, completeSetup, deactivateSelf, listRevokedUsers, deleteUserPermanently, requestPasswordReset } from "./services/userService.js";
@@ -1216,6 +1216,13 @@ app.post<{ Body: {
     return publicSyncConfig(cfg);
   },
 );
+
+// Validate a prospective SQL/API source without activating it or rewriting data.
+app.post<{ Body: Record<string, unknown> }>("/api/admin/integration/preview-switch", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  const result = await previewSourceSwitch((req.body || {}) as any);
+  return reply.code(result.ok ? 200 : 400).send(result);
+});
 
 app.post<{ Body: Record<string, unknown> }>("/api/admin/integration/test", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
