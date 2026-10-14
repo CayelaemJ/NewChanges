@@ -3,7 +3,7 @@ import { LOAD_ORDER } from "../src/services/reportFormats.js";
 import { verifyContinuity } from "../src/services/sourceActivation.js";
 const checkpoint=new Date("2026-10-14T08:00:00.000Z");
 const make=()=>({cursors:LOAD_ORDER.map(reportKey=>({
- reportKey,digest:"a".repeat(64),rowCount:10,lastSourceUpdatedAt:checkpoint,
+ reportKey,digest:"a".repeat(64),rowCount:10,lastSourceUpdatedAt:checkpoint,reconciledAt:checkpoint,
 }))});
 assert.doesNotThrow(()=>verifyContinuity(make(),make()));
 const wrong=make();wrong.cursors[0].digest="b".repeat(64);
