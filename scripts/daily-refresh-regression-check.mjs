@@ -2,6 +2,10 @@ import { readFileSync } from "node:fs";
 
 const read = (path) => readFileSync(path, "utf8");
 const daily = read("src/services/dailyRefresh.ts");
+const scheduled = daily.slice(daily.indexOf("export function startDailyRefresh()"),daily.indexOf("// Manual trigger"));
+must(scheduled.includes('runSync("scheduled")'), "scheduled refresh must run incremental sync");
+must(!scheduled.includes('runAuthoritativeFullRefresh('), "scheduled refresh must not run a destructive full refresh");
+
 const sync = read("src/services/syncService.ts");
 const imports = read("src/services/importService.ts");
 const snapshots = read("src/services/snapshotBuilder.ts");
