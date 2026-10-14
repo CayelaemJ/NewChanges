@@ -129,21 +129,52 @@ export async function registerMLOpsModel(input:{modelKey:string;version:string;m
   });
 }
 
-export async function promoteMLOpsModel(modelKey:string,version:string) {
-  const candidate=await prisma.mLOpsModel.findUnique({where:{modelKey_version:{modelKey,version}}});
-  if(!candidate) throw new Error("Model version not found.");
-  const active=await prisma.mLOpsModel.findMany({where:{modelKey,status:"ACTIVE"}});
-  await prisma.$transaction([
-    ...active.map((m:any)=>prisma.mLOpsModel.update({where:{id:m.id},data:{status:"RETIRED",retiredAt:new Date()}})),
-    prisma.mLOpsModel.update({where:{id:candidate.id},data:{status:"ACTIVE",promotedAt:new Date()}})
-  ]);
-  return prisma.mLOpsModel.findUnique({where:{id:candidate.id}});
+// Model lifecycle changes are serialised per model key. This prevents two admins
+// or AI operators from activating different versions concurrently.
+async function changeActiveModel(modelKey: string, version: string, operation: "PROMOTE" | "ROLLBACK") {
+  if (!modelKey?.trim() || !version?.trim()) throw new Error("Model key and version are required.");
+  return prisma.$transaction(async (tx) => {
+    // Transaction-scoped lock: no additional table or paid queue service required.
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${modelKey}))`;
+    const candidate = await tx.mLOpsModel.findUnique({ where: { modelKey_version: { modelKey, version } } });
+    if (!candidate) throw new Error("Model version not found.");
+    const active = await tx.mLOpsModel.findMany({ where: { modelKey, status: "ACTIVE" } });
+    if (active.length > 1) throw new Error("Multiple active versions detected; manual reconciliation required.");
+    const current = active[0];
+    if (candidate.status === "ACTIVE") throw new Error("This model version is already active.");
+    if (operation === "ROLLBACK" && !current) throw new Error("No active model exists to roll back.");
+    if (operation === "ROLLBACK" && candidate.status !== "RETIRED") {
+      throw new Error("Rollback target must be a previously retired version.");
+    }
+    if (operation === "PROMOTE" && candidate.status !== "SHADOW") {
+      throw new Error("Only validated shadow versions may be promoted. Use rollback to restore a retired version.");
+    }
+
+    const changedAt = new Date();
+    if (current) {
+      await tx.mLOpsModel.update({ where: { id: current.id }, data: { status: "RETIRED", retiredAt: changedAt } });
+    }
+    const next = await tx.mLOpsModel.update({
+      where: { id: candidate.id },
+      data: { status: "ACTIVE", promotedAt: changedAt, retiredAt: null },
+    });
+    await tx.mLOpsEvent.create({ data: {
+      eventType: operation === "PROMOTE" ? "MODEL_PROMOTION" : "MODEL_ROLLBACK",
+      modelKey, modelVersion: version, status: "ACTIVE",
+      metadata: { previousVersion: current?.version ?? null, newVersion: version, operation },
+    } });
+    return next;
+  });
 }
 
-export async function rollbackMLOpsModel(modelKey:string,version:string) {
-  const candidate=await prisma.mLOpsModel.findUnique({where:{modelKey_version:{modelKey,version}}});
-  if(!candidate) throw new Error("Model version not found.");
-  return prisma.mLOpsModel.update({where:{id:candidate.id},data:{status:"RETIRED",retiredAt:new Date()}});
+export async function promoteMLOpsModel(modelKey: string, version: string) {
+  return changeActiveModel(modelKey, version, "PROMOTE");
+}
+
+// Roll back TO a retired version; do not merely retire the requested model,
+// which could otherwise leave production with no active model.
+export async function rollbackMLOpsModel(modelKey: string, version: string) {
+  return changeActiveModel(modelKey, version, "ROLLBACK");
 }
 
 export async function listMLOpsEvents(modelKey?:string,limit=100) {
