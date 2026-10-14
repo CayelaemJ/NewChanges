@@ -373,6 +373,8 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
   }
   const summary: Record<string, any> = {};
   const touchedEmployers = new Set<string>();
+  let historicalShadowPartitions: import("./semanticRefreshPlanner.js").RefreshPartition[] = [];
+  let historicalPlanningError: string | null = null;
   let anyFailed = false;
   let anyOk = false;
   let failedStep: { reportIndex: number; reportKey: string; title: string; reason: string } | null = null;
@@ -708,6 +710,21 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
           }
           committed.skipped = 0;
         }
+        // Only inspect canonical rows after their transactional import succeeds.
+        // Planning is opt-in and bounded; failures must not invalidate live sync.
+        if (process.env.ENABLE_SEMANTIC_SHADOW_ENQUEUE === "true" && trigger !== "full-refresh" &&
+            !historicalPlanningError && (committed.inserted + committed.updated + committed.deleted > 0)) {
+          try {
+            const { partitionsFromCanonicalSourceRows } = await import("./semanticSourceChangePlanner.js");
+            historicalShadowPartitions.push(...partitionsFromCanonicalSourceRows(
+              reportKey, result.rows as Record<string, unknown>[], 500));
+            if (historicalShadowPartitions.length > 500) throw new Error("Historical semantic partition budget exceeded");
+          } catch(error:any) {
+            historicalPlanningError = error?.message ?? String(error);
+            historicalShadowPartitions = [];
+            console.warn("[sync] historical semantic invalidation deferred:", historicalPlanningError);
+          }
+        }
         await prisma.importBatch.update({
           where: { id: batch.id },
           data: {
@@ -878,10 +895,14 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
       const changedFeeds = Object.keys(summary).filter(key =>
         ["employers","workforce_snapshots","employees","platform_users","journeys","debt_accounts","policies","ratings","referrals","salary_advances"].includes(key) &&
         (Number(summary[key]?.inserted || 0) + Number(summary[key]?.updated || 0) + Number(summary[key]?.deleted || 0)) > 0);
+      if (historicalPlanningError) throw new Error("Historical dependency proof unavailable: " + historicalPlanningError);
       if (changedFeeds.length) {
-        const result = await enqueueSemanticRefresh(generationId, throughAt,
-          [...touchedEmployers].map(employerId => ({ employerId, period, feeds: changedFeeds, deleted: changedFeeds.some(key => Number(summary[key]?.deleted || 0) > 0) })));
-        summary.semanticShadowQueue = { ...result, generationId, period, mode: "SHADOW_ONLY" };
+        const { mergeAndExpandSemanticPartitions } = await import("./semanticSourceChangePlanner.js");
+        const historical = mergeAndExpandSemanticPartitions(historicalShadowPartitions,period,500);
+        if (!historical.length) throw new Error("Changed feeds have no provable business-period invalidations");
+        const result = await enqueueSemanticRefresh(generationId, throughAt,historical);
+        summary.semanticShadowQueue = { ...result, generationId, affectedPeriods: [...new Set(historical.map(x => x.period))].sort(),
+          partitions:historical.length, mode: "SHADOW_ONLY_HISTORICAL" };
       }
     } catch (error: any) {
       // Shadow sidecar failures must not falsify a successfully committed sync.
