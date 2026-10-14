@@ -38,4 +38,15 @@ assert(preview.includes("adapter.test()"), "preflight must validate canonical vi
 assert(preview.includes("adapter.watermark(reportKey)"), "preflight should check source freshness without importing");
 assert(!preview.includes("saveConfig(") && !preview.includes("runSync(") && !preview.includes("deleteMany("), "preflight cannot mutate source or dashboard data");
 assert(preview.includes("canReuseCurrentCursors: !sourceChanged"), "new source must not silently reuse old checkpoints");
+const governance = read("../src/services/sourceGovernance.ts");
+const schema = read("../prisma/schema.prisma");
+for (const model of ["SourceGeneration", "SourceGenerationCursor", "SemanticSnapshotManifest"]) {
+  assert(schema.includes(`model ${model} {`), `${model} metadata model required`);
+}
+assert(governance.includes("previewSourceSwitch(patch)"), "candidate registry must preflight before storing metadata");
+assert(governance.includes('activationAvailable: false'), "unsafe source activation must remain blocked");
+assert(!governance.includes("saveConfig(") && !governance.includes("deleteMany("), "candidate registration must not change live source or purge data");
+assert(governance.includes("generationId_reportKey"), "source cursors must be partitioned by generation");
+assert(governance.includes("MANIFEST_ONLY"), "semantic store must disclose incomplete external publication support");
+assert(server.includes('"/api/admin/integration/stage-source"'), "Admin candidate staging endpoint required");
 console.log("Source synchronization safety regression checks passed.");
