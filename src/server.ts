@@ -2215,13 +2215,22 @@ app.listen({ port: PORT, host: "0.0.0.0" })
     if (!standby) {
       await bootstrapAdmin();
       await ensureSectionDefaults();
-      if (process.env.TRAFFIC_SAVER_MODE === "false") {
+      // Independent source ingestion switch: maintain dashboard freshness while
+      // leaving mail, reports and maintenance jobs asleep in traffic-saver mode.
+      // Never activate this on a standby or a second ingest leader.
+      if (process.env.ENABLE_AUTHORITATIVE_INCREMENTAL_SCHEDULER === "true") {
         startSyncScheduler(app);
+        app.log.info("Authoritative incremental source scheduler enabled");
+      } else if (process.env.TRAFFIC_SAVER_MODE === "false") {
+        // Legacy compatibility when full background operations are enabled.
+        startSyncScheduler(app);
+      }
+      if (process.env.TRAFFIC_SAVER_MODE === "false") {
         startReportScheduler(app);
         startDailyRefresh();
         startAutomationScheduler(app);
       } else {
-        app.log.warn("TRAFFIC_SAVER_MODE: automatic sync, daily refresh and background jobs paused; manual admin actions remain available");
+        app.log.warn("TRAFFIC_SAVER_MODE: optional reports, daily reconciliation and maintenance paused; incremental source scheduler is independently configurable");
       }
     } else {
       app.log.warn("STANDBY_MODE enabled: background schedulers and bootstrap writes are disabled");
