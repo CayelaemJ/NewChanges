@@ -2,6 +2,7 @@
 // NEVER imports or purges historical facts. A different dataset needs an
 // independently staged semantic generation and is not eligible for this path.
 import { prisma } from "./snapshotBuilder.js";
+import type { Prisma } from "@prisma/client";
 import { LOAD_ORDER } from "./reportFormats.js";
 import { sourceEnvironmentLocked, createSourceAdapter } from "./sourceAdapter.js";
 import { getConfig, previewSourceSwitch, openIncrementalSyncLease, closeIncrementalSyncLease } from "./syncService.js";
@@ -10,7 +11,7 @@ import { sourceFingerprint, stageValidatedGeneration } from "./sourceGovernance.
 
 export function verifyContinuity(
   active: {cursors:Array<{reportKey:string;digest:string|null;rowCount:number|null;lastSourceUpdatedAt:Date|null;reconciledAt:Date|null}>},
-  target: {cursors:Array<{reportKey:string;digest:string|null;rowCount:number|null;lastSourceUpdatedAt:Date|null}>},
+  target: {cursors:Array<{reportKey:string;digest:string|null;rowCount:number|null;lastSourceUpdatedAt:Date|null;reconciledAt:Date|null}>},
 ) {
   const previous=new Map(active.cursors.map(x=>[x.reportKey,x]));
   const next=new Map(target.cursors.map(x=>[x.reportKey,x]));
@@ -100,7 +101,10 @@ export async function activateEquivalentSource(input:{
       if(active?.state!=="ACTIVE"||next?.state!==(rollback?"RETIRED":"VALIDATED")) throw new Error("Concurrent source activation conflict");
       // The source lease excludes sync workers while all ten checkpoints and
       // the source credentials are swapped as one serializable transaction.
-      await tx.integrationConfig.update({where:{id:"default"},data:candidate});
+      if (candidate.sqlDialect == null) throw new Error("Source SQL dialect must be configured before cutover");
+      // Values in the candidate patch may be nullable; required Prisma fields cannot be.
+      const configUpdate = Object.fromEntries(Object.entries(candidate).filter(([,value]) => value !== null && value !== undefined)) as Prisma.IntegrationConfigUpdateInput;
+      await tx.integrationConfig.update({where:{id:"default"},data:configUpdate});
       for (const feed of LOAD_ORDER) {
         const cursor=target.cursors.find(x=>x.reportKey===feed);
         if(!cursor) throw new Error("Incomplete source checkpoint");
@@ -141,7 +145,7 @@ export async function bootstrapExistingSource(input:{actor:string;reason:string;
     if(await prisma.sourceGeneration.findFirst({where:{state:"ACTIVE"}}))
       throw new Error("An active source generation already exists");
     const staged=await stageValidatedGeneration({});
-    if(!staged.ok||!staged.generationId||!staged.credentialsStaged)
+    if(!staged.ok || !("generationId" in staged) || !staged.generationId || !("credentialsStaged" in staged) || !staged.credentialsStaged)
       throw new Error("Active source failed validation or vault registration");
     const current=await prisma.integrationCursor.findMany({where:{reportKey:{in:LOAD_ORDER}}});
     if(current.length!==LOAD_ORDER.length)
