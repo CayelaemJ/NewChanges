@@ -6,9 +6,9 @@
   },
   "deploy": {
     "preDeployCommand": [
-      "node scripts/smoke-semantic-storage.mjs"
+      "npm run db:deploy"
     ],
-    "startCommand": "npm start",
+    "startCommand": "node scripts/smoke-semantic-storage.mjs && npm start",
     "healthcheckPath": "/health",
     "healthcheckTimeout": 300,
     "restartPolicyType": "ON_FAILURE"
