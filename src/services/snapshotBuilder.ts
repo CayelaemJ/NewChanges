@@ -15,7 +15,11 @@ const prisma = new PrismaClient();
 // Short-lived server-side cache: dashboard reads are read-heavy and the same
 // cohort is commonly requested repeatedly while users move between tabs.
 // Keep this deliberately small so slicer changes remain effectively real-time.
-const DASHBOARD_CACHE_TTL_MS = 60_000;
+// Adjustable emergency read-model TTL; clamped to 1–30 minutes to bound staleness.
+// Published refresh paths still invalidate affected employer cache entries.
+const DASHBOARD_CACHE_TTL_MS = Math.min(30 * 60_000, Math.max(60_000,
+  Number(process.env.SEMANTIC_CACHE_TTL_MS) || 5 * 60_000));
+const SEMANTIC_PERSIST_ON_READ = process.env.SEMANTIC_PERSIST_ON_READ === "true";
 const DASHBOARD_CACHE_SCHEMA = "financial-comparison-v3";
 const dashboardCache = new Map<string, { expiresAt: number; payload: any }>();
 const PUBLISHED_DASHBOARD_CACHE_KEY = "__published_dashboard_v1__";
@@ -1573,9 +1577,10 @@ export async function getDashboardPayload(employerId: string, query: DashboardQu
 
   const payload = await buildDashboardPayload(employerId, query);
   dashboardCache.set(key, { expiresAt: now + DASHBOARD_CACHE_TTL_MS, payload });
-  // Persist every explicit period/cohort result. A cold cohort pays the
-  // calculation cost once; every subsequent user sees the read-model path.
-  if (query.period && query.range == null) {
+  // Do NOT write a cache row on ordinary dashboard reads by default.
+  // Snapshot publication/refresh owns durable read-model writes; an explicit
+  // opt-in preserves the legacy on-read warming behaviour if needed.
+  if (SEMANTIC_PERSIST_ON_READ && query.period && query.range == null) {
     try { await persistDashboardCache(employerId, query, payload); } catch { /* cache failure must never break dashboard */ }
   }
   if (dashboardCache.size > 250) {
