@@ -1385,3 +1385,60 @@ model AchievableTarget {
 
   @@index([employerId, driver, effectiveFrom])
 }
+
+
+// Non-destructive source cutover control plane. Credentials are NOT stored here;
+// they remain in the existing secret-managed connection configuration.
+model SourceGeneration {
+  id              String   @id @default(cuid())
+  fingerprint     String   @unique
+  sourceMode      String
+  endpointLabel   String
+  state           String   @default("CANDIDATE") // CANDIDATE | VALIDATED | ACTIVE | RETIRED
+  validation      Json?
+  validatedAt     DateTime?
+  activatedAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  cursors         SourceGenerationCursor[]
+  manifests       SemanticSnapshotManifest[]
+
+  @@index([state, updatedAt])
+}
+
+// Each source generation has independent feed checkpoints. The legacy
+// IntegrationCursor remains active until a validated generation cutover ships.
+model SourceGenerationCursor {
+  id                    String   @id @default(cuid())
+  generationId          String
+  reportKey             String
+  lastSourceUpdatedAt   DateTime?
+  reconciledAt          DateTime?
+  rowCount              Int?
+  digest                String?
+  generation            SourceGeneration @relation(fields: [generationId], references: [id], onDelete: Restrict)
+  @@unique([generationId, reportKey])
+}
+
+// Metadata for externally durable, immutable semantic partitions.
+// Store object keys and hashes, not bulky dashboard JSON or raw PII.
+model SemanticSnapshotManifest {
+  id                String   @id @default(cuid())
+  generationId      String
+  employerId        String
+  period            String
+  partitionKey      String
+  version           String
+  objectKey         String
+  contentSha256     String
+  sourceWatermark   DateTime?
+  state             String   @default("STAGED") // STAGED | PUBLISHED | RETIRED
+  bytes             Int
+  validatedAt       DateTime?
+  publishedAt       DateTime?
+  createdAt         DateTime @default(now())
+  generation        SourceGeneration @relation(fields: [generationId], references: [id], onDelete: Restrict)
+  @@unique([generationId, employerId, period, partitionKey, version])
+  @@index([employerId, period, state])
+  @@index([generationId, state])
+}
