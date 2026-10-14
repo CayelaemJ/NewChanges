@@ -1249,6 +1249,14 @@ app.get<{ Params: { manifestId: string } }>("/api/admin/mlops/semantic-publicati
 // Permission-scoped publication version polling for signed-in dashboard users.
 // Never returns payloads or private storage URLs. Existing dashboard reads
 // remain unchanged until the semantic-serving rollout is approved.
+app.get("/api/dashboard/semantic-features", async (req, reply) => {
+  if (!(await requireUser(req, reply))) return;
+  return {
+    pollingEnabled: process.env.ENABLE_SEMANTIC_LIVE_NOTIFICATIONS === "true",
+    servingEnabled: false,
+  };
+});
+
 app.get<{ Querystring: { afterId?: string; limit?: string } }>("/api/dashboard/semantic-version-changes", async (req, reply) => {
   const user = await requireUser(req, reply);
   if (!user) return;
@@ -1259,6 +1267,7 @@ app.get<{ Querystring: { afterId?: string; limit?: string } }>("/api/dashboard/s
       afterId: req.query?.afterId,
       limit: Number(req.query?.limit ?? 50),
       employerIds: ids === null ? undefined : ids,
+      initializeAtLatest: !req.query?.afterId,
     });
   } catch(error: any) {
     return reply.code(400).send({ error: error?.message ?? "Invalid semantic version cursor" });
