@@ -4,7 +4,7 @@
 import { prisma } from "./snapshotBuilder.js";
 
 export async function readSemanticPublicationChanges(input:{
-  afterId?:string;limit?:number;employerIds?:string[];
+  afterId?:string;limit?:number;employerIds?:string[];initializeAtLatest?:boolean;
 }) {
   const requested = input.limit ?? 50;
   if (!Number.isFinite(requested)) throw new Error("Invalid publication page size");
@@ -13,6 +13,14 @@ export async function readSemanticPublicationChanges(input:{
   if(input.afterId && !after) throw new Error("Unknown publication cursor");
   const employers=[...new Set(input.employerIds??[])];
   if(employers.length>200) throw new Error("Employer filter exceeds limit");
+  if (!input.afterId && input.initializeAtLatest) {
+    const latest = await prisma.semanticPublicationAudit.findFirst({
+      where: employers.length ? { employerId: { in: employers } } : undefined,
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      select: { id: true },
+    });
+    return { changes: [], nextCursor: latest?.id ?? null, servingEnabled: false, transport: "DURABLE_POLL" };
+  }
   const rows=await prisma.semanticPublicationAudit.findMany({
     where:{
       ...(after?{OR:[{createdAt:{gt:after.createdAt}},{createdAt:after.createdAt,id:{gt:after.id}}]}:{}),
