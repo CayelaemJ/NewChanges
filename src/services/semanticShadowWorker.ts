@@ -2,7 +2,7 @@
 // (never raw source records) as a compatibility bootstrap. This is NOT yet a
 // replacement for dependency-aware recalculation of retroactive corrections.
 import { randomUUID } from "node:crypto";
-import { getPublishedDashboardPayload } from "./snapshotBuilder.js";
+import { getDashboardPayload, getPublishedDashboardPayload } from "./snapshotBuilder.js";
 import { claimSemanticRefresh, finishSemanticRefresh } from "./semanticRefreshQueue.js";
 import { stageAndPublishSemanticObject } from "./semanticObjectPipeline.js";
 import { prisma } from "./snapshotBuilder.js";
@@ -19,10 +19,15 @@ export async function processOneShadowSemanticRefresh(workerId:string,storage:Se
   const job=await claimSemanticRefresh(workerId,180);
   if(!job) return {processed:false,reason:"queue empty"};
   try {
-    const payload=await getPublishedDashboardPayload(job.employerId,{period:job.period});
+    // One bounded recomputation per durable job, not one per dashboard GET.
+    // Keep shadow-only copies as the default until historical parity passes.
+    const recompute=process.env.ENABLE_SEMANTIC_RECOMPUTE === "true";
+    const payload=recompute
+      ? await getDashboardPayload(job.employerId,{period:job.period})
+      : await getPublishedDashboardPayload(job.employerId,{period:job.period});
     if(!payload) throw new Error("No previously published dashboard payload for shadow semantic snapshot");
     const body=Buffer.from(JSON.stringify({
-      schemaVersion:"semantic-shadow-v1",generationId:job.generationId,employerId:job.employerId,
+      schemaVersion:"semantic-shadow-v1",calculationMode:recompute?"RECOMPUTED":"PUBLISHED_COPY",generationId:job.generationId,employerId:job.employerId,
       period:job.period,asAt:job.sourceWatermark.toISOString(),payload,
     }),"utf8");
     // Object keys are immutable; never replace bytes under an existing key.
