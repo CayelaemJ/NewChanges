@@ -49,4 +49,11 @@ assert(!governance.includes("saveConfig(") && !governance.includes("deleteMany("
 assert(governance.includes("generationId_reportKey"), "source cursors must be partitioned by generation");
 assert(governance.includes("MANIFEST_ONLY"), "semantic store must disclose incomplete external publication support");
 assert(server.includes('"/api/admin/integration/stage-source"'), "Admin candidate staging endpoint required");
+const gates = read("../src/services/semanticPublicationGates.ts");
+for (const model of ["SemanticPublicationPointer", "SemanticPublicationAudit"]) {
+  assert(schema.includes(`model ${model} {`), `Missing ${model} publication control model`);
+}
+assert(gates.includes("storageVerified: false, sha256Verified: false"), "semantic publication must fail closed without object storage verification");
+assert(gates.includes("evaluatePublicationGates"), "semantic publication gates required");
+assert(server.includes('"/api/admin/mlops/semantic-publications/:manifestId/readiness"'), "Admin readiness endpoint required");
 console.log("Source synchronization safety regression checks passed.");
