@@ -1319,6 +1319,7 @@ app.get<{ Params: { employerId: string }; Querystring: { period?: string } }>(
   async (req, reply) => {
     const user = await requireUser(req, reply);
     if (!user) return;
+    if (user.role !== "SUPERADMIN") return reply.code(403).send({ error: "superadmin diagnostic only" });
     if (!canViewEmployer(user, req.params.employerId))
       return reply.code(403).send({ error: "no access to this employer" });
     const period = String(req.query?.period || "");
