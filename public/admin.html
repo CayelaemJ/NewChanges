@@ -958,6 +958,31 @@ async function saveInteg(){
     loadInteg();
   }catch(e){ $('#integ-result').innerHTML = `<div class="banner err">✕ ${esc(e.message)}</div>`; }
 }
+async function previewCandidateSource(){
+  $('#integ-result').innerHTML='<div class="banner ok">Validating candidate source without switching databases or rewriting facts…</div>';
+  try{
+    const r=await fetch(`${API}/api/admin/integration/preview-switch`,{
+      method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(integrationDraft())
+    });
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok||!d.ok)throw new Error(d.error||'Candidate validation failed');
+    const detail=d.sourceChanged?'A different source identity was detected. Existing cursors will NOT be reused.':'Current source identity is unchanged.';
+    $('#integ-result').innerHTML=`<div class="banner ok">✓ ${esc(d.note||'Source contract validated')} ${esc(detail)} ${Number(d.testedFeeds||0)} feed(s) checked.</div>`;
+  }catch(e){$('#integ-result').innerHTML=`<div class="banner err">✕ ${esc(e.message)}</div>`;}
+}
+async function stageCandidateSource(){
+  $('#integ-result').innerHTML='<div class="banner ok">Staging candidate source. Current dashboard and connection remain active…</div>';
+  try{
+    const r=await fetch(`${API}/api/admin/integration/stage-source`,{
+      method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(integrationDraft())
+    });
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok||!d.ok)throw new Error(d.error||'Source staging failed');
+    const vault=d.credentialsStaged?'Encrypted credentials stored.':'Encrypted credential vault not configured; activation remains blocked.';
+    $('#integ-result').innerHTML=`<div class="banner ok">✓ Candidate generation ${esc(d.generationId||'unknown')} validated. ${esc(vault)} No active database or dashboard data changed.</div>`;
+    if(d.credentialsStaged){$('#integ-token').value='';$('#integ-sql-password').value='';}
+  }catch(e){$('#integ-result').innerHTML=`<div class="banner err">✕ ${esc(e.message)}</div>`;}
+}
 async function testInteg(){
   const body=integrationDraft();
   const label=body.sourceMode==='SQL'?'database':'API';
