@@ -94,4 +94,8 @@ assert(pubfeed.includes("semanticPublicationAudit.findMany"),"cross-instance not
 assert(pubfeed.includes("afterId"),"durable publication feed needs stable cursor");
 assert(server.includes('"/api/admin/mlops/semantic-publication-changes"'),"publication notification endpoint required");
 assert(read("../src/services/semanticHistoricalDependencies.ts").includes("Historical refresh budget exceeded"),"Historical dependencies must be bounded");
+const storageSettings=read("../src/services/semanticStorageSettings.ts");
+assert(storageSettings.includes('secretAccessKey'),"Server-side storage credentials required");
+assert(storageSettings.includes('secretsReturned:false'),"Storage health must never expose credentials");
+assert(server.includes('"/api/admin/mlops/semantic-storage-health"'),"Admin-only storage health required");
 console.log("Source synchronization safety regression checks passed.");
