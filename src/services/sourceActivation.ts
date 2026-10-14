@@ -3,20 +3,20 @@
 // independently staged semantic generation and is not eligible for this path.
 import { prisma } from "./snapshotBuilder.js";
 import { LOAD_ORDER } from "./reportFormats.js";
-import { sourceEnvironmentLocked } from "./sourceAdapter.js";
+import { sourceEnvironmentLocked, createSourceAdapter } from "./sourceAdapter.js";
 import { getConfig, previewSourceSwitch, openIncrementalSyncLease, closeIncrementalSyncLease } from "./syncService.js";
 import { openSourceSettings } from "./sourceConnectionVault.js";
 import { sourceFingerprint } from "./sourceGovernance.js";
 
 export function verifyContinuity(
-  active: {cursors:Array<{reportKey:string;digest:string|null;rowCount:number|null;lastSourceUpdatedAt:Date|null}>},
+  active: {cursors:Array<{reportKey:string;digest:string|null;rowCount:number|null;lastSourceUpdatedAt:Date|null;reconciledAt:Date|null}>},
   target: {cursors:Array<{reportKey:string;digest:string|null;rowCount:number|null;lastSourceUpdatedAt:Date|null}>},
 ) {
   const previous=new Map(active.cursors.map(x=>[x.reportKey,x]));
   const next=new Map(target.cursors.map(x=>[x.reportKey,x]));
   for(const feed of LOAD_ORDER) {
     const a=previous.get(feed),b=next.get(feed);
-    if(!a||!b||!a.digest||!b.digest||!/^[a-f0-9]{64}$/.test(a.digest) ||
+    if(!a||!b||!a.reconciledAt||!b.reconciledAt||!a.digest||!b.digest||!/^[a-f0-9]{64}$/.test(a.digest) ||
        a.digest!==b.digest || a.rowCount==null || b.rowCount==null ||
        a.rowCount!==b.rowCount ||
        (a.lastSourceUpdatedAt?.getTime()??null)!==(b.lastSourceUpdatedAt?.getTime()??null)) {
@@ -64,6 +64,38 @@ export async function activateEquivalentSource(input:{
       throw new Error("Decrypted connection does not match the approved source identity");
     const preflight=await previewSourceSwitch(candidate);
     if(!preflight.ok) throw new Error("Candidate source connection failed fresh validation");
+    // Source data might have advanced since it was reconciled. Recheck
+    // remote source watermarks on both connections under the sync lease.
+    const verifiedAt=Date.now();
+    for(const cursor of [...current.cursors,...target.cursors]) {
+      if(!cursor.reconciledAt || verifiedAt-cursor.reconciledAt.getTime()>60*60_000 ||
+         cursor.reconciledAt.getTime()>verifiedAt)
+        throw new Error("Reconciliation proof is stale; cutover blocked");
+    }
+    const readWatermark=(value:string|null|undefined)=>{
+      if(!value)return null;
+      const raw=value.trim().replace(" ","T");
+      const ms=Date.parse(/(?:Z|[+-][0-9]{2}:?[0-9]{2})$/i.test(raw)?raw:raw+"Z");
+      if(!Number.isFinite(ms))throw new Error("Invalid source watermark");
+      return ms;
+    };
+    const proposed=new Map((preflight.watermarks??[]).map(row=>[row.reportKey,readWatermark(row.newest)]));
+    if(proposed.size!==LOAD_ORDER.length) throw new Error("Candidate view watermarks are incomplete");
+    for(const cursor of target.cursors) {
+      if(proposed.get(cursor.reportKey)!==(cursor.lastSourceUpdatedAt?.getTime()??null))
+        throw new Error("Candidate source changed after reconciliation");
+    }
+    let activeAdapter:Awaited<ReturnType<typeof createSourceAdapter>>|null=null;
+    try{
+      activeAdapter=await createSourceAdapter(config);
+      if(!activeAdapter.watermark)throw new Error("Active source has no watermark provider");
+      for(const cursor of current.cursors){
+        const actual=await activeAdapter.watermark(cursor.reportKey);
+        if(readWatermark(actual.newest)!==(cursor.lastSourceUpdatedAt?.getTime()??null))
+          throw new Error("Active source changed after reconciliation");
+      }
+    }finally { await activeAdapter?.close().catch(()=>{}); }
+
     const changed=await prisma.$transaction(async tx=>{
       const active=await tx.sourceGeneration.findUnique({where:{id:current.id}});
       const next=await tx.sourceGeneration.findUnique({where:{id:target.id}});
