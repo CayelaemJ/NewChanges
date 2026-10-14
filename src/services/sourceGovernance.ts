@@ -43,7 +43,8 @@ export async function stageValidatedGeneration(patch: IntegrationConfigPatch) {
   const generation = await prisma.sourceGeneration.upsert({
     where: { fingerprint: fp },
     create: { fingerprint: fp, sourceMode: id.mode, endpointLabel, state: "VALIDATED", validatedAt: now, validation },
-    // Never demote ACTIVE generations on repeated preflight.\n    update: { validation, validatedAt: now },
+    // Never demote ACTIVE generations on repeated preflight.
+    update: { validation, validatedAt: now },
   });
   // All feed checkpoints start null for a different source. Never reuse
   // the legacy cursor because the view names happen to match.
