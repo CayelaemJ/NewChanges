@@ -2226,6 +2226,14 @@ app.listen({ port: PORT, host: "0.0.0.0" })
     } else {
       app.log.warn("STANDBY_MODE enabled: background schedulers and bootstrap writes are disabled");
     }
+    // Disposable Playground-only diagnostics. Never run during production serving.
+    if (process.env.RAILWAY_ENVIRONMENT_NAME === "Playground and new ideas" &&
+        process.env.SEMANTIC_STORAGE_SMOKE_TEST === "true") {
+      void import("./services/semanticStorageProbe.js")
+        .then(({ runPlaygroundStorageProbe }) => runPlaygroundStorageProbe())
+        .then(result => app.log.info({ result }, "Playground semantic S3 verification succeeded"))
+        .catch(error => app.log.error({ message: error instanceof Error ? error.message : String(error) }, "Playground semantic S3 verification failed"));
+    }
     app.log.info(`empower-fin Dashboard Portal on :${PORT}`);
   })
   .catch((err) => { app.log.error(err); process.exit(1); });
