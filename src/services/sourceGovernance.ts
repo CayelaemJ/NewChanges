@@ -6,6 +6,7 @@ import { LOAD_ORDER } from "./reportFormats.js";
 import { effectiveSourceConfig, configuredSourceMode } from "./sourceAdapter.js";
 import type { IntegrationConfigPatch } from "./syncService.js";
 import { getConfig, previewSourceSwitch } from "./syncService.js";
+import { pickSourceSettings, sealSourceSettings } from "./sourceConnectionVault.js";
 
 function identity(input: any) {
   const c = effectiveSourceConfig(input);
@@ -55,7 +56,20 @@ export async function stageValidatedGeneration(patch: IntegrationConfigPatch) {
       update: {},
     });
   }
-  return { ...preflight, generationId: generation.id, state: "VALIDATED", activationAvailable: false,
+  // The candidate's complete source settings are encrypted at rest, and
+  // never returned through an Admin API. Revalidating ACTIVE sources must not
+  // silently overwrite the rollback credential record.
+  let credentialsStaged = false;
+  if (generation.state !== "ACTIVE" && process.env.SOURCE_CONNECTION_VAULT_KEY) {
+    const sealed = sealSourceSettings(generation.id, pickSourceSettings(candidate));
+    await prisma.sourceConnectionVault.upsert({
+      where: { generationId: generation.id },
+      create: { generationId: generation.id, ...sealed },
+      update: sealed,
+    });
+    credentialsStaged = true;
+  }
+  return { ...preflight, generationId: generation.id, state: "VALIDATED", activationAvailable: false, credentialsStaged,
     note: "Candidate generation validated and registered. Activation remains blocked until dataset continuity and staged semantic snapshots are verified." };
 }
 
