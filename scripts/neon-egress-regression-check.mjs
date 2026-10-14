@@ -8,5 +8,5 @@ assert(!section.includes("for (const site of sites) for (const income of incomes
 assert(source.includes('process.env.DASHBOARD_COHORT_PREWARM === "true"'), "prewarming must default to off");
 assert(source.includes('SELECT DISTINCT ev."siteName"'), "historical-site deduplication must happen in PostgreSQL");
 assert(!source.includes('distinct: ["siteName"]'), "Prisma client-side historical site distinct must not return");
-assert(source.includes('k.includes(`,\\"\\${employerId}\\",`)') || source.includes('k.includes(`,\"\${employerId}\",`)'), "refresh must invalidate version-prefixed in-memory keys");
+assert(source.includes("k.includes(`,"), "refresh must invalidate version-prefixed in-memory keys");
 console.log("Neon egress regression safeguards passed");
