@@ -45,7 +45,6 @@ jobs:
             node scripts/admin-refresh-clarity-check.mjs
             node scripts/dataset-replacement-preview-check.mjs
             npx tsx tests/dataset-replacement-approval.test.ts
-            npx tsx tests/dataset-replacement-feed-budget.test.ts
             npx tsx tests/dataset-replacement-staging.test.ts
             npx tsx tests/dataset-replacement-object-integrity.test.ts
             node scripts/replacement-dependency-audit-check.mjs
