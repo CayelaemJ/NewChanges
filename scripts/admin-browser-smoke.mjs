@@ -1,12 +1,15 @@
 import assert from "node:assert/strict";
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { chromium } from "playwright";
 const browser=await chromium.launch({headless:true,args:["--no-sandbox"]});
 const page=await browser.newPage();
 const errors=[];
+const diagnostics=[];
+const failures=[];
 page.on("pageerror",e=>errors.push(e.stack||e.message));
-page.on("console",message=>{if(message.type()==="error")console.error("[browser console]",message.text())});
-page.on("requestfailed",request=>console.error("[request failed]",request.url(),request.failure()?.errorText));
+page.on("console",message=>{if(message.type()==="error"){diagnostics.push("[console] "+message.text());console.error("[browser console]",message.text())}});
+page.on("requestfailed",request=>{const detail=request.url()+" "+(request.failure()?.errorText||"");failures.push(detail);console.error("[request failed]",detail)});
+page.on("response",response=>{if(response.status()>=400 && new URL(response.url()).hostname==="admin.test")diagnostics.push("[HTTP "+response.status()+"] "+response.url())});
 await page.route("http://admin.test/**",async route=>{
   const url=new URL(route.request().url());
   if(url.pathname==="/admin")return route.fulfill({status:200,contentType:"text/html",body:readFileSync("public/admin.html","utf8")});
@@ -25,6 +28,7 @@ await page.route("http://admin.test/**",async route=>{
   }
   return route.fulfill({status:200,body:""});
 });
+try {
 await page.goto("http://admin.test/admin",{waitUntil:"domcontentloaded"});
 await page.waitForTimeout(1200);
 const labels=await page.locator("body").innerText();
@@ -35,4 +39,10 @@ assert.equal(typeof await page.evaluate(()=>window.loadInteg),"function","Integr
 if(errors.length) console.error("[uncaught browser exceptions]",errors.join("\\n"));
 assert.deepEqual(errors,[],"Browser runtime errors: "+errors.join(" | "));
 console.log("Admin Console headless Chromium smoke passed");
-await browser.close();
+} catch(error) {
+  mkdirSync("test-results/admin-browser",{recursive:true});
+  await page.screenshot({path:"test-results/admin-browser/failure.png",fullPage:true}).catch(()=>{});
+  writeFileSync("test-results/admin-browser/diagnostics.json",JSON.stringify({error:String(error),pageErrors:errors,console:diagnostics,requestFailures:failures,url:page.url()},null,2));
+  console.error("[Admin browser diagnostics]",JSON.stringify({pageErrors:errors,console:diagnostics,requestFailures:failures},null,2));
+  throw error;
+} finally {await browser.close()};
