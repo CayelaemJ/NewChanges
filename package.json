@@ -55,7 +55,11 @@
     "check:source-vault": "tsx tests/source-connection-vault.test.ts",
     "check:source-continuity": "tsx tests/source-continuity.test.ts",
     "semantic:reconcile:once": "tsx scripts/reconcile-source-generations.ts",
-    "check:source-reconciliation": "tsx tests/source-reconciliation.test.ts"
+    "check:source-reconciliation": "tsx tests/source-reconciliation.test.ts",
+    "quality:lint": "eslint .",
+    "quality:types": "tsc --noEmit && npm run check:frontend:typecheck",
+    "quality:unit": "vitest run",
+    "quality:e2e": "playwright test"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.2",
@@ -79,7 +83,13 @@
     "@types/luxon": "^3.6.2",
     "@types/mssql": "^9.1.5",
     "@types/pg": "^8.11.10",
-    "tsx": "^4.19.2"
+    "tsx": "^4.19.2",
+    "eslint": "^9.25.0",
+    "@eslint/js": "^9.25.0",
+    "globals": "^16.0.0",
+    "typescript": "^5.6.3",
+    "vitest": "^3.2.4",
+    "@playwright/test": "^1.52.0"
   },
   "overrides": {
     "@fastify/busboy": "3.2.1"
