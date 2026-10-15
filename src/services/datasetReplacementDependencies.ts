@@ -26,7 +26,7 @@ export async function inspectReplacementDependencies() {
   ]);
   const preserved = new Set(['User','UserEmployer','Session','Partner','UserSectionAccess',
     'AdminAuditLog','ReportSchedule','ReportDeliveryLog','SecurityAlert','DataAccessEvent',
-    'DataSubjectRequest','SourceActivationAudit']);
+    'DataSubjectRequest','SourceActivationAudit','ChatSession','ScoreWeight','AchievableTarget']);
   return {
     mode:"READ_ONLY_DATABASE_DEPENDENCY_AUDIT",executable:false,
     tableSizes:sizes.map(t=>({table:t.tableName,estimatedRows:Number(t.estimatedRows),
