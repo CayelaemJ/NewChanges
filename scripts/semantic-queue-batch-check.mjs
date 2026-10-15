@@ -6,6 +6,7 @@ assert(enqueue.includes("partitions.length>500"),"Queue must have a partition bu
 assert(enqueue.includes("i+=100"),"Queue must batch bounded chunks");
 assert(enqueue.includes("records.slice(i,i+100)"),"Queue batch must not exceed 100");
 assert(enqueue.includes("skipDuplicates:true"),"Queue must deduplicate across hosts");
-assert(enqueue.includes("records.length-queued"),"Dedup count must reflect inserted records");
+assert(enqueue.includes("partitions.length-queued"),"Dedup count must include coalesced and pre-existing jobs");
+assert(enqueue.includes("grouped=new Map"),"Same employer-period must coalesce changed feeds before writes");
 assert(!enqueue.includes("for (const part of partitions) {"),"Do not make individual database calls per semantic partition");
 console.log("Batched semantic refresh queue safety assertions passed");
