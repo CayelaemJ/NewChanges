@@ -19,7 +19,8 @@ await page.route("http://admin.test/**",async route=>{
     return route.fulfill({status:200,contentType:path.endsWith(".js")?"application/javascript":"text/css",body:readFileSync(path)});
   }
   if(url.pathname.startsWith("/api/")){
-    const body=url.pathname==="/api/admin/integration"
+    const body=url.pathname==="/api/auth/me" ? {id:"browser-smoke-admin",role:"SUPERADMIN",modules:{admin:true,dashboard:true},employers:[],theme:null}
+      : url.pathname==="/api/admin/integration"
       ? {configured:true,sourceMode:"SQL",effectiveSourceMode:"SQL",enabled:true,scheduleHours:24,lastSyncStatus:"OK"}
       : url.pathname==="/api/admin/database-status" ? {status:"green",provider:"Neon",database:"newchanges",message:"Test connection"}
       : url.pathname==="/api/admin/integration/logs" ? {logs:[]}
