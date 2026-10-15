@@ -6,16 +6,25 @@ import type { RefreshPartition } from "./semanticRefreshPlanner.js";
 
 export async function enqueueSemanticRefresh(generationId:string, watermark:Date, partitions:RefreshPartition[]) {
   if (!generationId || !Number.isFinite(watermark.getTime())) throw new Error("Invalid source generation or watermark");
-  let queued=0, deduplicated=0;
-  for (const part of partitions) {
+  // Bulk insert bounded chunks rather than one SQL round trip per partition.
+  // The unique idempotency key still protects concurrent schedulers.
+  if(partitions.length>500) throw new Error("Semantic queue partition budget exceeded");
+  if(partitions.length===0)return {queued:0,deduplicated:0};
+  const records=partitions.map(part=>{
+    if(!part.employerId || !/^\\d{4}-(0[1-9]|1[0-2])$/.test(part.period))
+      throw new Error("Invalid semantic employer or period");
     const idempotencyKey=createHash("sha256").update(JSON.stringify([generationId,part.employerId,part.period,"all",watermark.toISOString()])).digest("hex");
+    return {idempotencyKey,generationId,employerId:part.employerId,period:part.period,
+      partitionKey:"all",sourceWatermark:watermark,changedFeeds:part.feeds,status:"PENDING"};
+  });
+  let queued=0;
+  for(let i=0;i<records.length;i+=100){
     const inserted=await prisma.semanticRefreshJob.createMany({
-      data:[{idempotencyKey,generationId,employerId:part.employerId,period:part.period,partitionKey:"all",sourceWatermark:watermark,changedFeeds:part.feeds,status:"PENDING"}],
-      skipDuplicates:true,
+      data:records.slice(i,i+100),skipDuplicates:true,
     });
-    if(inserted.count) queued++; else deduplicated++;
+    queued+=inserted.count;
   }
-  return {queued,deduplicated};
+  return {queued,deduplicated:records.length-queued};
 }
 
 export async function claimSemanticRefresh(workerId:string, leaseSeconds=120) {
