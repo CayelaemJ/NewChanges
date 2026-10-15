@@ -46,7 +46,10 @@ jobs:
             node scripts/dataset-replacement-preview-check.mjs
             npx tsx tests/dataset-replacement-approval.test.ts
             npx tsx tests/dataset-replacement-feed-budget.test.ts
+            npx tsx tests/dataset-replacement-staging.test.ts
+            npx tsx tests/dataset-replacement-object-integrity.test.ts
             node scripts/replacement-dependency-audit-check.mjs
+            npx tsx tests/semantic-shadow-provenance.test.ts
             npm run check:semantic-planner
             node scripts/semantic-queue-batch-check.mjs
             npm run check:semantic-storage
