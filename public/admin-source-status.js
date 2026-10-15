@@ -3,6 +3,7 @@
   const ID = "efs-admin-source-status";
   const DB_ENDPOINT = "/api/admin/database-status";
   let timer = null;
+  let collapsed = true;
 
   function esc(value) {
     return String(value ?? "").replace(/[&<>"']/g, (ch) => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[ch]));
@@ -39,6 +40,8 @@
     const style = document.createElement("style");
     style.textContent = `
       #${ID}{position:fixed;right:18px;bottom:18px;z-index:120;max-width:min(560px,calc(100vw - 36px));font:600 12px/1.45 Manrope,system-ui,sans-serif;color:#243746;background:rgba(255,255,255,.97);border:1px solid #d7cde9;border-radius:12px;box-shadow:0 10px 30px rgba(15,36,56,.14);padding:10px 12px;backdrop-filter:blur(10px)}
+      #${ID} .efs-toggle{border:1px solid currentColor;border-radius:6px;padding:2px 8px;font:inherit;color:inherit;background:transparent;cursor:pointer;margin-left:auto}
+      #${ID} .efs-help{font-size:11px;font-weight:400;line-height:1.55;margin-top:7px;color:inherit;opacity:.85}
       #${ID} .efs-source-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
       #${ID} .efs-source-dot{width:8px;height:8px;border-radius:50%;background:#64748b;flex:0 0 auto}
       #${ID}[data-tone="ok"] .efs-source-dot{background:#187a4d}
@@ -83,10 +86,15 @@
         <span class="efs-source-dot" aria-hidden="true"></span>
         <strong>Connected source: ${esc(sourceLabel(config))}</strong>
         <span class="efs-source-state">${esc(current.label)}</span>
+        <button class="efs-toggle" type="button" aria-expanded="${!collapsed}" aria-controls="efs-status-detail">${collapsed ? "Details ▾" : "Collapse ▴"}</button>
       </div>
+      <div id="efs-status-detail" ${collapsed ? "hidden" : ""}>
       <div class="efs-source-meta">Last successful: ${esc(when(config.lastSuccessfulSyncAt))}${configured}${lock}${note}</div>
+      <div class="efs-help">Source = external SQL/API reporting data. COMPLETE = last import succeeded, not proof that the source is up to date. PostgreSQL = the shared Neon application database that stores dashboards and users; HEALTHY means its connection check succeeded. A healthy database does not guarantee successful source sync.</div>
       <div class="efs-db-panel" data-db-status="yellow" id="efs-db-status"><div class="efs-source-row"><span class="efs-db-dot" aria-hidden="true"></span><strong>PostgreSQL: Checking connection…</strong><span class="efs-source-state">CHECKING</span></div></div>
+      </div>
     `;
+    el.querySelector(".efs-toggle")?.addEventListener("click", () => { collapsed = !collapsed; const detail = document.getElementById("efs-status-detail"); if(detail) detail.hidden = collapsed; const btn = el.querySelector(".efs-toggle"); if(btn){btn.textContent = collapsed ? "Details ▾" : "Collapse ▴";btn.setAttribute("aria-expanded",String(!collapsed));} });
     if (previousDb) document.getElementById("efs-db-status")?.replaceWith(document.createRange().createContextualFragment(previousDb));
   }
   async function refresh() {
