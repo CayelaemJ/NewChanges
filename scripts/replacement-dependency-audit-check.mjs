@@ -1,0 +1,13 @@
+import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
+const service=readFileSync("src/services/datasetReplacementDependencies.ts","utf8");
+const server=readFileSync("src/server.ts","utf8");
+const route=server.slice(server.indexOf('app.get("/api/admin/integration/dataset-replacement/dependencies"'),server.indexOf("// Inventory-only replacement preview"));
+assert(route.includes('admin.role!=="SUPERADMIN"'));
+assert(route.includes("inspectReplacementDependencies()"));
+assert(service.includes('executable:false'));
+assert(service.includes("pg_total_relation_size"));
+assert(service.includes("pg_constraint"));
+assert(service.includes("blockedParentDeletes"));
+assert(!/deleteMany|TRUNCATE\s+TABLE|\$executeRaw|updateMany|DROP\s+TABLE/.test(service));
+console.log("Read-only replacement FK dependency guard passed");
