@@ -30,6 +30,7 @@ jobs:
             npm run check:source-sync-safety
             node scripts/admin-refresh-clarity-check.mjs
             node scripts/dataset-replacement-preview-check.mjs
+            node scripts/replacement-dependency-audit-check.mjs
             npm run check:semantic-planner
             npm run check:semantic-storage
             npm run check:source-vault
