@@ -84,12 +84,7 @@
     "@types/mssql": "^9.1.5",
     "@types/pg": "^8.11.10",
     "tsx": "^4.19.2",
-    "eslint": "^9.25.0",
-    "@eslint/js": "^9.25.0",
-    "globals": "^16.0.0",
-    "typescript": "^5.6.3",
-    "vitest": "^3.2.4",
-    "@playwright/test": "^1.52.0"
+    "typescript": "^5.6.3"
   },
   "overrides": {
     "@fastify/busboy": "3.2.1"
