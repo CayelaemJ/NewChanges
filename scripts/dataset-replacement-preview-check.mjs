@@ -20,5 +20,5 @@ assert(validator.includes('ENABLE_DATASET_REPLACEMENT_PREFLIGHT'),"candidate val
 assert(validator.includes('previewSourceSwitch(patch)'),"candidate validation must use read-only source preflight");
 assert(validator.includes('preflight.sourceChanged'),"replacement must reject the active source");
 assert(validator.includes('preflight.testedFeeds!==LOAD_ORDER.length'),"all ten canonical feeds must be validated");
-assert(!/deleteMany|updateMany|resetAllData|triggerRefreshNow|saveSyncConfig|runSync\\(|activateEquivalentSource|stageValidatedGeneration/.test(validator),"source preflight must not change application state");
+assert(!/deleteMany|updateMany|resetAllData|triggerRefreshNow|saveSyncConfig|runSync\(|activateEquivalentSource|stageValidatedGeneration/.test(validator),"source preflight must not change application state");
 console.log("Read-only Danger Zone dataset replacement preview guards passed.");
