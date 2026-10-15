@@ -1,3 +1,4 @@
+import { assessReplacementEvidence } from "./datasetReplacementApproval.js";
 // Read-only preflight for replacing a completely different canonical dataset.
 // No deletes, writes, imports, source credential reads or connection changes.
 import { prisma } from "./snapshotBuilder.js";
@@ -27,6 +28,7 @@ export async function previewDatasetReplacement() {
       debtAccounts,debtVersions,policies,policyVersions,ratings,referrals,salaryAdvances,
       headcounts,scores,cohorts,batches,cursors,sourceGenerations,semanticJobs,semanticPointers},
     identitiesToPreserve:{users,userEmployers,reportSchedules,partnerBrands,reportDeliveryLogs,accessOverrides},
+    approvalGate:assessReplacementEvidence({}),
     replacementReadiness:{
       safeToExecute:false,
       strategy:"STAGED_DIFFERENT_SOURCE_REPLACEMENT",
