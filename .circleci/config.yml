@@ -31,6 +31,7 @@ jobs:
             node scripts/admin-inline-syntax-check.mjs
             node scripts/admin-refresh-clarity-check.mjs
             node scripts/dataset-replacement-preview-check.mjs
+            npx tsx tests/dataset-replacement-approval.test.ts
             node scripts/replacement-dependency-audit-check.mjs
             npm run check:semantic-planner
             npm run check:semantic-storage
