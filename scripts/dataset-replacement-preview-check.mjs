@@ -1,0 +1,17 @@
+import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
+const server=readFileSync("src/server.ts","utf8");
+const service=readFileSync("src/services/datasetReplacementPreview.ts","utf8");
+const admin=readFileSync("public/admin.html","utf8");
+const endpoint=server.slice(server.indexOf('app.get("/api/admin/integration/dataset-replacement/preview"'),server.indexOf("// ── DANGER: purge"));
+assert(endpoint.includes('admin.role!=="SUPERADMIN"'));
+assert(endpoint.includes("previewDatasetReplacement()"));
+assert(!/deleteMany|updateMany|resetAllData|triggerRefreshNow|saveSyncConfig|runSync\(/.test(endpoint));
+assert(service.includes("mode:\"PREVIEW_ONLY\""));
+assert(service.includes("executable:false"));
+assert(service.includes("prisma.userEmployer.count()"));
+assert(service.includes("prisma.reportSchedule.count()"));
+assert(!/deleteMany|updateMany|truncate|\$executeRaw/.test(service));
+assert(admin.includes("Preview replacement impact"));
+assert(admin.includes("replacement is not enabled"));
+console.log("Read-only Danger Zone dataset replacement preview guards passed.");
