@@ -853,7 +853,7 @@ function setSqlPortDefault(force=false){
   field.value = dialect === 'MSSQL' ? '1433' : dialect === 'MYSQL' ? '3306' : '5432';
 }
 async function setIntegHeartbeat(hours){ const input=document.getElementById('integ-hours');if(input)input.value=String(hours); }
-function loadInteg(){
+async function loadInteg(){
   try{
     const c = await fetch(`${API}/api/admin/integration`).then(r=>r.json());
     setIntegMode((c.effectiveSourceMode || c.sourceMode || 'API').toUpperCase());
