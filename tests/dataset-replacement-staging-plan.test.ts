@@ -13,5 +13,7 @@ assert.equal(p.planDigest,planReplacementStaging(base).planDigest);
 assert.equal(planReplacementStaging({...base,sourceFingerprint:base.currentFingerprint}).validForStagingReview,false);
 assert.equal(planReplacementStaging({...base,incomingEmployerIds:["OLD"],employerMapping:{}}).validForStagingReview,false);
 assert.equal(planReplacementStaging({...base,employerMapping:{OLD:"WRONG"}}).validForStagingReview,false);
+assert.equal(planReplacementStaging({...base,employerMapping:{}}).validForStagingReview,false);
+assert.equal(planReplacementStaging({...base,existingEmployerIds:["OLD","OLD2"],employerMapping:{OLD:"NEW"}}).validForStagingReview,false);
 assert.equal(planReplacementStaging({...base,feeds:base.feeds.slice(1)}).validForStagingReview,false);
 console.log("Different-source staging dry-run protections passed");
