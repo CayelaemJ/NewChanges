@@ -28,6 +28,7 @@ jobs:
           name: Semantic integration and source safeguards
           command: |
             npm run check:source-sync-safety
+            node scripts/admin-refresh-clarity-check.mjs
             node scripts/dataset-replacement-preview-check.mjs
             npm run check:semantic-planner
             npm run check:semantic-storage
