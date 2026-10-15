@@ -47,7 +47,9 @@ export function planReplacementStaging(input:StagingPlanInput) {
     sourceRows:budget.totalRows,employersToReconcile:existing.size,
     incomingEmployers:incoming.size,
     planDigest:createHash("sha256").update(JSON.stringify({
-      sourceFingerprint:input.sourceFingerprint,feeds:input.feeds.map(x=>[x.reportKey,x.rowCount,x.sourceWatermark]).sort(),
+      sourceFingerprint:input.sourceFingerprint,currentFingerprint:input.currentFingerprint,
+      existingEmployers:[...input.existingEmployerIds].sort(),incomingEmployers:[...input.incomingEmployerIds].sort(),
+      feeds:input.feeds.map(x=>[x.reportKey,x.rowCount,x.sourceWatermark]).sort(),
       mapping:Object.entries(input.employerMapping).sort(),budget:input.budget,
     })).digest("hex"),
     executionEnabled:false as const,
