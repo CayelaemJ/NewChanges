@@ -70,7 +70,7 @@
     "csv-parse": "^7.0.2",
     "fastify": "^5.12.5",
     "luxon": "^3.7.2",
-    "mssql": "^11.0.1",
+    "mssql": "^12.7.4",
     "mysql2": "^3.11.0",
     "node-cron": "^4.6.0",
     "nodemailer": "^10.0.12",
@@ -81,7 +81,7 @@
   },
   "devDependencies": {
     "@types/luxon": "^3.6.2",
-    "@types/mssql": "^9.1.5",
+    "@types/mssql": "^12.3.0",
     "@types/pg": "^8.11.10",
     "tsx": "^4.19.2",
     "typescript": "^5.6.3"
