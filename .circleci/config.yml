@@ -49,6 +49,8 @@ jobs:
       - run:
           name: Semantic integration and source safeguards
           command: |
+            npm run check:contract
+            npm run check:neon-egress
             npm run check:source-sync-safety
             npm run check:admin-ui
             node scripts/admin-refresh-clarity-check.mjs
@@ -75,6 +77,9 @@ jobs:
             npm run check:imports
             npm run check:scheduling
             npm run check:daily-refresh
+            npm run check:enterprise-operations
+            npm run check:unified-data-ingestion
+            npm run check:enterprise-analytics-phase-2
             npm run check:react
             npm run check:role-perspective
       - run:
