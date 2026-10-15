@@ -1,0 +1,15 @@
+import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
+const status=readFileSync("public/admin-source-status.js","utf8");
+const admin=readFileSync("public/admin.html","utf8");
+const sync=readFileSync("src/services/syncService.ts","utf8");
+assert(status.includes('let collapsed = true'),"status panel must start compact");
+assert(status.includes('aria-expanded='),"details toggle must be accessible");
+assert(status.includes('SQL/API reporting data'),"explain external source");
+assert(status.includes('shared Neon application database'),"explain PostgreSQL read model");
+assert(status.includes('A healthy database does not guarantee successful source sync'),"clarify difference between connection health and ingestion success");
+assert(admin.includes('setIntegHeartbeat(1)')&&admin.includes('setIntegHeartbeat(24)'),"schedule presets required");
+assert(admin.includes('server-controlled interval'),"SQL watermark poll is not user-configurable via heartbeat");
+assert(admin.includes('Railway ingestion scheduler'),"scheduler deployment control must be disclosed");
+assert(sync.includes('patch.scheduleHours > 168'),"server must bound schedule frequency");
+console.log("Admin source-status and refresh cadence safety checks passed");

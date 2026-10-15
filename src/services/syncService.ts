@@ -105,6 +105,9 @@ export async function saveConfig(patch: IntegrationConfigPatch) {
   if (current.enabled && identityFields.some(key => patch[key] !== undefined && String(patch[key] ?? "") !== String(current[key] ?? ""))) {
     throw new Error("Use staged source cutover for active database identity changes; live cursors remain unchanged.");
   }
+  if (patch.scheduleHours !== undefined &&
+      (!Number.isInteger(patch.scheduleHours) || patch.scheduleHours < 1 || patch.scheduleHours > 168))
+    throw new Error("Scheduled source reconciliation interval must be between 1 and 168 whole hours.");
   const data: any = { ...patch };
   if (patch.authToken === "" || patch.authToken == null) delete data.authToken;
   if (patch.sqlPassword === "" || patch.sqlPassword == null) delete data.sqlPassword;
