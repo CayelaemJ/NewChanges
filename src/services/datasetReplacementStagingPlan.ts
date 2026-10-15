@@ -26,6 +26,12 @@ export function planReplacementStaging(input:StagingPlanInput) {
     issues.push("Duplicate employer identity in source inventory");
   if([...existing,...incoming].some(id=>!id.trim()))issues.push("Blank employer identity");
   const targets=new Set<string>();
+  // A new dataset cannot silently strand historical employer permissions.
+  // Every retained employer must have an explicit mapping; revocations need a separate reviewed workflow.
+  for(const oldId of existing) {
+    if(!Object.prototype.hasOwnProperty.call(input.employerMapping,oldId))
+      issues.push("Unreconciled existing employer requires mapping or reviewed revocation");
+  }
   for(const [oldId,newId] of Object.entries(input.employerMapping)){
     if(!existing.has(oldId)||!incoming.has(newId))issues.push("Unrecognized employer mapping");
     if(targets.has(newId))issues.push("Many-to-one employer mapping requires explicit resolution");
