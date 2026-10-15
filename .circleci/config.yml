@@ -13,8 +13,13 @@ jobs:
       - run:
           name: Chromium Admin Console smoke test
           command: |
-            npm install --no-save --no-package-lock --no-audit --no-fund playwright@1.56.1
-            node scripts/admin-browser-smoke.mjs
+            mkdir -p test-results/admin-browser
+            set -o pipefail
+            node --version | tee test-results/admin-browser/environment.log
+            npm --version | tee -a test-results/admin-browser/environment.log
+            npm ci --no-audit --no-fund 2>&1 | tee test-results/admin-browser/install.log
+            npm install --no-save --no-package-lock --no-audit --no-fund playwright@1.56.1 2>&1 | tee -a test-results/admin-browser/install.log
+            node scripts/admin-browser-smoke.mjs 2>&1 | tee test-results/admin-browser/browser.log
           no_output_timeout: 10m
       - store_artifacts:
           path: test-results/admin-browser
