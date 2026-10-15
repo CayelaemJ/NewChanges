@@ -39,6 +39,13 @@ jobs:
             npm run check:source-continuity
             npm run check:source-reconciliation
       - run:
+          name: Admin Console real-browser smoke (mocked APIs)
+          command: |
+            npm install --no-save --no-package-lock --no-audit --no-fund playwright@1.56.1
+            npx playwright install --with-deps chromium
+            node scripts/admin-browser-smoke.mjs
+          no_output_timeout: 10m
+      - run:
           name: API, data and dashboard regressions
           command: |
             npm run check:production
