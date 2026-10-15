@@ -46,6 +46,10 @@ for (const [source, needle, label] of required) {
   if (!source.includes(needle)) throw new Error(`FAIL: ${label}`);
 }
 
+if (server.includes('/api/admin/integration/config')) {
+  throw new Error('FAIL: obsolete integration config route must remain removed');
+}
+
 if (!/accept="\.csv,\.xlsx,\.xls,\.json"/.test(admin)) {
   throw new Error("FAIL: file picker no longer advertises CSV/XLSX/JSON");
 }
