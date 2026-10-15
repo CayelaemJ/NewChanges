@@ -17,7 +17,9 @@ const changes = route(server, 'app.get("/api/admin/integration/changes"', '// No
 assert(changes.includes("requireAdmin"), "change detection requires Admin");
 assert(changes.includes("detectSourceChanges()"), "health check must detect source changes");
 
-const refresh = route(server, 'app.post("/api/admin/integration/refresh"', '// ── DANGER: purge');
+// Bound the assertion to the refresh handler itself. Dataset replacement
+// preflight routes sit between refresh and the explicit Danger Zone reset.
+const refresh = route(server, 'app.post("/api/admin/integration/refresh"', '// Validate a DIFFERENT candidate SQL database read-only.');
 assert(refresh.includes('runSync("manual")'), "refresh must be incremental");
 assert(!refresh.includes("triggerRefreshNow"), "refresh must not invoke full purge");
 assert(!refresh.includes("purge"), "refresh must not purge data");
