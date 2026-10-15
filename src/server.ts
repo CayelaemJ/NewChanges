@@ -1,3 +1,4 @@
+import { previewDatasetReplacement } from "./services/datasetReplacementPreview.js";
 // ════════════════════════════════════════════════════════════════════
 //  API SERVER (Fastify + TypeScript)
 //  Serves JSON shaped exactly like the frontend DATA / PORTFOLIO objects,
@@ -1424,6 +1425,16 @@ app.post("/api/admin/integration/refresh", async (req, reply) => {
   const result = await runSync("manual");
   if (!result?.ok) return reply.code(409).send(result);
   return result;
+});
+
+// Inventory-only replacement preview. Never permits destructive operations.
+app.get("/api/admin/integration/dataset-replacement/preview", async (req, reply) => {
+  const admin=await requireAdmin(req,reply);
+  if(!admin) return;
+  if(admin.role!=="SUPERADMIN") return reply.code(403).send({error:"superadmin only"});
+  try {return await previewDatasetReplacement();}
+  catch(error:any){req.log.error({err:error},"dataset replacement preview failed");
+    return reply.code(500).send({error:"Unable to generate dataset replacement preview"});}
 });
 
 // ── DANGER: purge source-derived dashboard facts/caches and pull a fresh
