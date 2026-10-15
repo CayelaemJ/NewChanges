@@ -45,8 +45,10 @@ jobs:
             node scripts/admin-refresh-clarity-check.mjs
             node scripts/dataset-replacement-preview-check.mjs
             npx tsx tests/dataset-replacement-approval.test.ts
+            npx tsx tests/dataset-replacement-feed-budget.test.ts
             node scripts/replacement-dependency-audit-check.mjs
             npm run check:semantic-planner
+            node scripts/semantic-queue-batch-check.mjs
             npm run check:semantic-storage
             npm run check:source-vault
             npm run check:source-continuity
