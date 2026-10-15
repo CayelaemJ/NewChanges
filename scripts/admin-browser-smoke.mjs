@@ -35,7 +35,7 @@ const labels=await page.locator("body").innerText();
 assert(labels.trim().length>100,"Admin Console rendered empty page");
 assert(await page.locator("#integ-enabled").count()===1,"Source sync checkbox missing");
 assert(await page.locator("#integ-hours").count()===1,"Heartbeat schedule missing");
-assert.equal(typeof await page.evaluate(()=>window.loadInteg),"function","Integration loader unavailable");
+assert.equal(await page.evaluate(()=>typeof window.loadInteg),"function","Integration loader unavailable");
 if(errors.length) console.error("[uncaught browser exceptions]",errors.join("\\n"));
 assert.deepEqual(errors,[],"Browser runtime errors: "+errors.join(" | "));
 console.log("Admin Console headless Chromium smoke passed");
