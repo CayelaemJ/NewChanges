@@ -564,7 +564,7 @@
             <button class="btn btn-ghost" onclick="testInteg()">Test source</button>
             <button class="btn btn-ghost" onclick="previewCandidateSource()">Preview new source</button>
             <button class="btn btn-ghost" onclick="stageCandidateSource()">Stage validated source</button>
-            <button class="btn" style="background:#2B1D73;color:#fff;border-color:#2B1D73;" onclick="syncNow()">Sync now</button>
+            <button type="button" class="btn btn-ghost" onclick="syncNow()" title="Run an incremental sync now without clearing existing reporting records">Sync now</button>
             <button id="btn-refresh-now" class="btn btn-ghost" onclick="refreshNow(this)" title="Safely synchronize changes from the current source without a data purge">Refresh changes</button>
           </div>
           <div class="muted" style="margin-top:8px;max-width:820px;line-height:1.5;"><b>Sync now</b> and <b>Refresh changes</b> update the active source incrementally, without purging records. To switch databases, preview and stage the candidate first. A full reset is a separate confirmed recovery operation, never a normal refresh.</div>
