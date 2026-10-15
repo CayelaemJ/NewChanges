@@ -1,0 +1,2 @@
+account_ref,employer_ref,payroll_ref,observed_at,creditor_name,credit_type,balance_rand,in_arrears,source_updated_at
+TEST-ACC-1,DEMO,TEST-0001,2026-09-30,Synthetic Creditor,BANK_LOAN,100.00,false,2026-10-15T08:00:00Z

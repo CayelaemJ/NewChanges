@@ -37,12 +37,17 @@ const required = [
   [admin, 'syncLogFailureDetail', 'admin surfaces the exact failed dependency step from sync history'],
   [admin, 'Blocked downstream:', 'admin exposes downstream steps blocked by a failed dependency'],
   [server, '/api/admin/reports/:key/upload', 'governed file upload endpoint remains present'],
-  [server, '/api/admin/integration/config', 'integration configuration endpoint remains present'],
+  [server, 'app.get("/api/admin/integration"', 'authenticated integration read endpoint remains present'],
+  [server, '"/api/admin/integration",\n  async (req, reply) => {', 'authenticated integration save endpoint remains present'],
   [importer, 'detectFormat(opts.filename)', 'file format detection remains active'],
 ];
 
 for (const [source, needle, label] of required) {
   if (!source.includes(needle)) throw new Error(`FAIL: ${label}`);
+}
+
+if (server.includes('/api/admin/integration/config')) {
+  throw new Error('FAIL: obsolete integration config route must remain removed');
 }
 
 if (!/accept="\.csv,\.xlsx,\.xls,\.json"/.test(admin)) {

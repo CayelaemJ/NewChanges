@@ -3,6 +3,28 @@ version: 2.1
 # CI independent of GitHub-hosted Actions billing.
 # Connect this private GitHub repository to CircleCI (free plan) to activate.
 jobs:
+  admin_browser_smoke:
+    docker:
+      - image: mcr.microsoft.com/playwright:v1.56.1-noble
+    resource_class: small
+    working_directory: ~/newchanges
+    steps:
+      - checkout
+      - run:
+          name: Chromium Admin Console smoke test
+          command: |
+            mkdir -p test-results/admin-browser
+            set -o pipefail
+            node --version | tee test-results/admin-browser/environment.log
+            npm --version | tee -a test-results/admin-browser/environment.log
+            npm ci --no-audit --no-fund 2>&1 | tee test-results/admin-browser/install.log
+            npm install --no-save --no-package-lock --no-audit --no-fund playwright@1.56.1 2>&1 | tee -a test-results/admin-browser/install.log
+            node scripts/admin-browser-smoke.mjs 2>&1 | tee test-results/admin-browser/browser.log
+          no_output_timeout: 10m
+      - store_artifacts:
+          path: test-results/admin-browser
+          destination: admin-browser
+          when: always
   verify:
     docker:
       - image: cimg/node:22.14
@@ -27,6 +49,8 @@ jobs:
       - run:
           name: Semantic integration and source safeguards
           command: |
+            npm run check:contract
+            npm run check:neon-egress
             npm run check:source-sync-safety
             npm run check:admin-ui
             node scripts/admin-refresh-clarity-check.mjs
@@ -34,6 +58,7 @@ jobs:
             npx tsx tests/dataset-replacement-approval.test.ts
             npx tsx tests/dataset-replacement-feed-budget.test.ts
             npx tsx tests/dataset-replacement-staging.test.ts
+            npx tsx tests/dataset-replacement-staging-plan.test.ts
             npx tsx tests/dataset-replacement-object-integrity.test.ts
             node scripts/replacement-dependency-audit-check.mjs
             npx tsx tests/semantic-shadow-provenance.test.ts
@@ -52,6 +77,9 @@ jobs:
             npm run check:imports
             npm run check:scheduling
             npm run check:daily-refresh
+            npm run check:enterprise-operations
+            npm run check:unified-data-ingestion
+            npm run check:enterprise-analytics-phase-2
             npm run check:react
             npm run check:role-perspective
       - run:
@@ -79,3 +107,4 @@ workflows:
   verify_pull_requests_and_main:
     jobs:
       - verify
+      - admin_browser_smoke

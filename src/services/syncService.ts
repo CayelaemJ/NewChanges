@@ -159,6 +159,7 @@ export async function saveAnalyticsRoute(input: { reportKey: string; executionMo
 }
 
 export function publicConfig(config: Awaited<ReturnType<typeof getConfig>>) {
+  // Never expose replica password (or primary/API credentials) in public configuration responses.
   const { authToken, sqlPassword, sourceAnalyticsReplicaPassword, ...safe } = config as any;
   const effective = effectiveSourceConfig(config);
   let effectiveSourceMode = "API";
