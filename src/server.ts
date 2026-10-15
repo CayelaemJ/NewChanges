@@ -1,3 +1,4 @@
+import { inspectReplacementDependencies } from "./services/datasetReplacementDependencies.js";
 import { previewDatasetReplacement } from "./services/datasetReplacementPreview.js";
 // ════════════════════════════════════════════════════════════════════
 //  API SERVER (Fastify + TypeScript)
@@ -1455,6 +1456,16 @@ app.post<{ Body: import("./services/syncService.js").IntegrationConfigPatch }>(
     }
   },
 );
+
+// This SUPERADMIN-only inspection reports PostgreSQL FK cascade hazards.
+app.get("/api/admin/integration/dataset-replacement/dependencies", async (req,reply)=>{
+  const admin=await requireAdmin(req,reply);
+  if(!admin)return;
+  if(admin.role!=="SUPERADMIN")return reply.code(403).send({error:"superadmin only"});
+  try{return await inspectReplacementDependencies();}
+  catch(error:any){req.log.error({err:error},"replacement dependency inspection failed");
+    return reply.code(500).send({error:"Unable to inspect replacement dependencies"});}
+});
 
 // Inventory-only replacement preview. Never permits destructive operations.
 app.get("/api/admin/integration/dataset-replacement/preview", async (req, reply) => {
