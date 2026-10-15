@@ -1,0 +1,13 @@
+import assert from "node:assert/strict";
+import { LOAD_ORDER } from "../src/services/reportFormats.js";
+import { inspectReplacementFeedBudget } from "../src/services/datasetReplacementFeedBudget.js";
+const rows=LOAD_ORDER.map(reportKey=>({reportKey,rowCount:100,sourceWatermark:"2026-10-15T07:00:00Z"}));
+const limits={maxRowsPerFeed:250000,maxTotalRows:1000000};
+assert.equal(inspectReplacementFeedBudget(rows,limits).valid,true);
+assert.equal(inspectReplacementFeedBudget(rows.slice(1),limits).valid,false);
+assert.equal(inspectReplacementFeedBudget([...rows,rows[0]],limits).valid,false);
+assert.equal(inspectReplacementFeedBudget(rows.map((row,i)=>i?row:{...row,rowCount:250001}),limits).valid,false);
+assert.equal(inspectReplacementFeedBudget(rows.map((row,i)=>i?row:{...row,sourceWatermark:"invalid"}),limits).valid,false);
+assert.equal(inspectReplacementFeedBudget(rows,limits).executionEnabled,false);
+assert.throws(()=>inspectReplacementFeedBudget(rows,{maxRowsPerFeed:0,maxTotalRows:1}),/positive integer/);
+console.log("Unrelated-source ten-feed budget and non-execution tests passed");
