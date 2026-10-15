@@ -24,8 +24,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Install Semgrep
-        run: python -m pip install --user semgrep
+        run: pipx install semgrep
       - name: Scan JavaScript, TypeScript, and server code
         run: |
-          export PATH="$HOME/.local/bin:$PATH"
           semgrep scan --config p/javascript --config p/typescript --config p/security-audit --error --exclude node_modules --exclude dist --exclude build .
