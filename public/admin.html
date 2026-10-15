@@ -741,6 +741,12 @@
         <div class="card-hd" style="border-bottom-color:#fbe4df;"><h2 style="color:#b5391f;">Danger zone</h2><div class="note">Authoritative reset and rebuild from the connected source</div></div>
         <div class="card-bd">
           <p class="muted" style="margin-bottom:14px;"><b>Reset always reloads.</b> The connected API/SQL database becomes the source of truth: prior cursors, import history, MLOps decisions and stale-write comparisons are ignored for this rebuild. The current published dashboard stays visible until all 10 feeds have been rebuilt successfully. User logins, access, branding and separately sourced chat history are kept.</p>
+          <div style="border:1px solid var(--border,#d1d5db);border-radius:8px;padding:14px;margin-bottom:14px;">
+            <b>Replace reporting dataset — impact preview</b>
+            <p class="muted" style="margin:7px 0;">Moving from a test SQL database to a different production SQL database requires a separate controlled migration. Preview the records and identity mappings first. This does not delete or switch anything.</p>
+            <button class="btn btn-ghost" type="button" onclick="previewDatasetReplacement()">Preview replacement impact</button>
+            <div class="muted" id="dataset-replacement-preview" role="status" aria-live="polite" style="margin-top:9px;white-space:pre-wrap;"></div>
+          </div>
           <button class="btn" id="reset-btn" style="border-color:#e0492f;color:#b5391f;" onclick="openReset()">Reset &amp; rebuild from source…</button>
           <div id="reset-area" style="display:none;margin-top:16px;padding:16px;border:1px solid #f3c9c0;border-radius:11px;background:#fdf5f3;">
             <div style="font-weight:700;color:#b5391f;font-size:13.5px;margin-bottom:8px;">Are you sure? This cannot be undone.</div>
@@ -1791,6 +1797,19 @@ async function revokeSection(key,userId){
 }
 
 
+async function previewDatasetReplacement(){
+  const area=document.getElementById('dataset-replacement-preview');
+  if(!area)return;
+  area.textContent='Reading counts. No changes will be made…';
+  try {
+    const response=await fetch('/api/admin/integration/dataset-replacement/preview',{credentials:'same-origin'});
+    const data=await response.json();
+    if(!response.ok)throw new Error(data.error||'Preview unavailable');
+    const reporting=Object.entries(data.reportingRows||{}).map(([name,count])=>name+': '+Number(count).toLocaleString('en-ZA')).join(' | ');
+    const retained=Object.entries(data.identitiesToPreserve||{}).map(([name,count])=>name+': '+Number(count).toLocaleString('en-ZA')).join(' | ');
+    area.textContent='READ-ONLY — replacement is not enabled.\nReporting records: '+reporting+'\nProtected links: '+retained+'\nReview employer access before any replacement.';
+  }catch(error){area.textContent='Preview failed: '+(error?.message||String(error));}
+}
 // ── danger zone: full reset ──
 function openReset(){
   const area=$('#reset-area');
