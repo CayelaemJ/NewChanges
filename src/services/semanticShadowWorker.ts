@@ -6,6 +6,9 @@ import { getDashboardPayload, getPublishedDashboardPayload } from "./snapshotBui
 import { claimSemanticRefresh, finishSemanticRefresh } from "./semanticRefreshQueue.js";
 import { stageAndPublishSemanticObject } from "./semanticObjectPipeline.js";
 import { prisma } from "./snapshotBuilder.js";
+import { getConfig } from "./syncService.js";
+import { sourceFingerprint } from "./sourceGovernance.js";
+import { assessShadowSemanticProvenance } from "./semanticShadowProvenance.js";
 
 export interface SemanticStorageBroker {
   presign(input: { objectKey:string; bytes:number }):Promise<{putUrl:string;getUrl:string}>;
@@ -22,6 +25,17 @@ export async function processOneShadowSemanticRefresh(workerId:string,storage:Se
     // One bounded recomputation per durable job, not one per dashboard GET.
     // Keep shadow-only copies as the default until historical parity passes.
     const recompute=process.env.ENABLE_SEMANTIC_RECOMPUTE === "true";
+    const generation=await prisma.sourceGeneration.findUnique({
+      where:{id:job.generationId},select:{state:true,fingerprint:true,validatedAt:true}
+    });
+    const provenance=assessShadowSemanticProvenance({
+      recomputeEnabled:recompute,generationId:job.generationId,
+      generationState:generation?.state??null,generationFingerprint:generation?.fingerprint??null,
+      validatedAt:generation?.validatedAt??null,
+      activeSourceFingerprint:sourceFingerprint(await getConfig()),
+    });
+    if(!provenance.allowed) throw new Error("Semantic source provenance rejected: "+provenance.missing.join("; "));
+
     const payload=recompute
       ? await getDashboardPayload(job.employerId,{period:job.period})
       : await getPublishedDashboardPayload(job.employerId,{period:job.period});
