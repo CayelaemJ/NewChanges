@@ -1427,6 +1427,35 @@ app.post("/api/admin/integration/refresh", async (req, reply) => {
   return result;
 });
 
+// Validate a DIFFERENT candidate SQL database read-only. This is NOT an
+// equivalent-source cutover and cannot change live credentials or cursors.
+// Keep candidate credentials out of audit logs and response payloads.
+app.post<{ Body: import("./services/syncService.js").IntegrationConfigPatch }>(
+  "/api/admin/integration/dataset-replacement/validate-source",
+  async (req,reply)=>{
+    const admin=await requireAdmin(req,reply);
+    if(!admin)return;
+    if(admin.role!=="SUPERADMIN")return reply.code(403).send({error:"superadmin only"});
+    if(process.env.ENABLE_DATASET_REPLACEMENT_PREFLIGHT!=="true")
+      return reply.code(403).send({error:"Dataset replacement preflight is disabled"});
+    const patch=req.body??{};
+    if(patch.sourceMode!=="SQL")return reply.code(400).send({error:"Replacement source must use canonical SQL views"});
+    try{
+      const preflight=await previewSourceSwitch(patch);
+      if(!preflight.ok)return reply.code(400).send({ok:false,error:preflight.error??"Source preflight failed"});
+      if(!preflight.sourceChanged)return reply.code(409).send({ok:false,error:"Replacement source must differ from the currently active source"});
+      if(preflight.mode!=="SQL"||preflight.testedFeeds!==LOAD_ORDER.length||preflight.watermarks?.length!==LOAD_ORDER.length)
+        return reply.code(409).send({ok:false,error:"All ten canonical SQL feeds must be validated"});
+      return {ok:true,mode:"READ_ONLY_SOURCE_PREFLIGHT",executable:false,
+        testedFeeds:preflight.testedFeeds,sourceChanged:true,
+        note:"Candidate SQL views verified. No source switch, purge, import or cursor change was performed."};
+    }catch(error:any){
+      req.log.warn({type:"dataset_replacement_preflight_failed"},"candidate validation did not pass");
+      return reply.code(400).send({ok:false,error:"Candidate validation failed; verify connection settings and canonical views"});
+    }
+  },
+);
+
 // Inventory-only replacement preview. Never permits destructive operations.
 app.get("/api/admin/integration/dataset-replacement/preview", async (req, reply) => {
   const admin=await requireAdmin(req,reply);
