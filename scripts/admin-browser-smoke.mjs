@@ -4,7 +4,9 @@ import { chromium } from "playwright";
 const browser=await chromium.launch({headless:true,args:["--no-sandbox"]});
 const page=await browser.newPage();
 const errors=[];
-page.on("pageerror",e=>errors.push(e.message));
+page.on("pageerror",e=>errors.push(e.stack||e.message));
+page.on("console",message=>{if(message.type()==="error")console.error("[browser console]",message.text())});
+page.on("requestfailed",request=>console.error("[request failed]",request.url(),request.failure()?.errorText));
 await page.route("http://admin.test/**",async route=>{
   const url=new URL(route.request().url());
   if(url.pathname==="/admin")return route.fulfill({status:200,contentType:"text/html",body:readFileSync("public/admin.html","utf8")});
@@ -30,6 +32,7 @@ assert(labels.trim().length>100,"Admin Console rendered empty page");
 assert(await page.locator("#integ-enabled").count()===1,"Source sync checkbox missing");
 assert(await page.locator("#integ-hours").count()===1,"Heartbeat schedule missing");
 assert.equal(typeof await page.evaluate(()=>window.loadInteg),"function","Integration loader unavailable");
+if(errors.length) console.error("[uncaught browser exceptions]",errors.join("\\n"));
 assert.deepEqual(errors,[],"Browser runtime errors: "+errors.join(" | "));
 console.log("Admin Console headless Chromium smoke passed");
 await browser.close();
