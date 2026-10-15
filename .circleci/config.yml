@@ -16,6 +16,10 @@ jobs:
             npm install --no-save --no-package-lock --no-audit --no-fund playwright@1.56.1
             node scripts/admin-browser-smoke.mjs
           no_output_timeout: 10m
+      - store_artifacts:
+          path: test-results/admin-browser
+          destination: admin-browser
+          when: always
   verify:
     docker:
       - image: cimg/node:22.14
