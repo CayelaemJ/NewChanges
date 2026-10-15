@@ -3,6 +3,19 @@ version: 2.1
 # CI independent of GitHub-hosted Actions billing.
 # Connect this private GitHub repository to CircleCI (free plan) to activate.
 jobs:
+  admin_browser_smoke:
+    docker:
+      - image: mcr.microsoft.com/playwright:v1.56.1-noble
+    resource_class: small
+    working_directory: ~/newchanges
+    steps:
+      - checkout
+      - run:
+          name: Run Chromium Admin smoke on isolated mocked APIs
+          command: |
+            npm install --no-save --no-package-lock --no-audit --no-fund playwright@1.56.1
+            node scripts/admin-browser-smoke.mjs
+          no_output_timeout: 10m
   verify:
     docker:
       - image: cimg/node:22.14
@@ -39,13 +52,6 @@ jobs:
             npm run check:source-continuity
             npm run check:source-reconciliation
       - run:
-          name: Admin Console real-browser smoke (mocked APIs)
-          command: |
-            npm install --no-save --no-package-lock --no-audit --no-fund playwright@1.56.1
-            npx playwright install --with-deps chromium
-            node scripts/admin-browser-smoke.mjs
-          no_output_timeout: 10m
-      - run:
           name: API, data and dashboard regressions
           command: |
             npm run check:production
@@ -81,3 +87,4 @@ workflows:
   verify_pull_requests_and_main:
     jobs:
       - verify
+      - admin_browser_smoke
