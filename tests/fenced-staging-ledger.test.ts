@@ -25,7 +25,15 @@ assert(statements[1].includes('"fence"=$4::bigint AND "version"=$5::bigint'));
 assert(statements[1].includes('"snapshotId" IS NULL OR "snapshotId"=$6'));
 await assert.rejects(ledger.commit(lease,{...receipt,objectKey:"semantic/staging/other"}),/foreign/);
 await assert.rejects(ledger.acquire("gen1","employers","root",1),/lifetime/);
+const renewed=await ledger.renew(next,60);
+assert.equal(renewed.fence,4n);
+assert.equal(renewed.version,3n);
+assert(statements[2].includes('"leaseExpiresAt"=now()'));
+assert(statements[2].includes('"fence"=$4::bigint AND "version"=$5::bigint'));
+await assert.rejects(ledger.renew(next,1),/renewal/);
+
 granted=false;
 await assert.rejects(ledger.acquire("gen1","employers","render"),/held/);
 await assert.rejects(ledger.commit(lease,receipt),/Stale/);
+await assert.rejects(ledger.renew(next,60),/expired or fenced-out/);
 console.log("Fenced staging ledger protects versioned receipts and blocks stale writers");
