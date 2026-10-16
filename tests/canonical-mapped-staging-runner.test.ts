@@ -64,4 +64,14 @@ let invalidWrites=0;
 invalidStrict.sink={commitPage:async()=>{invalidWrites++;}};
 await assert.rejects(extractMappedFeedToStaging(invalidStrict),/Canonical mapping validation failed/);
 assert.equal(invalidWrites,0);
+// A mid-page invalid row must never advance the durable sink, and
+// retrying from the prior checkpoint must process the same page.
+const invalidPage=plan("employers");
+let invalidPageCommits=0;
+invalidPage.reader={snapshotId:"snap_1",snapshotConsistent:true,queryReadOnly:async()=>[
+ rowFor("employers",0),{...rowFor("employers",1),source_updated_at:"invalid"}
+]};
+invalidPage.sink={commitPage:async()=>{invalidPageCommits++;}};
+await assert.rejects(extractMappedFeedToStaging(invalidPage),/Invalid source timestamp/);
+assert.equal(invalidPageCommits,0);
 console.log("Mapped SQL executor staging: ten feeds, ordering, budgets, and fail-closed writes passed");
