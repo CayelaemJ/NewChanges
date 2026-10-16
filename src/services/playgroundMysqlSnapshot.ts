@@ -14,7 +14,7 @@ export interface PlaygroundMysqlSnapshot extends MappedSqlReader {
  close():Promise<void>;
 }
 export async function openPlaygroundMysqlSnapshot(config:PlaygroundMysqlSource):Promise<PlaygroundMysqlSnapshot>{
- if(!config.host||!config.database||!config.user||!config.password||
+ if(!config.host||!config.database||!config.user||config.user.trim().toLowerCase()==="root"||!config.password||
    config.ssl!==true||config.rejectUnauthorized!==true||
    !/^[a-zA-Z0-9_.-]{1,253}$/.test(config.host)||
    !/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(config.database))
