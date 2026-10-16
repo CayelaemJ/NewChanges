@@ -19,7 +19,10 @@ try{
  const done=await extractTenMappedFeeds(feed=>{
   const format=getFormat(feed)!;
   const rows=["A","B"].map(k=>Object.fromEntries(format.fields.filter(f=>f.required)
-   .map(f=>[f.name,f.name==="source_updated_at"?"2026-10-16T12:00:00Z":k])));
+   .map(f=>[f.name,f.name==="source_updated_at"?"2026-10-16T12:00:00Z":
+    f.type==="date"?"2026-10-15":f.type==="datetime"?"2026-10-16T12:00:00Z":
+    f.type==="int"?1:f.type==="decimal"?"1.00":f.type==="bool"?false:
+    f.type==="enum"?f.enumValues?.[0]:k])));
   return {mapping,catalog,feed,dialect:"MYSQL" as const,upperWatermark:"2026-10-16T13:00:00Z",
    reader:{snapshotId:"ten_snapshot",snapshotConsistent:true as const,
     queryReadOnly:async(_sql:string,params:readonly (string|number)[])=>{
@@ -28,7 +31,7 @@ try{
      const cursor=params.length>2?String(params[params.length-2]):"";
      return rows.filter(row=>String(row[format.naturalKey[0]])>cursor).slice(0,size);
     }},
-   sink:store.sink,pageSize:1,maxRows:3,maxBytes:4096,maxPages:4
+   sink:store.sink,canonicalValidation:"strict" as const,pageSize:1,maxRows:3,maxBytes:4096,maxPages:4
   };
  },{maxTotalRows:30,maxTotalBytes:40960,maxTotalPages:40});
  assert.equal(done.summaries.length,10);
