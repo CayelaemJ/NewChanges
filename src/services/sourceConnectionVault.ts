@@ -25,7 +25,7 @@ function encryptionKey(env:NodeJS.ProcessEnv=process.env):Buffer {
 export function sealSourceSettings(generationId:string,settings:IntegrationConfigPatch,env:NodeJS.ProcessEnv=process.env) {
   if(!generationId) throw new Error("Source generation ID required");
   const nonce=randomBytes(12);
-  const cipher=createCipheriv("aes-256-gcm",encryptionKey(env),nonce);
+  const cipher=createCipheriv("aes-256-gcm",encryptionKey(env),nonce,{authTagLength:16});
   cipher.setAAD(Buffer.from(generationId,"utf8"));
   const ciphertext=Buffer.concat([
     cipher.update(JSON.stringify(pickSourceSettings(settings)),"utf8"),cipher.final(),
@@ -35,7 +35,7 @@ export function sealSourceSettings(generationId:string,settings:IntegrationConfi
 export function openSourceSettings(generationId:string,record:{nonce:string;ciphertext:string;authTag:string},env:NodeJS.ProcessEnv=process.env):IntegrationConfigPatch {
   const nonce=Buffer.from(record.nonce,"base64"),tag=Buffer.from(record.authTag,"base64");
   if(nonce.length!==12||tag.length!==16) throw new Error("Invalid source vault record");
-  const decipher=createDecipheriv("aes-256-gcm",encryptionKey(env),nonce);
+  const decipher=createDecipheriv("aes-256-gcm",encryptionKey(env),nonce,{authTagLength:16});
   decipher.setAAD(Buffer.from(generationId,"utf8"));
   decipher.setAuthTag(tag);
   const json=Buffer.concat([decipher.update(Buffer.from(record.ciphertext,"base64")),decipher.final()]).toString("utf8");

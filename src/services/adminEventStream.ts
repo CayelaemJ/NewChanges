@@ -25,7 +25,7 @@ export function publishAdminEvent(type: string, payload: Record<string, unknown>
     ...(jobId ? (listeners.get(jobId) ?? []) : []),
   ]);
   for (const listener of targets) {
-    try { listener(event); } catch {}
+    try { listener(event); } catch { /* One broken listener must not affect the others. */ }
   }
   return event;
 }

@@ -402,7 +402,7 @@ export async function recordDataAccessEvent(input: {
         durationMs: input.durationMs,
       },
     });
-  } catch {}
+  } catch { /* Auditing failures must not interrupt the primary operation. */ }
 }
 
 export async function listSecurityAlerts(opts: { status?: string; limit?: number } = {}) {

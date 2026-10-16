@@ -1679,7 +1679,7 @@ export async function snapshotEmployer(employerId: string, period: string = curr
   // Imported data invalidates the persistent read model. The next snapshot
   // rebuilds it from the authoritative source tables.
   await prisma.dashboardCohortCache.deleteMany({ where: { employerId, cacheKey: { not: PUBLISHED_DASHBOARD_CACHE_KEY } } });
-  for (const k of [...dashboardCache.keys()]) if (k.includes(`,\"${employerId}\",`)) dashboardCache.delete(k);
+  for (const k of [...dashboardCache.keys()]) if (k.includes(`,"${employerId}",`)) dashboardCache.delete(k);
   const payload: any = await buildDashboardPayload(employerId, { period });
   const persisted = await persistScoreSnapshot(employerId, period, payload);
   if (persisted) {

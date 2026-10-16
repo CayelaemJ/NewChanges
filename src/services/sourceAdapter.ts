@@ -532,7 +532,7 @@ export async function checkMysqlReadReplica(config: IntegrationSourceConfig): Pr
       const row = rows?.[0];
       if (row) lagSeconds = row.Seconds_Behind_Source == null ? null : Number(row.Seconds_Behind_Source);
     } catch {
-      try { const [rows]: any = await connection.query("SHOW SLAVE STATUS"); const row = rows?.[0]; if (row) lagSeconds = row.Seconds_Behind_Master == null ? null : Number(row.Seconds_Behind_Master); } catch {}
+      try { const [rows]: any = await connection.query("SHOW SLAVE STATUS"); const row = rows?.[0]; if (row) lagSeconds = row.Seconds_Behind_Master == null ? null : Number(row.Seconds_Behind_Master); } catch { /* Replica status may not be supported on this server. */ }
     }
     const threshold = intSetting(effective.sqlReplicaMaxLagSeconds, 60, 0, 86400);
     const lagWithinThreshold = lagSeconds == null ? null : lagSeconds <= threshold;

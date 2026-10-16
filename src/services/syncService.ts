@@ -270,7 +270,7 @@ export async function detectSourceChanges() {
     };
   } finally {
     if (adapter) {
-      try { await adapter.close(); } catch {}
+      try { await adapter.close(); } catch { /* Optional cleanup or diagnostics failure; retain previous state. */ }
     }
   }
 }
@@ -289,7 +289,7 @@ export async function openIncrementalSyncLease() {
       "SELECT pg_try_advisory_lock_shared($1, $2) AS acquired",
       [FULL_REFRESH_LOCK_A, SOURCE_SYNC_COORDINATION_LOCK_B],
     );
-    if (!Boolean(result.rows?.[0]?.acquired)) {
+    if (!result.rows?.[0]?.acquired) {
       await client.end();
       return null;
     }
@@ -297,7 +297,7 @@ export async function openIncrementalSyncLease() {
       "SELECT pg_try_advisory_lock($1, $2) AS acquired",
       [FULL_REFRESH_LOCK_A, SOURCE_INCREMENTAL_MUTEX_B],
     );
-    if (!Boolean(incremental.rows?.[0]?.acquired)) {
+    if (!incremental.rows?.[0]?.acquired) {
       await client.query(
         "SELECT pg_advisory_unlock_shared($1, $2)",
         [FULL_REFRESH_LOCK_A, SOURCE_SYNC_COORDINATION_LOCK_B],
@@ -425,7 +425,7 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
           try {
             const described = await adapter.describe(reportKey);
             sourceTotalRows = Number.isFinite(Number(described.totalRows)) ? Number(described.totalRows) : null;
-          } catch {}
+          } catch { /* Optional cleanup or diagnostics failure; retain previous state. */ }
         }
         const feedSpan = 82 / Math.max(1, LOAD_ORDER.length);
         const feedStart = 5 + reportIndex * feedSpan;
@@ -540,7 +540,7 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
               if (newestMs != null && newestMs < cursor.lastSourceUpdatedAt.getTime()) {
                 rebasedCursor = new Date(newestMs);
               }
-            } catch {}
+            } catch { /* Optional cleanup or diagnostics failure; retain previous state. */ }
           }
           await prisma.integrationCursor.update({
             where: { reportKey },
@@ -1031,7 +1031,7 @@ export async function testConnection(patch: IntegrationConfigPatch = {}) {
     return { ok: false, error: error?.message ?? String(error), sourceMode: (() => { try { return configuredSourceMode(config); } catch { return "UNKNOWN"; } })() };
   } finally {
     if (adapter) {
-      try { await adapter.close(); } catch {}
+      try { await adapter.close(); } catch { /* Optional cleanup or diagnostics failure; retain previous state. */ }
     }
   }
 }
