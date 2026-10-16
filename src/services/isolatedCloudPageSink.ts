@@ -34,6 +34,8 @@ export function createIsolatedCloudPageSink(
   if(!identity.test(generation)||!identity.test(snapshotId)||!LOAD_ORDER.includes(feed)||
     !hex.test(pageDigest)||!Array.isArray(rows)||rows.length<1||rows.length>1000)
    throw new Error("Invalid cloud staging page identity");
+  const actualPageDigest=sha(Buffer.from(JSON.stringify(rows),"utf8"));
+  if(actualPageDigest!==pageDigest)throw new Error("Staged page digest does not match rows");
   const data=Buffer.from(JSON.stringify({rows,after,pageDigest}),"utf8");
   if(data.length>maxObjectBytes)throw new Error("Cloud page exceeds byte budget");
   const digest=sha(data);
