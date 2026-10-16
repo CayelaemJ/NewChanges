@@ -191,3 +191,44 @@ duplicate column identities. The intended discovery caller must run this
 validation before mapping review and retry with a narrower schema/scope rather
 than treating an incomplete inventory as authoritative. No connection or
 production ingestion is activated by this helper.
+
+## Executable mapped extraction + durable Playground receipt rehearsal (PR #153)
+
+The staged modules now compose into an **opt-in integration seam**:
+`openPlaygroundMysqlSnapshot` opens a TLS-validated, read-only repeatable
+MySQL snapshot (hard lifetime 120 seconds and 30-second maximum per-query
+timeout), queries `information_schema` with a bounded metadata budget,
+`extractMappedFeedToStaging` compiles and executes selected-column keyset
+pages after mapping/catalogue checks, and
+`createPlaygroundMappedStagingStore` persists each page to content-addressed
+files before advancing the associated checkpoint. A simulated mid-feed failure
+and restart is covered with a stable synthetic snapshot identifier.
+
+**Important restrictions**:
+- The MySQL snapshot adapter and local staging store are NOT wired to the
+  production ingestion scheduler, Neon write path, or source activation.
+- The consistency proof belongs to one live MySQL transaction. A transaction
+  snapshot cannot be recovered after disconnect: the synthetic recovery test
+  does not prove cross-session restart correctness with a changing live source.
+  Production restart requires CDC, immutable source snapshots, or documented
+  idempotent replay from a newly validated source generation.
+- The local Playground filesystem uses a single-writer contract, no distributed
+  lease, and is not a cloud object-store or production durability guarantee.
+  Its checkpoint is atomically published *after* a fsynced page, preventing a
+  checkpoint pointing at incomplete bytes. Failed publication leaves harmless
+  orphan files requiring bounded cleanup.
+- The source mapping and field meanings require operator approval and canonical
+  row validation before any production sink. The current executable staging
+  runner checks presence and shape of required fields, but not every
+  domain-specific canonical field rule.
+- Source costs are bounded by row/page and measured JSON bytes AFTER each
+  driver query returns. A production executor additionally needs streaming
+  driver backpressure and network-byte limits before transfer, query plan
+  validation, and storage budget enforcement across all ten feeds.
+- We have NOT run ten real mapped source tables end-to-end or proved a 500 GB
+  transformation fits on a small Neon instance. No production code cutover.
+
+The next approved migration must connect a durable shared storage backend,
+atomic idempotent checkpoint+write transactions, controlled deletions and
+reconciliation, semantic publication, and a full Railway Testing rehearsal
+before deploying to production.
