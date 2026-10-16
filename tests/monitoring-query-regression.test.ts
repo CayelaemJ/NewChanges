@@ -1,0 +1,14 @@
+import assert from "node:assert/strict";
+import {readFile} from "node:fs/promises";
+const server=await readFile(new URL("../src/server.ts",import.meta.url),"utf8");
+const snapshots=await readFile(new URL("../src/services/snapshotBuilder.ts",import.meta.url),"utf8");
+const authBlock=server.slice(server.indexOf("async function currentUser("),server.indexOf("// guard for API routes:"));
+const auditBlock=server.slice(server.indexOf('app.addHook("onResponse"'),server.indexOf("// Periodically discard old rate-limit buckets"));
+assert(authBlock.includes("authenticatedRequests.get(req)"));
+assert(authBlock.includes("authenticatedRequests.set(req, pending)"));
+assert(auditBlock.includes("await currentUser(req)"));
+assert(!auditBlock.includes("await resolveSession(token)"));
+assert(snapshots.includes("siteDimensionCache.get(employerId"));
+assert(snapshots.includes("siteDimensionCache.invalidate(employerId)"));
+assert(snapshots.includes("60_000, 200"));
+console.log("Session/audit de-duplication and site dimension invalidation guards passed");
