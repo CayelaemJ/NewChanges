@@ -1,0 +1,25 @@
+import assert from "node:assert/strict";
+import {LOAD_ORDER} from "../src/services/reportFormats.js";
+import {reviewTenFeedTransferBudget} from "../src/services/datasetReplacementTransferBudget.js";
+const feeds=LOAD_ORDER.map(reportKey=>({reportKey,rows:100,changedRows:2,averageBytesPerRow:1024}));
+const caps={maxSourceReadBytes:2_000_000,maxNeonWriteBytes:100_000,maxNeonResidentBytes:100_000,
+ neonWriteAmplification:2,neonResidentAmplification:2};
+const good=reviewTenFeedTransferBudget(feeds,caps);
+assert.equal(good.withinPlanningBudget,true);
+assert.equal(good.approvedForExecution,false);
+assert.equal(good.fullSourceReadBytes,1_024_000);
+assert.equal(good.changedPayloadBytes,20_480);
+assert.equal(good.projectedNeonWriteBytes,40_960);
+const huge=feeds.map((f,i)=>i===0?{...f,rows:600_000_000,changedRows:500_000_000}:f);
+const blocked=reviewTenFeedTransferBudget(huge,caps);
+assert.equal(blocked.withinPlanningBudget,false);
+assert(blocked.issues.some(x=>x.includes("source transfer")));
+assert(blocked.issues.some(x=>x.includes("Neon writes")));
+assert.equal(reviewTenFeedTransferBudget(feeds.slice(1),caps).withinPlanningBudget,false);
+assert.equal(reviewTenFeedTransferBudget([...feeds.slice(1),feeds[1]],caps).withinPlanningBudget,false);
+assert.equal(reviewTenFeedTransferBudget(feeds.map((f,i)=>i===0?{...f,changedRows:101}:f),caps).withinPlanningBudget,false);
+assert.equal(reviewTenFeedTransferBudget(feeds.map((f,i)=>i===0?{...f,averageBytesPerRow:Number.MAX_SAFE_INTEGER}:f),caps).withinPlanningBudget,false);
+assert.equal(reviewTenFeedTransferBudget(feeds,{...caps,maxSourceReadBytes:Infinity}).withinPlanningBudget,false);
+assert.equal(reviewTenFeedTransferBudget(feeds,{...caps,neonWriteAmplification:0}).withinPlanningBudget,false);
+assert.equal(reviewTenFeedTransferBudget(feeds,{...caps,maxSourceReadBytes:1}).withinPlanningBudget,false);
+console.log("Ten-feed transfer and Neon capacity budget regression checks passed");
