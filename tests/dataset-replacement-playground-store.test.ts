@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {mkdtemp,mkdir,writeFile,symlink,rm} from "node:fs/promises";
+import {mkdtemp,mkdir,writeFile,symlink,rm,open} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {join,dirname} from "node:path";
 import {createHash} from "node:crypto";
@@ -33,8 +33,13 @@ try {
   await writeFile(outside,content);
   await symlink(outside,missing);
   assert.equal((await reviewStoredReplacementManifest(input,reader)).readyForStagingReview,false);
+  await rm(missing);
+  const oversized=await open(missing,"w");
+  try {await oversized.truncate(1024*1024+1);}finally{await oversized.close();}
+  await assert.rejects(createPlaygroundFileObjectReader(root,1024*1024)(objects[2].objectKey),/byte limit/);
   await assert.rejects(reader("../secrets.json"),/Invalid staged object key/);
-  console.log("Playground disk readback, corruption, missing and symlink isolation passed");
+  assert.throws(()=>createPlaygroundFileObjectReader(root,Number.MAX_SAFE_INTEGER),/byte limit/);
+  console.log("Playground bounded readback, corruption, missing, symlink and oversized-object rejection passed");
 } finally {
   await rm(root,{recursive:true,force:true});
 }
