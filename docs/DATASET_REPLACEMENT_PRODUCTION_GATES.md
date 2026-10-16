@@ -262,3 +262,14 @@ approved Playground rehearsal, but the production scheduler never calls it.
    security and rollback checks on Railway Testing and supported source types.
 
 No production connection, import or migration was executed by the rehearsal.
+
+## Mandatory canonical validation gate
+
+`canonicalMappedRowValidation.ts` now reuses the existing canonical
+coercion and business-rule validator on a bounded mapped page, including UTC
+timestamps and required natural keys. The mapped staging runner can request
+`canonicalValidation: "strict"` to fail before writing a bad page. The
+end-to-end mock ten-feed Playground test exercises this strict mode on every
+feed. Future production integration MUST require strict validation and global
+cross-page identity reconciliation, not treat the current opt-in flag as an
+operator bypass. No real external-schema sample has been validated yet.
