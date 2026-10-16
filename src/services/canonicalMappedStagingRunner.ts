@@ -69,6 +69,7 @@ export async function extractMappedFeedToStaging(input:MappedFeedRun){
   if(records.length===0)break;
   if(exhausted)throw new Error("Extraction row/page budget reached before EOF");
   let pageBytes=0,last:KeysetCursor|null=null;
+  let previous:KeysetCursor|null=after;
   for(const record of records){
    if(!record||typeof record!=="object"||Array.isArray(record))throw new Error("Invalid source record");
    // SQL projection must contain only the approved fields and all required keys.
@@ -84,12 +85,13 @@ export async function extractMappedFeedToStaging(input:MappedFeedRun){
      throw new Error("Missing or invalid source natural key");
    // SQL driver keyset order is authoritative; require forward timestamp
    // progress, and reject identical cursor tuples to avoid stuck replays.
-   if(after&&Date.parse(updatedAt)<Date.parse(after.updatedAt))
+   if(previous&&Date.parse(updatedAt)<Date.parse(previous.updatedAt))
      throw new Error("Source timestamp regressed");
-   if(after&&updatedAt===after.updatedAt&&keys.every((k,i)=>k===after!.keys[i]))
+   if(previous&&Date.parse(updatedAt)===Date.parse(previous.updatedAt)&&
+      keys.every((k,i)=>k===previous!.keys[i]))
      throw new Error("Duplicate keyset cursor");
    last={updatedAt,keys:keys as (string|number)[]};
-   after=last;
+   previous=last;
    const encoded=JSON.stringify(record);
    if(!encoded)throw new Error("Invalid projected record");
    pageBytes+=Buffer.byteLength(encoded,"utf8");
@@ -103,6 +105,7 @@ export async function extractMappedFeedToStaging(input:MappedFeedRun){
   await sink.commitPage({generation:mapping.sourceGeneration,snapshotId:reader.snapshotId,
    feed,rows:stagedRows,after:last,pageDigest});
   // Cursor advances only after the single atomic sink commit.
+  after=last;
   rowsCommitted+=records.length;bytesRead+=pageBytes;pagesCommitted++;
   if(records.length<count)break;
  }
