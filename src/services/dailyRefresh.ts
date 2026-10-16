@@ -64,7 +64,7 @@ async function acquireSourceSyncExclusiveLease(client: Client) {
       "SELECT pg_try_advisory_lock($1, $2) AS acquired",
       [FULL_REFRESH_LOCK_A, SOURCE_SYNC_COORDINATION_LOCK_B],
     );
-    if (Boolean(result.rows?.[0]?.acquired)) return;
+    if (result.rows?.[0]?.acquired) return;
     await new Promise((resolve) => setTimeout(resolve, 5_000));
   }
   throw new Error("Timed out waiting for an existing source sync to release the full-refresh coordination lease.");
