@@ -181,3 +181,13 @@ or joining multiple tables, the next approved mapping version will need
 controlled transformations or source-side views; it must not silently invent
 fields. Do not claim universal engine support beyond the three currently
 implemented SQL dialects.
+
+## Metadata truncation safety check (staging)
+
+`validateDiscoveredCatalog` rejects a discovered schema catalogue when it
+contains as many columns as the configured cap, since this could be a truncated
+result. It also rejects schema mismatches, malformed column metadata, and
+duplicate column identities. The intended discovery caller must run this
+validation before mapping review and retry with a narrower schema/scope rather
+than treating an incomplete inventory as authoritative. No connection or
+production ingestion is activated by this helper.
