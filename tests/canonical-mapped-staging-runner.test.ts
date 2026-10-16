@@ -57,4 +57,11 @@ const budgeted=await extractTenMappedFeeds(feed=>plan(feed),{
  maxTotalRows:100,maxTotalBytes:100000,maxTotalPages:40
 });
 assert.equal(budgeted.summaries.length,10);
+const validStrict=plan("employers");validStrict.canonicalValidation="strict";
+assert.equal((await extractMappedFeedToStaging(validStrict)).rowsCommitted,3);
+const invalidStrict=plan("employees");invalidStrict.canonicalValidation="strict";
+let invalidWrites=0;
+invalidStrict.sink={commitPage:async()=>{invalidWrites++;}};
+await assert.rejects(extractMappedFeedToStaging(invalidStrict),/Canonical mapping validation failed/);
+assert.equal(invalidWrites,0);
 console.log("Mapped SQL executor staging: ten feeds, ordering, budgets, and fail-closed writes passed");
