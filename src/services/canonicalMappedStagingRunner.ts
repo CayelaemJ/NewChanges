@@ -87,9 +87,17 @@ export async function extractMappedFeedToStaging(input:MappedFeedRun){
    // progress, and reject identical cursor tuples to avoid stuck replays.
    if(previous&&Date.parse(updatedAt)<Date.parse(previous.updatedAt))
      throw new Error("Source timestamp regressed");
-   if(previous&&Date.parse(updatedAt)===Date.parse(previous.updatedAt)&&
-      keys.every((k,i)=>k===previous!.keys[i]))
-     throw new Error("Duplicate keyset cursor");
+   if(previous&&Date.parse(updatedAt)===Date.parse(previous.updatedAt)){
+    let order=0;
+    for(let i=0;i<keys.length;i++){
+     if(keys[i]===previous.keys[i])continue;
+     if(typeof keys[i]!==typeof previous.keys[i])
+      throw new Error("Source keyset cursor changed type");
+     order=keys[i]<previous.keys[i]?-1:1;
+     break;
+    }
+    if(order<=0)throw new Error("Source keyset cursor duplicated or out of order");
+   }
    last={updatedAt,keys:keys as (string|number)[]};
    previous=last;
    const encoded=JSON.stringify(record);
