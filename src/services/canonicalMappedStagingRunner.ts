@@ -42,7 +42,7 @@ export async function extractMappedFeedToStaging(input:MappedFeedRun){
  if(!LOAD_ORDER.includes(feed)||!getFormat(feed))throw new Error("Unknown feed");
  const format=getFormat(feed)!;
  const schema=mapping.feeds.find(f=>f.feed===feed)?.sourceTable.split(".")[0]??"";
- const discovered=validateDiscoveredCatalog(catalog,schema);
+ const discovered=validateDiscoveredCatalog(catalog.filter(c=>c.schema===schema),schema);
  if(!discovered.complete)throw new Error("Incomplete source catalogue: "+discovered.issues.join("; "));
  if(!reviewMappingAgainstCatalog(mapping,catalog).validForSampleReview)
   throw new Error("Invalid source mapping for catalogue");
