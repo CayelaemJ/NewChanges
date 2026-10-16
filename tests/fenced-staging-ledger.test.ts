@@ -21,7 +21,7 @@ const receipt={generation:"gen1",feed:"employers",snapshotId:"snap1",sha256:sha,
  cursor:{updatedAt:"2026-10-16T12:00:00Z",keys:["A"]},expectedVersion:2n};
 const next=await ledger.commit(lease,receipt);
 assert.equal(next.version,3n);
-assert(statements[1].includes('"fence"=$4 AND "version"=$5'));
+assert(statements[1].includes('"fence"=$4::bigint AND "version"=$5::bigint'));
 assert(statements[1].includes('"snapshotId" IS NULL OR "snapshotId"=$6'));
 await assert.rejects(ledger.commit(lease,{...receipt,objectKey:"semantic/staging/other"}),/foreign/);
 await assert.rejects(ledger.acquire("gen1","employers","root",1),/lifetime/);
