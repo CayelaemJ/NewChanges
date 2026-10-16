@@ -273,3 +273,22 @@ end-to-end mock ten-feed Playground test exercises this strict mode on every
 feed. Future production integration MUST require strict validation and global
 cross-page identity reconciliation, not treat the current opt-in flag as an
 operator bypass. No real external-schema sample has been validated yet.
+
+## Opt-in MySQL staging orchestration
+
+`rehearseMappedMysqlImport` now composes the above components for an explicitly
+approved Playground-only run: validates a complete ten-feed mapping and aggregate
+cost allocations before opening a TLS-protected read-only MySQL snapshot,
+discovers metadata for all mapped source schemas, executes strict canonical
+validation with bounded keyset projections, and commits locally to the
+content-addressed Playground store. It always closes the source snapshot on
+success or failure, returns compact progress metadata, and never touches
+live Neon tables or publishes dashboards.
+
+This helper is deliberately NOT wired to any HTTP route, production source
+configuration, or scheduler. Do not invoke it against production until
+read-only source credentials, source mapping approvals, safe indexing and
+source-side costs have been reviewed. For large datasets the 120-second
+transaction limit intentionally fails rather than silently retaining long
+source snapshots. A real-source canary and cloud object-store integration
+are still required.
