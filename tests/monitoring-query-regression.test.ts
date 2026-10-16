@@ -11,4 +11,7 @@ assert(!auditBlock.includes("await resolveSession(token)"));
 assert(snapshots.includes("siteDimensionCache.get(employerId"));
 assert(snapshots.includes("siteDimensionCache.invalidate(employerId)"));
 assert(snapshots.includes("60_000, 200"));
+assert(snapshots.includes("prisma.importBatch.groupBy({"));
+assert(snapshots.includes("_max: { committedAt: true }"));
+assert(!snapshots.includes("prisma.importBatch.findMany({"));
 console.log("Session/audit de-duplication and site dimension invalidation guards passed");
