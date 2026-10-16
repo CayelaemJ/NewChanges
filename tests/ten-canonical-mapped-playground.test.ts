@@ -28,7 +28,9 @@ try{
     queryReadOnly:async(_sql:string,params:readonly (string|number)[])=>{
      calls++;
      const size=Number(params[params.length-1]);
-     const cursor=params.length>2?String(params[params.length-2]):"";
+     // The first natural-key component follows the two timestamp parameters.
+     // Composite-key feeds have additional bound values after it.
+     const cursor=params.length>2?String(params[3]):"";
      return rows.filter(row=>String(row[format.naturalKey[0]])>cursor).slice(0,size);
     }},
    sink:store.sink,canonicalValidation:"strict" as const,pageSize:1,maxRows:3,maxBytes:4096,maxPages:4
