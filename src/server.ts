@@ -179,8 +179,9 @@ app.addHook("onResponse", async (req, reply) => {
   const sensitive = path.startsWith("/api/admin/") || path.startsWith("/api/dashboard") || path.startsWith("/api/portfolio");
   if (!sensitive) return;
   try {
-    const token = req.cookies?.session;
-    const user = token ? await resolveSession(token) : null;
+    // Reuse the per-request authentication result; never query session/user/links
+    // twice just to write the data-access audit trail.
+    const user = await currentUser(req);
     if (!user) return;
     const context = requestSecurityContext(req);
     await recordDataAccessEvent({
@@ -295,9 +296,17 @@ const serveHtml = async (reply: FastifyReply, file: string, status = 200) => {
 };
 
 // ── auth helpers ──
+// Request-scoped only: no cross-request permission cache, so revocations
+// and employer access changes are observed by the next HTTP request.
+const authenticatedRequests = new WeakMap<FastifyRequest, Promise<AuthUser | null>>();
 async function currentUser(req: FastifyRequest): Promise<AuthUser | null> {
-  const token = (req.cookies && req.cookies.session) || (req.headers.authorization?.replace("Bearer ", ""));
-  return resolveSession(token);
+  let pending = authenticatedRequests.get(req);
+  if (!pending) {
+    const token = (req.cookies && req.cookies.session) || (req.headers.authorization?.replace("Bearer ", ""));
+    pending = resolveSession(token);
+    authenticatedRequests.set(req, pending);
+  }
+  return pending;
 }
 // guard for API routes: returns the user or sends 401/403
 async function requireUser(req: FastifyRequest, reply: FastifyReply): Promise<AuthUser | null> {
