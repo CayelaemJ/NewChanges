@@ -314,3 +314,18 @@ cleanup, region-specific egress metering, access-control testing and recovery
 against a real bucket are outstanding. This path is not called by the
 production scheduler, API or live Neon writer. A 500 GB source remains
 outside Neon until separately approved, measured compact projections exist.
+
+## Cloud transport hardening and keyset chronology
+
+The isolated signed HTTPS transport is now pinned to the configured
+S3-compatible endpoint and its designated `semantic/staging/` object prefix;
+a SigV4-shaped URL for another host or object path is rejected before
+network I/O. Regression tests check foreign hosts and forbidden paths.
+The mapped extraction runner now rejects out-of-order natural keys when two
+records share the same source timestamp, preventing a stalled or retrograde
+checkpoint even if a driver violates the declared ORDER BY.
+
+Cloud staging is still a *preproduction* primitive. A durable distributed
+receipt ledger with fencing/CAS, immutable-source resumption, and a real
+object-store rehearsal are required before any production cutover. Do not
+enable this from the live API or scheduler based solely on green unit tests.
