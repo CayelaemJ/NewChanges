@@ -108,3 +108,27 @@ Playground sources. Within-feed ordering uses the last-update timestamp,
 while original event/effective dates remain intact for chronological
 reporting. The query planner does not by itself guarantee a consistent
 snapshot or make production migration safe.
+
+## Source-agnostic canonical mapping foundation
+
+The canonical ten feeds are a DESTINATION contract, not a requirement that an
+external database already provides ten `v_*` views. A read-only
+`canonicalSchemaMapping` contract now allows an operator-reviewed source
+table/view and explicit source-column mapping for each required canonical
+field. Every feed must include `source_updated_at`, natural keys, and all
+other required fields. Mapping never infers employer/tenant identity or a
+business date, never executes arbitrary SQL and never writes to Neon.
+
+This is a staging validation seam, NOT a connected schema-discovery wizard or
+a live universal database importer. Today the deployed SQL adapter still
+expects canonical views and supports PostgreSQL, MySQL/MariaDB and MSSQL.
+Additional engines require separately implemented read-only connectors.
+For a large source, prefer a validated indexed view or safe extracted
+projection, bounded incremental keyset/CDC reads and source-side aggregation.
+Avoid full table replication or blind schema inference. Missing required
+business facts must be reported rather than manufactured.
+
+Next: read-only metadata discovery, reviewable mapping preview with sampled
+canonical validation, adapter query compilation restricted to allowlisted
+source objects, source snapshot consistency, deterministic natural-key
+ordering, byte/write caps and Playground ten-feed integration.
