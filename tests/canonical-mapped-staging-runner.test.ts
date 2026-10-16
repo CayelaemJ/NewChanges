@@ -48,4 +48,13 @@ const result=await extractTenMappedFeeds(feed=>{const p=plan(feed);
 assert.equal(result.summaries.length,10);
 assert.deepEqual(ordered.filter((_,i)=>i%2===0),LOAD_ORDER);
 await assert.rejects(extractTenMappedFeeds(feed=>plan(feed==="employers"?"employees":feed)),/dependency order/);
+let built=0;
+await assert.rejects(extractTenMappedFeeds(feed=>{built++;return plan(feed)},{
+ maxTotalRows:50,maxTotalBytes:100000,maxTotalPages:100
+}),/reservation/);
+assert.equal(built,10);
+const budgeted=await extractTenMappedFeeds(feed=>plan(feed),{
+ maxTotalRows:100,maxTotalBytes:100000,maxTotalPages:40
+});
+assert.equal(budgeted.summaries.length,10);
 console.log("Mapped SQL executor staging: ten feeds, ordering, budgets, and fail-closed writes passed");
