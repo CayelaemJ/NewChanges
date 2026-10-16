@@ -377,10 +377,12 @@ async function feedCoverageForEmployer(
       where: { reportKey: { in: [...CORE_FEEDS] }, lastSuccessAt: { not: null } },
       select: { reportKey: true, lastSuccessAt: true },
     }),
-    prisma.importBatch.findMany({
+    // A grouped MAX avoids fetching and sorting every historic committed
+    // batch for each dashboard load. At most ten feed-coverage rows return.
+    prisma.importBatch.groupBy({
+      by: ["reportKey"],
       where: { status: "COMMITTED", reportKey: { in: [...CORE_FEEDS] }, employerRef: employerId },
-      orderBy: { committedAt: "desc" },
-      select: { reportKey: true, committedAt: true },
+      _max: { committedAt: true },
     }),
   ]);
 
@@ -390,11 +392,9 @@ async function feedCoverageForEmployer(
   }
 
   const importByFeed = new Map<string, Date>();
-  for (const batch of batches as any[]) {
+  for (const batch of batches) {
     if (!CORE_FEEDS.includes(batch.reportKey as CoreFeed)) continue;
-    if (!importByFeed.has(batch.reportKey)) {
-      importByFeed.set(batch.reportKey, batch.committedAt ?? new Date(0));
-    }
+    importByFeed.set(batch.reportKey, batch._max.committedAt ?? new Date(0));
   }
 
   const coverage = {} as Record<CoreFeed, FeedCoverageEntry>;
