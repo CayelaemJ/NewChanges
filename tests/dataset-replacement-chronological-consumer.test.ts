@@ -38,4 +38,26 @@ const done=await consumeCanonicalChronologically(all,async feed=>{order.push(fee
 assert.equal(done.summaries.length,10);
 assert.deepEqual(order.filter(x=>x.endsWith(":done")),LOAD_ORDER.map(f=>f+":done"));
 await assert.rejects(consumeCanonicalChronologically([...all].reverse()),/dependency load order/);
-console.log("Chronological keyset, budgets, commit/checkpoint ordering and ten-feed dependencies passed");
+
+const exactlyFull=make("employees",[]);
+exactlyFull.caps={...caps,maxTotalRows:5,maxPages:3};
+assert.equal((await consumeChronologicalFeed(exactlyFull)).rowsCommitted,5);
+const tooFewRows=make("employees",[]);
+tooFewRows.caps={...caps,maxTotalRows:4,maxPages:5};
+await assert.rejects(consumeChronologicalFeed(tooFewRows),/budget exhausted/);
+const tooFewPages=make("employees",[]);
+tooFewPages.caps={...caps,maxTotalRows:10,maxPages:2};
+await assert.rejects(consumeChronologicalFeed(tooFewPages),/budget exhausted/);
+const resumed=make("employees",[]);
+resumed.after=source[1].cursor;
+const resumedResult=await consumeChronologicalFeed(resumed);
+assert.equal(resumedResult.rowsCommitted,3);
+assert.equal(resumedResult.lastCheckpoint?.naturalKey,"k4");
+const replayEvents:string[]=[];
+const replay=make("employees",replayEvents);
+let firstCommit=true;
+replay.saveCheckpoint=async()=>{if(firstCommit){firstCommit=false;throw new Error("checkpoint failure");}};
+await assert.rejects(consumeChronologicalFeed(replay),/checkpoint failure/);
+assert.equal(replayEvents[0],"employees:commit:2");
+assert.equal((await consumeChronologicalFeed(make("employees",[]))).rowsCommitted,5);
+console.log("Chronological keyset, exact boundaries, resume and ten-feed dependency checks passed");
