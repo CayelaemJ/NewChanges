@@ -13,7 +13,7 @@ export function createPlaygroundFileObjectReader(root:string):TrustedObjectReade
     if(!path.startsWith(base+sep))throw new Error("Staging key escaped Playground root");
     const realBase=await realpath(base);
     const realPath=await realpath(path);
-    if(!realPath.startsWith(realBase+sep))throw new Error("Staged object points outside Playground root");
+    if(!realPath.startsWith(realBase+sep) || realPath!==path)throw new Error("Staged object points outside Playground root or uses a symlink");
     return readFile(realPath);
   };
 }
