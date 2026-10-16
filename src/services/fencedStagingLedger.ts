@@ -31,7 +31,7 @@ export function createFencedStagingLedger(db:StagingSqlExecutor){
     throw new Error("Invalid staging lease lifetime");
    const sql=`INSERT INTO "MappedStagingCheckpoint"
        ("generation","feed","owner","fence","version","leaseExpiresAt")
-       VALUES ($1,$2,$3,1,0,now() + ($4 * interval '1 second'))
+       VALUES ($1,$2,$3,1,0,now() + ($4::integer * interval '1 second'))
        ON CONFLICT ("generation","feed") DO UPDATE
        SET "owner"=EXCLUDED."owner",
            "fence"="MappedStagingCheckpoint"."fence"+1,
@@ -56,7 +56,7 @@ export function createFencedStagingLedger(db:StagingSqlExecutor){
       SET "version"="version"+1,"snapshotId"=$6,"objectKey"=$7,
           "sha256"=$8,"cursor"=$9::jsonb,"updatedAt"=now()
       WHERE "generation"=$1 AND "feed"=$2 AND "owner"=$3
-        AND "fence"=$4 AND "version"=$5
+        AND "fence"=$4::bigint AND "version"=$5::bigint
         AND "leaseExpiresAt">now()
         AND ("snapshotId" IS NULL OR "snapshotId"=$6)
       RETURNING "version"`;
