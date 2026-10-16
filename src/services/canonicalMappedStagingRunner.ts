@@ -7,6 +7,7 @@ import type {CanonicalSchemaMapping} from "./canonicalSchemaMapping.js";
 import type {DiscoveryColumn,DiscoveryDialect} from "./canonicalSchemaDiscovery.js";
 import {validateDiscoveredCatalog,reviewMappingAgainstCatalog} from "./canonicalSchemaDiscovery.js";
 import type {KeysetCursor} from "./datasetReplacementKeysetSql.js";
+import {validateMappedCanonicalPage} from "./canonicalMappedRowValidation.js";
 
 export interface MappedSqlReader {
  readonly snapshotId:string;
@@ -27,6 +28,7 @@ export interface MappedFeedRun {
  dialect:DiscoveryDialect; feed:string; upperWatermark:string;
  reader:MappedSqlReader; sink:MappedStagingSink;
  after?:KeysetCursor|null;
+ canonicalValidation?:"strict";
  maxRows:number;maxBytes:number;pageSize:number;maxPages:number;
 }
 const normalizedStamp=(v:unknown):string=>{
@@ -95,9 +97,11 @@ export async function extractMappedFeedToStaging(input:MappedFeedRun){
      throw new Error("Mapped source byte budget exceeded before staged write");
   }
   if(!last)throw new Error("Missing page checkpoint");
-  const pageDigest=createHash("sha256").update(JSON.stringify(records)).digest("hex");
+  const stagedRows=input.canonicalValidation==="strict"
+   ?validateMappedCanonicalPage(feed,records):records;
+  const pageDigest=createHash("sha256").update(JSON.stringify(stagedRows)).digest("hex");
   await sink.commitPage({generation:mapping.sourceGeneration,snapshotId:reader.snapshotId,
-   feed,rows:records,after:last,pageDigest});
+   feed,rows:stagedRows,after:last,pageDigest});
   // Cursor advances only after the single atomic sink commit.
   rowsCommitted+=records.length;bytesRead+=pageBytes;pagesCommitted++;
   if(records.length<count)break;
