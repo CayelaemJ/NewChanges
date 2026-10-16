@@ -25,5 +25,11 @@ await assert.rejects(store.sink.commitPage({...input,after:{...input.after,keys:
 assert.equal(receipts.length,1);
 await assert.rejects(store.sink.commitPage({...input,pageDigest:"a".repeat(64)}),/digest does not match/);
 await assert.rejects(store.sink.commitPage({...input,generation:"../bad"}),/identity/);
+const pageBytes=Buffer.byteLength(JSON.stringify({rows,after:input.after,pageDigest:input.pageDigest}));
+const capped=createIsolatedCloudPageSink(http,async()=>{},env,2*1024*1024,pageBytes*2);
+corrupted=false;
+await capped.sink.commitPage(input);
+await assert.rejects(capped.sink.commitPage(input),/network-byte budget/);
+assert.throws(()=>createIsolatedCloudPageSink(http,async()=>{},env,2*1024*1024,129*1024*1024),/network budget/);
 assert.throws(()=>createIsolatedCloudPageSink(http,async()=>{},env,17*1024*1024),/budget/);
 console.log("Cloud staged page upload, readback integrity and fail-closed receipt tests passed");

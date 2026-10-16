@@ -341,3 +341,15 @@ arity and UTC timestamps before issuing SQL. This is a staging contract;
 production migration of the table is still NOT enabled. Equal-timestamp
 natural-key progression is checked in the bounded extraction runner; a live
 source still requires collation/snapshot compatibility verification.
+
+## Cloud rehearsal network-cost reservation
+
+The isolated S3 staging sink now reserves both its PUT bytes and full GET
+readback bytes **before** network I/O, enforcing a default 64 MiB total
+network budget (hard ceiling 128 MiB) alongside its per-page limits. Failed
+uploads conservatively retain their reservation because billed transfer might
+have occurred. This is an intentional short-lived Playground safety budget,
+NOT a production throughput design. For production-sized imports, validate
+provider-supported SHA-256 integrity metadata / conditional HEAD checks and
+measure byte charges before reducing full readbacks; do not silently weaken
+integrity guarantees to save costs.
