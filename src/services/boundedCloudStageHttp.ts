@@ -30,7 +30,7 @@ export function createBoundedCloudStageHttp(timeoutMs=15000,env:NodeJS.ProcessEn
    if(!res.ok)throw new Error("Cloud staged PUT failed with status "+res.status);
   },
   async get(url,maximumBytes){
-   ensureSigned(url);
+   ensureSigned(url,expectedOrigin,keyPrefix);
    if(!Number.isSafeInteger(maximumBytes)||maximumBytes<1||maximumBytes>16*1024*1024)
     throw new Error("Invalid cloud GET byte budget");
    const res=await fetch(url,{method:"GET",redirect:"error",
