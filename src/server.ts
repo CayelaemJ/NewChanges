@@ -193,7 +193,7 @@ app.addHook("onResponse", async (req, reply) => {
       statusCode: reply.statusCode,
       durationMs: undefined,
     });
-  } catch {}
+  } catch { /* Audit failures must not interrupt successful requests. */ }
 });
 // Periodically discard old rate-limit buckets so a long-lived process does not
 // retain one entry forever for every IP that ever touched it.
@@ -267,10 +267,10 @@ const escAttr = (v: string) => v.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<"
 // (never reflect an arbitrary Host header into markup).
 function publicOrigin(req: FastifyRequest): string {
   const configured = String(process.env.PUBLIC_BASE_URL || "").trim().replace(/\/$/, "");
-  if (/^https?:\/\/[a-z0-9.\-]+(:\d+)?$/i.test(configured)) return configured;
+  if (/^https?:\/\/[a-z0-9.-]+(:\d+)?$/i.test(configured)) return configured;
   const host = String(req.headers.host || "");
   const proto = req.protocol === "https" ? "https" : "http";
-  return /^[a-z0-9.\-]+(:\d+)?$/i.test(host) ? `${proto}://${host}` : "http://localhost";
+  return /^[a-z0-9.-]+(:\d+)?$/i.test(host) ? `${proto}://${host}` : "http://localhost";
 }
 const CONTACT_EMAIL = (process.env.CONTACT_EMAIL || "").trim();
 const siteVars = (req: FastifyRequest): Record<string, string> => ({
@@ -568,7 +568,7 @@ app.get("/api/admin/events", async (req, reply) => {
 
   const unsubscribe = subscribeAdminEvents(jobId, send);
   const heartbeat = setInterval(() => {
-    try { res.write(`: heartbeat ${Date.now()}\n\n`); } catch {}
+    try { res.write(`: heartbeat ${Date.now()}\n\n`); } catch { /* Ignore writes after the SSE connection closes. */ }
   }, 15000);
 
   const close = () => {
