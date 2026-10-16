@@ -162,6 +162,83 @@ jobs:
           name: Scan JavaScript, TypeScript and security rules
           command: semgrep scan --config p/javascript --config p/typescript --config p/security-audit --error --exclude node_modules --exclude dist --exclude build .
 
+  secrets_scan:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Scan tracked source for leaked secrets (Gitleaks)
+          command: |
+            set -euo pipefail
+            VERSION=8.24.3
+            curl -fsSL "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz" -o /tmp/gitleaks.tgz
+            mkdir -p /tmp/gitleaks-bin
+            tar -xzf /tmp/gitleaks.tgz -C /tmp/gitleaks-bin gitleaks
+            /tmp/gitleaks-bin/gitleaks dir --redact --exit-code 1 .
+
+  trivy_scan:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Trivy dependency and config scanning
+          command: |
+            set -euo pipefail
+            curl -fsSL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh -o /tmp/trivy-install.sh
+            sh /tmp/trivy-install.sh -b /tmp v0.67.2
+            /tmp/trivy fs --scanners vuln,misconfig --severity HIGH,CRITICAL --exit-code 1 --skip-dirs node_modules --skip-dirs dist .
+
+  postgres_schema:
+    docker:
+      - image: cimg/node:22.14
+        environment:
+          DATABASE_URL: postgresql://circleci:circleci@localhost:5432/ci_validation?schema=public
+      - image: cimg/postgres:16.6
+        environment:
+          POSTGRES_USER: circleci
+          POSTGRES_PASSWORD: circleci
+          POSTGRES_DB: ci_validation
+    resource_class: small
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - npm-v1-{{ checksum "package-lock.json" }}
+      - run:
+          name: Install app dependencies and generate Prisma
+          command: npm ci --no-audit --no-fund && npx prisma generate
+      - run:
+          name: Validate isolated PostgreSQL schema
+          command: |
+            set -euo pipefail
+            npx prisma validate
+            for i in $(seq 1 30); do
+              if node -e 'const n=require("net").connect(5432,"127.0.0.1"); n.on("connect",()=>process.exit(0));n.on("error",()=>process.exit(1))'; then break; fi
+              sleep 2
+            done
+            npx prisma db push --skip-generate
+            npx prisma db pull --print > /tmp/verified-prisma-schema.prisma
+
+  railway_health:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    steps:
+      - run:
+          name: Read-only Railway health endpoint verification
+          command: |
+            set -euo pipefail
+            if [ -z "${RAILWAY_HEALTH_URL:-}" ]; then
+              echo "SKIPPED: configure RAILWAY_HEALTH_URL for the deployed application's health endpoint"
+              exit 0
+            fi
+            case "$RAILWAY_HEALTH_URL" in https://*) ;; *) echo "Only HTTPS health URLs are allowed"; exit 1;; esac
+            curl --fail --silent --show-error --location --max-time 20 --retry 3 "$RAILWAY_HEALTH_URL" > /dev/null
+
 workflows:
   verify_pull_requests_and_main:
     jobs:
@@ -170,3 +247,10 @@ workflows:
       - source_quality
       - browser_smoke
       - semgrep_security
+      - secrets_scan
+      - trivy_scan
+      - postgres_schema
+      - railway_health:
+          filters:
+            branches:
+              only: main
