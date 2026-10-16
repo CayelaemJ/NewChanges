@@ -15,8 +15,10 @@ admin's SQL source connection and TLS mode, while hardcoding
   connection, TLS settings and schedule.
 - One-time source bootstrap is available only by an explicit, manual command
   with `ALLOW_INITIAL_SOURCE_BOOTSTRAP=YES_I_APPROVE` and
-  `SOURCE_SQL_SSL=true`, restricted non-root credentials and a verified
-  certificate. The bootstrap only fills an unconfigured source; it refuses
+  `SOURCE_SQL_SSL=true`, restricted non-root credentials supplied with the server-side
+  `SOURCE_SQL_PASSWORD` secret and a verified certificate. The bootstrap
+  leaves `IntegrationConfig.sqlPassword` NULL instead of persisting a new
+  plaintext source password. The bootstrap only fills an unconfigured source; it refuses
   to overwrite established source settings or scheduling.
 - No SQL source change or `IntegrationConfig` data correction is applied
   by merging this PR. All future changes require authenticated Admin
