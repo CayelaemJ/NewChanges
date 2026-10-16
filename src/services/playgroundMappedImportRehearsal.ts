@@ -31,7 +31,10 @@ export async function rehearseMappedMysqlImport(input:PlaygroundMappedMysqlRehea
  if(!Number.isSafeInteger(input.pageSize)||input.pageSize<1||input.pageSize>250||
    !Number.isSafeInteger(input.maxRowsPerFeed)||input.maxRowsPerFeed<1||
    !Number.isSafeInteger(input.maxBytesPerFeed)||input.maxBytesPerFeed<1||
-   !Number.isSafeInteger(input.maxPagesPerFeed)||input.maxPagesPerFeed<1)
+   !Number.isSafeInteger(input.maxPagesPerFeed)||input.maxPagesPerFeed<1||
+   !Number.isSafeInteger(input.maxTotalRows)||input.maxTotalRows<1||
+   !Number.isSafeInteger(input.maxTotalBytes)||input.maxTotalBytes<1||
+   !Number.isSafeInteger(input.maxTotalPages)||input.maxTotalPages<1)
   throw new Error("Invalid Playground feed budgets");
  // Reserve an upper bound before making a network connection.
  const allocations={
