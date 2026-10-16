@@ -132,3 +132,27 @@ Next: read-only metadata discovery, reviewable mapping preview with sampled
 canonical validation, adapter query compilation restricted to allowlisted
 source objects, source snapshot consistency, deterministic natural-key
 ordering, byte/write caps and Playground ten-feed integration.
+
+## Bounded source metadata discovery and mapping preview
+
+`canonicalSchemaDiscovery.ts` now plans read-only `information_schema.columns`
+queries for MySQL, PostgreSQL and SQL Server. Schema names are bound parameters
+and discovery caps at 5,000 column metadata records. The helper validates
+mapped source table and field names against a returned catalogue, generates a
+review-only field preview, and offers **name-only** suggestions; it does not
+infer business meaning, source identity, tenancy, chronology or relationships.
+Review outcomes never enable execution or publication.
+
+This is a pure planner, not a working remote-database discovery endpoint.
+The next implementation must execute these queries with least-privilege
+credentials and a hard timeout, fail when the metadata limit is exceeded,
+and provide an authenticated Admin review of selected source objects.
+Before data movement, sample-validate mapped fields against canonical
+contracts and require explicit approval of tenant identifiers and date
+semantics. For sources without the necessary business fields, report gaps
+rather than fabricate values.
+
+The legacy SQL adapter still requires canonical views until an approved
+mapping is compiled into allowlisted source queries. Source byte, Neon-write,
+resident-size and transfer-cost budgets must become mandatory enforcement in
+that execution path. Never move hundreds of gigabytes into Neon by default.
