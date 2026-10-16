@@ -389,7 +389,11 @@ app.post<{ Body: { name?: unknown; email?: unknown; organisation?: unknown; mess
     await sendMail({
       to: CONTACT_EMAIL, replyTo: email,
       subject: `Portal contact request from ${name.replace(/[\r\n]+/g, " ")}`,
-      html: `<div style="font-family:Arial,sans-serif;color:#241536"><h2 style="color:#32217c">New contact request</h2><p><b>Name:</b> ${e(name)}<br><b>Email:</b> ${e(email)}<br><b>Organisation:</b> ${e(organisation || "—")}</p><p style="white-space:pre-wrap">${e(message)}</p></div>`,
+      html: [
+        '<div style="font-family:Arial,sans-serif;color:#241536"><h2 style="color:#32217c">New contact request</h2><p><b>Name:</b> ',
+        e(name), '<br><b>Email:</b> ', e(email), '<br><b>Organisation:</b> ', e(organisation || "—"),
+        '</p><p style="white-space:pre-wrap">', e(message), "</p></div>",
+      ].join(""),
     });
     return { ok: true };
   } catch (err) {
