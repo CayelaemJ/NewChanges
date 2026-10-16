@@ -19,4 +19,15 @@ assert.equal(planReplacementStaging({...base,employerMapping:{OLD:"WRONG"}}).val
 assert.equal(planReplacementStaging({...base,employerMapping:{}}).validForStagingReview,false);
 assert.equal(planReplacementStaging({...base,existingEmployerIds:["OLD","OLD2"],employerMapping:{OLD:"NEW"}}).validForStagingReview,false);
 assert.equal(planReplacementStaging({...base,feeds:base.feeds.slice(1)}).validForStagingReview,false);
-console.log("Different-source staging dry-run protections passed");
+const estimated=LOAD_ORDER.map(reportKey=>({reportKey,rows:100,changedRows:2,averageBytesPerRow:1024}));
+const limited={feeds:estimated,caps:{maxSourceReadBytes:1000,maxNeonWriteBytes:100000,
+ maxNeonResidentBytes:100000,neonWriteAmplification:2,neonResidentAmplification:2}};
+const rejected=planReplacementStaging({...base,transferEstimate:limited});
+assert.equal(rejected.validForStagingReview,false);
+assert(rejected.issues.some(x=>x.includes("source transfer")));
+const accepted=planReplacementStaging({...base,transferEstimate:{...limited,
+ caps:{...limited.caps,maxSourceReadBytes:2000000}}});
+assert.equal(accepted.validForStagingReview,true);
+assert.equal(accepted.transferBudget?.approvedForExecution,false);
+assert.notEqual(accepted.planDigest,p.planDigest);
+console.log("Different-source staging and optional transfer budget dry-run protections passed");
