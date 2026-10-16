@@ -1,78 +1,54 @@
 #!/usr/bin/env node
-
 /**
- * Configure MySQL as the live data sync source.
- * Stores connection config in Postgres integrationConfig table.
- * Run once to set up MySQL → canonical views sync pipeline.
+ * One-time, consent-gated, non-destructive MySQL source bootstrap.
+ * Not invoked by deployment or background schedules.
+ * Operators should use the authenticated Admin connection workflow for
+ * existing sources or for any update to refresh cadence and source TLS.
  */
-
 import pg from "pg";
+const {Pool}=pg;
 
-const { Pool } = pg;
-
-const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) {
-  console.error("ERROR: DATABASE_URL not set");
-  process.exit(1);
+function readBootstrapConfig(env=process.env){
+ if(env.ALLOW_INITIAL_SOURCE_BOOTSTRAP!=="YES_I_APPROVE")
+  throw new Error("Source bootstrap requires explicit operator approval");
+ const host=env.MYSQLHOST??"",user=env.MYSQLUSER??"",
+  password=env.SOURCE_SQL_PASSWORD??"",database=env.MYSQLDATABASE??"";
+ const port=Number(env.MYSQLPORT??3306);
+ if(!host||!database||!user||!password||
+   !/^[a-zA-Z0-9_.-]{1,253}$/.test(host)||
+   !/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(database)||
+   !Number.isSafeInteger(port)||port<1||port>65535)
+  throw new Error("Incomplete or invalid restricted MySQL bootstrap configuration");
+ if(user.trim().toLowerCase()==="root")
+  throw new Error("Use a restricted read-only MySQL source user, not root");
+ if(env.SOURCE_SQL_SSL!=="true"||env.SOURCE_SQL_TRUST_SERVER_CERTIFICATE==="true")
+  throw new Error("Verified MySQL TLS must be explicitly enabled");
+ if(!env.DATABASE_URL)throw new Error("DATABASE_URL is required for source bootstrap");
+ return {host,port,database,user,password};
 }
-
-const mysqlHost = process.env.MYSQLHOST || "mysql.railway.internal";
-const mysqlPort = parseInt(process.env.MYSQLPORT || "3306", 10);
-const mysqlUser = process.env.MYSQLUSER || "root";
-const mysqlPassword = process.env.MYSQLPASSWORD;
-const mysqlDatabase = process.env.MYSQLDATABASE || "mysql";
-
-if (!mysqlPassword) {
-  console.error("ERROR: MYSQLPASSWORD not set");
-  process.exit(1);
+async function main(){
+ const config=readBootstrapConfig();
+ const pool=new Pool({connectionString:process.env.DATABASE_URL});
+ try{
+  const response=await pool.query(`
+   UPDATE "IntegrationConfig" SET
+      "enabled"=true,"sourceMode"='SQL',"sqlDialect"='MYSQL',
+      "sqlHost"=$1,"sqlPort"=$2,"sqlDatabase"=$3,
+      "sqlUsername"=$4,"sqlPassword"=NULL,"sqlSsl"=true,
+      "sqlTrustServerCertificate"=false
+   WHERE "id"='default'
+     AND ("sqlHost" IS NULL OR btrim("sqlHost")='')
+     AND ("sqlUsername" IS NULL OR btrim("sqlUsername")='')
+   RETURNING "id"`,
+   [config.host,config.port,config.database,config.user]);
+  if(response.rowCount===1)
+   console.log("Initial MySQL source configured without changing the saved refresh schedule.");
+  else
+   console.log("Existing source settings preserved; use authenticated Admin settings for changes.");
+ }finally{await pool.end();}
 }
-
-const pool = new Pool({ connectionString: databaseUrl });
-
-async function configureSync() {
-  const client = await pool.connect();
-  try {
-    console.log("🔧 Configuring MySQL as sync source...");
-    console.log(`   Host: ${mysqlHost}:${mysqlPort}`);
-    console.log(`   Database: ${mysqlDatabase}`);
-    console.log(`   User: ${mysqlUser}`);
-
-    const result = await client.query(
-      `
-      UPDATE "IntegrationConfig"
-      SET 
-        "enabled" = true,
-        "sourceMode" = 'SQL',
-        "sqlDialect" = 'MYSQL',
-        "sqlHost" = $1,
-        "sqlPort" = $2,
-        "sqlDatabase" = $3,
-        "sqlUsername" = $4,
-        "sqlPassword" = $5,
-        "sqlSsl" = false,
-        "scheduleHours" = 1
-      WHERE id = 'default'
-      RETURNING *;
-      `,
-      [mysqlHost, mysqlPort, mysqlDatabase, mysqlUser, mysqlPassword]
-    );
-
-    if (result.rowCount === 0) {
-      console.log("❌ Failed to update integrationConfig");
-      process.exit(1);
-    }
-
-    console.log("✅ MySQL sync configured!");
-    console.log("   Sync is ENABLED and will run every 24 hours");
-    console.log("   To trigger sync now, POST to /api/admin/integration/sync");
-    process.exit(0);
-  } catch (err) {
-    console.error("❌ Configuration failed:", err.message);
-    process.exit(1);
-  } finally {
-    client.release();
-    await pool.end();
-  }
-}
-
-configureSync();
+main().catch(()=>{
+ // Never include source credentials, DB URLs or driver error details in logs.
+ console.error("Source bootstrap refused or failed. Check restricted operator logs.");
+ process.exitCode=1;
+});
