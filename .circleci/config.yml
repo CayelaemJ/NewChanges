@@ -69,6 +69,7 @@ jobs:
             npx tsx tests/canonical-schema-mapping.test.ts
             npx tsx tests/canonical-schema-discovery.test.ts
             npx tsx tests/canonical-mapped-keyset-sql.test.ts
+            npx tsx tests/bounded-dimension-cache.test.ts
             node scripts/replacement-dependency-audit-check.mjs
             npx tsx tests/semantic-shadow-provenance.test.ts
             npm run check:semantic-planner
