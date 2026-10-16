@@ -73,6 +73,7 @@ jobs:
             npx tsx tests/playground-mapped-staging-store.test.ts
             npx tsx tests/mapped-staging-recovery.test.ts
             npx tsx tests/playground-mysql-snapshot.test.ts
+            npx tsx tests/ten-canonical-mapped-playground.test.ts
             npx tsx tests/bounded-dimension-cache.test.ts
             npx tsx tests/monitoring-query-regression.test.ts
             node scripts/replacement-dependency-audit-check.mjs
