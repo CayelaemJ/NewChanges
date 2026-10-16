@@ -18,6 +18,32 @@ export function buildSourceMetadataQuery(dialect:DiscoveryDialect,schema:string,
   " ORDER BY table_name ASC, ordinal_position ASC"+limit;
  return {sql,params:[schema,maxColumns] as readonly (string|number)[],readOnly:true as const};
 }
+/**
+ * A catalogue exactly at its row cap might have been truncated. Fail closed:
+ * an incomplete column catalogue must never approve a schema mapping.
+ */
+export function validateDiscoveredCatalog(
+ rows:readonly DiscoveryColumn[], expectedSchema:string, maxColumns=5000,
+) {
+ const issues:string[]=[];
+ if(!ident.test(expectedSchema)||!Number.isSafeInteger(maxColumns)||maxColumns<1||maxColumns>5000)
+  issues.push("Invalid discovery bounds");
+ if(!Array.isArray(rows)||rows.length>=maxColumns)
+  issues.push("Metadata discovery reached its column budget; catalogue may be truncated");
+ const seen=new Set<string>();
+ for(const row of rows??[]){
+  if(!row||![row.schema,row.table,row.column].every(v=>typeof v==="string"&&ident.test(v))||
+    row.schema!==expectedSchema||
+    typeof row.dataType!=="string"||row.dataType.length<1||row.dataType.length>128||
+    typeof row.nullable!=="boolean"){
+    issues.push("Invalid source metadata row");continue;
+  }
+  const key=[row.schema,row.table,row.column].join(".").toLowerCase();
+  if(seen.has(key))issues.push("Duplicate discovered source column");
+  seen.add(key);
+ }
+ return {complete:issues.length===0,issues,readOnly:true as const,executionEnabled:false as const};
+}
 function normalized(input:string){return input.toLowerCase().replace(/[^a-z0-9]/g,"");}
 export function reviewMappingAgainstCatalog(mapping:CanonicalSchemaMapping,columns:readonly DiscoveryColumn[]){
  const base=validateCanonicalSchemaMapping(mapping);
