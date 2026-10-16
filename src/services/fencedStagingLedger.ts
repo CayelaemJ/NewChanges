@@ -43,6 +43,22 @@ export function createFencedStagingLedger(db:StagingSqlExecutor){
    if(rows.length!==1)throw new Error("Staging lease is held by another worker");
    return {generation,feed,owner,fence:toBigInt(rows[0].fence),version:toBigInt(rows[0].version)};
   },
+  async renew(lease:FencedLease,leaseSeconds=30):Promise<FencedLease>{
+   checkScope(lease.generation,lease.feed,lease.owner);
+   if(!Number.isSafeInteger(leaseSeconds)||leaseSeconds<10||leaseSeconds>120||
+      lease.fence<1n||lease.version<0n)throw new Error("Invalid lease renewal");
+   const sql=`UPDATE "MappedStagingCheckpoint"
+      SET "leaseExpiresAt"=now() + ($6::integer * interval '1 second')
+      WHERE "generation"=$1 AND "feed"=$2 AND "owner"=$3
+        AND "fence"=$4::bigint AND "version"=$5::bigint
+        AND "leaseExpiresAt">now()
+      RETURNING "version"`;
+   const result=await db.query<{version:unknown}>(sql,[
+    lease.generation,lease.feed,lease.owner,lease.fence.toString(),
+    lease.version.toString(),leaseSeconds]);
+   if(result.length!==1)throw new Error("Cannot renew expired or fenced-out lease");
+   return {...lease,version:toBigInt(result[0].version)};
+  },
   async commit(lease:FencedLease,receipt:FencedReceipt):Promise<FencedLease>{
    checkScope(lease.generation,lease.feed,lease.owner);
    if(receipt.generation!==lease.generation||receipt.feed!==lease.feed||
