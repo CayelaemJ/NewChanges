@@ -9,6 +9,7 @@
 
 import { IncomeBand, PrismaClient } from "@prisma/client";
 import { computeOptimiseScore, DEFAULT_WEIGHTS, DriverAvailability, ScoreInputs, Weights } from "./scoreEngine.js";
+import { createBoundedDimensionCache } from "./boundedDimensionCache.js";
 
 const prisma = new PrismaClient();
 
@@ -23,6 +24,9 @@ const SEMANTIC_PERSIST_ON_READ = process.env.SEMANTIC_PERSIST_ON_READ === "true"
 const DASHBOARD_CACHE_SCHEMA = "financial-comparison-v3";
 const dashboardCache = new Map<string, { expiresAt: number; payload: any }>();
 const PUBLISHED_DASHBOARD_CACHE_KEY = "__published_dashboard_v1__";
+// Historical DISTINCT site lookup is expensive on EmployeeVersion. Reuse only
+// this non-sensitive dimension for at most 60s, across dashboard filter variants.
+const siteDimensionCache = createBoundedDimensionCache<string[]>(60_000, 200);
 
 export interface PublishedDashboardState {
   dashboard: any;
@@ -373,10 +377,12 @@ async function feedCoverageForEmployer(
       where: { reportKey: { in: [...CORE_FEEDS] }, lastSuccessAt: { not: null } },
       select: { reportKey: true, lastSuccessAt: true },
     }),
-    prisma.importBatch.findMany({
+    // A grouped MAX avoids fetching and sorting every historic committed
+    // batch for each dashboard load. At most ten feed-coverage rows return.
+    prisma.importBatch.groupBy({
+      by: ["reportKey"],
       where: { status: "COMMITTED", reportKey: { in: [...CORE_FEEDS] }, employerRef: employerId },
-      orderBy: { committedAt: "desc" },
-      select: { reportKey: true, committedAt: true },
+      _max: { committedAt: true },
     }),
   ]);
 
@@ -386,11 +392,9 @@ async function feedCoverageForEmployer(
   }
 
   const importByFeed = new Map<string, Date>();
-  for (const batch of batches as any[]) {
+  for (const batch of batches) {
     if (!CORE_FEEDS.includes(batch.reportKey as CoreFeed)) continue;
-    if (!importByFeed.has(batch.reportKey)) {
-      importByFeed.set(batch.reportKey, batch.committedAt ?? new Date(0));
-    }
+    importByFeed.set(batch.reportKey, batch._max.committedAt ?? new Date(0));
   }
 
   const coverage = {} as Record<CoreFeed, FeedCoverageEntry>;
@@ -978,26 +982,31 @@ async function buildDashboardPayload(employerId: string, query: DashboardQuery =
   // Dimension members are independent of the selected cohort. This prevents
   // the region slicer from becoming a one-option control (e.g. "Absa") simply
   // because the current as-at period has no eligible rows for other sites.
-  const [allSiteRows, historicalSiteRows] = await Promise.all([
-    prisma.site.findMany({
-      where: { employerId },
-      select: { name: true },
-      orderBy: { name: "asc" },
-    }),
-    // Prisma distinct de-duplicates in the client and transfers every historical
-    // EmployeeVersion row. Push DISTINCT into PostgreSQL to avoid massive egress.
-    prisma.$queryRaw<Array<{ siteName: string }>>`
-      SELECT DISTINCT ev."siteName"
-      FROM "EmployeeVersion" ev
-      JOIN "Employee" e ON e.id = ev."employeeId"
-      WHERE e."employerId" = ${employerId}
-        AND ev."siteName" IS NOT NULL
-      ORDER BY ev."siteName" ASC
-    `,
-  ]);
+  const knownSites = await siteDimensionCache.get(employerId, async () => {
+    const [allSiteRows, historicalSiteRows] = await Promise.all([
+      prisma.site.findMany({
+        where: { employerId },
+        select: { name: true },
+        orderBy: { name: "asc" },
+      }),
+      // Server-side DISTINCT limits network transfer; the short-lived
+      // dimension cache now avoids repeating this expensive historical scan.
+      prisma.$queryRaw<Array<{ siteName: string }>>`
+        SELECT DISTINCT ev."siteName"
+        FROM "EmployeeVersion" ev
+        JOIN "Employee" e ON e.id = ev."employeeId"
+        WHERE e."employerId" = ${employerId}
+          AND ev."siteName" IS NOT NULL
+        ORDER BY ev."siteName" ASC
+      `,
+    ]);
+    return [...new Set([
+      ...allSiteRows.map(row => row.name),
+      ...historicalSiteRows.map(row => row.siteName),
+    ].filter(Boolean))].sort();
+  });
   const sites = [...new Set([
-    ...allSiteRows.map((row: any) => row.name),
-    ...historicalSiteRows.map((row: any) => row.siteName),
+    ...knownSites,
     ...eligibleEmployees.map((employee: any) => employee.site?.name),
   ].filter(Boolean))].sort();
   for (const siteName of sites) {
@@ -1680,6 +1689,7 @@ export async function snapshotEmployer(employerId: string, period: string = curr
   // rebuilds it from the authoritative source tables.
   await prisma.dashboardCohortCache.deleteMany({ where: { employerId, cacheKey: { not: PUBLISHED_DASHBOARD_CACHE_KEY } } });
   for (const k of [...dashboardCache.keys()]) if (k.includes(`,"${employerId}",`)) dashboardCache.delete(k);
+  siteDimensionCache.invalidate(employerId);
   const payload: any = await buildDashboardPayload(employerId, { period });
   const persisted = await persistScoreSnapshot(employerId, period, payload);
   if (persisted) {

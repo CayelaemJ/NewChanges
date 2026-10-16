@@ -413,8 +413,8 @@
       </div>
 
       <!-- import history -->
-      <div class="card section-gap">
-        <div class="card-hd"><h2>Import history</h2><div class="note">Live updates every 1.5s · Rows show validated totals and how many changes have actually reached live tables</div></div>
+      <div class="card section-gap" id="import-history-card">
+        <div class="card-hd"><h2>Import history</h2><div class="note">Refreshes every 30s while in view · Import jobs update immediately · Rows show validated totals and live changes</div><button class="btn btn-sm" type="button" onclick="loadHistory()">Refresh</button></div>
         <div class="card-bd" style="padding:6px 8px 12px;">
           <table class="hist"><thead><tr><th>Report</th><th>File</th><th>Rows</th><th>Status</th><th>When</th><th>Download</th><th></th></tr></thead>
           <tbody id="hist-body"><tr><td colspan="7" class="muted" style="padding:14px;">No imports yet.</td></tr></tbody></table>
@@ -2285,10 +2285,16 @@ function installCompactCollapse(){
   });
 }
 window.addEventListener("load", () => boot(), { once: true });
+// Avoid issuing an entire import-history query every 1.5 seconds merely
+// because an admin tab is open. Active import jobs already call loadHistory().
 window.setInterval(() => {
   if(document.visibilityState !== 'visible') return;
+  const card=document.getElementById('import-history-card');
+  if(!card) return;
+  const box=card.getBoundingClientRect();
+  if(box.bottom<=0 || box.top>=window.innerHeight) return;
   loadHistory();
-}, 1500);
+}, 30000);
 window.setInterval(() => {
   if(document.visibilityState !== 'visible') return;
   Promise.allSettled([loadAdminSecuritySummary(), loadComplianceSummary()]);

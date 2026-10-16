@@ -15,7 +15,7 @@ const checks = [
   [admin.includes("new XMLHttpRequest()") && admin.includes("xhr.upload.addEventListener('progress'"), "file upload reports browser upload progress"],
   [admin.includes("new EventSource(") && admin.includes("/api/admin/events?jobId="), "job progress uses SSE"],
   [admin.includes("return fallbackPoll()"), "job progress retains polling fallback"],
-  [admin.includes("loadHistory();\n}, 1500)") && admin.includes("history-row-detail") && admin.includes("COMMITTING"), "Import history refreshes itself and distinguishes validated from live commit progress"],
+  [admin.includes("}, 30000);") && admin.includes("id=\"import-history-card\"") && admin.includes("if(box.bottom<=0 || box.top>=window.innerHeight) return;") && !admin.includes("}, 1500);") && admin.includes("history-row-detail") && admin.includes("COMMITTING"), "Import history polls only when visible at low frequency, retains manual refresh and live commit progress"],
   [admin.includes("Processed live:") && admin.includes("Source view:") && admin.includes("Validated:"), "SQL live progress exposes source, validated and processed row counts"],
   [server.includes('job.status === "PENDING" || job.status === "PROCESSING"') && server.includes("detail: job.detail ?? null"), "polling endpoints keep in-progress jobs live with row detail"],
   [server.includes('/api/admin/events') && server.includes('text/event-stream'), "authenticated SSE endpoint exists"],
