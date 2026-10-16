@@ -38,6 +38,16 @@ const normalizedStamp=(v:unknown):string=>{
  return v;
 };
 const validIdentity=(s:string)=>/^[A-Za-z0-9_-]{1,128}$/.test(s);
+function normalizeNaturalKey(value:unknown,fieldType:string):string|number{
+ if(value instanceof Date){
+  if(!Number.isFinite(value.getTime())||!(fieldType==="date"||fieldType==="datetime"))
+   throw new Error("Invalid source natural-key date");
+  return fieldType==="date"?value.toISOString().slice(0,10):value.toISOString();
+ }
+ if(typeof value==="string"&&value.length>0&&value.length<=2048)return value;
+ if(typeof value==="number"&&Number.isSafeInteger(value))return value;
+ throw new Error("Missing or invalid source natural key");
+}
 /** A caller cannot confuse a keyset cursor from one feed with another. */
 export async function extractMappedFeedToStaging(input:MappedFeedRun){
  const {mapping,catalog,dialect,feed,reader,sink}=input;
@@ -79,10 +89,8 @@ export async function extractMappedFeedToStaging(input:MappedFeedRun){
     if(!Object.prototype.hasOwnProperty.call(record,f.name)||record[f.name]==null)
       throw new Error("Missing required canonical source field: "+f.name);
    const updatedAt=normalizedStamp(record.source_updated_at);
-   const keys=format.naturalKey.map(k=>record[k]);
-   if(keys.some(k=>!(typeof k==="string"&&k.length>0&&k.length<=2048)&&
-    !(typeof k==="number"&&Number.isSafeInteger(k))))
-     throw new Error("Missing or invalid source natural key");
+   const keys=format.naturalKey.map(k=>normalizeNaturalKey(
+    record[k],format.fields.find(f=>f.name===k)?.type??"string"));
    // SQL driver keyset order is authoritative; require forward timestamp
    // progress, and reject identical cursor tuples to avoid stuck replays.
    if(previous&&Date.parse(updatedAt)<Date.parse(previous.updatedAt))
