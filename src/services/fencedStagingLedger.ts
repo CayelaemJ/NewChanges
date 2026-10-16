@@ -68,7 +68,7 @@ export function createFencedStagingLedger(db:StagingSqlExecutor){
       receipt.objectKey!==`semantic/staging/${receipt.generation}/${receipt.snapshotId}/${receipt.feed}/${receipt.sha256}.json`||
       !receipt.cursor||typeof receipt.cursor!=="object"||Array.isArray(receipt.cursor)||
       typeof receipt.cursor.updatedAt!=="string"||
-      !/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?Z$/.test(receipt.cursor.updatedAt)||
+      !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z$/.test(receipt.cursor.updatedAt)||
       !Number.isFinite(Date.parse(receipt.cursor.updatedAt))||
       !Array.isArray(receipt.cursor.keys)||
       receipt.cursor.keys.length!==getFormat(lease.feed)!.naturalKey.length||
