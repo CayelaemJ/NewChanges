@@ -1,0 +1,33 @@
+import assert from "node:assert/strict";
+import {mkdtemp,rm,readFile,writeFile} from "node:fs/promises";
+import {tmpdir} from "node:os";
+import {join} from "node:path";
+import {createHash} from "node:crypto";
+import {createPlaygroundMappedStagingStore} from "../src/services/playgroundMappedStagingStore.js";
+const root=await mkdtemp(join(tmpdir(),"mapped-staging-"));
+try{
+ const {sink,readCheckpoint}=createPlaygroundMappedStagingStore(root);
+ const rows=[{source_updated_at:"2026-10-16T12:00:00Z",employer_ref:"A"}];
+ const cursor={updatedAt:"2026-10-16T12:00:00Z",keys:["A"]};
+ const digest=createHash("sha256").update(JSON.stringify(rows)).digest("hex");
+ const input={generation:"g1",snapshotId:"snap1",feed:"employers",rows,after:cursor,pageDigest:digest};
+ assert.equal(await readCheckpoint("g1","snap1","employers"),null);
+ await sink.commitPage(input);
+ const saved=await readCheckpoint("g1","snap1","employers");
+ assert.equal(saved?.sequence,1);
+ assert.equal(saved?.cursor.keys[0],"A");
+ await sink.commitPage(input);
+ assert.equal((await readCheckpoint("g1","snap1","employers"))?.sequence,1);
+ await assert.rejects(sink.commitPage({...input,pageDigest:"a".repeat(64)}),/Conflicting page/);
+ const next={...input,after:{...cursor,keys:["B"]},rows:[{...rows[0],employer_ref:"B"}]};
+ next.pageDigest=createHash("sha256").update(JSON.stringify(next.rows)).digest("hex");
+ await sink.commitPage(next);
+ assert.equal((await readCheckpoint("g1","snap1","employers"))?.sequence,2);
+ const final=await readCheckpoint("g1","snap1","employers");
+ const path=join(root,"g1","snap1","employers",final!.pageFile);
+ await writeFile(path,"corruption");
+ await assert.rejects(readCheckpoint("g1","snap1","employers"),/corrupted/);
+ await assert.rejects(sink.commitPage({...input,generation:"../bad"}),/Invalid staging identity/);
+ assert.throws(()=>createPlaygroundMappedStagingStore(root,50*1024*1024),/limit/);
+ console.log("Durable Playground staging: checkpoint resume, retry, lineage and corruption checks passed");
+}finally{await rm(root,{recursive:true,force:true});}
