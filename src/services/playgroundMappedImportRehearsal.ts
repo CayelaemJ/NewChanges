@@ -5,6 +5,7 @@ import {validateCanonicalSchemaMapping,type CanonicalSchemaMapping} from "./cano
 import {openPlaygroundMysqlSnapshot,type PlaygroundMysqlSource} from "./playgroundMysqlSnapshot.js";
 import {createPlaygroundMappedStagingStore} from "./playgroundMappedStagingStore.js";
 import {extractTenMappedFeeds} from "./canonicalMappedStagingRunner.js";
+import type {DiscoveryColumn} from "./canonicalSchemaDiscovery.js";
 
 export interface PlaygroundMappedMysqlRehearsal {
  approvedForPlayground:true;
@@ -50,7 +51,7 @@ export async function rehearseMappedMysqlImport(input:PlaygroundMappedMysqlRehea
  const source=await openPlaygroundMysqlSnapshot(input.source);
  try{
   const schemas=[...new Set(input.mapping.feeds.map(f=>f.sourceTable.split(".")[0]))];
-  const catalog=[];
+  const catalog:DiscoveryColumn[]=[];
   for(const schema of schemas)catalog.push(...await source.discoverColumns(schema));
   const store=createPlaygroundMappedStagingStore(input.stagingRoot);
   const stage=await extractTenMappedFeeds(feed=>({
