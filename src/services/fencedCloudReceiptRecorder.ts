@@ -11,6 +11,7 @@ export async function createFencedCloudReceiptRecorder(
  const ledger=createFencedStagingLedger(db);
  let lease:FencedLease=await ledger.acquire(generation,feed,owner,leaseSeconds);
  let writing=false;
+ let lastLeaseTouch=Date.now();
  return {
   async recordReceipt(receipt:CloudPageReceipt){
    if(writing)throw new Error("Concurrent staging receipts are forbidden");
@@ -23,6 +24,11 @@ export async function createFencedCloudReceiptRecorder(
      objectKey:receipt.objectKey,sha256:receipt.sha256,
      cursor:receipt.cursor,expectedVersion:lease.version,
     };
+    // Refresh only when needed to avoid extra Neon queries per page.
+    if(Date.now()-lastLeaseTouch>=Math.max(1000,Math.floor(leaseSeconds*1000/3))){
+     lease=await ledger.renew(lease,leaseSeconds);
+     lastLeaseTouch=Date.now();
+    }
     lease=await ledger.commit(lease,candidate);
    }finally{writing=false;}
   },
