@@ -353,3 +353,20 @@ NOT a production throughput design. For production-sized imports, validate
 provider-supported SHA-256 integrity metadata / conditional HEAD checks and
 measure byte charges before reducing full readbacks; do not silently weaken
 integrity guarantees to save costs.
+
+## Operator-driven read-only source rehearsal (not enabled by default)
+
+A guarded command, `npx tsx scripts/rehearse-mapped-mysql.ts mapping.json`,
+now exists for Testing or Playground only. It requires explicit
+`PLAYGROUND_MAPPED_SOURCE_APPROVED=yes`, matching
+`RAILWAY_ENVIRONMENT_NAME`, TLS-only non-root MySQL credentials under
+`PLAYGROUND_MYSQL_HOST`, `PLAYGROUND_MYSQL_DATABASE`,
+`PLAYGROUND_MYSQL_USER`, `PLAYGROUND_MYSQL_PASSWORD`, and an explicit
+`PLAYGROUND_SOURCE_WATERMARK` UTC instant. A reviewed ten-feed mapping JSON
+under 256 KiB must be supplied. The command caps rehearsal network/source
+rows and bytes and writes only isolated local staging objects; it never
+publishes Neon data. Do not use production credentials or source servers.
+
+It has NOT been executed against an actual customer source. Running it in
+Railway Testing requires configuring a restricted read-only source account,
+reviewed mapping and stage directory, and assessing the source query indexes.
