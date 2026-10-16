@@ -82,4 +82,19 @@ retrograde.reader={snapshotId:"snap_1",snapshotConsistent:true,queryReadOnly:asy
 retrograde.sink={commitPage:async()=>{retrogradeWrites++;}};
 await assert.rejects(extractMappedFeedToStaging(retrograde),/out of order/);
 assert.equal(retrogradeWrites,0);
+const historicalDate=plan("employees");
+const historicalFormat=getFormat("employees")!;
+const datedRow=Object.fromEntries(historicalFormat.fields.filter(f=>f.required).map(f=>[
+ f.name,f.name==="source_updated_at"?new Date("2026-10-16T12:00:00Z"):
+ f.name==="observed_at"?new Date("2026-10-15T00:00:00Z"):"k"
+]));
+let receivedCursor:string|number|undefined;
+let servedHistorical=false;
+historicalDate.reader={snapshotId:"snap_1",snapshotConsistent:true,
+ queryReadOnly:async()=>servedHistorical?[]:(servedHistorical=true,[datedRow])};
+historicalDate.sink={commitPage:async receipt=>{
+ receivedCursor=receipt.after.keys[receipt.after.keys.length-1];
+}};
+assert.equal((await extractMappedFeedToStaging(historicalDate)).rowsCommitted,1);
+assert.equal(receivedCursor,"2026-10-15");
 console.log("Mapped SQL executor staging: ten feeds, ordering, budgets, and fail-closed writes passed");
