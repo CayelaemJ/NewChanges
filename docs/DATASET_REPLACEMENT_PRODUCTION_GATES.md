@@ -27,3 +27,21 @@ does not extract, mutate, publish, delete, switch sources, or enable workers.
 
 Creates only temporary local files; checks ten feed readback, deletion,
 corruption, symlink denial, and path traversal. Cleans up after execution.
+
+## Transfer and Neon capacity planning (read-only)
+
+`reviewTenFeedTransferBudget` accepts exactly ten canonical feed estimates with
+estimated row sizes and changed-row counts. It rejects unsafe numeric overflow,
+missing or duplicate feeds, excessive total source bytes, and amplified Neon
+write/resident-storage projections. A replacement staging dry run can now include
+this estimate to explain rejections. This is NOT a production import guard.
+
+**The dry-run transfer estimate remains optional for backwards compatibility.**
+Before enabling execution, make source-derived byte estimates and operator-defined
+caps mandatory, measure source query and egress volume, and check free Neon
+capacity and WAL/index amplification. Do not equate 500 GB of historical source
+data with the amount that needs to be persisted to Neon: prefer source-side
+aggregation and incremental watermarks, with deletion/backfill reconciliation.
+Never assert that a 500 GB source can fit on a small Neon instance without a
+representative canary and verified compact data model. No import is approved
+by these planning helpers.
