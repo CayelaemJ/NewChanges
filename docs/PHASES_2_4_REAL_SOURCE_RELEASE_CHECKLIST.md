@@ -67,3 +67,34 @@ was checked. Do not connect Testing to the Production database as a shortcut.
 
 This checklist does not assert that the staged test modules automatically
 perform Phase 2–4. It documents what is still required to claim completion.
+
+## Staged Railway Testing preparation (not applied)
+
+A **Testing-only** pending Railway patch now contains:
+- empty NewChanges-Testing-Rehearsal service definition;
+- private S3-compatible newchanges-semantic-testing bucket in Amsterdam.
+
+Patch ID: `93eebc77-26f3-4d19-b0de-8df280a0585b`.
+Both resources remain **staged-create**, have no running worker and have
+not been provisioned or deployed. The operator must review future charges,
+link the app's GitHub source, wire restricted credentials without copying
+Production secrets, and apply the patch explicitly before any real rehearsal.
+Do not equate this patch with Phase 2 completion.
+
+## Approved operator CLI (no production activation)
+
+`npx tsx scripts/run-approved-mapped-rehearsal.ts <approved-mapping.json>`
+
+The command is guarded by the existing `guardedMappedMysqlRehearsal`
+module. It requires an explicitly approved source mapping, Testing or
+Playground Railway environment, a restricted non-root MySQL user, TLS,
+a UTC source watermark, bounded page sizes, and a max 64 MiB exploratory
+transfer reservation. It exits without connecting if required approvals or
+validations are absent. It does not modify a source, Neon, scheduler or
+production source configuration. The operator must verify employer identity,
+business field meaning and legal data-handling approvals first.
+
+The command currently stages to **local isolated filesystem**; it is not
+the full cloud-backed recovery proof. The production cutover gate remains
+closed until real cloud checkpoint replay and semantic publication are
+demonstrated. Never supply credentials in a checked-in JSON mapping.
