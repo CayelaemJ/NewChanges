@@ -45,16 +45,12 @@ if (status !== 0) {
   process.exit(status);
 }
 
-// ── Configure MySQL as live data sync source if credentials are available ──
-if (process.env.MYSQLHOST && process.env.MYSQLUSER && process.env.MYSQLPASSWORD && process.env.MYSQLDATABASE) {
-  console.log("\n📡 Configuring MySQL as live data sync source...");
-  const syncStatus = spawnSync("node", ["scripts/configure-mysql-sync.mjs"], { stdio: "inherit" });
-  if (syncStatus.status !== 0) {
-    console.warn("⚠️  MySQL sync configuration skipped (credentials incomplete or connection failed)");
-  }
-}
+// Source selection, TLS, scheduling and credentials are operator-managed
+// settings. Never reset them automatically merely because a deploy carries
+// MYSQL* environment variables. This used to undo Admin changes on every deploy.
+console.log("Source sync settings preserved; no automatic MySQL reconfiguration.");
 
-// ── Apply the core server-side bulk upsert procedures on every deploy. ──
+// // ── Apply the core server-side bulk upsert procedures on every deploy. ──
 // These are CREATE OR REPLACE functions and are the normal fast path for API/SQL
 // integration syncs. Without them the app falls back to the much slower 1k-row
 // Prisma commit path, which is not acceptable for 100k+ row source tables.
