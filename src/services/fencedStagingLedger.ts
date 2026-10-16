@@ -1,7 +1,7 @@
 // Candidate PostgreSQL checkpoint-ledger adapter, isolated from live imports.
 // The table is NOT automatically migrated or used by production. All ledger
 // transitions are atomic database statements with monotonic fencing tokens.
-import {LOAD_ORDER} from "./reportFormats.js";
+import {LOAD_ORDER,getFormat} from "./reportFormats.js";
 import type {KeysetCursor} from "./datasetReplacementKeysetSql.js";
 export interface StagingSqlExecutor{
  query<T extends Record<string,unknown>>(sql:string,params:readonly unknown[]):Promise<readonly T[]>;
@@ -67,15 +67,29 @@ export function createFencedStagingLedger(db:StagingSqlExecutor){
       typeof receipt.objectKey!=="string"||
       receipt.objectKey!==`semantic/staging/${receipt.generation}/${receipt.snapshotId}/${receipt.feed}/${receipt.sha256}.json`||
       !receipt.cursor||typeof receipt.cursor!=="object"||Array.isArray(receipt.cursor)||
+      typeof receipt.cursor.updatedAt!=="string"||
+      !/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?Z$/.test(receipt.cursor.updatedAt)||
+      !Number.isFinite(Date.parse(receipt.cursor.updatedAt))||
+      !Array.isArray(receipt.cursor.keys)||
+      receipt.cursor.keys.length!==getFormat(lease.feed)!.naturalKey.length||
+      receipt.cursor.keys.some(k=>typeof k==="string"?k.length<1||k.length>2048:
+        typeof k!=="number"||!Number.isSafeInteger(k))||
       lease.fence<1n||lease.version<0n)
     throw new Error("Invalid or foreign staged receipt");
    const sql=`UPDATE "MappedStagingCheckpoint"
-      SET "version"="version"+1,"snapshotId"=$6,"objectKey"=$7,
+      SET "version"=CASE WHEN "objectKey"=$7 AND "sha256"=$8
+            AND "cursor"=$9::jsonb THEN "version"
+            ELSE "version"+1 END,"snapshotId"=$6,"objectKey"=$7,
           "sha256"=$8,"cursor"=$9::jsonb,"updatedAt"=now()
       WHERE "generation"=$1 AND "feed"=$2 AND "owner"=$3
         AND "fence"=$4::bigint AND "version"=$5::bigint
         AND "leaseExpiresAt">now()
         AND ("snapshotId" IS NULL OR "snapshotId"=$6)
+        AND ("cursor" IS NULL OR "cursor"<>$9::jsonb
+             OR ("objectKey"=$7 AND "sha256"=$8))
+        AND ("cursor" IS NULL OR
+             ("cursor"->>'updatedAt')::timestamptz <=
+             ($9::jsonb->>'updatedAt')::timestamptz)
       RETURNING "version"`;
    const rows=await db.query<{version:unknown}>(sql,[
     lease.generation,lease.feed,lease.owner,lease.fence.toString(),lease.version.toString(),

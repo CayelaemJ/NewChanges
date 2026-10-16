@@ -329,3 +329,15 @@ Cloud staging is still a *preproduction* primitive. A durable distributed
 receipt ledger with fencing/CAS, immutable-source resumption, and a real
 object-store rehearsal are required before any production cutover. Do not
 enable this from the live API or scheduler based solely on green unit tests.
+
+## Fenced checkpoint replay and chronological safety
+
+The candidate PostgreSQL receipt ledger now treats an identical object/cursor
+receipt as an idempotent replay (without incrementing its version), rejects
+conflicting content at the same cursor, and refuses a source timestamp that
+moves backwards. Every commit still requires the current owner, fencing token,
+checkpoint version, and nonexpired lease. The ledger validates natural-key
+arity and UTC timestamps before issuing SQL. This is a staging contract;
+production migration of the table is still NOT enabled. Equal-timestamp
+natural-key progression is checked in the bounded extraction runner; a live
+source still requires collation/snapshot compatibility verification.
