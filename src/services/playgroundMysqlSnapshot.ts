@@ -3,12 +3,14 @@
 // Bounded lifespan prevents long snapshot transactions on large source DBs.
 import {randomBytes} from "node:crypto";
 import type {MappedSqlReader} from "./canonicalMappedStagingRunner.js";
+import {buildSourceMetadataQuery,validateDiscoveredCatalog,type DiscoveryColumn} from "./canonicalSchemaDiscovery.js";
 
 export interface PlaygroundMysqlSource {
  host:string;port?:number;database:string;user:string;password:string;
  ssl:true;rejectUnauthorized:true;queryTimeoutMs?:number;
 }
 export interface PlaygroundMysqlSnapshot extends MappedSqlReader {
+ discoverColumns(schema:string,maxColumns?:number):Promise<DiscoveryColumn[]>;
  close():Promise<void>;
 }
 export async function openPlaygroundMysqlSnapshot(config:PlaygroundMysqlSource):Promise<PlaygroundMysqlSnapshot>{
@@ -36,6 +38,17 @@ export async function openPlaygroundMysqlSnapshot(config:PlaygroundMysqlSource):
  }catch(e){await connection.end().catch(()=>{});throw e;}
  return {
   snapshotId,snapshotConsistent:true,
+  async discoverColumns(schema,maxColumns=5000){
+   if(closed||Date.now()-openedAt>120_000)throw new Error("MySQL source snapshot expired");
+   const query=buildSourceMetadataQuery("MYSQL",schema,maxColumns);
+   const [raw]=await connection.query({sql:query.sql,timeout},[...query.params]);
+   if(!Array.isArray(raw))throw new Error("Invalid source metadata response");
+   const rows:DiscoveryColumn[]=raw.map((r:any)=>({schema:String(r.table_schema),table:String(r.table_name),
+    column:String(r.column_name),dataType:String(r.data_type),nullable:r.is_nullable==="YES"}));
+   const result=validateDiscoveredCatalog(rows,schema,maxColumns);
+   if(!result.complete)throw new Error("Incomplete source metadata: "+result.issues.join("; "));
+   return rows;
+  },
   async queryReadOnly(sql,params){
    if(closed||Date.now()-openedAt>120_000)throw new Error("MySQL source snapshot expired; restart the isolated rehearsal");
    if(!/^SELECT\s/i.test(sql)||/[;]|--|\/\*/.test(sql))
