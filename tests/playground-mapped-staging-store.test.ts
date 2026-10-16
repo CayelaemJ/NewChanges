@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {mkdtemp,rm,readFile,writeFile} from "node:fs/promises";
+import {mkdtemp,rm,mkdir,readFile,writeFile} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 import {createHash} from "node:crypto";
@@ -27,6 +27,14 @@ try{
  const path=join(root,"g1","snap1","employers",final!.pageFile);
  await writeFile(path,"corruption");
  await assert.rejects(readCheckpoint("g1","snap1","employers"),/corrupted/);
+ const orphanDir=join(root,"g2","snap1","employers");
+ await mkdir(orphanDir,{recursive:true});
+ const stagedObject=Buffer.from(JSON.stringify({rows,after:cursor,pageDigest:digest}));
+ const orphanName=createHash("sha256").update(stagedObject).digest("hex")+".json";
+ await writeFile(join(orphanDir,orphanName),"orphan-corrupted");
+ await assert.rejects(sink.commitPage({...input,generation:"g2"}),/Corrupted prior staging object/);
+ assert.equal(await readCheckpoint("g2","snap1","employers"),null);
+ await assert.rejects(sink.commitPage({...input,generation:"g3",pageDigest:"a".repeat(64)}),/digest does not match/);
  await assert.rejects(sink.commitPage({...input,generation:"../bad"}),/Invalid staging identity/);
  assert.throws(()=>createPlaygroundMappedStagingStore(root,50*1024*1024),/limit/);
  console.log("Durable Playground staging: checkpoint resume, retry, lineage and corruption checks passed");

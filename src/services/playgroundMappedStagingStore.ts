@@ -4,7 +4,8 @@
 // unreferenced page, never a checkpoint referring to incomplete bytes.
 // Single writer per (generation,snapshot,feed) required; no distributed lease.
 import {createHash} from "node:crypto";
-import {mkdir,open,readFile,rename,realpath,stat,unlink} from "node:fs/promises";
+import {mkdir,open,readFile,rename,realpath,unlink} from "node:fs/promises";
+import {constants} from "node:fs";
 import {join,resolve,sep} from "node:path";
 import type {MappedStagingSink} from "./canonicalMappedStagingRunner.js";
 import type {KeysetCursor} from "./datasetReplacementKeysetSql.js";
@@ -74,11 +75,24 @@ export function createPlaygroundMappedStagingStore(root:string,maximumPageBytes=
     if(previous.pageDigest===pageDigest)return; // Idempotent retry after crash.
     throw new Error("Conflicting page for committed checkpoint");
    }
+   if(hash(JSON.stringify(rows))!==pageDigest)
+    throw new Error("Playground staged page digest does not match rows");
    const encoded=Buffer.from(JSON.stringify({rows,after,pageDigest}),"utf8");
    if(encoded.byteLength>maximumPageBytes)throw new Error("Staging object byte budget exceeded");
    const contentHash=hash(encoded),pageFile=contentHash+".json",path=join(dir,pageFile);
    // Immutable content-addressed page. A failed write cannot advance a cursor.
-   try{await stat(path);}catch(e:any){
+   try{
+    // An orphan from a prior interrupted attempt is never trusted on name alone.
+    const existingFile=await open(path,constants.O_RDONLY|constants.O_NOFOLLOW|constants.O_NONBLOCK);
+    try{
+     const info=await existingFile.stat();
+     if(!info.isFile()||info.size>maximumPageBytes)
+      throw new Error("Untrusted or oversized prior staging object");
+     const existing=await existingFile.readFile();
+     if(existing.length!==encoded.length||hash(existing)!==contentHash)
+      throw new Error("Corrupted prior staging object");
+    }finally{await existingFile.close();}
+   }catch(e:any){
     if(e?.code!=="ENOENT")throw e;
     await atomicWrite(path,encoded);
    }
