@@ -90,3 +90,21 @@ reconciliation, and recovery tests. Existing offset-based `fetchReport`
 still buffers the full feed and must not be used for massive migrations.
 Source-side aggregates and verified change windows should be favoured over
 repeated full historical transfer.
+
+## Parameterized SQL keyset plan
+
+`buildCanonicalKeysetQuery` now creates read-only, parameterized SQL for
+PostgreSQL, MySQL and SQL Server, ordering each canonical view by
+`source_updated_at` and every field of its contracted natural key.
+This avoids OFFSET's positional drift and supports bounded page sizes.
+SQL identifiers derive only from the trusted canonical schema/format;
+runtime values are bound parameters. The planner has no credentials or
+connection and cannot execute an import.
+
+**Production gating:** A stable unique tie-breaker, snapshot isolation or
+CDC token, timestamp precision agreement across drivers, indexed query plans,
+and transactionally idempotent writes/checkpoints must be proven on real
+Playground sources. Within-feed ordering uses the last-update timestamp,
+while original event/effective dates remain intact for chronological
+reporting. The query planner does not by itself guarantee a consistent
+snapshot or make production migration safe.
