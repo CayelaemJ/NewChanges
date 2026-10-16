@@ -90,10 +90,13 @@ export async function extractMappedFeedToStaging(input:MappedFeedRun){
    if(previous&&Date.parse(updatedAt)===Date.parse(previous.updatedAt)){
     let order=0;
     for(let i=0;i<keys.length;i++){
-     if(keys[i]===previous.keys[i])continue;
-     if(typeof keys[i]!==typeof previous.keys[i])
-      throw new Error("Source keyset cursor changed type");
-     order=keys[i]<previous.keys[i]?-1:1;
+     const currentKey=keys[i],priorKey=previous.keys[i];
+     if(currentKey===priorKey)continue;
+     if(typeof currentKey==="string"&&typeof priorKey==="string")
+      order=currentKey<priorKey?-1:1;
+     else if(typeof currentKey==="number"&&typeof priorKey==="number")
+      order=currentKey<priorKey?-1:1;
+     else throw new Error("Source keyset cursor changed type");
      break;
     }
     if(order<=0)throw new Error("Source keyset cursor duplicated or out of order");
