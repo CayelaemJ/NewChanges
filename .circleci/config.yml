@@ -2,6 +2,28 @@ version: 2.1
 
 # CI independent of GitHub-hosted Actions billing.
 # Connect this private GitHub repository to CircleCI (free plan) to activate.
+# Reusable native CircleCI deployment marker.
+# Invoke this command *after* a real Railway deployment has succeeded, from
+# the job that performs or verifies the deploy. Never mark CI success as a deploy.
+commands:
+  record_railway_deploy:
+    description: Record an actual successful Railway deployment in CircleCI Deploys.
+    parameters:
+      environment:
+        type: string
+      component:
+        type: string
+        default: newchanges
+    steps:
+      - run:
+          name: Record successful Railway deployment marker
+          command: |
+            : "${CIRCLE_SHA1:?CircleCI commit SHA is required}"
+            circleci run release log \
+              --environment-name="<< parameters.environment >>" \
+              --component-name="<< parameters.component >>" \
+              --target-version="$CIRCLE_SHA1"
+
 jobs:
   admin_browser_smoke:
     docker:
