@@ -12,6 +12,9 @@ assert(bootstrap.includes('btrim("sqlHost")'));
 assert(bootstrap.includes('btrim("sqlUsername")'));
 assert(bootstrap.includes('restricted read-only MySQL'));
 assert(bootstrap.includes('SOURCE_SQL_SSL'));
+assert(bootstrap.includes('password=env.SOURCE_SQL_PASSWORD'));
+assert(bootstrap.includes('"sqlPassword"=NULL'));
+assert(!bootstrap.includes('password=env.MYSQLPASSWORD'));
 const check=spawnSync(process.execPath,[new URL("./configure-mysql-sync.mjs",import.meta.url).pathname],{
  encoding:"utf8",
  env:{...process.env,ALLOW_INITIAL_SOURCE_BOOTSTRAP:"",MYSQLPASSWORD:"NEVER_PRINT_THIS_TEST_SECRET"}
