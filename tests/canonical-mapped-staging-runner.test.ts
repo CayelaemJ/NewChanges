@@ -74,4 +74,12 @@ invalidPage.reader={snapshotId:"snap_1",snapshotConsistent:true,queryReadOnly:as
 invalidPage.sink={commitPage:async()=>{invalidPageCommits++;}};
 await assert.rejects(extractMappedFeedToStaging(invalidPage),/Invalid source timestamp/);
 assert.equal(invalidPageCommits,0);
+const retrograde=plan("employers");
+let retrogradeWrites=0;
+retrograde.reader={snapshotId:"snap_1",snapshotConsistent:true,queryReadOnly:async()=>[
+ rowFor("employers",1),rowFor("employers",0)
+]};
+retrograde.sink={commitPage:async()=>{retrogradeWrites++;}};
+await assert.rejects(extractMappedFeedToStaging(retrograde),/out of order/);
+assert.equal(retrogradeWrites,0);
 console.log("Mapped SQL executor staging: ten feeds, ordering, budgets, and fail-closed writes passed");
