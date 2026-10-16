@@ -43,7 +43,7 @@ async function openFullRefreshLease() {
       "SELECT pg_try_advisory_lock($1, $2) AS acquired",
       [FULL_REFRESH_LOCK_A, FULL_REFRESH_LEADER_LOCK_B],
     );
-    const acquired = Boolean(result.rows?.[0]?.acquired);
+    const acquired = result.rows?.[0]?.acquired;
     if (!acquired) {
       await client.end();
       return null;
