@@ -45,3 +45,23 @@ aggregation and incremental watermarks, with deletion/backfill reconciliation.
 Never assert that a 500 GB source can fit on a small Neon instance without a
 representative canary and verified compact data model. No import is approved
 by these planning helpers.
+
+## SQL page-consumption seam (PR #153)
+
+The SQL source adapter now exposes an optional `iterateReportPages()`
+async iterable. Each awaited iteration returns only one normalized SQL page;
+the caller controls backpressure by requesting the next page only after
+processing the previous page. It does not mutate databases or enable an
+importer. The legacy `fetchReport()` still aggregates all pages into memory.
+
+**Do not use the current OFFSET pagination as a resumable production
+checkpoint.** If source records are inserted, deleted, or updated during an
+OFFSET walk, ties on `source_updated_at` and shifting row positions can
+skip or duplicate records. The execution integration must use immutable
+snapshot isolation or keyset paging with a stable unique tie-breaker and
+source-generation-bound cursors, and must update the cursor only after
+durable writes. It must also enforce an overall transfer byte ceiling and
+apply backpressure across validation and Neon writes.
+
+No evidence of a 500 GB import, production streaming, or cost reduction is
+claimed by adding this interface.
