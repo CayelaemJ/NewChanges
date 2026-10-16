@@ -81,6 +81,7 @@ jobs:
             npx tsx tests/fenced-staging-ledger.test.ts
             npx tsx tests/fenced-cloud-receipt-recorder.test.ts
             npx tsx tests/ten-feed-cutover-gate.test.ts
+            npx tsx tests/approved-mapped-rehearsal-cli.test.ts
             npx tsx tests/cloud-receipt-fencing-integration.test.ts
             npx tsx tests/playground-mysql-rehearsal-config.test.ts
             npx tsx tests/bounded-dimension-cache.test.ts
