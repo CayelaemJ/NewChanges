@@ -107,14 +107,30 @@ export async function extractMappedFeedToStaging(input:MappedFeedRun){
 }
 
 /** Fail-closed dependency order; a failed feed blocks all downstream feeds. */
+export interface TenFeedBudget{maxTotalRows:number;maxTotalBytes:number;maxTotalPages:number}
+/** Optional aggregated budget is checked BEFORE extraction, not after expenses occur. */
 export async function extractTenMappedFeeds(
  makeRun:(feed:string)=>MappedFeedRun,
+ aggregate?:TenFeedBudget,
 ){
- const summaries=[];
- for(const feed of LOAD_ORDER){
-  const run=makeRun(feed);
-  if(run.feed!==feed)throw new Error("Mapped feed dependency order changed");
-  summaries.push(await extractMappedFeedToStaging(run));
+ const plans=LOAD_ORDER.map(feed=>makeRun(feed));
+ if(plans.some((p,i)=>p.feed!==LOAD_ORDER[i]))
+  throw new Error("Mapped feed dependency order changed");
+ if(aggregate){
+  if(!Number.isSafeInteger(aggregate.maxTotalRows)||aggregate.maxTotalRows<1||
+   !Number.isSafeInteger(aggregate.maxTotalBytes)||aggregate.maxTotalBytes<1||
+   !Number.isSafeInteger(aggregate.maxTotalPages)||aggregate.maxTotalPages<1)
+    throw new Error("Invalid aggregate mapped transfer budget");
+  // Reject a configuration whose worst-case total exceeds the approved cap
+  // before reading any source rows or creating any staging objects.
+  const sum=(field:"maxRows"|"maxBytes"|"maxPages")=>plans.reduce((n,p)=>n+p[field],0);
+  if(![sum("maxRows"),sum("maxBytes"),sum("maxPages")].every(Number.isSafeInteger)||
+    sum("maxRows")>aggregate.maxTotalRows||
+    sum("maxBytes")>aggregate.maxTotalBytes||
+    sum("maxPages")>aggregate.maxTotalPages)
+   throw new Error("Ten-feed transfer reservation exceeds approved budget");
  }
+ const summaries=[];
+ for(const run of plans)summaries.push(await extractMappedFeedToStaging(run));
  return {summaries,publicationEnabled:false as const};
 }
