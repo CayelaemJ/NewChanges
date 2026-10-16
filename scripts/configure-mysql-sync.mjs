@@ -12,7 +12,7 @@ function readBootstrapConfig(env=process.env){
  if(env.ALLOW_INITIAL_SOURCE_BOOTSTRAP!=="YES_I_APPROVE")
   throw new Error("Source bootstrap requires explicit operator approval");
  const host=env.MYSQLHOST??"",user=env.MYSQLUSER??"",
-  password=env.MYSQLPASSWORD??"",database=env.MYSQLDATABASE??"";
+  password=env.SOURCE_SQL_PASSWORD??"",database=env.MYSQLDATABASE??"";
  const port=Number(env.MYSQLPORT??3306);
  if(!host||!database||!user||!password||
    !/^[a-zA-Z0-9_.-]{1,253}$/.test(host)||
@@ -34,13 +34,13 @@ async function main(){
    UPDATE "IntegrationConfig" SET
       "enabled"=true,"sourceMode"='SQL',"sqlDialect"='MYSQL',
       "sqlHost"=$1,"sqlPort"=$2,"sqlDatabase"=$3,
-      "sqlUsername"=$4,"sqlPassword"=$5,"sqlSsl"=true,
+      "sqlUsername"=$4,"sqlPassword"=NULL,"sqlSsl"=true,
       "sqlTrustServerCertificate"=false
    WHERE "id"='default'
      AND ("sqlHost" IS NULL OR btrim("sqlHost")='')
      AND ("sqlUsername" IS NULL OR btrim("sqlUsername")='')
    RETURNING "id"`,
-   [config.host,config.port,config.database,config.user,config.password]);
+   [config.host,config.port,config.database,config.user]);
   if(response.rowCount===1)
    console.log("Initial MySQL source configured without changing the saved refresh schedule.");
   else
