@@ -292,3 +292,25 @@ source-side costs have been reviewed. For large datasets the 120-second
 transaction limit intentionally fails rather than silently retaining long
 source snapshots. A real-source canary and cloud object-store integration
 are still required.
+
+## Signed cloud page objects — still isolated
+
+`isolatedCloudPageSink.ts` now composes the existing private S3-compatible
+SigV4 broker with immutable, content-addressed pages under
+`semantic/staging/<generation>/<snapshot>/<feed>/<sha256>.json`.
+The sink checks the source-page digest, enforces a 16 MiB absolute page
+ceiling (default 2 MiB), uploads one page, fetches it back with a bounded
+reader, checks its length/SHA-256 and only then invokes the caller's
+`recordReceipt` callback. `boundedCloudStageHttp.ts` provides a separate
+30-second maximum timeout transport with no redirects, HTTPS-only signed URL
+requirements, and stream readback byte ceilings. Tests use in-memory
+transport; **no customer data or object was uploaded**.
+
+The receipt callback MUST be bound to an idempotent durable ledger protected
+by a distributed single-writer lease and generation/snapshot fencing before
+the sink is used across Railway and Render. Upload + GET verification alone
+does not atomically advance a production checkpoint. Object-store lifecycle
+cleanup, region-specific egress metering, access-control testing and recovery
+against a real bucket are outstanding. This path is not called by the
+production scheduler, API or live Neon writer. A 500 GB source remains
+outside Neon until separately approved, measured compact projections exist.
