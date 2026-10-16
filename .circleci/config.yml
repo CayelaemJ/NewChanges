@@ -82,6 +82,8 @@ jobs:
             npx tsx tests/dataset-replacement-staging.test.ts
             npx tsx tests/dataset-replacement-staging-plan.test.ts
             npx tsx tests/dataset-replacement-object-integrity.test.ts
+            npx tsx tests/dataset-replacement-manifest-review.test.ts
+            npx tsx tests/dataset-replacement-storage-review.test.ts
             node scripts/replacement-dependency-audit-check.mjs
             npx tsx tests/semantic-shadow-provenance.test.ts
             npm run check:semantic-planner
@@ -182,11 +184,71 @@ jobs:
           name: Scan JavaScript, TypeScript and security rules
           command: semgrep scan --config p/javascript --config p/typescript --config p/security-audit --error --exclude node_modules --exclude dist --exclude build .
 
+  source_quality:
+    docker:
+      - image: cimg/node:22.14
+    resource_class: small
+    working_directory: ~/newchanges
+    steps:
+      - checkout
+      - run:
+          name: Install app and frontend dependencies
+          command: npm ci --no-audit --no-fund && npm install --prefix frontend --no-audit --no-fund
+      - run:
+          name: Install standalone quality tooling
+          command: npm install --no-save --package-lock=false --no-audit --no-fund eslint@^9 @eslint/js@^9 globals@^16 @typescript-eslint/parser@^8 vitest@^3 @playwright/test@^1
+      - run:
+          name: ESLint
+          command: npm run quality:lint
+      - run:
+          name: TypeScript
+          command: npm run quality:types
+      - run:
+          name: Vitest unit tests
+          command: npm run quality:unit
+
+  browser_smoke:
+    docker:
+      - image: mcr.microsoft.com/playwright:v1.56.1-noble
+    resource_class: small
+    working_directory: ~/newchanges
+    steps:
+      - checkout
+      - run:
+          name: Install app and frontend dependencies
+          command: npm ci --no-audit --no-fund && npm install --prefix frontend --no-audit --no-fund
+      - run:
+          name: Install Playwright
+          command: npm install --no-save --package-lock=false --no-audit --no-fund @playwright/test@1.56.1
+      - run:
+          name: Browser smoke test in Chromium
+          command: npm run quality:e2e
+      - store_artifacts:
+          path: test-results
+          destination: browser-smoke
+
+  semgrep_security:
+    docker:
+      - image: python:3.12-slim
+    resource_class: small
+    working_directory: ~/newchanges
+    steps:
+      - checkout
+      - run:
+          name: Install Semgrep
+          command: pip install --no-cache-dir semgrep
+      - run:
+          name: Scan JavaScript, TypeScript and security rules
+          command: semgrep scan --config p/javascript --config p/typescript --config p/security-audit --error --exclude node_modules --exclude dist --exclude build .
+
 workflows:
   verify_pull_requests_and_main:
     jobs:
       - verify
       - admin_browser_smoke
+      - source_quality
+      - browser_smoke
+      - semgrep_security
       - source_quality
       - browser_smoke
       - semgrep_security
