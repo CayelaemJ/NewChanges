@@ -35,13 +35,15 @@ export async function consumeChronologicalFeed(plan:ChronologicalFeedPlan){
   throw new Error("Invalid chronological staging plan");
  let after=plan.after,rows=0,bytes=0,pages=0;
  while(true){
-  if(pages>=c.maxPages)throw new Error("Page budget exhausted before end of feed");
-  if(rows>=c.maxTotalRows)throw new Error("Row budget exhausted before end of feed");
-  const limit=Math.min(c.maxRowsPerPage,c.maxTotalRows-rows);
+  // A one-row lookahead distinguishes exactly-full feeds from truncated feeds.
+  // The probe is never committed and stays within a bounded single-row read.
+  const exhausted=pages>=c.maxPages||rows>=c.maxTotalRows;
+  const limit=exhausted?1:Math.min(c.maxRowsPerPage,c.maxTotalRows-rows);
   const page=await plan.readPage(after,limit,plan.snapshotId);
   if(page.snapshotId!==plan.snapshotId||!Array.isArray(page.rows)||page.rows.length>limit)
    throw new Error("Invalid page or source snapshot changed");
   if(page.rows.length===0)break;
+  if(exhausted)throw new Error("Row or page budget exhausted before end of feed");
   let previous=after,added=0;
   for(const row of page.rows){
    if(!validCursor(row.cursor)||(previous!==null&&compare(row.cursor,previous)<=0))
