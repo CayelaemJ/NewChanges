@@ -2,13 +2,14 @@
 // The table is NOT automatically migrated or used by production. All ledger
 // transitions are atomic database statements with monotonic fencing tokens.
 import {LOAD_ORDER} from "./reportFormats.js";
+import type {KeysetCursor} from "./datasetReplacementKeysetSql.js";
 export interface StagingSqlExecutor{
  query<T extends Record<string,unknown>>(sql:string,params:readonly unknown[]):Promise<readonly T[]>;
 }
 export interface FencedLease {generation:string;feed:string;owner:string;fence:bigint;version:bigint;}
 export interface FencedReceipt{
  generation:string;feed:string;snapshotId:string;objectKey:string;
- sha256:string;cursor:Record<string,unknown>;expectedVersion:bigint;
+ sha256:string;cursor:KeysetCursor;expectedVersion:bigint;
 }
 const safe=/^[a-zA-Z0-9_-]{1,128}$/;
 const hex=/^[a-f0-9]{64}$/;
