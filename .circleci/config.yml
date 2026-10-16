@@ -62,6 +62,7 @@ jobs:
             npx tsx tests/dataset-replacement-object-integrity.test.ts
             npx tsx tests/dataset-replacement-manifest-review.test.ts
             npx tsx tests/dataset-replacement-storage-review.test.ts
+            npx tsx tests/dataset-replacement-playground-store.test.ts
             node scripts/replacement-dependency-audit-check.mjs
             npx tsx tests/semantic-shadow-provenance.test.ts
             npm run check:semantic-planner
