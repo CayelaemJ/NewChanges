@@ -232,3 +232,33 @@ The next approved migration must connect a durable shared storage backend,
 atomic idempotent checkpoint+write transactions, controlled deletions and
 reconciliation, semantic publication, and a full Railway Testing rehearsal
 before deploying to production.
+
+## Full mapped ten-feed Playground staging rehearsal
+
+The isolated test `tests/ten-canonical-mapped-playground.test.ts` now composes
+ten different source-table mappings, bounded SQL query plans, strict canonical
+feed dependency order, aggregate row/byte/page reservations, and per-page
+durable filesystem checkpoint receipts. It verifies all ten feed checkpoints
+after completion and confirms publication stays disabled.
+
+This runs against a deterministic in-memory SQL-session mock, NOT an external
+MySQL database. It tests integration contracts, crash handling and local
+file durability; it does not demonstrate live source performance or billing.
+A real MySQL read-only TLS snapshot adapter is available for an explicitly
+approved Playground rehearsal, but the production scheduler never calls it.
+
+**Remaining production blockers**:
+1. Authenticated administrator approval of the discovered source schema,
+   natural keys, business dates and employer/tenant mappings.
+2. Real source-index and snapshot feasibility checks, large-row streaming
+   backpressure, transformations/joins, and canonical row validation.
+3. Cloud object-storage durability with distributed single-writer fencing,
+   retention, cleanup, key-rotation and data governance.
+4. Restart-safe CDC/immutable snapshot or revalidated replay; a new MySQL
+   transaction is NOT the old consistent snapshot.
+5. Transactional batch projection, semantic processing, atomic publication and
+   rollback against an isolated Neon testing database.
+6. Full ten-feed data reconciliation and measured network, compute, storage,
+   security and rollback checks on Railway Testing and supported source types.
+
+No production connection, import or migration was executed by the rehearsal.
