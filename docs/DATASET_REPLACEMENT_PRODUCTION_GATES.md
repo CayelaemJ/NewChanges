@@ -65,3 +65,28 @@ apply backpressure across validation and Neon writes.
 
 No evidence of a 500 GB import, production streaming, or cost reduction is
 claimed by adding this interface.
+
+## Chronological import and cost constraints
+
+The isolated `consumeCanonicalChronologically` staging helper now enforces
+canonical dependency order, with each individual feed traversed by a strict
+`(source_updated_at, natural_key)` keyset cursor, a fixed source snapshot
+identifier and bounded rows/bytes/pages. It checkpoints only after the caller
+has durably committed a page. This is an **opt-in testable seam**, not
+the production importer or a source SQL snapshot implementation.
+
+**Chronology has two distinct meanings:** cross-feed dependency ordering is
+mandatory; within-feed update ordering governs safe incremental imports.
+Business-event chronology (such as `observed_at` or `advanced_at`) must
+remain in the rows and be used by time-series reporting, including
+retroactive corrections. Globally sorting 500 GB by business date would
+force large source sorts and replays and is not required for correctness
+when generation isolation, dated upserts and semantic recomputation exist.
+
+Before execution, require actual SQL keyset query implementations with a
+stable unique natural-key tie-breaker, indexed source change tokens,
+snapshot/CDC consistency, durable idempotent page commits, deletion
+reconciliation, and recovery tests. Existing offset-based `fetchReport`
+still buffers the full feed and must not be used for massive migrations.
+Source-side aggregates and verified change windows should be favoured over
+repeated full historical transfer.
