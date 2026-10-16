@@ -78,6 +78,7 @@ jobs:
             npx tsx tests/playground-mapped-import-rehearsal.test.ts
             npx tsx tests/isolated-cloud-page-sink.test.ts
             npx tsx tests/bounded-cloud-stage-http.test.ts
+            npx tsx tests/fenced-staging-ledger.test.ts
             npx tsx tests/bounded-dimension-cache.test.ts
             npx tsx tests/monitoring-query-regression.test.ts
             node scripts/replacement-dependency-audit-check.mjs
