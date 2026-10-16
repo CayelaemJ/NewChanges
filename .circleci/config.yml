@@ -67,6 +67,7 @@ jobs:
             npx tsx tests/dataset-replacement-chronological-consumer.test.ts
             npx tsx tests/dataset-replacement-keyset-sql.test.ts
             npx tsx tests/canonical-schema-mapping.test.ts
+            npx tsx tests/canonical-schema-discovery.test.ts
             node scripts/replacement-dependency-audit-check.mjs
             npx tsx tests/semantic-shadow-provenance.test.ts
             npm run check:semantic-planner
