@@ -156,3 +156,28 @@ The legacy SQL adapter still requires canonical views until an approved
 mapping is compiled into allowlisted source queries. Source byte, Neon-write,
 resident-size and transfer-cost budgets must become mandatory enforcement in
 that execution path. Never move hundreds of gigabytes into Neon by default.
+
+## Catalog-verified mapping to bounded SQL extraction (staging only)
+
+`canonicalMappedKeysetSql.ts` now compiles an explicit ten-feed mapping,
+already checked against a returned column catalogue, into dialect-specific
+read-only SELECT projections for PostgreSQL, MySQL, or SQL Server. It selects
+only explicitly mapped canonical columns (no SELECT *), aliases them to the
+canonical contract, and uses parameterized upper watermarks and
+`(source_updated_at, natural-key)` keyset predicates. Source identifiers must
+exist in the discovered catalogue and satisfy strict identifier validation.
+
+This module **does not execute SQL**, authorize a mapping, guarantee a source
+snapshot, start a migration, or turn optional estimates into spending controls.
+Before live use, implement a least-privilege discovery executor, explicit
+operator semantic approvals and sample validation, snapshot-consistent keyset
+queries, persistent idempotent checkpoints, real byte/write accounting, and a
+bounded staged publisher with tested rollback.
+
+Indexes, non-unique natural keys, collations, null behavior, timestamps,
+cross-table joins, and databases whose semantics cannot fit the ten feeds
+remain source-specific feasibility checks. If a source requires aggregation
+or joining multiple tables, the next approved mapping version will need
+controlled transformations or source-side views; it must not silently invent
+fields. Do not claim universal engine support beyond the three currently
+implemented SQL dialects.
