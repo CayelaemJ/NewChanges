@@ -27,6 +27,11 @@ for(const row of [...first.rows,...second.rows]){
  manual.update(len).update(b);
 }
 assert.equal(receipt.committedRowsSha256,manual.digest("hex"));
+const otherPaging=createMappedStagingEvidenceSink({commitPage:async()=>{}});
+await otherPaging.sink.commitPage(make(["A"]));
+await otherPaging.sink.commitPage(make(["B","C"]));
+assert.equal(otherPaging.finish().find(x=>x.feed==="employers")!.committedRowsSha256,
+ receipt.committedRowsSha256);
 const empty=recorder.finish().find(x=>x.feed==="salary_advances")!;
 assert.equal(empty.rowsCommitted,0);
 assert.equal(empty.committedRowsSha256,createHash("sha256").digest("hex"));
