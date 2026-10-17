@@ -853,6 +853,50 @@ function setSqlPortDefault(force=false){
   field.value = dialect === 'MSSQL' ? '1433' : dialect === 'MYSQL' ? '3306' : '5432';
 }
 async function setIntegHeartbeat(hours){ const input=document.getElementById('integ-hours');if(input)input.value=String(hours); }
+function renderIntegSyncStatus(c){
+  const s = $('#integ-status');
+  const changeMode=$('#integ-change-mode');
+  if(changeMode){
+    const interval=Number(c.sourceChangePollSeconds||60);
+    changeMode.textContent = !c.changeDetectionSupported
+      ? 'SQL source watermark detection is not available; the fallback heartbeat controls reconciliation.'
+      : !c.changeDetectionEnabled
+        ? 'SQL source is not enabled or configured; no near-real-time changes are being watched.'
+        : !c.sourceChangeSchedulerEnabled
+          ? 'SQL source configured, but the server watcher is paused. Enable the authoritative incremental scheduler on the ingest leader.'
+          : `SQL watcher configured to check watermarks every ${interval.toLocaleString('en-ZA')} seconds. Only changed feeds trigger incremental imports; unchanged sources are skipped. Actual dashboard freshness also depends on source indexing and processing time.`;
+  }
+  const configuredText = c.configured ? 'configured' : 'incomplete';
+  if(c.lastSyncAt){
+    const when = new Date(c.lastSyncAt).toLocaleString('en-ZA');
+    const lastGood = c.lastSuccessfulSyncAt ? new Date(c.lastSuccessfulSyncAt).toLocaleString('en-ZA') : 'none yet';
+    const failureStates=['FAILED','PARTIAL','FULL_REFRESH_FAILED','FULL_REFRESH_PRECHECK_FAILED'];
+    const rebuilding=c.lastSyncStatus==='REBUILDING';
+    s.style.display='block';
+    s.className = 'banner ' + (c.lastSyncStatus==='OK'?'ok':failureStates.includes(c.lastSyncStatus)?'err':'');
+    const reason=c.lastSyncNote||'No refresh reason was recorded.';
+    const watcher=c.changeDetectionEnabled&&c.sourceChangeSchedulerEnabled?` · Watch interval: ${c.sourceChangePollSeconds||60}s`:' · Change watcher not running';
+    s.textContent = `${c.effectiveSourceMode || c.sourceMode || 'API'} source · ${configuredText}${watcher} · Last attempt: ${c.lastSyncStatus||'UNKNOWN'} · ${when} · Last successful: ${lastGood} · ${rebuilding?'Refresh status':'Refresh reason'}: ${reason}`;
+  }else{
+    s.style.display='block';
+    s.className = 'banner ' + (c.configured?'ok':'');
+    const watcher=c.changeDetectionEnabled&&c.sourceChangeSchedulerEnabled?` Watch interval: ${c.sourceChangePollSeconds||60}s.`:' Automatic change watcher is not running.';
+    s.textContent = `${c.effectiveSourceMode || c.sourceMode || 'API'} source · ${configuredText}. No sync has run yet.${watcher}`;
+  }
+
+}
+async function refreshVisibleIntegSyncStatus(){
+  if(document.visibilityState!=='visible')return;
+  const card=document.getElementById('live-integration');
+  if(!card)return;
+  const box=card.getBoundingClientRect();
+  if(box.bottom<=0||box.top>=window.innerHeight)return;
+  try{
+    const reply=await fetch(`${API}/api/admin/integration`);
+    if(!reply.ok)return;
+    renderIntegSyncStatus(await reply.json());
+  }catch{ /* A polling failure cannot erase the last known sync status. */ }
+}
 async function loadInteg(){
   try{
     const c = await fetch(`${API}/api/admin/integration`).then(r=>r.json());
@@ -898,35 +942,7 @@ async function loadInteg(){
       }
     }
 
-    const s = $('#integ-status');
-    const changeMode=$('#integ-change-mode');
-    if(changeMode){
-      const interval=Number(c.sourceChangePollSeconds||60);
-      changeMode.textContent = !c.changeDetectionSupported
-        ? 'SQL source watermark detection is not available; the fallback heartbeat controls reconciliation.'
-        : !c.changeDetectionEnabled
-          ? 'SQL source is not enabled or configured; no near-real-time changes are being watched.'
-          : !c.sourceChangeSchedulerEnabled
-            ? 'SQL source configured, but the server watcher is paused. Enable the authoritative incremental scheduler on the ingest leader.'
-            : `SQL watcher configured to check watermarks every ${interval.toLocaleString('en-ZA')} seconds. Only changed feeds trigger incremental imports; unchanged sources are skipped. Actual dashboard freshness also depends on source indexing and processing time.`;
-    }
-    const configuredText = c.configured ? 'configured' : 'incomplete';
-    if(c.lastSyncAt){
-      const when = new Date(c.lastSyncAt).toLocaleString('en-ZA');
-      const lastGood = c.lastSuccessfulSyncAt ? new Date(c.lastSuccessfulSyncAt).toLocaleString('en-ZA') : 'none yet';
-      const failureStates=['FAILED','PARTIAL','FULL_REFRESH_FAILED','FULL_REFRESH_PRECHECK_FAILED'];
-      const rebuilding=c.lastSyncStatus==='REBUILDING';
-      s.style.display='block';
-      s.className = 'banner ' + (c.lastSyncStatus==='OK'?'ok':failureStates.includes(c.lastSyncStatus)?'err':'');
-      const reason=c.lastSyncNote||'No refresh reason was recorded.';
-      const watcher=c.changeDetectionEnabled&&c.sourceChangeSchedulerEnabled?` · Watch interval: ${c.sourceChangePollSeconds||60}s`:' · Change watcher not running';
-      s.textContent = `${c.effectiveSourceMode || c.sourceMode || 'API'} source · ${configuredText}${watcher} · Last attempt: ${c.lastSyncStatus||'UNKNOWN'} · ${when} · Last successful: ${lastGood} · ${rebuilding?'Refresh status':'Refresh reason'}: ${reason}`;
-    }else{
-      s.style.display='block';
-      s.className = 'banner ' + (c.configured?'ok':'');
-      const watcher=c.changeDetectionEnabled&&c.sourceChangeSchedulerEnabled?` Watch interval: ${c.sourceChangePollSeconds||60}s.`:' Automatic change watcher is not running.';
-      s.textContent = `${c.effectiveSourceMode || c.sourceMode || 'API'} source · ${configuredText}. No sync has run yet.${watcher}`;
-    }
+    renderIntegSyncStatus(c);
     loadIntegLogs();
   }catch(e){}
 }
@@ -2304,6 +2320,7 @@ window.setInterval(() => {
   if(document.visibilityState !== 'visible') return;
   Promise.allSettled([loadAdminSecuritySummary(), loadComplianceSummary()]);
 }, 30000);
+window.setInterval(refreshVisibleIntegSyncStatus, 60000);
 </script>
 <script src="/static/shell.js?v=1"></script>
 <script>
