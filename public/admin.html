@@ -449,7 +449,7 @@
               <button type="button" class="btn btn-ghost" onclick="setIntegHeartbeat(24)">Daily</button>
               <button type="button" class="btn btn-ghost" onclick="setIntegHeartbeat(168)">Weekly</button>
             </div>
-            <p class="muted" style="margin-top:8px;max-width:820px;">For SQL: change detection checks source watermarks every 60 seconds by default (30 seconds when configured). Unchanged sources skip expensive imports. Freshness also depends on source indexing and processing time. This hourly setting is for fallback reconciliation, not a timed full rebuild. For API: it controls the regular polling cadence. The Railway ingestion scheduler must also be enabled by deployment configuration; turning on the checkbox alone cannot start a paused server scheduler.</p>
+            <p class="muted" style="margin-top:8px;max-width:820px;">For SQL: change detection checks source watermarks on a server-controlled interval (60 seconds by default; 30 seconds when configured). Unchanged sources skip expensive imports. Freshness also depends on source indexing and processing time. This hourly setting is for fallback reconciliation, not a timed full rebuild. For API: it controls the regular polling cadence. The Railway ingestion scheduler must also be enabled by deployment configuration; turning on the checkbox alone cannot start a paused server scheduler.</p>
             <div id="integ-change-mode" class="muted" style="margin-top:7px;max-width:820px;">SQL sources also use indexed change detection between heartbeat runs.</div>
           </div>
 
