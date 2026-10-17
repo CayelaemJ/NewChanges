@@ -370,3 +370,18 @@ publishes Neon data. Do not use production credentials or source servers.
 It has NOT been executed against an actual customer source. Running it in
 Railway Testing requires configuring a restricted read-only source account,
 reviewed mapping and stage directory, and assessing the source query indexes.
+
+## Cross-feed snapshot consistency and upper-watermark defense (17 October)
+
+The mapped runner independently rejects source rows newer than the approved
+upper watermark, even if a source connector disregards SQL predicates. Invalid
+driver Date objects and malformed upper-watermark configuration fail before
+staged writes or checkpoint advancement. A ten-feed staging batch also rejects
+mixed source generations, snapshot identifiers, watermarks, dialects, mapping
+definitions, or discovered metadata catalogues **before any source read**.
+Regression tests cover each rejected case and assert zero writes.
+
+These are consistency safeguards, not substitutes for real database snapshots,
+CDC restart guarantees, semantic approvals, or tested cloud checkpoint fencing.
+The production import/semantic publisher remains disabled pending Phase 2–4
+reconciliation, recovery and security evidence.
