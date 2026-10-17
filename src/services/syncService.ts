@@ -6,6 +6,7 @@
 // ════════════════════════════════════════════════════════════════════
 
 import { PrismaClient, Prisma } from "@prisma/client";
+import { sourceChangePollSeconds } from "./sourceChangePollConfig.js";
 import { Client } from "pg";
 import { LOAD_ORDER, getFormat } from "./reportFormats.js";
 import { validate } from "./importParser.js";
@@ -20,8 +21,10 @@ const prisma = new PrismaClient();
 type Json = Prisma.InputJsonValue;
 const CURSOR_OVERLAP_MS = 5 * 60 * 1000;
 const CLOCK_SKEW_TOLERANCE_MS = 5 * 60 * 1000;
-// Five-minute default avoids expensive ten-feed SQL watermark checks every 30s.
-export const SOURCE_CHANGE_POLL_SECONDS = Math.max(60, Math.min(3600, Number(process.env.SOURCE_CHANGE_POLL_SECONDS ?? 300) || 300));
+// Near-real-time SQL changes: default 60s; 30s is available for indexed
+// sources. This schedules cheap watermarks, NEVER a full ten-feed import.
+// Operators can increase the interval if their source cannot sustain it.
+export const SOURCE_CHANGE_POLL_SECONDS = sourceChangePollSeconds();
 const pendingSnapshotEmployers = new Set<string>();
 let snapshotDrainScheduled = false;
 
@@ -203,6 +206,11 @@ export function publicConfig(config: Awaited<ReturnType<typeof getConfig>>) {
     effectiveApiBaseUrl: effective.baseUrl ?? null,
     changeDetectionSupported: effectiveSourceMode === "SQL",
     changeDetectionEnabled: configured && effectiveSourceMode === "SQL" && Boolean((config as any).enabled),
+    // Runtime enablement is a separate deployment control. Do not claim a
+    // running watcher simply because source credentials are configured.
+    sourceChangeSchedulerEnabled: process.env.STANDBY_MODE !== "true" &&
+      (process.env.ENABLE_AUTHORITATIVE_INCREMENTAL_SCHEDULER === "true" ||
+       process.env.TRAFFIC_SAVER_MODE === "false"),
     sourceChangePollSeconds: SOURCE_CHANGE_POLL_SECONDS,
     syncBulkChunkSize: SYNC_BULK_CHUNK_SIZE,
     hasToken: Boolean(effective.authToken),

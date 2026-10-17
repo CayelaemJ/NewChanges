@@ -449,7 +449,7 @@
               <button type="button" class="btn btn-ghost" onclick="setIntegHeartbeat(24)">Daily</button>
               <button type="button" class="btn btn-ghost" onclick="setIntegHeartbeat(168)">Weekly</button>
             </div>
-            <p class="muted" style="margin-top:8px;max-width:820px;">For SQL: change detection checks source watermarks on a server-controlled interval (normally 5 minutes); unchanged sources skip expensive imports. This hourly setting is for fallback reconciliation, not a timed full rebuild. For API: it controls the regular polling cadence. The Railway ingestion scheduler must also be enabled by deployment configuration; turning on the checkbox alone cannot start a paused server scheduler.</p>
+            <p class="muted" style="margin-top:8px;max-width:820px;">For SQL: change detection checks source watermarks on a server-controlled interval (60 seconds by default; 30 seconds when configured). Unchanged sources skip expensive imports. Freshness also depends on source indexing and processing time. This hourly setting is for fallback reconciliation, not a timed full rebuild. For API: it controls the regular polling cadence. The Railway ingestion scheduler must also be enabled by deployment configuration; turning on the checkbox alone cannot start a paused server scheduler.</p>
             <div id="integ-change-mode" class="muted" style="margin-top:7px;max-width:820px;">SQL sources also use indexed change detection between heartbeat runs.</div>
           </div>
 
@@ -853,6 +853,50 @@ function setSqlPortDefault(force=false){
   field.value = dialect === 'MSSQL' ? '1433' : dialect === 'MYSQL' ? '3306' : '5432';
 }
 async function setIntegHeartbeat(hours){ const input=document.getElementById('integ-hours');if(input)input.value=String(hours); }
+function renderIntegSyncStatus(c){
+  const s = $('#integ-status');
+  const changeMode=$('#integ-change-mode');
+  if(changeMode){
+    const interval=Number(c.sourceChangePollSeconds||60);
+    changeMode.textContent = !c.changeDetectionSupported
+      ? 'SQL source watermark detection is not available; the fallback heartbeat controls reconciliation.'
+      : !c.changeDetectionEnabled
+        ? 'SQL source is not enabled or configured; no near-real-time changes are being watched.'
+        : !c.sourceChangeSchedulerEnabled
+          ? 'SQL source configured, but the server watcher is paused. Enable the authoritative incremental scheduler on the ingest leader.'
+          : `SQL watcher configured to check watermarks every ${interval.toLocaleString('en-ZA')} seconds. Only changed feeds trigger incremental imports; unchanged sources are skipped. Actual dashboard freshness also depends on source indexing and processing time.`;
+  }
+  const configuredText = c.configured ? 'configured' : 'incomplete';
+  if(c.lastSyncAt){
+    const when = new Date(c.lastSyncAt).toLocaleString('en-ZA');
+    const lastGood = c.lastSuccessfulSyncAt ? new Date(c.lastSuccessfulSyncAt).toLocaleString('en-ZA') : 'none yet';
+    const failureStates=['FAILED','PARTIAL','FULL_REFRESH_FAILED','FULL_REFRESH_PRECHECK_FAILED'];
+    const rebuilding=c.lastSyncStatus==='REBUILDING';
+    s.style.display='block';
+    s.className = 'banner ' + (c.lastSyncStatus==='OK'?'ok':failureStates.includes(c.lastSyncStatus)?'err':'');
+    const reason=c.lastSyncNote||'No refresh reason was recorded.';
+    const watcher=c.changeDetectionEnabled&&c.sourceChangeSchedulerEnabled?` · Watch interval: ${c.sourceChangePollSeconds||60}s`:' · Change watcher not running';
+    s.textContent = `${c.effectiveSourceMode || c.sourceMode || 'API'} source · ${configuredText}${watcher} · Last attempt: ${c.lastSyncStatus||'UNKNOWN'} · ${when} · Last successful: ${lastGood} · ${rebuilding?'Refresh status':'Refresh reason'}: ${reason}`;
+  }else{
+    s.style.display='block';
+    s.className = 'banner ' + (c.configured?'ok':'');
+    const watcher=c.changeDetectionEnabled&&c.sourceChangeSchedulerEnabled?` Watch interval: ${c.sourceChangePollSeconds||60}s.`:' Automatic change watcher is not running.';
+    s.textContent = `${c.effectiveSourceMode || c.sourceMode || 'API'} source · ${configuredText}. No sync has run yet.${watcher}`;
+  }
+
+}
+async function refreshVisibleIntegSyncStatus(){
+  if(document.visibilityState!=='visible')return;
+  const card=document.getElementById('live-integration');
+  if(!card)return;
+  const box=card.getBoundingClientRect();
+  if(box.bottom<=0||box.top>=window.innerHeight)return;
+  try{
+    const reply=await fetch(`${API}/api/admin/integration`);
+    if(!reply.ok)return;
+    renderIntegSyncStatus(await reply.json());
+  }catch{ /* A polling failure cannot erase the last known sync status. */ }
+}
 async function loadInteg(){
   try{
     const c = await fetch(`${API}/api/admin/integration`).then(r=>r.json());
@@ -898,30 +942,7 @@ async function loadInteg(){
       }
     }
 
-    const s = $('#integ-status');
-    const changeMode=$('#integ-change-mode');
-    if(changeMode){
-      changeMode.textContent = c.changeDetectionSupported
-        ? `Live SQL change detection is active every ${Number(c.sourceChangePollSeconds||30).toLocaleString('en-ZA')}s using indexed source_updated_at watermarks. Bulk writes process up to ${Number(c.syncBulkChunkSize||20000).toLocaleString('en-ZA')} rows per database call. The hourly setting above remains a safety reconciliation.`
-        : 'This source does not expose a portable SQL watermark, so the heartbeat schedule above controls automatic reconciliation.';
-    }
-    const configuredText = c.configured ? 'configured' : 'incomplete';
-    if(c.lastSyncAt){
-      const when = new Date(c.lastSyncAt).toLocaleString('en-ZA');
-      const lastGood = c.lastSuccessfulSyncAt ? new Date(c.lastSuccessfulSyncAt).toLocaleString('en-ZA') : 'none yet';
-      const failureStates=['FAILED','PARTIAL','FULL_REFRESH_FAILED','FULL_REFRESH_PRECHECK_FAILED'];
-      const rebuilding=c.lastSyncStatus==='REBUILDING';
-      s.style.display='block';
-      s.className = 'banner ' + (c.lastSyncStatus==='OK'?'ok':failureStates.includes(c.lastSyncStatus)?'err':'');
-      const reason=c.lastSyncNote||'No refresh reason was recorded.';
-      const watcher=c.changeDetectionEnabled?` · Change watch: every ${c.sourceChangePollSeconds||30}s`:'';
-      s.textContent = `${c.effectiveSourceMode || c.sourceMode || 'API'} source · ${configuredText}${watcher} · Last attempt: ${c.lastSyncStatus||'UNKNOWN'} · ${when} · Last successful: ${lastGood} · ${rebuilding?'Refresh status':'Refresh reason'}: ${reason}`;
-    }else{
-      s.style.display='block';
-      s.className = 'banner ' + (c.configured?'ok':'');
-      const watcher=c.changeDetectionEnabled?` Change watch runs every ${c.sourceChangePollSeconds||30}s.`:'';
-      s.textContent = `${c.effectiveSourceMode || c.sourceMode || 'API'} source · ${configuredText}. No sync has run yet.${watcher}`;
-    }
+    renderIntegSyncStatus(c);
     loadIntegLogs();
   }catch(e){}
 }
@@ -2299,6 +2320,7 @@ window.setInterval(() => {
   if(document.visibilityState !== 'visible') return;
   Promise.allSettled([loadAdminSecuritySummary(), loadComplianceSummary()]);
 }, 30000);
+window.setInterval(refreshVisibleIntegSyncStatus, 60000);
 </script>
 <script src="/static/shell.js?v=1"></script>
 <script>

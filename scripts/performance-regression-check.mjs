@@ -32,7 +32,10 @@ must(sourceAdapter.includes("watermark?(reportKey") && (sourceAdapter.match(/MAX
 must(syncSource.includes("detectSourceChanges") && syncSource.includes("SOURCE_CHANGE_POLL_SECONDS") && syncSource.includes("lastSourceUpdatedAt: newestPulledAt"), "sync service must detect source changes and persist the real source watermark");
 must(server.includes("Source database changes detected; running incremental sync") && server.includes("SOURCE_CHANGE_POLL_SECONDS"), "runtime scheduler must trigger incremental sync from detected SQL changes");
 must(server.includes("_max: { lastSourceUpdatedAt: true }"), "dashboard versioning must advance only when the source watermark advances");
-must(admin.includes("Live SQL change detection is active every") && admin.includes("Bulk writes process up to"), "Administration must explain change detection and bulk-write throughput");
+must(admin.includes("SQL watcher configured to check watermarks every") &&
+     admin.includes("Only changed feeds trigger incremental imports") &&
+     admin.includes("sourceChangeSchedulerEnabled"),
+     "Administration must explain near-real-time source polling without falsely claiming paused watchers are live");
 must(dashboard.includes("setInterval(checkSourceVersion,180000)"), "traffic saver dashboards must re-check the source version within 3 minutes");
 
 if (failures.length) {
