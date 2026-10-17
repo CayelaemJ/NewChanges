@@ -8,7 +8,11 @@ if(process.env.SEMANTIC_STORAGE_SMOKE_TEST!=="true" || !(testingApproved||playgr
 }
 if(testingApproved && !(process.env.SEMANTIC_S3_BUCKET??"").includes("testing"))
   throw new Error("Testing object smoke must target the dedicated Testing bucket");
-const [{createSemanticStorageBroker},{putAndVerifySemanticObject}]=await Promise.all([\n import("../dist/services/semanticS3Broker.js"),\n import("../dist/services/semanticObjectVerification.js"),\n]);\nconst period=new Date().toISOString().slice(0,7);
+const [{createSemanticStorageBroker},{putAndVerifySemanticObject}]=await Promise.all([
+ import("../dist/services/semanticS3Broker.js"),
+ import("../dist/services/semanticObjectVerification.js"),
+]);
+const period=new Date().toISOString().slice(0,7);
 const objectKey=`semantic/smoke/${testingApproved?"testing":"smoke"}/${period}/${randomUUID()}.json`;
 const content=Buffer.from(JSON.stringify({probe:"semantic-storage-v1",period}),"utf8");
 const broker=createSemanticStorageBroker();
