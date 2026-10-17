@@ -1,7 +1,5 @@
 // Small runtime-only verification. No tsx or dev dependencies required.
 import {randomUUID} from "node:crypto";
-import {createSemanticStorageBroker} from "../dist/services/semanticS3Broker.js";
-import {putAndVerifySemanticObject} from "../dist/services/semanticObjectVerification.js";
 const envName=process.env.RAILWAY_ENVIRONMENT_NAME;
 const testingApproved=envName==="Testing" && process.env.TESTING_S3_SMOKE_APPROVED==="YES_I_APPROVE";
 const playgroundApproved=envName==="Playground and new ideas";
@@ -10,7 +8,7 @@ if(process.env.SEMANTIC_STORAGE_SMOKE_TEST!=="true" || !(testingApproved||playgr
 }
 if(testingApproved && !(process.env.SEMANTIC_S3_BUCKET??"").includes("testing"))
   throw new Error("Testing object smoke must target the dedicated Testing bucket");
-const period=new Date().toISOString().slice(0,7);
+const [{createSemanticStorageBroker},{putAndVerifySemanticObject}]=await Promise.all([\n import("../dist/services/semanticS3Broker.js"),\n import("../dist/services/semanticObjectVerification.js"),\n]);\nconst period=new Date().toISOString().slice(0,7);
 const objectKey=`semantic/smoke/${testingApproved?"testing":"smoke"}/${period}/${randomUUID()}.json`;
 const content=Buffer.from(JSON.stringify({probe:"semantic-storage-v1",period}),"utf8");
 const broker=createSemanticStorageBroker();
