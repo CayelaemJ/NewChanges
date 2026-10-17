@@ -59,7 +59,7 @@ export async function extractMappedFeedToStaging(input:MappedFeedRun){
  // Reject invalid high-watermark configuration even if a broken/in-memory
  // reader ignores the compiler's bound WHERE predicate.
  const upperWatermarkMs=Date.parse(input.upperWatermark);
- if(!/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?Z$/.test(input.upperWatermark)||
+ if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z$/.test(input.upperWatermark)||
     !Number.isFinite(upperWatermarkMs))throw new Error("Invalid source upper watermark");
  const schema=mapping.feeds.find(f=>f.feed===feed)?.sourceTable.split(".")[0]??"";
  const discovered=validateDiscoveredCatalog(catalog.filter(c=>c.schema===schema),schema);
