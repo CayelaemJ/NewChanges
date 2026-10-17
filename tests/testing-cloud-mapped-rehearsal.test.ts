@@ -33,6 +33,9 @@ deny(config,{...env,ENABLE_GOVERNED_SOURCE_CUTOVER:"true"},/cannot activate/);
 deny({...config,source:{...config.source,user:"root"}},env,/Restricted/);
 deny({...config,source:{...config.source,ssl:false}},env,/Restricted/);
 deny({...config,maxTotalBytes:70*1024*1024},env,/budget/);
+deny({...config,maxTotalRows:999},env,/reservation/);
+deny({...config,maxTotalPages:99},env,/reservation/);
+deny({...config,pageSize:251},env,/reservation/);
 deny({...config,upperWatermark:"yesterday"},env,/watermark/);
 const path=new URL("../scripts/run-testing-cloud-rehearsal.mjs",import.meta.url).pathname;
 const execution=spawnSync(process.execPath,[path],{encoding:"utf8",
