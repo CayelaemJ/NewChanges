@@ -31,6 +31,7 @@ import { readPublishedSemanticPartition } from "./services/semanticCanaryRead.js
 import { activateEquivalentSource, bootstrapExistingSource } from "./services/sourceActivation.js";
 import { startDailyRefresh, triggerRefreshNow } from "./services/dailyRefresh.js";
 import { getConfig as getSyncConfig, saveConfig as saveSyncConfig, publicConfig as publicSyncConfig, testConnection as testSyncConnection, runSync, recentSyncLogs, detectSourceChanges, previewSourceSwitch, SOURCE_CHANGE_POLL_SECONDS } from "./services/syncService.js";
+import { recordSourceWatch, sourceWatchPublicStatus } from "./services/sourceWatchHealth.js";
 import { listPartners, createPartner, updatePartner, deletePartner, assignUserToPartner, assignEmployerToPartner, themeForUser, themeForEmployer, themeForSlug } from "./services/partnerService.js";
 import { login, resolveSession, destroySession, destroySessionById, destroyAllSessionsForUser, canViewEmployer, canAccessModule, allowedEmployerIds, AuthUser, isAdminRole } from "./services/authService.js";
 import { createUser, listUsers, updateUser, resetPassword, completeSetup, deactivateSelf, listRevokedUsers, deleteUserPermanently, requestPasswordReset } from "./services/userService.js";
@@ -1194,7 +1195,11 @@ app.get("/api/admin/integration", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
   const cfg = await getSyncConfig();
   // Secrets are never returned to the browser; only presence flags are exposed.
-  return publicSyncConfig(cfg);
+  const safe=publicSyncConfig(cfg);
+  return {...safe,sourceWatchHealth:sourceWatchPublicStatus(
+    Boolean(safe.changeDetectionEnabled&&safe.sourceChangeSchedulerEnabled),
+    SOURCE_CHANGE_POLL_SECONDS,
+  )};
 });
 
 app.post<{ Body: {
@@ -2086,11 +2091,14 @@ function startSyncScheduler(app: any) {
   const tick = async () => {
     if (tickRunning) return;
     tickRunning = true;
+    const startedAt=Date.now();
+    const report=(outcome:Parameters<typeof recordSourceWatch>[0]["outcome"],changedFeeds=0)=>
+      recordSourceWatch({outcome,durationMs:Date.now()-startedAt,changedFeeds});
     try {
       const cfg = await getSyncConfig();
-      if (!cfg.enabled) return;
+      if (!cfg.enabled){report("DISABLED");return;}
       const publicCfg = publicSyncConfig(cfg);
-      if (!publicCfg.configured) return;
+      if (!publicCfg.configured){report("DISABLED");return;}
 
       // Direct SQL: use the indexed source watermark first. A changed
       // source_updated_at triggers the normal cursor-based incremental sync;
@@ -2104,6 +2112,7 @@ function startSyncScheduler(app: any) {
         const r = await runSync("scheduled");
         app.log.info(`Change-triggered sync: ${r.status ?? "done"}`);
         reportFailure(r);
+        report(r.status==="OK"?"SYNC_OK":"SYNC_FAILED",changes.reports.length);
         return;
       }
 
@@ -2113,6 +2122,7 @@ function startSyncScheduler(app: any) {
       // A first-time source with no successful import still gets bootstrapped.
       // Real deletions must arrive as versioned is_deleted tombstones.
       if (changes.supported && !changes.changed && cfg.lastSuccessfulSyncAt) {
+        report("UNCHANGED");
         app.log.info("SQL source watermarks unchanged; skipping costly heartbeat extraction");
         return;
       }
@@ -2127,8 +2137,12 @@ function startSyncScheduler(app: any) {
         const r = await runSync("scheduled");
         app.log.info(`Scheduled sync: ${r.status ?? "done"}`);
         reportFailure(r);
+        report(r.status==="OK"?"FALLBACK":"SYNC_FAILED");
+      }else{
+        report("UNSUPPORTED");
       }
     } catch (e) {
+      recordSourceWatch({outcome:"ERROR",durationMs:Date.now()-startedAt});
       app.log.error(e);
     } finally {
       tickRunning = false;
