@@ -97,6 +97,25 @@ historicalDate.sink={commitPage:async receipt=>{
 }};
 assert.equal((await extractMappedFeedToStaging(historicalDate)).rowsCommitted,1);
 assert.equal(receivedCursor,"2026-10-15");
+// Reject mixed source snapshots, generations and watermarks before reading
+// any data, even if each individual feed plan would pass validation.
+for(const mismatch of ["snapshot","watermark","generation","catalog"] as const){
+ let reads=0,writes=0;
+ await assert.rejects(extractTenMappedFeeds(feed=>{
+  const p=plan(feed);
+  p.reader={...p.reader,queryReadOnly:async()=>{reads++;return []}};
+  p.sink={commitPage:async()=>{writes++;}};
+  if(feed==="policies"){
+   if(mismatch==="snapshot")p.reader={...p.reader,snapshotId:"different_snapshot"};
+   if(mismatch==="watermark")p.upperWatermark="2026-10-16T13:00:00Z";
+   if(mismatch==="generation")p.mapping={...p.mapping,sourceGeneration:"other_generation"};
+   if(mismatch==="catalog")p.catalog=p.catalog.slice(0,-1);
+  }
+  return p;
+ }),/one source generation, snapshot, watermark and catalogue/);
+ assert.equal(reads,0);
+ assert.equal(writes,0);
+}
 // A malicious, buggy, or inconsistent reader must never stage rows that
 // exceed the operator-approved extraction watermark.
 const tooRecent=plan("employers");
