@@ -866,6 +866,14 @@ function renderIntegSyncStatus(c){
           ? 'SQL source configured, but the server watcher is paused. Enable the authoritative incremental scheduler on the ingest leader.'
           : `SQL watcher configured to check watermarks every ${interval.toLocaleString('en-ZA')} seconds. Only changed feeds trigger incremental imports; unchanged sources are skipped. Actual dashboard freshness also depends on source indexing and processing time.`;
   }
+  const watch=c.sourceWatchHealth;
+  if(changeMode&&watch){
+    const lastCheck=watch.lastCheckedAt
+      ? new Date(watch.lastCheckedAt).toLocaleString('en-ZA')
+      : 'No observed check yet';
+    const status=watch.status||'UNKNOWN';
+    changeMode.textContent += ` Last observed poll on this application worker: ${lastCheck}; status: ${status}; previous poll duration: ${watch.lastDurationMs??'—'} ms. This does not by itself guarantee dashboard publication freshness.`;
+  }
   const configuredText = c.configured ? 'configured' : 'incomplete';
   if(c.lastSyncAt){
     const when = new Date(c.lastSyncAt).toLocaleString('en-ZA');
