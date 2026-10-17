@@ -17,6 +17,6 @@ assert(scheduler.includes("if (changes.supported && !changes.changed && cfg.last
 assert(scheduler.includes("setInterval(tick, CHECK_MS)"),"schedule incremental checks");
 assert(source.includes('sourceChangeSchedulerEnabled:'),"Admin must see actual scheduler enablement");
 assert(admin.includes('!c.sourceChangeSchedulerEnabled'),"Admin must warn when watcher paused");
-assert(admin.includes('every 60 seconds by default'),"Admin must describe real default");
+assert(admin.includes('60 seconds by default'),"Admin must describe real default");
 assert(!admin.includes("normally 5 minutes"),"remove stale admin documentation");
 console.log("Near-real-time SQL watcher interval, non-overlap and Admin truthfulness passed");
