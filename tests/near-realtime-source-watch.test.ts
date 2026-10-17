@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
-import {sourceChangePollSeconds} from "../src/services/syncService.js";
+import {sourceChangePollSeconds} from "../src/services/sourceChangePollConfig.js";
 assert.equal(sourceChangePollSeconds({}),60);
 assert.equal(sourceChangePollSeconds({SOURCE_CHANGE_POLL_SECONDS:"30"}),30);
 assert.equal(sourceChangePollSeconds({SOURCE_CHANGE_POLL_SECONDS:"60"}),60);
