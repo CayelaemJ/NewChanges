@@ -152,6 +152,19 @@ export async function extractTenMappedFeeds(
  const plans=LOAD_ORDER.map(feed=>makeRun(feed));
  if(plans.some((p,i)=>p.feed!==LOAD_ORDER[i]))
   throw new Error("Mapped feed dependency order changed");
+ // All ten feeds must describe one consistent source snapshot and one
+ // approved mapping generation. Reject mixed plans BEFORE source I/O.
+ const reference=plans[0];
+ const mappingFingerprint=JSON.stringify(reference.mapping);
+ const catalogFingerprint=JSON.stringify(reference.catalog);
+ if(plans.some(p=>p.mapping.sourceGeneration!==reference.mapping.sourceGeneration||
+    p.reader.snapshotId!==reference.reader.snapshotId||
+    p.reader.snapshotConsistent!==true||
+    p.upperWatermark!==reference.upperWatermark||
+    p.dialect!==reference.dialect||
+    JSON.stringify(p.mapping)!==mappingFingerprint||
+    JSON.stringify(p.catalog)!==catalogFingerprint))
+  throw new Error("Ten-feed staging requires one source generation, snapshot, watermark and catalogue");
  if(aggregate){
   if(!Number.isSafeInteger(aggregate.maxTotalRows)||aggregate.maxTotalRows<1||
    !Number.isSafeInteger(aggregate.maxTotalBytes)||aggregate.maxTotalBytes<1||
