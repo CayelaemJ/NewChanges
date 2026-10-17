@@ -40,6 +40,14 @@ export function validateTestingCloudRun(
  if(config.source.user.trim().toLowerCase()==="root"||
    config.source.ssl!==true||config.source.rejectUnauthorized!==true)
   throw new Error("Restricted verified-TLS source required");
+ if(!Number.isSafeInteger(config.pageSize)||config.pageSize<1||config.pageSize>250||
+   !Number.isSafeInteger(config.maxRowsPerFeed)||config.maxRowsPerFeed<1||
+   !Number.isSafeInteger(config.maxBytesPerFeed)||config.maxBytesPerFeed<1||
+   !Number.isSafeInteger(config.maxPagesPerFeed)||config.maxPagesPerFeed<1||
+   LOAD_ORDER.length*config.maxRowsPerFeed>config.maxTotalRows||
+   LOAD_ORDER.length*config.maxBytesPerFeed>config.maxTotalBytes||
+   LOAD_ORDER.length*config.maxPagesPerFeed>config.maxTotalPages)
+  throw new Error("Invalid per-feed or aggregate Testing transfer reservation");
  if(!Number.isSafeInteger(config.maxTotalBytes)||config.maxTotalBytes<1||
    config.maxTotalBytes>64*1024*1024||
    !Number.isSafeInteger(config.maxTotalRows)||config.maxTotalRows<1||
