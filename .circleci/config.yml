@@ -83,6 +83,7 @@ jobs:
             npx tsx tests/ten-feed-cutover-gate.test.ts
             npx tsx tests/testing-s3-smoke-guard.test.ts
             npx tsx tests/testing-cloud-mapped-rehearsal.test.ts
+            npx tsx tests/near-realtime-source-watch.test.ts
             node scripts/source-config-preservation-regression-check.mjs
             npx tsx tests/approved-mapped-rehearsal-cli.test.ts
             npx tsx tests/cloud-receipt-fencing-integration.test.ts
