@@ -97,4 +97,24 @@ historicalDate.sink={commitPage:async receipt=>{
 }};
 assert.equal((await extractMappedFeedToStaging(historicalDate)).rowsCommitted,1);
 assert.equal(receivedCursor,"2026-10-15");
+// A malicious, buggy, or inconsistent reader must never stage rows that
+// exceed the operator-approved extraction watermark.
+const tooRecent=plan("employers");
+let futureWrites=0;
+tooRecent.reader={snapshotId:"snap_1",snapshotConsistent:true,queryReadOnly:async()=>[
+ {...rowFor("employers",0),source_updated_at:"2026-10-16T14:00:01Z"}
+]};
+tooRecent.sink={commitPage:async()=>{futureWrites++;}};
+await assert.rejects(extractMappedFeedToStaging(tooRecent),/exceeds approved upper watermark/);
+assert.equal(futureWrites,0);
+const invalidDate=plan("employers");
+invalidDate.reader={snapshotId:"snap_1",snapshotConsistent:true,queryReadOnly:async()=>[
+ {...rowFor("employers",0),source_updated_at:new Date(NaN)}
+]};
+invalidDate.sink={commitPage:async()=>{futureWrites++;}};
+await assert.rejects(extractMappedFeedToStaging(invalidDate),/Invalid source timestamp/);
+assert.equal(futureWrites,0);
+const invalidBound=plan("employers");
+invalidBound.upperWatermark="not-a-date";
+await assert.rejects(extractMappedFeedToStaging(invalidBound),/Invalid source upper watermark/);
 console.log("Mapped SQL executor staging: ten feeds, ordering, budgets, and fail-closed writes passed");
