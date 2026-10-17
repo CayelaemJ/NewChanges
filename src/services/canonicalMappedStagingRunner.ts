@@ -32,7 +32,10 @@ export interface MappedFeedRun {
  maxRows:number;maxBytes:number;pageSize:number;maxPages:number;
 }
 const normalizedStamp=(v:unknown):string=>{
- if(v instanceof Date)return v.toISOString();
+ if(v instanceof Date){
+  if(!Number.isFinite(v.getTime()))throw new Error("Invalid source timestamp");
+  return v.toISOString();
+ }
  if(typeof v!=="string"||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z$/.test(v)
   ||!Number.isFinite(Date.parse(v)))throw new Error("Invalid source timestamp; explicit UTC required");
  return v;
@@ -53,6 +56,11 @@ export async function extractMappedFeedToStaging(input:MappedFeedRun){
  const {mapping,catalog,dialect,feed,reader,sink}=input;
  if(!LOAD_ORDER.includes(feed)||!getFormat(feed))throw new Error("Unknown feed");
  const format=getFormat(feed)!;
+ // Reject invalid high-watermark configuration even if a broken/in-memory
+ // reader ignores the compiler's bound WHERE predicate.
+ const upperWatermarkMs=Date.parse(input.upperWatermark);
+ if(!/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?Z$/.test(input.upperWatermark)||
+    !Number.isFinite(upperWatermarkMs))throw new Error("Invalid source upper watermark");
  const schema=mapping.feeds.find(f=>f.feed===feed)?.sourceTable.split(".")[0]??"";
  const discovered=validateDiscoveredCatalog(catalog.filter(c=>c.schema===schema),schema);
  if(!discovered.complete)throw new Error("Incomplete source catalogue: "+discovered.issues.join("; "));
@@ -89,6 +97,8 @@ export async function extractMappedFeedToStaging(input:MappedFeedRun){
     if(!Object.prototype.hasOwnProperty.call(record,f.name)||record[f.name]==null)
       throw new Error("Missing required canonical source field: "+f.name);
    const updatedAt=normalizedStamp(record.source_updated_at);
+   if(Date.parse(updatedAt)>upperWatermarkMs)
+    throw new Error("Mapped source row exceeds approved upper watermark");
    const keys=format.naturalKey.map(k=>normalizeNaturalKey(
     record[k],format.fields.find(f=>f.name===k)?.type??"string"));
    // SQL driver keyset order is authoritative; require forward timestamp
