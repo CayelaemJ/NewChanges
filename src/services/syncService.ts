@@ -213,8 +213,9 @@ export function publicConfig(config: Awaited<ReturnType<typeof getConfig>>) {
     changeDetectionEnabled: configured && effectiveSourceMode === "SQL" && Boolean((config as any).enabled),
     // Runtime enablement is a separate deployment control. Do not claim a
     // running watcher simply because source credentials are configured.
-    sourceChangeSchedulerEnabled: process.env.ENABLE_AUTHORITATIVE_INCREMENTAL_SCHEDULER === "true" ||
-      process.env.TRAFFIC_SAVER_MODE === "false",
+    sourceChangeSchedulerEnabled: process.env.STANDBY_MODE !== "true" &&
+      (process.env.ENABLE_AUTHORITATIVE_INCREMENTAL_SCHEDULER === "true" ||
+       process.env.TRAFFIC_SAVER_MODE === "false"),
     sourceChangePollSeconds: SOURCE_CHANGE_POLL_SECONDS,
     syncBulkChunkSize: SYNC_BULK_CHUNK_SIZE,
     hasToken: Boolean(effective.authToken),
