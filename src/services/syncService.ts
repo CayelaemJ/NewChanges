@@ -6,6 +6,7 @@
 // ════════════════════════════════════════════════════════════════════
 
 import { PrismaClient, Prisma } from "@prisma/client";
+import { sourceChangePollSeconds } from "./sourceChangePollConfig.js";
 import { Client } from "pg";
 import { LOAD_ORDER, getFormat } from "./reportFormats.js";
 import { validate } from "./importParser.js";
@@ -23,12 +24,6 @@ const CLOCK_SKEW_TOLERANCE_MS = 5 * 60 * 1000;
 // Near-real-time SQL changes: default 60s; 30s is available for indexed
 // sources. This schedules cheap watermarks, NEVER a full ten-feed import.
 // Operators can increase the interval if their source cannot sustain it.
-export function sourceChangePollSeconds(env: NodeJS.ProcessEnv = process.env): number {
-  const raw = env.SOURCE_CHANGE_POLL_SECONDS;
-  const parsed = raw == null || raw.trim() === "" ? 60 : Number(raw);
-  if (!Number.isFinite(parsed) || !Number.isInteger(parsed)) return 60;
-  return Math.max(30, Math.min(3600, parsed));
-}
 export const SOURCE_CHANGE_POLL_SECONDS = sourceChangePollSeconds();
 const pendingSnapshotEmployers = new Set<string>();
 let snapshotDrainScheduled = false;
