@@ -19,4 +19,10 @@ assert(source.includes('sourceChangeSchedulerEnabled:'),"Admin must see actual s
 assert(admin.includes('!c.sourceChangeSchedulerEnabled'),"Admin must warn when watcher paused");
 assert(admin.includes('60 seconds by default'),"Admin must describe real default");
 assert(!admin.includes("normally 5 minutes"),"remove stale admin documentation");
+assert(admin.includes("window.setInterval(refreshVisibleIntegSyncStatus, 60000)"),"Admin integration status must update once per minute");
+const statusRefresh=admin.slice(admin.indexOf("async function refreshVisibleIntegSyncStatus"),admin.indexOf("async function loadInteg()"));
+assert(statusRefresh.includes("document.visibilityState"),"do not poll hidden Admin tabs");
+assert(statusRefresh.includes("getBoundingClientRect"),"poll only visible integration panel");
+assert(statusRefresh.includes("renderIntegSyncStatus(await reply.json())"),"refresh current sync status without resetting form fields");
+assert(!statusRefresh.includes("integrationDraft()"),"status refresh must not modify unsaved Admin settings");
 console.log("Near-real-time SQL watcher interval, non-overlap and Admin truthfulness passed");
