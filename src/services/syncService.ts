@@ -20,8 +20,16 @@ const prisma = new PrismaClient();
 type Json = Prisma.InputJsonValue;
 const CURSOR_OVERLAP_MS = 5 * 60 * 1000;
 const CLOCK_SKEW_TOLERANCE_MS = 5 * 60 * 1000;
-// Five-minute default avoids expensive ten-feed SQL watermark checks every 30s.
-export const SOURCE_CHANGE_POLL_SECONDS = Math.max(60, Math.min(3600, Number(process.env.SOURCE_CHANGE_POLL_SECONDS ?? 300) || 300));
+// Near-real-time SQL changes: default 60s; 30s is available for indexed
+// sources. This schedules cheap watermarks, NEVER a full ten-feed import.
+// Operators can increase the interval if their source cannot sustain it.
+export function sourceChangePollSeconds(env: NodeJS.ProcessEnv = process.env): number {
+  const raw = env.SOURCE_CHANGE_POLL_SECONDS;
+  const parsed = raw == null || raw.trim() === "" ? 60 : Number(raw);
+  if (!Number.isFinite(parsed) || !Number.isInteger(parsed)) return 60;
+  return Math.max(30, Math.min(3600, parsed));
+}
+export const SOURCE_CHANGE_POLL_SECONDS = sourceChangePollSeconds();
 const pendingSnapshotEmployers = new Set<string>();
 let snapshotDrainScheduled = false;
 
