@@ -44,7 +44,7 @@ export async function probeRailwayPostgres(env=process.env){
    throw new Error("Railway PostgreSQL read-only TLS or database validation failed");
   await client.query("ROLLBACK");
   return {ok:true,provider:"railway-postgresql",database:input.expectedDatabase,
-   readOnly:true,tlsVerifiedByServer:true,elapsedMs:Date.now()-started,
+   readOnly:true,tlsConnectionActive:true,elapsedMs:Date.now()-started,
    schemaModified:false,applicationStorageSwitched:false};
  }finally{
   await client.end().catch(()=>{});
