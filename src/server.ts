@@ -31,6 +31,7 @@ import { readPublishedSemanticPartition } from "./services/semanticCanaryRead.js
 import { activateEquivalentSource, bootstrapExistingSource } from "./services/sourceActivation.js";
 import { startDailyRefresh, triggerRefreshNow } from "./services/dailyRefresh.js";
 import { getConfig as getSyncConfig, saveConfig as saveSyncConfig, publicConfig as publicSyncConfig, testConnection as testSyncConnection, runSync, recentSyncLogs, detectSourceChanges, previewSourceSwitch, SOURCE_CHANGE_POLL_SECONDS } from "./services/syncService.js";
+import { recordSourceWatch, sourceWatchPublicStatus } from "./services/sourceWatchHealth.js";
 import { listPartners, createPartner, updatePartner, deletePartner, assignUserToPartner, assignEmployerToPartner, themeForUser, themeForEmployer, themeForSlug } from "./services/partnerService.js";
 import { login, resolveSession, destroySession, destroySessionById, destroyAllSessionsForUser, canViewEmployer, canAccessModule, allowedEmployerIds, AuthUser, isAdminRole } from "./services/authService.js";
 import { createUser, listUsers, updateUser, resetPassword, completeSetup, deactivateSelf, listRevokedUsers, deleteUserPermanently, requestPasswordReset } from "./services/userService.js";
@@ -179,8 +180,9 @@ app.addHook("onResponse", async (req, reply) => {
   const sensitive = path.startsWith("/api/admin/") || path.startsWith("/api/dashboard") || path.startsWith("/api/portfolio");
   if (!sensitive) return;
   try {
-    const token = req.cookies?.session;
-    const user = token ? await resolveSession(token) : null;
+    // Reuse the per-request authentication result; never query session/user/links
+    // twice just to write the data-access audit trail.
+    const user = await currentUser(req);
     if (!user) return;
     const context = requestSecurityContext(req);
     await recordDataAccessEvent({
@@ -193,7 +195,7 @@ app.addHook("onResponse", async (req, reply) => {
       statusCode: reply.statusCode,
       durationMs: undefined,
     });
-  } catch {}
+  } catch { /* Audit failures must not interrupt successful requests. */ }
 });
 // Periodically discard old rate-limit buckets so a long-lived process does not
 // retain one entry forever for every IP that ever touched it.
@@ -267,10 +269,10 @@ const escAttr = (v: string) => v.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<"
 // (never reflect an arbitrary Host header into markup).
 function publicOrigin(req: FastifyRequest): string {
   const configured = String(process.env.PUBLIC_BASE_URL || "").trim().replace(/\/$/, "");
-  if (/^https?:\/\/[a-z0-9.\-]+(:\d+)?$/i.test(configured)) return configured;
+  if (/^https?:\/\/[a-z0-9.-]+(:\d+)?$/i.test(configured)) return configured;
   const host = String(req.headers.host || "");
   const proto = req.protocol === "https" ? "https" : "http";
-  return /^[a-z0-9.\-]+(:\d+)?$/i.test(host) ? `${proto}://${host}` : "http://localhost";
+  return /^[a-z0-9.-]+(:\d+)?$/i.test(host) ? `${proto}://${host}` : "http://localhost";
 }
 const CONTACT_EMAIL = (process.env.CONTACT_EMAIL || "").trim();
 const siteVars = (req: FastifyRequest): Record<string, string> => ({
@@ -295,9 +297,17 @@ const serveHtml = async (reply: FastifyReply, file: string, status = 200) => {
 };
 
 // ── auth helpers ──
+// Request-scoped only: no cross-request permission cache, so revocations
+// and employer access changes are observed by the next HTTP request.
+const authenticatedRequests = new WeakMap<FastifyRequest, Promise<AuthUser | null>>();
 async function currentUser(req: FastifyRequest): Promise<AuthUser | null> {
-  const token = (req.cookies && req.cookies.session) || (req.headers.authorization?.replace("Bearer ", ""));
-  return resolveSession(token);
+  let pending = authenticatedRequests.get(req);
+  if (!pending) {
+    const token = (req.cookies && req.cookies.session) || (req.headers.authorization?.replace("Bearer ", ""));
+    pending = resolveSession(token);
+    authenticatedRequests.set(req, pending);
+  }
+  return pending;
 }
 // guard for API routes: returns the user or sends 401/403
 async function requireUser(req: FastifyRequest, reply: FastifyReply): Promise<AuthUser | null> {
@@ -389,7 +399,11 @@ app.post<{ Body: { name?: unknown; email?: unknown; organisation?: unknown; mess
     await sendMail({
       to: CONTACT_EMAIL, replyTo: email,
       subject: `Portal contact request from ${name.replace(/[\r\n]+/g, " ")}`,
-      html: `<div style="font-family:Arial,sans-serif;color:#241536"><h2 style="color:#32217c">New contact request</h2><p><b>Name:</b> ${e(name)}<br><b>Email:</b> ${e(email)}<br><b>Organisation:</b> ${e(organisation || "—")}</p><p style="white-space:pre-wrap">${e(message)}</p></div>`,
+      html: [
+        '<div style="font-family:Arial,sans-serif;color:#241536"><h2 style="color:#32217c">New contact request</h2><p><b>Name:</b> ',
+        e(name), '<br><b>Email:</b> ', e(email), '<br><b>Organisation:</b> ', e(organisation || "—"),
+        '</p><p style="white-space:pre-wrap">', e(message), "</p></div>",
+      ].join(""),
     });
     return { ok: true };
   } catch (err) {
@@ -568,7 +582,7 @@ app.get("/api/admin/events", async (req, reply) => {
 
   const unsubscribe = subscribeAdminEvents(jobId, send);
   const heartbeat = setInterval(() => {
-    try { res.write(`: heartbeat ${Date.now()}\n\n`); } catch {}
+    try { res.write(`: heartbeat ${Date.now()}\n\n`); } catch { /* Ignore writes after the SSE connection closes. */ }
   }, 15000);
 
   const close = () => {
@@ -1181,7 +1195,11 @@ app.get("/api/admin/integration", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
   const cfg = await getSyncConfig();
   // Secrets are never returned to the browser; only presence flags are exposed.
-  return publicSyncConfig(cfg);
+  const safe=publicSyncConfig(cfg);
+  return {...safe,sourceWatchHealth:sourceWatchPublicStatus(
+    Boolean(safe.changeDetectionEnabled&&safe.sourceChangeSchedulerEnabled),
+    SOURCE_CHANGE_POLL_SECONDS,
+  )};
 });
 
 app.post<{ Body: {
@@ -2073,11 +2091,14 @@ function startSyncScheduler(app: any) {
   const tick = async () => {
     if (tickRunning) return;
     tickRunning = true;
+    const startedAt=Date.now();
+    const report=(outcome:Parameters<typeof recordSourceWatch>[0]["outcome"],changedFeeds=0)=>
+      recordSourceWatch({outcome,durationMs:Date.now()-startedAt,changedFeeds});
     try {
       const cfg = await getSyncConfig();
-      if (!cfg.enabled) return;
+      if (!cfg.enabled){report("DISABLED");return;}
       const publicCfg = publicSyncConfig(cfg);
-      if (!publicCfg.configured) return;
+      if (!publicCfg.configured){report("DISABLED");return;}
 
       // Direct SQL: use the indexed source watermark first. A changed
       // source_updated_at triggers the normal cursor-based incremental sync;
@@ -2091,6 +2112,7 @@ function startSyncScheduler(app: any) {
         const r = await runSync("scheduled");
         app.log.info(`Change-triggered sync: ${r.status ?? "done"}`);
         reportFailure(r);
+        report(r.status==="OK"?"SYNC_OK":"SYNC_FAILED",changes.reports.length);
         return;
       }
 
@@ -2100,6 +2122,7 @@ function startSyncScheduler(app: any) {
       // A first-time source with no successful import still gets bootstrapped.
       // Real deletions must arrive as versioned is_deleted tombstones.
       if (changes.supported && !changes.changed && cfg.lastSuccessfulSyncAt) {
+        report("UNCHANGED");
         app.log.info("SQL source watermarks unchanged; skipping costly heartbeat extraction");
         return;
       }
@@ -2114,8 +2137,12 @@ function startSyncScheduler(app: any) {
         const r = await runSync("scheduled");
         app.log.info(`Scheduled sync: ${r.status ?? "done"}`);
         reportFailure(r);
+        report(r.status==="OK"?"FALLBACK":"SYNC_FAILED");
+      }else{
+        report("UNSUPPORTED");
       }
     } catch (e) {
+      recordSourceWatch({outcome:"ERROR",durationMs:Date.now()-startedAt});
       app.log.error(e);
     } finally {
       tickRunning = false;

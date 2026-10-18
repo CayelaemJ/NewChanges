@@ -1,0 +1,35 @@
+import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
+import {readSourceWatchHealth,recordSourceWatch,
+ resetSourceWatchHealthForTest,sourceWatchPublicStatus} from "../src/services/sourceWatchHealth.js";
+
+resetSourceWatchHealthForTest();
+const now=new Date("2026-10-18T12:00:00.000Z");
+assert.equal(sourceWatchPublicStatus(false,60,now).status,"PAUSED");
+assert.equal(sourceWatchPublicStatus(true,60,now).status,"STALE");
+recordSourceWatch({outcome:"UNCHANGED",durationMs:36,at:now});
+let status=sourceWatchPublicStatus(true,60,new Date(now.getTime()+30_000));
+assert.equal(status.status,"RUNNING");
+assert.equal(status.lastCheckAgeSeconds,30);
+assert.equal(status.pollCount,1);
+assert.equal(status.lastSuccessfulSyncAt,null);
+recordSourceWatch({outcome:"SYNC_OK",changedFeeds:2,durationMs:355,at:now});
+status=sourceWatchPublicStatus(true,60,now);
+assert.equal(status.lastChangedFeeds,2);
+assert.equal(status.lastSuccessfulSyncAt,now.toISOString());
+recordSourceWatch({outcome:"ERROR",durationMs:750,errorClass:"Database credentials leaked",at:now});
+status=sourceWatchPublicStatus(true,60,now);
+assert.equal(status.status,"DEGRADED");
+assert.equal(status.lastErrorClass,"SOURCE_PROBE_ERROR");
+assert(!JSON.stringify(status).includes("credentials leaked"));
+assert.equal(sourceWatchPublicStatus(true,60,new Date(now.getTime()+181_000)).status,"STALE");
+assert.equal(readSourceWatchHealth().pollCount,3);
+assert.throws(()=>recordSourceWatch({outcome:"UNCHANGED",durationMs:-1}),/telemetry/);
+const server=readFileSync(new URL("../src/server.ts",import.meta.url),"utf8");
+const admin=readFileSync(new URL("../public/admin.html",import.meta.url),"utf8");
+assert(server.includes("sourceWatchHealth:sourceWatchPublicStatus("));
+assert(server.includes('report("UNCHANGED")'));
+assert(server.includes('recordSourceWatch({outcome:"ERROR"'));
+assert(admin.includes("Last observed poll on this application worker"));
+assert(admin.includes("watch.status"));
+console.log("Source watch telemetry: fresh, stale, degraded, process-local, no error secret leakage");

@@ -1,0 +1,2 @@
+journey_ref,employer_ref,payroll_ref,type,status,started_at,completed_at,source_updated_at
+TEST-JNY-1,DEMO,TEST-0001,CREDIT_LIFE,COMPLETED,2026-03-01,2026-03-20,2026-10-15T08:00:00Z

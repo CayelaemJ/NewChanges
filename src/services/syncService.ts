@@ -6,6 +6,7 @@
 // ════════════════════════════════════════════════════════════════════
 
 import { PrismaClient, Prisma } from "@prisma/client";
+import { sourceChangePollSeconds } from "./sourceChangePollConfig.js";
 import { Client } from "pg";
 import { LOAD_ORDER, getFormat } from "./reportFormats.js";
 import { validate } from "./importParser.js";
@@ -20,8 +21,10 @@ const prisma = new PrismaClient();
 type Json = Prisma.InputJsonValue;
 const CURSOR_OVERLAP_MS = 5 * 60 * 1000;
 const CLOCK_SKEW_TOLERANCE_MS = 5 * 60 * 1000;
-// Five-minute default avoids expensive ten-feed SQL watermark checks every 30s.
-export const SOURCE_CHANGE_POLL_SECONDS = Math.max(60, Math.min(3600, Number(process.env.SOURCE_CHANGE_POLL_SECONDS ?? 300) || 300));
+// Near-real-time SQL changes: default 60s; 30s is available for indexed
+// sources. This schedules cheap watermarks, NEVER a full ten-feed import.
+// Operators can increase the interval if their source cannot sustain it.
+export const SOURCE_CHANGE_POLL_SECONDS = sourceChangePollSeconds();
 const pendingSnapshotEmployers = new Set<string>();
 let snapshotDrainScheduled = false;
 
@@ -159,6 +162,7 @@ export async function saveAnalyticsRoute(input: { reportKey: string; executionMo
 }
 
 export function publicConfig(config: Awaited<ReturnType<typeof getConfig>>) {
+  // Never expose replica password (or primary/API credentials) in public configuration responses.
   const { authToken, sqlPassword, sourceAnalyticsReplicaPassword, ...safe } = config as any;
   const effective = effectiveSourceConfig(config);
   let effectiveSourceMode = "API";
@@ -202,6 +206,11 @@ export function publicConfig(config: Awaited<ReturnType<typeof getConfig>>) {
     effectiveApiBaseUrl: effective.baseUrl ?? null,
     changeDetectionSupported: effectiveSourceMode === "SQL",
     changeDetectionEnabled: configured && effectiveSourceMode === "SQL" && Boolean((config as any).enabled),
+    // Runtime enablement is a separate deployment control. Do not claim a
+    // running watcher simply because source credentials are configured.
+    sourceChangeSchedulerEnabled: process.env.STANDBY_MODE !== "true" &&
+      (process.env.ENABLE_AUTHORITATIVE_INCREMENTAL_SCHEDULER === "true" ||
+       process.env.TRAFFIC_SAVER_MODE === "false"),
     sourceChangePollSeconds: SOURCE_CHANGE_POLL_SECONDS,
     syncBulkChunkSize: SYNC_BULK_CHUNK_SIZE,
     hasToken: Boolean(effective.authToken),
@@ -269,7 +278,7 @@ export async function detectSourceChanges() {
     };
   } finally {
     if (adapter) {
-      try { await adapter.close(); } catch {}
+      try { await adapter.close(); } catch { /* Optional cleanup or diagnostics failure; retain previous state. */ }
     }
   }
 }
@@ -288,7 +297,7 @@ export async function openIncrementalSyncLease() {
       "SELECT pg_try_advisory_lock_shared($1, $2) AS acquired",
       [FULL_REFRESH_LOCK_A, SOURCE_SYNC_COORDINATION_LOCK_B],
     );
-    if (!Boolean(result.rows?.[0]?.acquired)) {
+    if (!result.rows?.[0]?.acquired) {
       await client.end();
       return null;
     }
@@ -296,7 +305,7 @@ export async function openIncrementalSyncLease() {
       "SELECT pg_try_advisory_lock($1, $2) AS acquired",
       [FULL_REFRESH_LOCK_A, SOURCE_INCREMENTAL_MUTEX_B],
     );
-    if (!Boolean(incremental.rows?.[0]?.acquired)) {
+    if (!incremental.rows?.[0]?.acquired) {
       await client.query(
         "SELECT pg_advisory_unlock_shared($1, $2)",
         [FULL_REFRESH_LOCK_A, SOURCE_SYNC_COORDINATION_LOCK_B],
@@ -424,7 +433,7 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
           try {
             const described = await adapter.describe(reportKey);
             sourceTotalRows = Number.isFinite(Number(described.totalRows)) ? Number(described.totalRows) : null;
-          } catch {}
+          } catch { /* Optional cleanup or diagnostics failure; retain previous state. */ }
         }
         const feedSpan = 82 / Math.max(1, LOAD_ORDER.length);
         const feedStart = 5 + reportIndex * feedSpan;
@@ -539,7 +548,7 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
               if (newestMs != null && newestMs < cursor.lastSourceUpdatedAt.getTime()) {
                 rebasedCursor = new Date(newestMs);
               }
-            } catch {}
+            } catch { /* Optional cleanup or diagnostics failure; retain previous state. */ }
           }
           await prisma.integrationCursor.update({
             where: { reportKey },
@@ -1030,7 +1039,7 @@ export async function testConnection(patch: IntegrationConfigPatch = {}) {
     return { ok: false, error: error?.message ?? String(error), sourceMode: (() => { try { return configuredSourceMode(config); } catch { return "UNKNOWN"; } })() };
   } finally {
     if (adapter) {
-      try { await adapter.close(); } catch {}
+      try { await adapter.close(); } catch { /* Optional cleanup or diagnostics failure; retain previous state. */ }
     }
   }
 }

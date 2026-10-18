@@ -59,6 +59,9 @@ export interface SourceAdapter {
   mode: SourceMode;
   label: string;
   fetchReport(reportKey: string, window?: SourceWindow, sourceViewOverride?: string | null, options?: { useReplica?: boolean; authoritative?: boolean }): Promise<SourceFetchResult>;
+  // Bounded, one-page-at-a-time extraction for a future checkpointed importer.
+  // Consumers must not retain pages or advance a durable cursor before commits.
+  iterateReportPages?(reportKey: string, window?: SourceWindow, sourceViewOverride?: string | null, options?: { useReplica?: boolean; authoritative?: boolean }): AsyncIterable<SourceFetchResult>;
   test(): Promise<{ ok: true; note: string; details?: unknown }>;
   describe?(reportKey: string): Promise<{ database: string | null; totalRows: number; newest: string | null; location: string }>;
   watermark?(reportKey: string): Promise<{ newest: string | null; location: string }>;
@@ -532,7 +535,7 @@ export async function checkMysqlReadReplica(config: IntegrationSourceConfig): Pr
       const row = rows?.[0];
       if (row) lagSeconds = row.Seconds_Behind_Source == null ? null : Number(row.Seconds_Behind_Source);
     } catch {
-      try { const [rows]: any = await connection.query("SHOW SLAVE STATUS"); const row = rows?.[0]; if (row) lagSeconds = row.Seconds_Behind_Master == null ? null : Number(row.Seconds_Behind_Master); } catch {}
+      try { const [rows]: any = await connection.query("SHOW SLAVE STATUS"); const row = rows?.[0]; if (row) lagSeconds = row.Seconds_Behind_Master == null ? null : Number(row.Seconds_Behind_Master); } catch { /* Replica status may not be supported on this server. */ }
     }
     const threshold = intSetting(effective.sqlReplicaMaxLagSeconds, 60, 0, 86400);
     const lagWithinThreshold = lagSeconds == null ? null : lagSeconds <= threshold;
@@ -601,6 +604,25 @@ async function createSqlAdapter(config: IntegrationSourceConfig): Promise<Source
     throw new Error(`Could not open a ${dialect} connection to ${config.sqlHost}:${config.sqlPort ?? "(default port)"} — ${note}. If this looks like a protocol/handshake error rather than an auth or network error, double-check that "SQL platform" in Admin is actually set to the database engine you're running (and that Save settings was clicked after changing it), then re-test.`);
   }
 
+  async function* iterateReportPages(reportKey: string, window: SourceWindow = {}, sourceViewOverride?: string | null, options?: { useReplica?: boolean; authoritative?: boolean }): AsyncGenerator<SourceFetchResult> {
+    const selectedExecutor = options?.useReplica ? replicaExecutor : executor;
+    if (options?.useReplica && !selectedExecutor) throw new Error("Read replica is required for " + reportKey + ", but no approved replica is configured.");
+    const activeExecutor = selectedExecutor ?? executor;
+    const location = `${dialect}${options?.useReplica ? "-REPLICA" : ""}:${formatSqlLocation(options?.useReplica && replicaExecutor ? { ...config, sqlSchema: config.sqlReplicaSchema ?? config.sqlSchema } : config, reportKey)}`;
+    let offset = 0;
+    while (true) {
+      const page = await activeExecutor.queryReport(reportKey, window, extractionPageSize, sourceViewOverride, offset);
+      if(page.rows.length > extractionPageSize) throw new Error("SQL page exceeded configured row budget");
+      if(page.rows.length === 0) break;
+      // Do not accumulate pages. Consumers must finish and release each page
+      // before requesting another, with durable checkpoints after successful writes.
+      yield {records:normalizeSqlRows(reportKey,page.rows),location};
+      if (page.rows.length < extractionPageSize) break;
+      offset += page.rows.length;
+      if(!Number.isSafeInteger(offset))throw new Error("SQL pagination offset exceeded safe integer range");
+    }
+  }
+
   async function fetchReport(reportKey: string, window: SourceWindow = {}, sourceViewOverride?: string | null, options?: { useReplica?: boolean; authoritative?: boolean }): Promise<SourceFetchResult> {
     const selectedExecutor = options?.useReplica ? replicaExecutor : executor;
     if (options?.useReplica && !selectedExecutor) throw new Error("Read replica is required for " + reportKey + ", but no approved replica is configured.");
@@ -629,6 +651,7 @@ async function createSqlAdapter(config: IntegrationSourceConfig): Promise<Source
     mode: "SQL",
     label: `${dialect} ${config.sqlHost}/${config.sqlDatabase}`,
     fetchReport,
+    iterateReportPages,
     async describe(reportKey: string) {
       const d = await executor.describe(reportKey);
       return { ...d, location: `${dialect}:${config.sqlHost}:${config.sqlPort ?? "default"}/${d.database ?? config.sqlDatabase}.${formatSqlLocation(config, reportKey)}` };

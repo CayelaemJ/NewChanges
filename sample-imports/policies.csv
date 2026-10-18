@@ -1,0 +1,2 @@
+policy_ref,employer_ref,payroll_ref,observed_at,type,premium_rand,is_wasteful,source_updated_at
+TEST-POL-1,DEMO,TEST-0001,2026-09-30,FUNERAL,50.00,false,2026-10-15T08:00:00Z

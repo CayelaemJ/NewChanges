@@ -10,12 +10,26 @@ export async function enqueueSemanticRefresh(generationId:string, watermark:Date
   // The unique idempotency key still protects concurrent schedulers.
   if(partitions.length>500) throw new Error("Semantic queue partition budget exceeded");
   if(partitions.length===0)return {queued:0,deduplicated:0};
-  const records=partitions.map(part=>{
-    if(!part.employerId || !/^\\d{4}-(0[1-9]|1[0-2])$/.test(part.period))
-      throw new Error("Invalid semantic employer or period");
+  // Coalesce overlapping feeds for the same employer/month before any writes.
+  // Otherwise one generation/watermark may create the same idempotency key
+  // with incomplete changedFeeds depending on partition order.
+  const grouped=new Map<string,{employerId:string;period:string;feeds:Set<string>}>();
+  for(const part of partitions){
+    if(!part.employerId?.trim() || !/^\\d{4}-(0[1-9]|1[0-2])$/.test(part.period) ||
+       !Array.isArray(part.feeds) || part.feeds.length===0)
+      throw new Error("Invalid semantic employer, period or changed feeds");
+    const key=JSON.stringify([part.employerId,part.period]);
+    const current=grouped.get(key) ?? {employerId:part.employerId,period:part.period,feeds:new Set<string>()};
+    for(const feed of part.feeds){
+      if(typeof feed!=="string" || !feed.trim())throw new Error("Invalid semantic changed feed");
+      current.feeds.add(feed);
+    }
+    grouped.set(key,current);
+  }
+  const records=[...grouped.values()].map(part=>{
     const idempotencyKey=createHash("sha256").update(JSON.stringify([generationId,part.employerId,part.period,"all",watermark.toISOString()])).digest("hex");
     return {idempotencyKey,generationId,employerId:part.employerId,period:part.period,
-      partitionKey:"all",sourceWatermark:watermark,changedFeeds:part.feeds,status:"PENDING"};
+      partitionKey:"all",sourceWatermark:watermark,changedFeeds:[...part.feeds].sort(),status:"PENDING"};
   });
   let queued=0;
   for(let i=0;i<records.length;i+=100){
@@ -24,7 +38,7 @@ export async function enqueueSemanticRefresh(generationId:string, watermark:Date
     });
     queued+=inserted.count;
   }
-  return {queued,deduplicated:records.length-queued};
+  return {queued,deduplicated:partitions.length-queued};
 }
 
 export async function claimSemanticRefresh(workerId:string, leaseSeconds=120) {
