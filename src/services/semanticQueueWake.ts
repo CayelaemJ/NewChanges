@@ -29,7 +29,7 @@ export function semanticListenerConnectionString(env:NodeJS.ProcessEnv=process.e
   let source:URL,listen:URL;
   try {source=new URL(main);listen=new URL(direct);}
   catch {throw new Error("Semantic listener needs a separate direct PostgreSQL connection URL");}
-  const normalizedHost=(hostname:string)=>hostname.replace(/-pooler(?=\\.)/g,"");
+  const normalizedHost=(hostname:string)=>hostname.replace(/-pooler(?=\.)/g,"");
   if(!["postgres:","postgresql:"].includes(listen.protocol) ||
      listen.hostname.includes("-pooler.") ||
      !listen.hostname.endsWith(".neon.tech") ||
