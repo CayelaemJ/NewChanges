@@ -26,6 +26,7 @@ import { stageValidatedGeneration, listSourceGenerations, getSemanticPublication
 import { semanticPublicationReadiness } from "./services/semanticPublicationGates.js";
 import { getSemanticQueueHealth } from "./services/semanticQueueHealth.js";
 import { readSemanticPublicationChanges } from "./services/semanticPublicationFeed.js";
+import { semanticBrowserPollSeconds } from "./services/semanticLatencyBudget.js";
 import { publicSemanticStorageHealth } from "./services/semanticStorageSettings.js";
 import { readPublishedSemanticPartition } from "./services/semanticCanaryRead.js";
 import { activateEquivalentSource, bootstrapExistingSource } from "./services/sourceActivation.js";
@@ -1314,6 +1315,7 @@ app.get("/api/dashboard/semantic-features", async (req, reply) => {
   if (!(await requireUser(req, reply))) return;
   return {
     pollingEnabled: process.env.ENABLE_SEMANTIC_LIVE_NOTIFICATIONS === "true",
+    pollIntervalSeconds: semanticBrowserPollSeconds(),
     servingEnabled: false,
   };
 });
