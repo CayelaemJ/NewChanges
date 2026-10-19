@@ -7,7 +7,7 @@ import { Client } from "pg";
 import { processOneShadowSemanticRefresh } from "../src/services/semanticShadowWorker.js";
 import { createSemanticStorageBroker } from "../src/services/semanticS3Broker.js";
 import { reconcileExpiredSemanticRefreshLeases } from "../src/services/semanticRefreshQueue.js";
-import { SEMANTIC_QUEUE_WAKE_CHANNEL, semanticListenerEnabled } from "../src/services/semanticQueueWake.js";
+import { SEMANTIC_QUEUE_WAKE_CHANNEL, semanticListenerEnabled, semanticListenerConnectionString } from "../src/services/semanticQueueWake.js";
 import { prisma } from "../src/services/snapshotBuilder.js";
 
 async function main() {
@@ -16,7 +16,7 @@ async function main() {
     console.log("Semantic event listener disabled; no database or storage connections.");
     return;
   }
-  if(!process.env.DATABASE_URL) throw new Error("Dedicated semantic listener needs a configured database");
+  const directDatabaseUrl=semanticListenerConnectionString();
   const storage=createSemanticStorageBroker();
   const workerId="semantic-event-"+randomUUID();
   let listener:Client|null=null;
@@ -79,7 +79,7 @@ async function main() {
   };
   const sweep=setInterval(wake,60_000);
   try {
-    listener=new Client({connectionString:process.env.DATABASE_URL,connectionTimeoutMillis:10_000});
+    listener=new Client({connectionString:directDatabaseUrl,connectionTimeoutMillis:10_000});
     listener.on("notification",msg=>{
       if(msg.channel===SEMANTIC_QUEUE_WAKE_CHANNEL)wake();
     });
