@@ -42,3 +42,30 @@ verifying the server supports trusted certificate validation. Provision a
 restricted account (never root) and rotate old stored source credentials
 through the governed Admin workflow with a connection test and rollback
 plan. Retain source data/history during any connection update.
+
+
+## Near-real-time source drift safety — 19 October 2026
+
+The 30–60-second watcher must not silently interpret a rebuilt, reset,
+truncated, invalid-dated, or empty source as permanently unchanged.
+The new watermark classifier reports per-feed `REGRESSED`, `MISSING`
+or `INVALID` when existing cursor history conflicts with the returned
+source maximum. When any anomaly is present, ordinary incremental ingestion
+pauses and the watcher records a degraded/error state. Source data and
+persisted cursors remain untouched; an approved replay/reset is required.
+
+A **normal forward watermark** can still trigger a bounded incremental
+sync, and an unchanged maximum remains inexpensive.
+
+**Limit of MAX(updated_at):** removing an older record while leaving the
+maximum unchanged is not detectable from that scalar. Reliable hard
+deletions must use source-provided `is_deleted` tombstones, a change log,
+CDC, or an explicitly scheduled, reconciled anti-join/full snapshot.
+Do not advertise the 30–60-second target as proof of arbitrary deletion
+capture or end-to-end materialisation latency.
+
+**Deployment:** use exactly one authoritative always-on ingestion worker.
+The existing free Render standby is for app/startup checks only; its
+`STANDBY_MODE` prevents scheduled polling, and sleeping hosts cannot
+guarantee minute-by-minute checks. Production Railway/Postgres ownership,
+billing and a secure data migration remain a separate release gate.
