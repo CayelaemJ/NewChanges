@@ -304,3 +304,9 @@ img[data-custom-logo]{
     min-height:30px!important;
   }
 }
+
+/* Keep consent text and actions readable in account-branded dark mode. */
+html.portal-dark .ent-cookie{background:var(--surface-1,#111c26);border-top-color:var(--blue,#6cb5ee)}
+html.portal-dark .ent-cookie p{color:var(--ink,#e5eef5)}
+html.portal-dark .ent-cookie a{color:var(--blue,#6cb5ee)}
+html.portal-dark .ent-cookie button{background:var(--blue,#6cb5ee);color:var(--dm-on-accent,#07101a);border-color:var(--blue,#6cb5ee)}
