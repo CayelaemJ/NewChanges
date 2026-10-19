@@ -41,4 +41,8 @@ assert.deepEqual(historical.find(x=>x.period==="2026-05")?.feeds,["employees","p
 assert.throws(()=>mergeAndExpandSemanticPartitions(datedCorrection,"2026-10",3),/budget exceeded/);
 assert.throws(()=>partitionsFromCanonicalSourceRows("ratings",[{employer_ref:"VIG",created_at:"invalid"}]),/Invalid business date/);
 
+// Reject bad source identity before queuing any score refresh work.
+for(const employer_ref of [null,42,"", "   ", "x".repeat(201)])
+  assert.throws(()=>partitionsFromCanonicalSourceRows("ratings",[{employer_ref,created_at:"2026-10-01",source_updated_at:"2026-10-01T00:00:00Z"}]),/Invalid canonical employer key/);
+assert.throws(()=>partitionsFromCanonicalSourceRows("ratings",[null as unknown as Record<string,unknown>]),/Invalid canonical source row/);
 console.log("Incremental semantic partition planner tests passed");
