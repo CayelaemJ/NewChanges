@@ -9,6 +9,11 @@ assert(seed.includes("current_database() <> 'newchanges_testing_20261017'"),
   "Fixture must enforce exact isolated Neon database identity");
 assert(!/\b(?:DELETE\s+FROM|TRUNCATE|DROP\s+TABLE|UPDATE\s+)/i.test(seed),
   "Fixture must remain insert-only; never delete or overwrite data");
+
+const forbiddenSql=/\b(?:DELETE\s+FROM|TRUNCATE|DROP\s+TABLE|UPDATE\s+)/i;
+for(const destructive of ['DELETE FROM "Employer"','TRUNCATE "Employee"','DROP TABLE "Journey"','UPDATE "Employer" SET'])
+  assert(forbiddenSql.test(destructive),"Fixture safety guard must detect destructive SQL: "+destructive);
+
 for(const table of ["Employer","EmployerHeadcountSnapshot","Employee","PlatformUser",
   "Journey","DebtAccount","InsurancePolicy","Rating","Referral","SalaryAdvance",
   "AchievableTarget","SourceGeneration","SourceGenerationCursor"])
