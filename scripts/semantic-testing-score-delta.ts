@@ -48,6 +48,7 @@ async function run() {
   guard();
   const started=Date.now();
   let changed=false;
+  let originalUpdatedAt:Date|null=null;
   try {
     const actual=await prisma.$queryRaw<Array<{name:string}>>`SELECT current_database() AS name`;
     assert.equal(actual[0]?.name,databaseName,"Wrong database identity");
@@ -62,9 +63,10 @@ async function run() {
     assert.deepEqual(
       generation.cursors.filter(c=>c.reconciledAt).map(c=>c.reportKey).sort(),
       [...LOAD_ORDER].sort(),"Ten synthetic reconciliation cursors required");
-    const journey=await prisma.journey.findUnique({where:{id:journeyId},select:{monthlySavingCents:true}});
+    const journey=await prisma.journey.findUnique({where:{id:journeyId},select:{monthlySavingCents:true,sourceUpdatedAt:true}});
     assert.equal(journey?.monthlySavingCents,baseSavingsCents,
       "Fixture already modified; do not overwrite unexpected data");
+    originalUpdatedAt=journey!.sourceUpdatedAt;
 
     const baseline=await snapshotEmployer(employerId,period);
     assert(baseline.persisted && baseline.scoreReady,"Synthetic baseline must produce a complete score");
@@ -92,18 +94,21 @@ async function run() {
       publicationTested:false,browserTested:false,
     }));
   } finally {
-    if(changed) {
-      const reverted=await prisma.journey.updateMany({
-        where:{id:journeyId,monthlySavingCents:changedSavingsCents},
-        data:{monthlySavingCents:baseSavingsCents,sourceUpdatedAt:new Date()},
-      });
-      if(reverted.count!==1) throw new Error("Synthetic fixture restore failed; manual Testing review required");
-      const restored=await snapshotEmployer(employerId,period);
-      if(!restored.persisted || !restored.scoreReady)
-        throw new Error("Synthetic fixture baseline score could not be restored");
-      console.log("Synthetic Testing journey and baseline score restored");
+    try {
+      if(changed) {
+        const reverted=await prisma.journey.updateMany({
+          where:{id:journeyId,monthlySavingCents:changedSavingsCents},
+          data:{monthlySavingCents:baseSavingsCents,sourceUpdatedAt:originalUpdatedAt!},
+        });
+        if(reverted.count!==1) throw new Error("Synthetic fixture restore failed; manual Testing review required");
+        const restored=await snapshotEmployer(employerId,period);
+        if(!restored.persisted || !restored.scoreReady)
+          throw new Error("Synthetic fixture baseline score could not be restored");
+        console.log("Synthetic Testing journey and baseline score restored");
+      }
+    } finally {
+      await prisma.$disconnect();
     }
-    await prisma.$disconnect();
   }
 }
 run().catch(error=>{console.error("Isolated semantic score-delta failed:",error?.message||String(error));process.exitCode=1;});
