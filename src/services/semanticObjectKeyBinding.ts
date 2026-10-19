@@ -16,7 +16,8 @@ export function requireSemanticObjectUrlBinding(
     if(!/^[a-f0-9]{64}$/.test(url.searchParams.get("X-Amz-Signature")??"") ||
        url.searchParams.get("X-Amz-Algorithm")!=="AWS4-HMAC-SHA256")
       throw new Error("Semantic object storage requires presigned S3 URLs");
-    const keySuffix="/"+objectKey.split("/").map(encodeURIComponent).join("/");
+    const encode=(v:string)=>encodeURIComponent(v).replace(/[!\'()*]/g,c=>`%${c.charCodeAt(0).toString(16).toUpperCase()}`);
+    const keySuffix="/"+objectKey.split("/").map(encode).join("/");
     if(!url.pathname.endsWith(keySuffix))
       throw new Error("Presigned semantic URL does not match manifest object key");
   }
