@@ -45,6 +45,15 @@ The live consoles were reviewed separately, including rendered header spacing, l
 
 Verified defects fixed: header descriptions touching controls, clipped search hints, unlabelled user fields, visible temporary passwords, blank no-match user search, missing submission error handling, cramped role choices, page-wide mobile overflow from the account header and admin tables, low-contrast dark introductory text, and security-drawer keyboard handling. Tables now have keyboard-accessible scrolling regions; narrow forms stack, controls wrap, and focusable actions have larger touch targets.
 
-The additional isolated Chromium suite covers Administration and Users at 320, 360, 390, 768 and 1366 CSS pixels in light and dark mode: 20 combinations. It asserts no page-wide horizontal overflow, no clipped heading/label/button text and no uncaught page errors. It also tests tab/collapse controls, labels, search no-match/reset, editor cancellation, drawer Escape dismissal, password/link mode switching, invalid name/email validation, and a failed mocked creation response preserving input and re-enabling the button. All writes are intercepted locally; the suite uses fake identities and no production session. Screenshots and a JSON result are generated under test-results/console-ux and retained by the CircleCI browser job.
+The additional isolated Chromium suite covers Administration and Users at 320, 360, 390, 768 and 1366 CSS pixels plus 844 × 390 phone landscape in light and dark mode: 24 combinations. It asserts no page-wide horizontal overflow, no clipped heading/label/button text and no uncaught page errors. It also tests tab/collapse controls, labels, search no-match/reset, editor cancellation, drawer Escape dismissal, password/link mode switching, invalid name/email validation, and a failed mocked creation response preserving input and re-enabling the button. All writes are intercepted locally; the suite uses fake identities and no production session. Screenshots and a JSON result are generated under test-results/console-ux and retained by the CircleCI browser job.
 
 This verifies the patched source with isolated browser fixtures. It does not replace deployed verification, real role-matrix checks or database-backed integration testing. Deployment remains pending.
+
+
+## CI and permission checks after the UI pass
+
+CircleCI verify, source_quality, browser_smoke, admin_browser_smoke and semgrep_security all passed for commit 21089d3cfcc2c58027d718dd844c2781a18127d5. Snyk and Semgrep Cloud also passed. GitHub Actions jobs reported failure without executing steps (runner ID 0 and empty step lists); those results are not executed test failures.
+
+Additional local tests passed for all five access roles, cross-employer denial, admin read/write denial for non-admin roles, inactive identities and revoked sessions. These execute the real Fastify guards with an isolated in-memory session/audit repository; they do not change production permissions. The console suite now covers 24 portrait/landscape, desktop/tablet and light/dark combinations. TypeScript and unit checks passed again.
+
+Render workspace identification is still pending; the connector reports no selected workspace. Deployment inspection and promotion have not been performed.

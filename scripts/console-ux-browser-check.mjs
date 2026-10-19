@@ -9,8 +9,9 @@ const results=[];
 const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
 mkdirSync('test-results/console-ux',{recursive:true});
 try {
-  for(const width of [320,360,390,768,1366]) for(const dark of [false,true]) for(const consoleName of ['admin','users']) {
-    const context=await browser.newContext({viewport:{width,height:900},reducedMotion:'reduce'});
+  for(const viewport of [...[320,360,390,768,1366].map(width=>({width,height:900})),{width:844,height:390}]) for(const dark of [false,true]) for(const consoleName of ['admin','users']) {
+    const {width,height}=viewport;
+    const context=await browser.newContext({viewport,reducedMotion:'reduce'});
     const page=await context.newPage();
     const errors=[];
     page.on('pageerror',error=>errors.push(error.message));
@@ -109,10 +110,10 @@ try {
       assert.deepEqual(errors,[],'no uncaught browser errors');
       await page.locator('.head').scrollIntoViewIfNeeded();
       await page.screenshot({path:`test-results/console-ux/${consoleName}-${width}-${dark?'dark':'light'}.png`});
-      results.push({console:consoleName,width,mode:dark?'dark':'light',status:'pass'});
+      results.push({console:consoleName,width,height,mode:dark?'dark':'light',status:'pass'});
     }catch(error){
       await page.screenshot({path:`test-results/console-ux/failure-${consoleName}-${width}-${dark?'dark':'light'}.png`,fullPage:true});
-      results.push({console:consoleName,width,mode:dark?'dark':'light',status:'fail',error:String(error)});
+      results.push({console:consoleName,width,height,mode:dark?'dark':'light',status:'fail',error:String(error)});
     }finally{await context.close();}
   }
 }finally{await browser.close();}
