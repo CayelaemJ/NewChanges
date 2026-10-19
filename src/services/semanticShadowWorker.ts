@@ -19,6 +19,10 @@ export interface SemanticStorageBroker {
 export async function processOneShadowSemanticRefresh(workerId:string,storage:SemanticStorageBroker) {
   if(process.env.ENABLE_SEMANTIC_SHADOW_WORKER!=="true" || process.env.ENABLE_SEMANTIC_OBJECT_PUBLISH!=="true")
     return {processed:false,reason:"shadow semantic worker disabled"};
+  // Do not claim and burn durable retries until real source-specific score recomputation is enabled.
+  // A copied published payload cannot satisfy a live score-refresh obligation.
+  if(process.env.ENABLE_SEMANTIC_RECOMPUTE!=="true")
+    return {processed:false,reason:"source-specific semantic recomputation disabled"};
   const job=await claimSemanticRefresh(workerId,180);
   if(!job) return {processed:false,reason:"queue empty"};
   try {
