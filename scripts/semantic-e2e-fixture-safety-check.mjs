@@ -91,4 +91,42 @@ assert(transportPublication.includes("if(pointer && !ids.includes(pointer.manife
   "Cleanup must reject foreign pointers and remove only owned manifests");
 assert(circleci.includes("npm run semantic:e2e:storage-publication"),
   "Storage publication rehearsal must only run in manual CircleCI Testing job");
+const fullRehearsal=readFileSync("scripts/semantic-testing-full-e2e.ts","utf8");
+assert(fullRehearsal.includes('SEMANTIC_SYNTHETIC_E2E_APPROVED!=="YES_TEST_ONLY"'),
+  "Canonical-to-canary rehearsal must require explicit Testing approval");
+assert(fullRehearsal.includes('url.pathname!=="/"+dbName'),
+  "Canonical-to-canary rehearsal must refuse all other databases");
+assert(fullRehearsal.includes("await snapshotEmployer(employerId,period)") &&
+  fullRehearsal.includes("await readPublishedSemanticPartition(key)") &&
+  fullRehearsal.includes("await readSemanticPublicationChanges("),
+  "Full rehearsal must bridge real score rebuild, published canary read and version feed");
+assert(fullRehearsal.includes("assert.notEqual(revised.score,baseline.score") &&
+  fullRehearsal.includes("rollbackSemanticPublication({"),
+  "Full rehearsal must verify a genuine score delta and rollback");
+assert(fullRehearsal.includes('url.hostname!=="testing-e2e.example.invalid"') &&
+  fullRehearsal.includes("globalThis.fetch=async(input,init)=>"),
+  "Full rehearsal must intercept only synthetic S3 requests");
+assert(fullRehearsal.includes("externalDurabilityVerified:false") &&
+  fullRehearsal.includes("browserWithRealApiTested:false"),
+  "Integration must not misrepresent emulated storage or browser results");
+assert(fullRehearsal.includes("where:{id:journeyId,monthlySavingCents:30000}") &&
+  fullRehearsal.includes("await prisma.$disconnect()"),
+  "Synthetic source must be restored and Neon client disconnected");
+assert(circleci.includes("npm run semantic:e2e:canonical-to-canary") &&
+  circleci.includes("context: newchanges-neon-testing"),
+  "Full integration test must only run with manually authorized Testing credentials");
+const readOnlyStorage=readFileSync("src/services/semanticRealStorageRead.ts","utf8");
+const readOnlyCli=readFileSync("scripts/semantic-testing-real-storage-read.ts","utf8");
+assert(readOnlyStorage.includes('SEMANTIC_STORAGE_READ_APPROVED!=="YES_TESTING_READ_ONLY"') &&
+  readOnlyStorage.includes("SEMANTIC_VERIFY_ALLOWED_HOST") &&
+  readOnlyStorage.includes("identified as Testing") &&
+  readOnlyStorage.includes("existing synthetic Testing object key"),
+  "Real storage verifier must refuse unknown hosts, non-Testing buckets and non-synthetic keys");
+assert(readOnlyStorage.includes('presignS3Request({method:"GET"') &&
+  !readOnlyStorage.includes('presignS3Request({method:"PUT"') &&
+  !readOnlyStorage.includes('presignS3Request({method:"DELETE"'),
+  "Real storage verification must be strictly read-only");
+assert(readOnlyCli.includes("verifyExistingSemanticObjectRead(process.env)") &&
+  !readOnlyCli.includes("ENABLE_SEMANTIC_OBJECT_PUBLISH"),
+  "Real storage CLI must never enable semantic publication");
 console.log("Isolated Neon synthetic fixture and score-delta runner safety assertions passed");
