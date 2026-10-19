@@ -177,7 +177,7 @@ jobs:
           command: npm install --no-save --package-lock=false --no-audit --no-fund @playwright/test@1.56.1
       - run:
           name: Browser smoke test in Chromium
-          command: npm run quality:e2e && node scripts/console-ux-browser-check.mjs
+          command: npm run quality:e2e && node scripts/console-ux-browser-check.mjs && node scripts/header-responsive-check.mjs
       - store_artifacts:
           path: test-results
           destination: browser-smoke

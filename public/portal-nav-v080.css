@@ -58,3 +58,23 @@
   .portal-theme-quick{width:32px;height:32px;}
 }
 .portal-account-build{margin-top:7px;font-size:10px;font-weight:700;color:var(--grey-l,#8497a7);letter-spacing:.03em;}
+
+/* Navigation must reserve space for its text rather than shrink under sync status. */
+.topbar .portal-primary-nav{flex-shrink:0;overflow:visible}
+.topbar .portal-nav-link{flex-shrink:0}
+.topbar .data-fresh{flex-shrink:0;white-space:nowrap}
+.topbar .portal-account{flex-shrink:0}
+@media(max-width:1180px){
+  .topbar .portal-primary-nav{display:none!important}
+  .topbar .portal-mobile-links{display:block!important}
+  .topbar .topbar-inner{gap:12px!important;overflow:visible!important}
+  .topbar .topbar-meta{flex:0 0 auto!important;gap:12px!important;overflow:visible!important}
+  .topbar .portal-brand-lockup{flex-shrink:0}
+  .topbar #role-indicator{display:none!important}
+}
+@media(max-width:640px){
+  .topbar{overflow:visible!important}
+  .topbar .data-fresh{display:none!important}
+  .topbar .topbar-meta{margin-left:auto!important}
+  .topbar .portal-account-menu{position:fixed;right:12px;top:68px;max-height:calc(100dvh - 84px);overflow-y:auto}
+}
