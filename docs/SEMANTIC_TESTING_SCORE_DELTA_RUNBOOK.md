@@ -59,3 +59,16 @@ The opt-in Testing job additionally executes `npm run semantic:e2e:publication-m
 **This rehearsal deliberately does not store object bytes in S3 or perform signed PUT/GET.** A green result must not be used as evidence that real durable storage or dashboard serving works.
 
 The workflow is restricted to feature branch `fix/semantic-refresh-period-validation-20261019`, with CircleCI context `newchanges-neon-testing` and boolean pipeline parameter `semantic_testing_e2e=true` (default false). An authorized CircleCI operator must confirm that this context actually exists, limit its access to the approved project and feature branch, and install the masked Testing-only `SEMANTIC_TESTING_DATABASE_URL` secret. The current connections cannot inspect CircleCI context settings or trigger the job. Do not use production credentials or enable this job on ordinary PR builds.
+
+
+## Provider-independent storage-to-publication integration
+Normal CircleCI `check:semantic-storage` now includes `tests/semantic-s3-roundtrip.test.ts`. Its offline HTTPS emulator independently reconstructs AWS Signature V4 authorization for signed GET/PUT, checks content SHA-256 on readback, and rejects altered signed query parameters and corrupted response bytes. **No storage account or credentials are required.**
+
+The manual `semantic_testing_e2e=true` workflow also runs `npm run semantic:e2e:storage-publication` after the database-backed scoring, queue and metadata tests. It uses:
+- The exact synthetic employer/source generation already seeded in `newchanges_testing_20261017`, checked at runtime.
+- Real `stageAndPublishSemanticObject` logic, live isolated Neon metadata transactions, publication pointer swaps, and audited rollback.
+- An in-memory fake HTTPS S3 transport that refuses all non-synthetic hosts/paths; it is never allowed to send requests to real storage.
+- A deliberate corrupted GET that must fail before a manifest/pointer is created, followed by two readback-verified synthetic publications and rollback.
+- Cleanup of the unique synthetic manifests, pointers and audit entries produced by that invocation.
+
+**Boundaries:** This proves code-level cryptographic signing and transport verification in normal CI, and can prove integrated storage verification / Neon publication transactions on a manual Testing run. It does not establish durable third-party bucket storage, browser freshness, automatic SQL-source change detection, 30–60 second update timing, or production readiness. Until the manual workflow is actually run, even the integrated Neon behavior is *unverified*. Never turn this Testing emulator into a production storage provider.
