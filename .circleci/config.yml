@@ -49,6 +49,8 @@ jobs:
       - run:
           name: Semantic integration and source safeguards
           command: |
+            node scripts/production-boundary-check.mjs
+            node scripts/portfolio-loading-check.mjs
             npm run check:contract
             npm run check:neon-egress
             npm run check:source-sync-safety
@@ -146,7 +148,7 @@ jobs:
       - checkout
       - run:
           name: Install app and frontend dependencies
-          command: npm ci --no-audit --no-fund && npm install --prefix frontend --no-audit --no-fund
+          command: npm ci --no-audit --no-fund && npm ci --prefix frontend --no-audit --no-fund
       - run:
           name: Install standalone quality tooling
           command: npm install --no-save --package-lock=false --no-audit --no-fund eslint@^9 @eslint/js@^9 globals@^16 @typescript-eslint/parser@^8 vitest@^3 @playwright/test@^1
@@ -169,13 +171,13 @@ jobs:
       - checkout
       - run:
           name: Install app and frontend dependencies
-          command: npm ci --no-audit --no-fund && npm install --prefix frontend --no-audit --no-fund
+          command: npm ci --no-audit --no-fund && npm ci --prefix frontend --no-audit --no-fund
       - run:
           name: Install Playwright
           command: npm install --no-save --package-lock=false --no-audit --no-fund @playwright/test@1.56.1
       - run:
           name: Browser smoke test in Chromium
-          command: npm run quality:e2e
+          command: npm run quality:e2e && node scripts/console-ux-browser-check.mjs
       - store_artifacts:
           path: test-results
           destination: browser-smoke
@@ -202,3 +204,4 @@ workflows:
       - source_quality
       - browser_smoke
       - semgrep_security
+

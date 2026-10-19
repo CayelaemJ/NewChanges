@@ -167,7 +167,12 @@ function DashboardView({me}:{me:Me}) {
   const query=useMemo(()=>{const p=new URLSearchParams();if(period)p.set("period",period);else p.set("range",range);if(income!=="all")p.set("income",income);if(site!=="all")p.set("site",site);return p.toString()},[period,range,income,site]);
 
   useEffect(()=>{
-    if(!employer) return;
+    if(!employer) {
+      setLoading(false);
+      setData(null);
+      setError("No employers are assigned to your account. Contact your portal administrator for access.");
+      return;
+    }
     const controller=new AbortController();
     setLoading(true); setError("");
     const url="/api/employers/"+encodeURIComponent(employer.id)+"/dashboard?"+query;
@@ -545,3 +550,4 @@ class AppErrorBoundary extends Component<PropsWithChildren, {hasError:boolean}> 
 }
 
 export default function AppRoot(){ return <AppErrorBoundary><App /></AppErrorBoundary>; }
+

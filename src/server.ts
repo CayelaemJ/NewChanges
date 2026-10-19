@@ -13,7 +13,7 @@ import multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
 import cookie from "@fastify/cookie";
 import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { prisma, snapshotEmployer, getDashboardPayload, getPublishedDashboardPayload, getPublishedDashboardState, publishedDashboardEmployerIds, monthKey } from "./services/snapshotBuilder.js";
@@ -59,7 +59,11 @@ const PUBLIC_DIR = [join(__dirname, "public"), join(__dirname, "..", "public")]
 const MAX_UPLOAD_BYTES = Number(process.env.UPLOAD_MAX_BYTES ?? 50 * 1024 * 1024);
 
 const app = Fastify({
-  logger: { redact: ["req.headers.authorization", "req.headers.cookie", "res.headers[\"set-cookie\"]"] },
+  logger: {
+    redact: ["req.headers.authorization", "req.headers.cookie", "res.headers[\"set-cookie\"]"],
+    // Reset links and filters can contain sensitive values. Log route paths only.
+    serializers: { req: (req) => ({ method: req.method, url: String(req.url || "").split("?", 1)[0], hostname: req.hostname, remoteAddress: req.ip }) },
+  },
   // Behind Railway's proxy, req.ip is the proxy unless this is enabled, which
   // collapsed every visitor into a single rate-limit bucket.
   trustProxy: (address: string, hop: number) => process.env.TRUST_PROXY === "true" && hop === 1,
@@ -131,6 +135,14 @@ function rateLimit(reply: FastifyReply, key: string, limit: number, windowMs: nu
 app.addHook("onRequest", async (req, reply) => {
   applySecurityHeaders(reply);
   const path = req.url.split("?", 1)[0];
+  // HTML must go through its authorised route, never the public asset server.
+  // Source maps and dotfiles are not production assets.
+  let assetPath = path;
+  try { assetPath = decodeURIComponent(path); } catch { return reply.code(400).send({ error: "invalid URL" }); }
+  if ((assetPath.startsWith("/static/") || assetPath.startsWith("/react/")) &&
+      (/\.(?:html?|map)(?:\/|$)/i.test(assetPath) || /(?:^|\/)\.[^/]/.test(assetPath))) {
+    return reply.code(404).send({ error: "not found" });
+  }
   if (path.startsWith("/api/")) {
     reply.header("Cache-Control", "no-store");
     reply.header("Pragma", "no-cache");
@@ -206,7 +218,7 @@ setInterval(() => {
 }, 5 * 60_000).unref();
 
 app.setErrorHandler((error, req, reply) => {
-  req.log.error({ err: error, method: req.method, url: req.url }, "unhandled request error");
+  req.log.error({ err: error, method: req.method, url: req.url.split("?", 1)[0] }, "unhandled request error");
   if (reply.sent) return;
   const status = Number((error as any)?.statusCode);
   if (status >= 400 && status < 500) { const message = error instanceof Error ? error.message : "request rejected"; return reply.code(status).send({ error: message }); }
@@ -223,7 +235,7 @@ app.register(fastifyStatic, {
   prefix: "/react/",
   decorateReply: false,
   setHeaders(res, filePath) {
-    if (/\\.(?:js|css|html)$/i.test(filePath)) {
+    if (/\.(?:js|css|html)$/i.test(filePath)) {
       res.header("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
       res.header("Pragma", "no-cache");
       res.header("Expires", "0");
@@ -286,6 +298,7 @@ const siteVars = (req: FastifyRequest): Record<string, string> => ({
 });
 const serveHtml = async (reply: FastifyReply, file: string, status = 200) => {
   const vars = siteVars(reply.request);
+  if (file === "set-password.html") reply.header("Referrer-Policy", "no-referrer");
   const html = (await readFile(join(PUBLIC_DIR, file), "utf-8")).replace(/\{\{([A-Z_]+)\}\}/g, (m, k) => (k in vars ? escAttr(vars[k]) : m));
   return reply
     .code(status)
@@ -336,7 +349,10 @@ function redactAuditDetail(value: unknown): unknown {
 
 // ── public pages ──
 app.get("/react", async (_req, reply) => reply.redirect("/react/"));
-app.get("/react/", async (_req, reply) => {
+app.get("/react/", async (req, reply) => {
+  const user = await currentUser(req);
+  if (!user) return reply.redirect("/login");
+  if (!canAccessModule(user, "dashboard")) return reply.code(403).send({ error: "no dashboard access" });
   try {
     const html = await readFile(join(PUBLIC_DIR, "react", "index.html"), "utf-8");
     return reply.type("text/html; charset=utf-8").header("Cache-Control", "no-store").send(html);
@@ -344,7 +360,10 @@ app.get("/react/", async (_req, reply) => {
     return reply.code(503).send({ error: "React frontend has not been built yet" });
   }
 });
-app.get("/react/admin", async (_req, reply) => {
+app.get("/react/admin", async (req, reply) => {
+  const user = await currentUser(req);
+  if (!user) return reply.redirect("/login");
+  if (!canAccessModule(user, "admin")) return reply.code(403).send({ error: "admin only" });
   try {
     const html = await readFile(join(PUBLIC_DIR, "react", "index.html"), "utf-8");
     return reply.type("text/html; charset=utf-8").header("Cache-Control", "no-store").send(html);
@@ -352,7 +371,10 @@ app.get("/react/admin", async (_req, reply) => {
     return reply.code(503).send({ error: "React frontend has not been built yet" });
   }
 });
-app.get("/react/dashboard", async (_req, reply) => {
+app.get("/react/dashboard", async (req, reply) => {
+  const user = await currentUser(req);
+  if (!user) return reply.redirect("/login");
+  if (!canAccessModule(user, "dashboard")) return reply.code(403).send({ error: "no dashboard access" });
   try {
     const html = await readFile(join(PUBLIC_DIR, "react", "index.html"), "utf-8");
     return reply.type("text/html; charset=utf-8").header("Cache-Control", "no-store").send(html);
@@ -458,7 +480,7 @@ app.get("/ready", async (_req, reply) => {
   }
 });
 // lets you confirm the NEW build is live: should report the live-dashboard version
-app.get("/version", async () => ({ product: "empower-fin Dashboard Portal", version: "0.10.0", contractVersion: "2.6", coreSourceFeeds: 10, sourceModes: ["API", "SQL"], sqlDialects: ["POSTGRESQL", "MSSQL", "MYSQL"], channelPartners: true, scheduledReports: true, emailDelivery: "SMTP", portfolioEmployerFilter: true, portfolioMetricHelp: true, employerMetricHelp: true, uiNavigation: "account-dropdown-v2", routes: ["/login", "/dashboard", "/admin", "/users"] }));
+app.get("/version", async () => ({ product: "empower-fin Dashboard Portal", version: "0.10.0" }));
 
 // ════════════════════ AUTH ════════════════════
 const COOKIE_SECURE = !["0", "false", "no"].includes(String(process.env.COOKIE_SECURE ?? "true").toLowerCase());
@@ -1873,7 +1895,7 @@ app.get<{ Params: { employerId: string }; Querystring: { site?: string; income?:
     if (dashboardUsesPublishedSnapshot(syncStatus)) {
       const published = await getPublishedDashboardState(req.params.employerId);
       if (!published) return sendPublishedDashboardUnavailable(reply, syncStatus);
-      return published.periods;
+      return published.periods.filter((row: { period: string }) => /^\d{4}-(0[1-9]|1[0-2])$/.test(row.period) && row.period <= currentPeriod());
     }
 
     // Keep this endpoint cheap. The previous implementation read date columns
@@ -1889,7 +1911,7 @@ app.get<{ Params: { employerId: string }; Querystring: { site?: string; income?:
     // Never rebuild the full dashboard once per month just to populate it.
 
     const snapshots = await prisma.scoreSnapshot.findMany({
-      where: { employerId, payloadVersion: { gte: 4 } },
+      where: { employerId, payloadVersion: { gte: 4 }, period: { lte: currentPeriod() } },
       select: {
         period: true,
         optimiseScore: true,
@@ -1937,7 +1959,7 @@ app.get<{ Params: { employerId: string }; Querystring: { site?: string; income?:
     // Return at most the latest 12 real reporting months. Keep the selector
     // cheap: only the indexed observation dimension and persisted snapshots are
     // touched; never invoke getDashboardPayload from this endpoint.
-    const latestPeriods = [...periodSet].sort().reverse().slice(0, 12);
+    const latestPeriods = [...periodSet].filter(period => /^\d{4}-(0[1-9]|1[0-2])$/.test(period) && period <= currentPeriod()).sort().reverse().slice(0, 12);
     const snapshotByPeriod = new Map(snapshots.map((row: any) => [row.period, row]));
     const snapshotScore = (snap: any): number | null => {
       if (!snap) return null;
@@ -2305,6 +2327,9 @@ setInterval(() => {
 // Register all routes before opening the listener.
   if (!CONTACT_EMAIL) app.log.warn("CONTACT_EMAIL is not set: the contact form is disabled and legal pages show a placeholder contact.");
   app.log.info({ portalVersion: "0.10.0", publicDir: PUBLIC_DIR }, "starting empower-fin Dashboard Portal");
+// Importing the app for injection tests must never start ingestion or a listener.
+export { app };
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
 app.listen({ port: PORT, host: "0.0.0.0" })
   .then(async () => {
     // Standby instances must not run independent scheduled imports, mail or
@@ -2344,3 +2369,5 @@ app.listen({ port: PORT, host: "0.0.0.0" })
     app.log.info(`empower-fin Dashboard Portal on :${PORT}`);
   })
   .catch((err) => { app.log.error(err); process.exit(1); });
+}
+

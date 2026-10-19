@@ -41,21 +41,33 @@
     const bar=document.createElement("div");
     bar.className="security-tools";
     bar.style.margin="8px 0";
-    bar.innerHTML='<input id="user-admin-search" placeholder="Search users by name, email or role"><select id="user-admin-status"><option value="">All status</option><option value="active">Active</option><option value="pending">Pending setup</option><option value="disabled">Disabled</option></select>';
-    table.parentElement.insertBefore(bar,table);
+    bar.innerHTML='<input id="user-admin-search" aria-label="Search users by name, email or role" placeholder="Search users"><select id="user-admin-status" aria-label="User status"><option value="">All statuses</option><option value="active">Active</option><option value="pending">Pending setup</option><option value="disabled">Disabled</option></select><span id="user-filter-summary" class="muted" role="status" aria-live="polite"></span>';
+    const scrollRegion=table.closest('.console-table-scroll')||table;
+    scrollRegion.parentElement.insertBefore(bar,scrollRegion);
     const filter=function(){
       const q=(document.querySelector("#user-admin-search")?.value||"").toLowerCase().trim();
       const status=document.querySelector("#user-admin-status")?.value||"";
-      Array.from(rows.querySelectorAll("tr")).forEach(function(tr){
+      let visible=0;
+      const userRows=Array.from(rows.querySelectorAll('tr[id^="row-"]'));
+      userRows.forEach(function(tr){
         const text=tr.textContent.toLowerCase();
         let state="";
         const tag=tr.querySelector(".tag");
         if(tag)state=tag.textContent.toLowerCase().includes("pending")?"pending":tag.textContent.toLowerCase().includes("disabled")?"disabled":"active";
-        tr.style.display=(!q||text.includes(q))&&(!status||status===state)?"":"none";
+        const matches=(!q||text.includes(q))&&(!status||status===state);
+        tr.style.display=matches?"":"none";
+        if(matches)visible++;
       });
+      rows.querySelectorAll('tr[id^="editor-"]').forEach(function(editor){
+        editor.style.display=editor.previousElementSibling?.style.display==='none'?'none':'';
+      });
+      const summary=document.getElementById('user-filter-summary');
+      if(summary)summary.textContent=userRows.length?visible+' of '+userRows.length+' users'+(visible?'':' — no matches. Clear the search or change the status filter.') : '';
     };
     bar.querySelector("#user-admin-search").addEventListener("input",filter);
     bar.querySelector("#user-admin-status").addEventListener("change",filter);
+    window.applyUserListFilter=filter;
+    filter();
   }
 
   function decorateUserRows(){
@@ -289,7 +301,7 @@
           <td>${esc([l.city,l.region,l.country].filter(Boolean).join(", ")||"Location unavailable")}</td>
           <td>${esc(l.ipAddress||"")}</td></tr>`;
       }).join("");
-      back.innerHTML=`<div class="security-drawer" role="dialog" aria-modal="true">
+      back.innerHTML=`<div class="security-drawer" role="dialog" aria-modal="true" aria-label="User security profile">
         <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:18px">
           <div><div class="muted">Security profile</div><h2 style="font:600 24px Fraunces,serif;color:var(--brand-primary);margin:2px 0 4px">${esc(user.name)}</h2><div class="muted">${esc(user.email)}</div></div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end"><button class="btn btn-sm" type="button" data-revoke-all>Log out all sessions</button><button class="btn btn-sm" type="button" data-close-security>Close</button></div>
@@ -306,11 +318,22 @@
         <div class="security-table-wrap"><table class="security-table"><thead><tr><th>Time</th><th>Result</th><th>Device</th><th>Location</th><th>IP</th></tr></thead><tbody>${loginRows}</tbody></table></div>
       </div>`;
       document.body.appendChild(back);
-      back.querySelector("[data-close-security]").addEventListener("click",function(){back.remove();});
-      back.querySelector("[data-revoke-all]").addEventListener("click",async function(){await window.revokeAllUserSessions(user.id,user.name);back.remove();});
-      back.addEventListener("click",function(e){if(e.target===back)back.remove();});
+      const previousFocus=document.activeElement;
+      const close=function(){back.remove();previousFocus?.focus();};
+      back.querySelector("[data-close-security]").addEventListener("click",close);
+      back.querySelector("[data-revoke-all]").addEventListener("click",async function(){await window.revokeAllUserSessions(user.id,user.name);close();});
+      back.addEventListener("click",function(e){if(e.target===back)close();});
+      back.addEventListener('keydown',function(event){
+        if(event.key==='Escape'){event.preventDefault();close();return;}
+        if(event.key!=='Tab')return;
+        const buttons=[...back.querySelectorAll('button:not(:disabled),a[href],input,select,textarea,[tabindex="0"]')].filter(el=>el.getClientRects().length);
+        const first=buttons[0],last=buttons[buttons.length-1];
+        if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}
+        else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}
+      });
+      back.querySelector('[data-close-security]').focus();
       back.querySelectorAll("[data-drawer-revoke]").forEach(function(btn){
-        btn.addEventListener("click",async function(){await window.revokeSession(btn.getAttribute("data-drawer-revoke"),user.name);back.remove();});
+        btn.addEventListener("click",async function(){await window.revokeSession(btn.getAttribute("data-drawer-revoke"),user.name);close();});
       });
     }catch(error){
       console.error("[users] security profile failed",error);

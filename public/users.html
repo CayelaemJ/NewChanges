@@ -99,8 +99,9 @@
   <link rel="stylesheet" href="/static/enterprise-v3.css?v=4">
 <link rel="stylesheet" href="/static/dark-theme-v2.css?v=6">
 <link rel="stylesheet" href="/static/the-fixer-brand.css?v=13">
+<link rel="stylesheet" href="/static/console-ux.css?v=1">
 </head>
-<body data-portal-build="0.10.0">
+<body class="console-page console-users" data-portal-build="0.10.0">
 <div class="topbar"><div class="topbar-inner">
   <img src="/static/the-fixer-logo.svg?v=6" class="efs-brand-logo" alt="The Fixer" style="height:30px;width:auto;">
   <span class="pill">User Management</span>
@@ -121,8 +122,8 @@
         <div class="security-stat"><div class="k">Successful logins 24h</div><div class="v" id="sec-success">-</div></div>
       </div>
       <div class="security-tools">
-        <input id="sec-search" placeholder="Search users, email, IP or location" oninput="renderSecuritySessions()">
-        <select id="sec-status"><option value="active">Live sessions</option><option value="">All sessions</option><option value="ended">Ended sessions</option></select>
+        <input id="sec-search" aria-label="Search sessions by user, email, IP or location" placeholder="Search sessions" oninput="renderSecuritySessions()">
+        <select id="sec-status" aria-label="Session status"><option value="active">Live sessions</option><option value="">All sessions</option><option value="ended">Ended sessions</option></select>
       </div>
       <div class="security-grid">
         <div>
@@ -199,8 +200,8 @@
     <div class="card-hd"><h2>Add a user</h2></div>
     <div class="card-bd">
       <div class="row2">
-        <div><label>Full name</label><input id="n-name" placeholder="Jane Smith"></div>
-        <div><label>Email</label><input id="n-email" type="email" placeholder="jane@company.com"></div>
+        <div><label for="n-name">Full name</label><input id="n-name" autocomplete="name" maxlength="120" placeholder="Jane Smith"></div>
+        <div><label for="n-email">Email</label><input id="n-email" type="email" autocomplete="email" maxlength="254" placeholder="jane@company.com"></div>
       </div>
       <div class="row2">
         <div>
@@ -226,7 +227,9 @@
             <label><input type="radio" name="access" value="temp" checked onchange="onAccessChange()"> Set a temp password</label>
             <label><input type="radio" name="access" value="link" onchange="onAccessChange()"> Send a set-password link</label>
           </div>
-          <input id="n-pass" type="text" placeholder="temporary password" style="margin-top:8px;">
+          <label for="n-pass" id="n-pass-label">Temporary password</label>
+          <input id="n-pass" type="password" autocomplete="new-password" aria-describedby="n-pass-help" placeholder="Temporary password" style="margin-top:8px;">
+          <p id="n-pass-help" class="form-help">Use at least 12 characters, including uppercase, lowercase and a number.</p>
         </div>
       </div>
       <div id="emp-wrap">
@@ -234,11 +237,11 @@
         <div class="emp-pick" id="emp-pick"><span class="muted">Loading employers…</span></div>
       </div>
       <div style="margin-top:14px;">
-        <label>Channel partner <span class="muted">(applies their branding — optional)</span></label>
+        <label for="n-partner">Channel partner <span class="muted">(applies their branding — optional)</span></label>
         <select id="n-partner"><option value="">None (standard empower-fin branding)</option></select>
       </div>
-      <button class="btn btn-primary" style="margin-top:18px;" onclick="addUser()">Create user</button>
-      <div class="msg" id="add-msg"></div>
+      <button class="btn btn-primary" style="margin-top:18px;" id="create-user-btn" type="button" onclick="addUser()">Create user</button>
+      <div class="msg" id="add-msg" role="status" aria-live="polite"></div>
       <div class="link-box" id="link-box"></div>
     </div>
   </div>
@@ -246,23 +249,23 @@
   <div id="user-list-card" class="card">
     <div class="card-hd"><h2>Existing users</h2></div>
     <div class="card-bd" style="padding:6px 10px 12px;">
-      <table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Employers</th><th>Partner</th><th>Status</th><th></th></tr></thead>
-      <tbody id="user-rows"><tr><td colspan="6" class="muted" style="padding:16px;">Loading…</td></tr></tbody></table>
+      <p class="console-scroll-hint">Scroll horizontally to see every column and user action.</p><div class="console-table-scroll" role="region" tabindex="0" aria-label="Existing users table"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Employers</th><th>Partner</th><th>Status</th><th></th></tr></thead>
+      <tbody id="user-rows"><tr><td colspan="6" class="muted" style="padding:16px;">Loading…</td></tr></tbody></table></div>
     </div>
   </div>
 
   <div id="revoked-users-card" class="card" style="border-color:#f3c9c0;">
     <div class="card-hd" style="border-bottom-color:#fbe4df;"><h2 style="color:#b5391f;">Past users</h2><div class="note" style="margin-left:10px;color:#8497a7;font-size:12px;">Who once had access, and why it ended · admin-only</div></div>
     <div class="card-bd" style="padding:6px 10px 12px;">
-      <table><thead><tr><th>User</th><th>Role</th><th>Reason</th><th>Revoked by</th><th>Date</th><th></th></tr></thead>
-      <tbody id="revoked-rows"><tr><td colspan="6" class="muted" style="padding:16px;">Loading…</td></tr></tbody></table>
+      <p class="console-scroll-hint">Scroll horizontally to see all access history.</p><div class="console-table-scroll" role="region" tabindex="0" aria-label="Past users table"><table><thead><tr><th>User</th><th>Role</th><th>Reason</th><th>Revoked by</th><th>Date</th><th></th></tr></thead>
+      <tbody id="revoked-rows"><tr><td colspan="6" class="muted" style="padding:16px;">Loading…</td></tr></tbody></table></div>
     </div>
   </div>
 </div>
 
 <script src="/static/engagement-v1.js?v=1" defer></script>
 <script src="/static/portal-nav-v080.js?v=0.10.0"></script>
-<script src="/static/user-security.js?v=3"></script>
+<script src="/static/user-security.js?v=4"></script>
 <script>
 const $=s=>document.querySelector(s);
 const escHtml=value=>String(value??'').replace(/[&<>\"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[ch]));
@@ -347,7 +350,7 @@ function onRoleChange(){
 }
 function onAccessChange(){
   const mode=document.querySelector('input[name=access]:checked').value;
-  $('#n-pass').style.display = mode==='temp' ? 'block' : 'none';
+  ['n-pass','n-pass-label','n-pass-help'].forEach(id=>document.getElementById(id).style.display=mode==='temp'?'block':'none');
 }
 
 async function addUser(){
@@ -358,6 +361,13 @@ async function addUser(){
   const body={ name:$('#n-name').value, email:$('#n-email').value, role, employerIds:(role==='ADMIN'||role==='SUPERADMIN')?[]:employerIds };
   const pid=$('#n-partner').value; if(pid) body.partnerId=pid;
   if(mode==='temp'){ body.tempPassword=$('#n-pass').value; } else { body.sendSetupLink=true; }
+  if(!body.name.trim()){ show(msg,'err','Enter the user’s full name.'); $('#n-name').focus(); return; }
+  if(!$('#n-email').checkValidity() || !body.email.trim()){ show(msg,'err','Enter a valid email address.'); $('#n-email').focus(); return; }
+  if(mode==='temp' && (body.tempPassword.length<12 || !/[A-Z]/.test(body.tempPassword) || !/[a-z]/.test(body.tempPassword) || !/[0-9]/.test(body.tempPassword))){ show(msg,'err','Use at least 12 characters with uppercase, lowercase and a number.'); $('#n-pass').focus(); return; }
+  const button=$('#create-user-btn');
+  if(button.disabled) return;
+  button.disabled=true; button.textContent='Creating user…';
+  try {
   const r=await fetch('/api/users',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   const d=await r.json();
   if(!r.ok){ show(msg,'err',d.error||'Could not create user'); return; }
@@ -365,13 +375,17 @@ async function addUser(){
     show(msg,'ok','User created — a set-password email was sent to '+body.email+'.');
   } else if(d.setupPath){
     show(msg,'ok','User created, but the email could not be sent'+(d.emailError?(' ('+d.emailError+')'):'')+'. Share this link with them manually:');
-    box.style.display='block'; box.innerHTML='<b>Set-password link</b> (copy & send to the user):<br>'+location.origin+d.setupPath;
+    box.style.display='block'; box.textContent='Set-password link (share privately): '+location.origin+d.setupPath;
   } else {
     show(msg,'ok','User created.');
   }
   $('#n-name').value=''; $('#n-email').value=''; $('#n-pass').value=''; $('#n-partner').value='';
   document.querySelectorAll('#emp-pick input:checked').forEach(c=>c.checked=false);
   loadUsers();
+  } catch(error) {
+    show(msg,'err','Could not complete the request. Your entries are preserved. Refresh the user list before retrying to check whether the account was created.');
+  } finally { button.disabled=false; button.textContent='Create user'; }
+
 }
 
 async function loadPartnersDropdown(){
@@ -420,13 +434,14 @@ async function loadUsers(){
         <td><b>${escHtml(u.name)}</b></td><td class="muted">${escHtml(u.email)}</td>
         <td><span class="role ${escHtml(u.role)}">${role}</span></td>
         <td>${emps}</td><td>${partner}</td><td>${status}</td>
-        <td style="white-space:nowrap;">
+        <td><div class="user-row-actions">
           <button class="btn btn-sm" type="button" onclick="viewUserSecurity('${id}')">Security</button>
           <button class="btn btn-sm" type="button" onclick="editUser('${id}')">Edit</button>
           <button class="btn btn-sm" type="button" onclick="toggleActive('${id}',${!u.active})">${u.active?'Disable':'Enable'}</button>
-        </td>
+        </div></td>
       </tr>`;
     }).join('');
+    window.applyUserListFilter?.();
   }catch(error){
     console.error('[users] user list load failed',error);
     showUsersLoadError(error.message||String(error));
@@ -436,21 +451,21 @@ async function loadUsers(){
 function editUser(id){
   const u=USERS.find(x=>x.id===id); if(!u) return;
   // if an editor is already open, close it first
-  document.getElementById('editor-'+id)?.remove();
+  document.querySelectorAll('tr[id^="editor-"]').forEach(row=>row.remove());
   const empIds=new Set(u.employers.map(e=>e.id));
   const empBoxes = EMPLOYERS.length
     ? EMPLOYERS.map(e=>`<label style="display:inline-flex;align-items:center;gap:6px;margin:3px 12px 3px 0;font-weight:600;"><input type="checkbox" value="${esc(e.id)}" ${empIds.has(e.id)?'checked':''} style="width:auto;"> ${esc(e.name)}</label>`).join('')
     : '<span class="muted">No employers yet.</span>';
   const partnerOpts = '<option value="">None (standard branding)</option>'+
-    PARTNERS_LIST.map(p=>`<option value="${esc(p.id)}" ${u.partner&&u.partner.id===p.id?'selected':''}>${p.displayName||p.name}</option>`).join('');
+    PARTNERS_LIST.map(p=>`<option value="${esc(p.id)}" ${u.partner&&u.partner.id===p.id?'selected':''}>${escHtml(p.displayName||p.name)}</option>`).join('');
   const availableRoles = ME?.role==='SUPERADMIN' ? ['EMPLOYER_MANAGER','PORTFOLIO_MANAGER','VIEWER','ADMIN','SUPERADMIN'] : ['EMPLOYER_MANAGER','PORTFOLIO_MANAGER','VIEWER'];
   const roleOpts = availableRoles.map(r=>`<option value="${r}" ${u.role===r?'selected':''}>${r.replace('_',' ')}</option>`).join('');
   const tr=document.createElement('tr');
   tr.id='editor-'+id;
   tr.innerHTML=`<td colspan="7" style="background:#eef3f8;padding:16px 14px;">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:760px;">
+    <div class="user-editor-grid">
       <label style="font-size:12px;font-weight:700;color:#5b6b7a;">Full name
-        <input id="e-name-${id}" value="${u.name.replace(/"/g,'&quot;')}" style="display:block;width:100%;margin-top:4px;padding:8px 11px;border:1px solid #e8e1f7;border-radius:8px;font:inherit;">
+        <input id="e-name-${id}" value="${escHtml(u.name)}" style="display:block;width:100%;margin-top:4px;padding:8px 11px;border:1px solid #e8e1f7;border-radius:8px;font:inherit;">
       </label>
       <label style="font-size:12px;font-weight:700;color:#5b6b7a;">Role
         <select id="e-role-${id}" onchange="document.getElementById('e-emp-wrap-${id}').style.display=(this.value==='ADMIN'||this.value==='SUPERADMIN')?'none':'block'" style="display:block;width:100%;margin-top:4px;padding:8px 11px;border:1px solid #e8e1f7;border-radius:8px;font:inherit;">${roleOpts}</select>
@@ -463,7 +478,7 @@ function editUser(id){
       <div style="font-size:12px;font-weight:700;color:#5b6b7a;margin-bottom:5px;">Linked employers (which employers this user may see)</div>
       <div style="border:1px solid #e8e1f7;border-radius:9px;padding:10px;background:#fff;">${empBoxes}</div>
     </div>
-    <div style="margin-top:14px;display:flex;gap:8px;align-items:center;">
+    <div class="user-editor-actions" style="margin-top:14px;">
       <button class="btn btn-primary btn-sm" onclick="saveUser('${id}')">Save changes</button>
       <button class="btn btn-sm" onclick="document.getElementById('editor-${id}').remove()">Cancel</button>
       <span id="e-msg-${id}" style="font-size:12.5px;"></span>
@@ -517,7 +532,7 @@ async function loadRevokedUsers(){
         <td>${escHtml(u.revokedReason||'—')}</td>
         <td>${by}</td>
         <td class="muted">${u.revokedAt?new Date(u.revokedAt).toLocaleDateString():'—'}</td>
-        <td style="white-space:nowrap;">
+        <td><div class="user-row-actions">
           <button class="btn btn-sm" onclick="toggleActive('${id}',true)">Reactivate</button>
           <button class="btn btn-sm" style="color:#b5391f;" onclick="deleteUserForever('${id}','${escHtml(u.name).replace(/'/g,"")}')">Delete permanently</button>
         </td>
@@ -553,3 +568,4 @@ boot();
 <script src="/static/admin-source-status.js?v=1"></script>
 </body>
 </html>
+
