@@ -49,7 +49,7 @@
     "check:daily-refresh": "node scripts/daily-refresh-regression-check.mjs",
     "check:neon-egress": "node scripts/neon-egress-regression-check.mjs",
     "check:source-sync-safety": "node scripts/source-sync-safety-regression-check.mjs",
-    "check:semantic-planner": "tsx tests/semantic-refresh-planner.test.ts && tsx tests/semantic-refresh-pipeline-contract.test.ts && node scripts/semantic-e2e-fixture-safety-check.mjs",
+    "check:semantic-planner": "tsx tests/semantic-refresh-planner.test.ts && tsx tests/semantic-refresh-pipeline-contract.test.ts && tsx tests/semantic-publication-ordering.test.ts && node scripts/semantic-e2e-fixture-safety-check.mjs",
     "semantic:shadow:once": "tsx scripts/run-semantic-shadow-worker.ts",
     "semantic:e2e:preflight": "node scripts/semantic-e2e-preflight.mjs",
     "semantic:e2e:score-delta": "tsx scripts/semantic-testing-score-delta.ts",
