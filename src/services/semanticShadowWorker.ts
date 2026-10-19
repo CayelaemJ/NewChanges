@@ -2,7 +2,7 @@
 // (never raw source records) as a compatibility bootstrap. This is NOT yet a
 // replacement for dependency-aware recalculation of retroactive corrections.
 import { randomUUID } from "node:crypto";
-import { getDashboardPayload, getPublishedDashboardPayload } from "./snapshotBuilder.js";
+import { getDashboardPayload, getPublishedDashboardPayload, snapshotEmployer } from "./snapshotBuilder.js";
 import { claimSemanticRefresh, finishSemanticRefresh } from "./semanticRefreshQueue.js";
 import { stageAndPublishSemanticObject } from "./semanticObjectPipeline.js";
 import { prisma } from "./snapshotBuilder.js";
@@ -40,9 +40,12 @@ export async function processOneShadowSemanticRefresh(workerId:string,storage:Se
     });
     if(!provenance.allowed) throw new Error("Semantic source provenance rejected: "+provenance.missing.join("; "));
 
-    const payload=recompute
-      ? await getDashboardPayload(job.employerId,{period:job.period})
-      : await getPublishedDashboardPayload(job.employerId,{period:job.period});
+    // Rebuild from canonical tables first. An ordinary dashboard GET may return
+    // stale persisted read-model bytes and must never count as recomputation.
+    const refreshed=await snapshotEmployer(job.employerId,job.period);
+    if(!refreshed.persisted || !refreshed.scoreReady)
+      throw new Error("Semantic score recomputation did not persist a complete score snapshot");
+    const payload=await getDashboardPayload(job.employerId,{period:job.period});
     if(!payload) throw new Error("No previously published dashboard payload for shadow semantic snapshot");
     const body=Buffer.from(JSON.stringify({
       schemaVersion:"semantic-shadow-v1",calculationMode:recompute?"RECOMPUTED":"PUBLISHED_COPY",generationId:job.generationId,employerId:job.employerId,
