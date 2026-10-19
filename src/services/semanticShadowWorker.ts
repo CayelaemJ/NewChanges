@@ -59,7 +59,7 @@ export async function processOneShadowSemanticRefresh(workerId:string,storage:Se
       throw new Error("Recalculated semantic payload does not match persisted score snapshot");
     const body=Buffer.from(JSON.stringify({
       schemaVersion:"semantic-shadow-v1",calculationMode:recompute?"RECOMPUTED":"PUBLISHED_COPY",generationId:job.generationId,employerId:job.employerId,
-      period:job.period,asAt:job.sourceWatermark.toISOString(),payload,
+      period:job.period,partitionKey:job.partitionKey,asAt:job.sourceWatermark.toISOString(),payload,
     }),"utf8");
     // Object keys are immutable; never replace bytes under an existing key.
     const version=randomUUID();
