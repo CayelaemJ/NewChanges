@@ -47,7 +47,7 @@ async function stage(label:string,watermark:Date) {
 async function main() {
   guard();
   try {
-    const actual=await prisma.$queryRaw<Array<{name:string}>>\`SELECT current_database() AS name\`;
+    const actual=await prisma.$queryRaw<Array<{name:string}>>`SELECT current_database() AS name`;
     assert.equal(actual[0]?.name,databaseName);
     const employer=await prisma.employer.findUnique({where:{id:employerId},select:{name:true}});
     assert(employer?.name.startsWith("SYNTHETIC QA ONLY"),"Synthetic employer required");
