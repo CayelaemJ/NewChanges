@@ -31,7 +31,7 @@ try {
   if(!counts.employers || !counts.active_generations)
     throw new Error("E2E BLOCKED: seed an approved synthetic employer and establish a validated ACTIVE Testing source generation first");
   if(!counts.score_snapshots)
-    throw new Error("E2E BLOCKED: no baseline persisted score; rebuild a synthetic Testing score before attempting score delta verification");
+    console.log("No baseline score yet; the guarded synthetic score-delta runner will build one first");
   console.log("Semantic E2E database prerequisites present; worker and storage connectivity still require separate verification");
 } finally {
   await client.query("ROLLBACK").catch(()=>{});
