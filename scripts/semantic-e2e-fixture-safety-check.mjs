@@ -46,4 +46,25 @@ assert(circleci.includes("semantic_testing_e2e:") && circleci.includes("default:
 assert(circleci.includes("npm run semantic:e2e:score-delta") &&
   circleci.includes("npm run semantic:e2e:queue"),
   "Manual CircleCI Testing job must execute both isolated database rehearsals");
+const publicationRunner=readFileSync("scripts/semantic-testing-publication.ts","utf8");
+assert(publicationRunner.includes('SEMANTIC_SYNTHETIC_E2E_APPROVED!=="YES_TEST_ONLY"'),
+  "Publication rehearsal requires explicit Testing-only approval");
+assert(publicationRunner.includes('u.pathname!=="/"+databaseName'),
+  "Publication rehearsal must refuse non-Testing database names");
+assert(publicationRunner.includes("publishVerifiedSemanticManifest({") &&
+  publicationRunner.includes("rollbackSemanticPublication({"),
+  "Publication rehearsal must use actual application publisher and rollback");
+assert(publicationRunner.includes("stale,expectedPreviousManifestId:updated.manifestId"),
+  "Publication rehearsal must reject older source watermark");
+assert(publicationRunner.includes("semanticPublicationAudit.findMany"),
+  "Rollback rehearsal must inspect persisted audit history");
+assert(publicationRunner.includes("ownedIds.includes(existing.manifestId)") &&
+  publicationRunner.includes("semanticSnapshotManifest.deleteMany"),
+  "Publication cleanup must be limited to records owned by its invocation");
+assert(publicationRunner.includes("objectStoreVerified:false"),
+  "Metadata-only rehearsal must never claim external durability");
+assert(circleci.includes("npm run semantic:e2e:publication-metadata"),
+  "Manual CircleCI Testing workflow must include publication and rollback rehearsal");
+assert(circleci.includes("context: newchanges-neon-testing"),
+  "Manual CircleCI Testing workflow must use restricted Testing credentials");
 console.log("Isolated Neon synthetic fixture and score-delta runner safety assertions passed");
