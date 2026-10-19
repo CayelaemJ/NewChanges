@@ -46,7 +46,7 @@ export async function enqueueSemanticRefresh(generationId:string, watermark:Date
   // The dedicated listener also sweeps on startup and periodically.
   if(shouldWakeSemanticWorker(queued)) {
     try {
-      await prisma.$queryRaw`SELECT pg_notify(${SEMANTIC_QUEUE_WAKE_CHANNEL}, 'ready')`;
+      await prisma.$queryRaw`SELECT pg_notify(${SEMANTIC_QUEUE_WAKE_CHANNEL}, 'ready')::text AS notified`;
     } catch(error) {
       // Source sync remains committed and queue rows remain pending: failures
       // here must not turn a successful ingestion into a phantom rollback.
