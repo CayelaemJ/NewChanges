@@ -15,7 +15,7 @@ export async function enqueueSemanticRefresh(generationId:string, watermark:Date
   // with incomplete changedFeeds depending on partition order.
   const grouped=new Map<string,{employerId:string;period:string;feeds:Set<string>}>();
   for(const part of partitions){
-    if(!part.employerId?.trim() || !/^\\d{4}-(0[1-9]|1[0-2])$/.test(part.period) ||
+    if(!part.employerId?.trim() || !/^\d{4}-(0[1-9]|1[0-2])$/.test(part.period) ||
        !Array.isArray(part.feeds) || part.feeds.length===0)
       throw new Error("Invalid semantic employer, period or changed feeds");
     const key=JSON.stringify([part.employerId,part.period]);
