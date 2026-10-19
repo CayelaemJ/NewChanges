@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { putAndVerifySemanticObject } from "../src/services/semanticObjectVerification.js";
+import { putAndVerifySemanticObject, readBoundedSemanticObject } from "../src/services/semanticObjectVerification.js";
 
 // In-memory HTTPS transport rehearsal. No Railway account, paid bucket,
 // database writes, network egress, or external credentials are involved.
@@ -34,6 +34,11 @@ try {
   assert.equal(uploaded,2);
   await assert.rejects(putAndVerifySemanticObject({...args,getUrl:"http://localhost/semantic/fixture/get"}),/HTTPS presigned URL/);
   await assert.rejects(putAndVerifySemanticObject({...args,content:new Uint8Array(0)}),/Invalid semantic object length/);
+  tamper=false;
+  assert.deepEqual(Buffer.from(await readBoundedSemanticObject(args.getUrl,original.byteLength)),Buffer.from(original));
+  await assert.rejects(readBoundedSemanticObject(args.getUrl,original.byteLength-1),/exceeds byte limit/);
+  await assert.rejects(readBoundedSemanticObject(args.getUrl,0),/Invalid semantic read byte budget/);
+  await assert.rejects(readBoundedSemanticObject("http://localhost/unsafe",original.byteLength),/HTTPS presigned URL/);
 } finally {
   globalThis.fetch=realFetch;
 }
