@@ -69,13 +69,17 @@ export async function claimSemanticRefresh(
   // Synthetic rehearsals supply both IDs, preventing unrelated job claims.
   const scopeGeneration=scope?.generationId??"";
   const scopeEmployer=scope?.employerId??"";
+  // Prisma DateTime defaults are stored at millisecond precision while PostgreSQL
+  // now() retains microseconds. A just-inserted default availableAt can round
+  // ~0.5ms into the future, causing an immediate NOTIFY wake to miss the job.
+  // Permit only a 1ms timestamp-rounding margin, not early scheduled retries.
   const rows=await prisma.$queryRaw<Array<{id:string;generationId:string;employerId:string;period:string;partitionKey:string;sourceWatermark:Date}>>`
     UPDATE "SemanticRefreshJob"
     SET status='RUNNING', "workerId"=${workerId}, "leasedUntil"=now()+(${leaseSeconds} * interval '1 second'),
         attempts=attempts+1, "updatedAt"=now()
     WHERE id IN (
       SELECT id FROM "SemanticRefreshJob"
-      WHERE ((status='PENDING' AND "availableAt"<=now()) OR (status='RUNNING' AND "leasedUntil"<now()))
+      WHERE ((status='PENDING' AND "availableAt"<=now()+interval '1 millisecond') OR (status='RUNNING' AND "leasedUntil"<now()))
         AND attempts < 5
         AND (${scopeGeneration} = '' OR "generationId" = ${scopeGeneration})
         AND (${scopeEmployer} = '' OR "employerId" = ${scopeEmployer})
