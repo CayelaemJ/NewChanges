@@ -88,6 +88,11 @@ assert(!server.includes("run-semantic-event-worker") &&
   !server.includes("processOneShadowSemanticRefresh("),
   "Web server must not embed the dedicated semantic processing loop");
 assert(queue.includes("FOR UPDATE SKIP LOCKED"), "Workers must avoid competing claims");
+assert(queue.includes('"availableAt"<=now()+interval \'1 millisecond\''),
+  "Immediate semantic NOTIFY wake must tolerate PostgreSQL millisecond default timestamp rounding");
+assert(queue.includes('AND attempts < 5'),
+  "Timestamp tolerance must not bypass semantic retry safety");
+
 assert(queue.includes('"leasedUntil"'), "Worker lease required");
 assert(storage.includes('redirect:"error"'), "External object requests must not follow redirects");
 assert(storage.includes('actual!==expected'), "Object must pass independent SHA-256 verification");
