@@ -92,6 +92,10 @@ async function main() {
     await assert.rejects(publishVerifiedSemanticManifest({
       ...stale,expectedPreviousManifestId:updated.manifestId,actor,reason,
     }),/cannot regress source watermark/);
+    await assert.rejects(rollbackSemanticPublication({
+      ...key,expectedCurrentManifestId:updated.manifestId,
+      restoreManifestId:stale.manifestId,actor,reason,
+    }),/Invalid rollback target/);
     const current=await prisma.semanticPublicationPointer.findUnique({
       where:{employerId_period_partitionKey:key},select:{manifestId:true},
     });
