@@ -98,6 +98,10 @@ assert(shadow.indexOf('if(process.env.ENABLE_SEMANTIC_RECOMPUTE!=="true")') < sh
 const oneShotWorker=read("../scripts/run-semantic-shadow-worker.ts");
 assert(oneShotWorker.includes('process.env.ENABLE_SEMANTIC_RECOMPUTE !== "true"'),"One-shot worker must not initialise storage when recomputation is disabled");
 assert(oneShotWorker.indexOf('process.env.ENABLE_SEMANTIC_RECOMPUTE !== "true"') < oneShotWorker.indexOf("createSemanticStorageBroker();"),"Recompute gate must precede storage startup");
+assert(oneShotWorker.includes("const maxJobs=5"),"Scheduled semantic worker must bound queue drain size");
+assert(oneShotWorker.includes("const maxStartWindowMs=45_000"),"Scheduled semantic worker must bound its work-start window");
+assert(oneShotWorker.includes("if(!result.processed)break"),"Worker must stop draining when queue is empty or disabled");
+assert(oneShotWorker.includes('if("error" in result){process.exitCode=1;break;}'),"Worker must stop draining after a job failure");
 assert(!server.includes("processOneShadowSemanticRefresh("), "web server must not accidentally start shadow worker");
 assert(sync.includes('ENABLE_SEMANTIC_SHADOW_ENQUEUE'), "shadow enqueue must be explicitly opt-in");
 assert(sync.includes('generation?.state !== "ACTIVE"'), "shadow enqueue must validate the assigned source generation");
