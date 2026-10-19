@@ -2,6 +2,9 @@ version: 2.1
 
 # Explicit manual opt-in; NEVER runs against a database on ordinary PR pushes.
 parameters:
+  semantic_context_readiness:
+    type: boolean
+    default: false
   semantic_testing_e2e:
     type: boolean
     default: false
@@ -12,6 +15,36 @@ parameters:
 # CI independent of GitHub-hosted Actions billing.
 # Connect this private GitHub repository to CircleCI (free plan) to activate.
 jobs:
+  semantic_testing_context_readiness:
+    docker:
+      - image: cimg/node:22.14
+    resource_class: small
+    working_directory: ~/newchanges
+    steps:
+      - checkout
+      - run:
+          name: Require restricted context and isolated feature branch
+          command: |
+            set -eu
+            if [ "${CIRCLE_BRANCH:-}" != "fix/semantic-refresh-period-validation-20261019" ]; then
+              echo "Refusing context readiness outside isolated feature branch."
+              exit 1
+            fi
+            if [ -z "${SEMANTIC_TESTING_DATABASE_URL:-}" ] || [ -z "${SEMANTIC_LISTEN_DATABASE_URL:-}" ]; then
+              echo "Restricted Testing context requires both pooled and direct Neon connection secrets."
+              exit 1
+            fi
+      - run:
+          name: Install locked dependencies
+          command: npm ci --no-audit --no-fund
+      - run:
+          name: Verify both Neon Testing connections and synthetic fixtures read-only
+          command: |
+            set -eu
+            export DATABASE_URL="${SEMANTIC_TESTING_DATABASE_URL}"
+            export SEMANTIC_SYNTHETIC_E2E_APPROVED=YES_TEST_ONLY
+            npm run semantic:e2e:context-readiness
+
   semantic_testing_notify_probe:
     docker:
       - image: cimg/node:22.14
@@ -276,6 +309,11 @@ jobs:
           command: semgrep scan --config p/javascript --config p/typescript --config p/security-audit --error --exclude node_modules --exclude dist --exclude build .
 
 workflows:
+  semantic_context_readiness_check:
+    when: << pipeline.parameters.semantic_context_readiness >>
+    jobs:
+      - semantic_testing_context_readiness:
+          context: newchanges-neon-testing
   semantic_notification_rehearsal:
     when: << pipeline.parameters.semantic_notify_probe >>
     jobs:
