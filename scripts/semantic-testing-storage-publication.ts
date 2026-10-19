@@ -67,7 +67,7 @@ async function publish(label:string,previous:string|null,sourceWatermark:Date) {
   const objectKey=["semantic",generationId,employerId,period,version+".json"].join("/");
   const body=Buffer.from(JSON.stringify({
     schemaVersion:"semantic-shadow-v1",calculationMode:"RECOMPUTED",synthetic:true,
-    generationId,employerId,period,label,asAt:sourceWatermark.toISOString(),
+    generationId,employerId,period,partitionKey,label,asAt:sourceWatermark.toISOString(),
   }),"utf8");
   const signed=await createSemanticStorageBroker(fakeS3).presign({objectKey,bytes:body.length});
   process.env.ENABLE_SEMANTIC_OBJECT_PUBLISH="true";
