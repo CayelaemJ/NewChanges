@@ -76,3 +76,19 @@ The manual `semantic_testing_e2e=true` workflow also runs `npm run semantic:e2e:
 
 ### Presigned object identity guard
 Production semantic publication now refuses to upload unless **both** signed S3 URLs address exactly the same immutable `semantic/<generation>/<employer>/<period>/<version>.json` key recorded in the manifest. It also requires HTTPS and Signature V4 metadata. This avoids treating a successful digest verification for a different object as proof that the manifest's referenced key is durable. The ordinary, offline storage test exercises this guard with valid signatures, mismatched keys, missing signatures, insecure protocols and encoded key names.
+
+## Continuous isolated source-to-canary rehearsal (manual, not executed)
+The `semantic_testing_e2e=true` CircleCI job now ends with `npm run semantic:e2e:canonical-to-canary`. With the restricted Neon Testing secret, it takes the synthetic employer's real canonical rows through `snapshotEmployer`, persists the baseline score, publishes a read-back-verified **in-memory S3 emulation**, changes the namespaced journey's savings value, recalculates, publishes the changed score, checks the real Neon publication audit cursor and the canary's decoded wellness score, rolls back the pointer, and verifies the original score is served again. Its `finally` restores the synthetic source row, rebuilds the baseline and cleans up only its own manifests and pointers. This is an application-service integration test against isolated Neon, **not** a deployed browser/API or durable object-store test. No production flags are enabled.
+
+## Real external storage verification, strictly read-only
+When an already-existing object is available **in an approved, separate Testing bucket**, `npm run semantic:e2e:real-storage-read` can prove its durable-byte availability at that moment without an upload, delete, service provisioning or database write. An authorized operator must supply the credentials via a secured Node runner and the following Testing-only environment variables, without logging them:
+
+- `SEMANTIC_STORAGE_READ_APPROVED=YES_TESTING_READ_ONLY`
+- `SEMANTIC_S3_ENDPOINT`, `SEMANTIC_S3_BUCKET`, `SEMANTIC_S3_REGION`, `SEMANTIC_S3_ACCESS_KEY_ID`, `SEMANTIC_S3_SECRET_ACCESS_KEY` (and addressing style if required)
+- `SEMANTIC_VERIFY_ALLOWED_HOST` — the **exact** public DNS hostname of the approved Testing storage endpoint
+- `SEMANTIC_VERIFY_OBJECT_KEY` — an existing object under `semantic/__synthetic_semantic_generation_20261019__/__synthetic_semantic_e2e_20261019__/`
+- `SEMANTIC_VERIFY_SHA256` and `SEMANTIC_VERIFY_BYTES` — independently recorded expected digest and byte size
+
+The command refuses non-Testing-named buckets, other employers/generations, unapproved endpoints, invalid hashes or oversized objects before making a network request. It performs a single bounded signed `GET` and independent SHA-256/size comparison, then prints **only** proof metadata. No presigned URL, object contents or secret is emitted. Its validation and tamper cases run offline in ordinary CircleCI; the actual external GET has **not** been executed and requires a preexisting object and credentials.
+
+S3 request charges, network costs and existing-provider billing depend on the provider; this does not provision or buy any infrastructure. Do not use an unpaid Railway account or production object to satisfy this test. A real Testing publication still needs both an independently controlled source-to-object upload and subsequent canary read, plus an authenticated HTTP/browser acceptance run.
