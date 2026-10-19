@@ -85,6 +85,9 @@ jobs:
             npx tsx tests/testing-cloud-mapped-rehearsal.test.ts
             npx tsx tests/near-realtime-source-watch.test.ts
             npx tsx tests/source-watch-health.test.ts
+            npx tsx tests/source-watermark-drift.test.ts
+            npx tsx tests/sync-alert-policy.test.ts
+            npx tsx tests/render-railway-pg-readonly-probe.test.ts
             node scripts/source-config-preservation-regression-check.mjs
             npx tsx tests/approved-mapped-rehearsal-cli.test.ts
             npx tsx tests/cloud-receipt-fencing-integration.test.ts
