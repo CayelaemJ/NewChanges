@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 
-test("visible semantic version update refreshes rendered wellness score and months",async({page})=>{
+for(const pollSeconds of [30,15]) {
+test(`visible semantic publication refreshes score and months within ${pollSeconds}s`,async({page})=>{
   await page.clock.install();
   let score=26;
   let periods=["2026-09"];
@@ -17,7 +18,7 @@ test("visible semantic version update refreshes rendered wellness score and mont
       employers:[{id:employerId,name:"Synthetic Employer"}],
       theme:{branded:false},
     });
-    if(path==="/api/dashboard/semantic-features")return json({pollingEnabled:true,servingEnabled:false});
+    if(path==="/api/dashboard/semantic-features")return json({pollingEnabled:true,pollIntervalSeconds:pollSeconds,servingEnabled:false});
     if(path==="/api/dashboard/semantic-version-changes"){
       versionReads++;
       const after=url.searchParams.get("afterId");
@@ -51,9 +52,11 @@ test("visible semantic version update refreshes rendered wellness score and mont
 
   score=38;
   periods=["2026-09","2026-10"];
-  await page.clock.fastForward(30_001);
+  await page.clock.fastForward(pollSeconds*1000+1);
   await expect(page.getByText(/Financial wellbeing score is 38\/100/)).toBeVisible();
   expect(dashboardReads).toBeGreaterThan(initialDashboardReads);
   expect(periodReads).toBeGreaterThan(initialPeriodReads);
   expect(versionReads).toBeGreaterThan(1);
 });
+
+}
