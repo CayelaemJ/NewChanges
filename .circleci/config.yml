@@ -41,6 +41,7 @@ jobs:
             export ENABLE_SEMANTIC_OBJECT_PUBLISH=false
             npm run semantic:e2e:preflight
             npm run semantic:e2e:score-delta
+            npm run semantic:e2e:queue
 
   admin_browser_smoke:
     docker:
