@@ -20,13 +20,13 @@ function dateString(raw: unknown):string|null {
   if(raw == null || raw === "")return null;
   if(typeof raw==="string"){
     // Reject rolled-over dates (e.g. February 31) and timezone-less timestamps.
-    if(/^\\d{4}-\\d{2}-\\d{2}$/.test(raw)){
+    if(/^\d{4}-\d{2}-\d{2}$/.test(raw)){
       const parsed=new Date(raw+"T00:00:00Z");
       if(!Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0,10)!==raw)
         throw new Error("Invalid business date in canonical source row");
       return parsed.toISOString();
     }
-    if(!/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?Z$/.test(raw))
+    if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z$/.test(raw))
       throw new Error("Invalid business date in canonical source row");
     const parsed=new Date(raw);
     if(!Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0,10)!==raw.slice(0,10))
