@@ -43,7 +43,7 @@
     "check:mlops": "node scripts/mlops-regression-check.mjs",
     "check:mlops-data-quality": "node scripts/mlops-data-quality-regression-check.mjs",
     "check:role-perspective": "node scripts/role-perspective-regression-check.mjs",
-    "frontend:build": "npm install --prefix frontend --no-audit --no-fund && npm run build --prefix frontend",
+    "frontend:build": "npm ci --prefix frontend --no-audit --no-fund && npm run build --prefix frontend",
     "check:react": "npm run check:frontend:typecheck && node scripts/react-migration-regression-check.mjs",
     "check:frontend:typecheck": "tsc -p frontend/tsconfig.json --noEmit",
     "check:daily-refresh": "node scripts/daily-refresh-regression-check.mjs",
@@ -90,3 +90,4 @@
     "@fastify/busboy": "3.2.1"
   }
 }
+

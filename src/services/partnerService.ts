@@ -4,6 +4,7 @@
 // ─────────────────────────────────────────────────────────────────────────
 
 import { PrismaClient } from "@prisma/client";
+import { destroyAllSessionsForUser } from "./authService.js";
 const prisma = new PrismaClient();
 
 const slugify = (s: string) =>
@@ -93,7 +94,12 @@ export async function deletePartner(id: string) {
 }
 
 export async function assignUserToPartner(userId: string, partnerId: string | null) {
-  return prisma.user.update({ where: { id: userId }, data: { partnerId } });
+  await destroyAllSessionsForUser(userId);
+  // Never serialize a complete identity record into a browser response.
+  return prisma.user.update({
+    where: { id: userId }, data: { partnerId },
+    select: { id: true, partnerId: true },
+  });
 }
 
 export async function assignEmployerToPartner(employerId: string, partnerId: string | null) {
@@ -161,3 +167,4 @@ export async function themeForSlug(slug: string) {
     branded: true as const,
   };
 }
+

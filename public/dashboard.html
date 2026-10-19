@@ -481,7 +481,7 @@
 
     /* Remove all interactive chrome. Whichever of #employer-view /
        #portfolio-view is currently on screen (per the audience switch)
-       stays as-is here Not available forcing #employer-view on and #portfolio-view off
+       stays as-is here — forcing #employer-view on and #portfolio-view off
        is what made "Export book" always print the employer dashboard even
        when the portfolio report was the one open. */
     .topbar,.filters,.head-actions,.row-chevron,
@@ -491,7 +491,7 @@
        "forwards" holds the *end* keyframe (opacity:1). Cancelling the
        animation for print without also pinning opacity/transform back to
        that end state drops every card back to its opacity:0 starting
-       point Not available which is what was making exported/printed reports come out
+       point — which is what was making exported/printed reports come out
        blank. Force the settled, fully-visible state instead. */
     .reveal{animation:none!important;opacity:1!important;transform:none!important;}
 
@@ -864,7 +864,7 @@
     <div>
       <div class="head-eyebrow">Employer Insights · Financial Wellbeing Programme</div>
       <h1>Your workforce <span class="emp"></span></h1>
-      <div class="head-sub">How the financial wellbeing programme is landing across your workforce Not available who is using it, the outcomes achieved, and how employees rate the service.</div>
+      <div class="head-sub">How the financial wellbeing programme is landing across your workforce — who is using it, the outcomes achieved, and how employees rate the service.</div>
       <div id="ctx-sub" style="font-size:12px;font-weight:700;color:var(--blue-d);margin-top:10px;letter-spacing:.01em;">Programme to date</div>
     </div>
     <div class="head-actions">
@@ -915,7 +915,7 @@
     <div class="card-hd">
       <div>
         <div class="card-title">Workforce Financial Wellness Score <button type="button" class="metric-info" data-metric="wellness" aria-label="What is the Workforce Financial Wellness Score?">i</button></div>
-        <div class="card-note">The single number that tracks your people's financial health Not available and its trajectory</div>
+        <div class="card-note">The single number that tracks your people's financial health — and its trajectory</div>
       </div>
       <span class="card-tag">Index · modelled</span>
     </div>
@@ -931,7 +931,7 @@
       <div class="card-hd">
         <div>
           <div class="card-title">From enrolled to better off <button type="button" class="metric-info" data-metric="funnel" aria-label="What is the engagement funnel?">i</button></div>
-          <div class="card-note">The journey every employee can take Not available and where they are on it</div>
+          <div class="card-note">The journey every employee can take — and where they are on it</div>
         </div>
         <span class="card-tag">Engagement funnel</span>
       </div>
@@ -941,7 +941,7 @@
       <div class="card-hd">
         <div>
           <div class="card-title">Financial problems resolved <button type="button" class="metric-info" data-metric="outcomes" aria-label="What are financial problems resolved?">i</button></div>
-          <div class="card-note" id="outcomes-note">Financial problems resolved Not available and the value created</div>
+          <div class="card-note" id="outcomes-note">Financial problems resolved — and the value created</div>
         </div>
         <span class="card-tag">Outcomes</span>
       </div>
@@ -975,7 +975,7 @@
       <div class="card-hd">
         <div>
           <div class="card-title">Debt Pressure Profile <button type="button" class="metric-info" data-metric="debtProfile" aria-label="What is the Debt Pressure Profile?">i</button></div>
-          <div class="card-note">Where your people's arrears sit Not available by credit type, then by creditor</div>
+          <div class="card-note">Where your people's arrears sit — by credit type, then by creditor</div>
         </div>
         <span class="card-tag">Arrears journey</span>
       </div>
@@ -991,7 +991,7 @@
     <div>
       <div class="eyebrow">ON-DEMAND PAY</div>
       <h1 style="font-size:27px;">Early Wage Access</h1>
-      <div class="head-sub">How many employees are drawing earned wages early, and how much Not available a live read on cashflow pressure between paydays.</div>
+      <div class="head-sub">How many employees are drawing earned wages early, and how much — a live read on cashflow pressure between paydays.</div>
     </div>
   </div>
   <div id="ewa-kpis" class="grid g-4"></div>
@@ -1014,7 +1014,7 @@
     <div>
       <div class="head-eyebrow">Where the pressure sits</div>
       <h1 style="font-size:27px;">Workforce Financial Stress Map</h1>
-      <div class="head-sub">Financial pressure is not evenly spread. This is where it concentrates Not available so you and your broker can direct the programme to the people and sites that need it most.</div>
+      <div class="head-sub">Financial pressure is not evenly spread. This is where it concentrates — so you and your broker can direct the programme to the people and sites that need it most.</div>
     </div>
   </div>
 
@@ -1052,14 +1052,14 @@
     <div>
       <div class="head-eyebrow">Tackling problem debt</div>
       <h1 style="font-size:27px;">How problem debt is being handled</h1>
-      <div class="head-sub">Not all distressed debt is dealt with the same way. Here is exactly what is happening to each rand Not available and we are precise about which debt is under active arrangement versus self-managed with our guidance.</div>
+      <div class="head-sub">Not all distressed debt is dealt with the same way. Here is exactly what is happening to each rand — and we are precise about which debt is under active arrangement versus self-managed with our guidance.</div>
     </div>
   </div>
   <div class="card reveal section-gap" style="margin-top:0;animation-delay:.04s">
     <div class="card-hd">
       <div>
         <div class="card-title">Problem debt by how it's being handled <button type="button" class="metric-info" data-metric="debtStates" aria-label="How is problem debt being handled?">i</button></div>
-        <div class="card-note">Three honest states Not available only the first is an active arrangement</div>
+        <div class="card-note">Three honest states — only the first is an active arrangement</div>
       </div>
       <span class="card-tag">Debt intervention</span>
     </div>
@@ -1071,7 +1071,7 @@
       <div class="card-hd">
         <div>
           <div class="card-title">Potentially prescribed debt challenged <button type="button" class="metric-info" data-metric="prescription" aria-label="What is prescribed debt recovery?">i</button></div>
-          <div class="card-note">Old debt employees may no longer legally owe Not available identified and contested</div>
+          <div class="card-note">Old debt employees may no longer legally owe — identified and contested</div>
         </div>
         <span class="card-tag">Recovery</span>
       </div>
@@ -1082,7 +1082,7 @@
       <div class="card-hd">
         <div>
           <div class="card-title">Financial Risk Signals <button type="button" class="metric-info" data-metric="riskSignals" aria-label="What are Financial Risk Signals?">i</button></div>
-          <div class="card-note">Exposure detected across your workforce Not available your early-warning list</div>
+          <div class="card-note">Exposure detected across your workforce — your early-warning list</div>
         </div>
         <span class="card-tag">Diagnostic</span>
       </div>
@@ -1097,7 +1097,7 @@
     <div>
       <div class="head-eyebrow">What to do next</div>
       <h1 style="font-size:27px;">Opportunities identified</h1>
-      <div class="head-sub">The programme has already mapped the next wave of value sitting in your workforce Not available eligible employees who haven't yet been helped.</div>
+      <div class="head-sub">The programme has already mapped the next wave of value sitting in your workforce — eligible employees who haven't yet been helped.</div>
     </div>
   </div>
   <div id="opportunities"></div>
@@ -1120,7 +1120,7 @@
       <div class="card-hd">
         <div>
           <div class="card-title">Conversations by journey <button type="button" class="metric-info" data-metric="chatByJourney" aria-label="What are conversations by journey?">i</button></div>
-          <div class="card-note">Where the questions are coming from Not available click a journey for its top themes</div>
+          <div class="card-note">Where the questions are coming from — click a journey for its top themes</div>
         </div>
         <span class="card-tag" id="chat-count-tag">Chat data</span>
       </div>
@@ -1164,14 +1164,14 @@
 
     <div class="pf-banner">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 3l7 3v5c0 4.4-3 7.5-7 9-4-1.5-7-4.6-7-9V6l7-3z" stroke="#fff" stroke-width="1.8"/></svg>
-      Internal portfolio view Not available authorised empower-fin and channel partner users only. Not shared with employers.
+      Internal portfolio view — authorised empower-fin and channel partner users only. Not shared with employers.
     </div>
 
     <div class="head" style="padding:26px 0 18px;">
       <div>
         <div class="head-eyebrow">Across all employer clients</div>
         <h1 style="font-size:34px;">Portfolio insights</h1>
-        <div class="head-sub">Every reportable metric, across your whole book of employers. Spot where opportunity is highest, where satisfaction is slipping, and where financial stress is concentrated Not available at a glance.</div>
+        <div class="head-sub">Every reportable metric, across your whole book of employers. Spot where opportunity is highest, where satisfaction is slipping, and where financial stress is concentrated — at a glance.</div>
       </div>
       <div class="head-actions">
         <button class="btn" id="btn-pf-export">Export book</button>
@@ -1231,7 +1231,7 @@
 <script src="/static/portal-nav-v080.js?v=0.10.0"></script>
 <script>
 /* ════════════════════════════════════════════════════════════════════
-   EMPOWER-FIN DASHBOARD PORTAL Not available EMPLOYER DASHBOARD
+   EMPOWER-FIN DASHBOARD PORTAL — EMPLOYER DASHBOARD
    The static DATA object below is an explicit visual-demonstration fixture.
    Production mode replaces it with the complete API payload and never merges
    missing live fields into these values. Open with ?demo=1 to use the fixture.
@@ -1258,7 +1258,7 @@ let DATA = {
   debtStates: {
     active:    { rand: 6_390_000, employees: 214, label:"Under active intervention", note:"settlement or reduced-instalment arrangements sent" },
     challenged:{ rand: 2_740_000, employees: 274, label:"Being challenged",          note:"potentially prescribed debt contested" },
-    guided:    { rand: 2_790_000, employees: 133, label:"Self-managed via guidance",  note:"couldn't afford an arrangement Not available educated on prescription to manage it themselves" },
+    guided:    { rand: 2_790_000, employees: 133, label:"Self-managed via guidance",  note:"couldn't afford an arrangement — educated on prescription to manage it themselves" },
   },
 
   // ── Workforce Financial Wellness Score (pass 6) ──
@@ -1448,7 +1448,7 @@ let DATA = {
 };
 
 /* ════════════════════════════════════════════════════════════════════
-   PORTFOLIO (internal) Not available every employer across the key reportable metrics.
+   PORTFOLIO (internal) — every employer across the key reportable metrics.
    Static rows below are used only when the page is opened with ?demo=1.
    Metric directions: higher-is-better for most; for stress & arrears,
    higher-is-worse (handled in the heatmap colouring).
@@ -1481,6 +1481,10 @@ const PORTFOLIO = {
     { name:"Boland Agri Co-op",          heads:520,  takeUp:86, engaged:74, wellness:80, saving:142600, betterOff:318, oppValue:61000,  stress:39, arrears:18, rating:4.8, fiveStarPct:82 },
   ],
 };
+
+// Never paint fixture rows while a live request is pending.
+if (!PORTFOLIO.explicitDemo) PORTFOLIO.employers = [];
+PORTFOLIO.loading = !PORTFOLIO.explicitDemo;
 
 /* Portfolio measure glossary. Plain-language definitions are based on the
    approved financial-wellbeing measure dictionary supplied for the build. */
@@ -1653,7 +1657,7 @@ function renderExec(){
 
 /* ─────────────────── Workforce Financial Wellness Score ─────────────────── */
 // Shared with the driver bars below so a driver's colour always means the same
-// thing as the score band's colour Not available improving/strong shines dark green, at
+// thing as the score band's colour — improving/strong shines dark green, at
 // risk is amber, critical is red. Thresholds match wellnessBand() server-side.
 function brandSeries(i=0){
   const vars=['--chart-engagement','--chart-cashflow','--chart-debt','--chart-insurance','--chart-workforce','--chart-low','--chart-mid','--chart-high'];
@@ -1768,7 +1772,7 @@ function renderOutcomes(){
   const available=DATA.availability?.journeys!==false;
   const rows=Array.isArray(DATA.outcomes)?DATA.outcomes:[];
   const total=rows.reduce((sum,o)=>sum+(Number(o.count)||0),0);
-  if(note) note.textContent=available?`${total.toLocaleString('en-ZA')} financial ${total===1?'problem':'problems'} resolved Not available and the value created`:'Journey data not loaded.';
+  if(note) note.textContent=available?`${total.toLocaleString('en-ZA')} financial ${total===1?'problem':'problems'} resolved — and the value created`:'Journey data not loaded.';
   if(!available){wrap.innerHTML='<div class="muted" style="padding:22px 8px">Journey data has not been loaded for this employer.</div>';return;}
   if(!rows.length){wrap.innerHTML='<div class="muted" style="padding:22px 8px">No completed outcomes in the selected reporting window.</div>';return;}
   rows.forEach(o=>{ const row=el(`<div class="outcome clickable"><div class="outcome-ico">${svgIco(o.ico)}</div><div><div class="outcome-name">${esc(o.name)}</div><div class="outcome-meta">${fmtCount(o.count)} completed · ${o.meta}</div></div><div class="outcome-stat"><div class="v">${displayMoney(o.stat)}</div><div class="l">${esc(o.statL)}</div></div><div class="row-chevron">›</div></div>`); row.addEventListener('click',()=>outcomeDrill(o)); wrap.appendChild(row); });
@@ -2009,7 +2013,7 @@ function renderRatings(){
 function renderDebtStates(){
   const wrap=document.getElementById('debt-states'); if(!wrap) return;
   const d=DATA.debtStates;
-  // Full number, not abbreviated Not available these three cards are the actual audited
+  // Full number, not abbreviated — these three cards are the actual audited
   // rand amounts an employer/broker checks line by line, so "R 384k" vs
   // "R 384,231" is the difference between a rough vibe and a real figure.
   const fmtM=v=> 'R '+Math.round(v).toLocaleString('en-ZA');
@@ -2032,7 +2036,7 @@ function renderDebtStates(){
   wrap.appendChild(el(`<div>
     <div class="ds-bar">${seg}</div>
     <div class="ds-grid">${cards}</div>
-    <div class="ds-foot">Only <strong>${fmtM(d.active.rand)}</strong> is counted as <strong>debt under active intervention</strong> in the summary above. The guidance-only amount is shown separately and honestly Not available we educated these employees on prescription so they can manage accounts they couldn't afford to arrange; we don't claim it as active intervention.</div>
+    <div class="ds-foot">Only <strong>${fmtM(d.active.rand)}</strong> is counted as <strong>debt under active intervention</strong> in the summary above. The guidance-only amount is shown separately and honestly — we educated these employees on prescription so they can manage accounts they couldn't afford to arrange; we don't claim it as active intervention.</div>
   </div>`));
 }
 
@@ -2083,7 +2087,7 @@ function renderOpportunities(){
       <div class="opp-foot-main">
         <div class="opp-foot-l">Estimated additional value in the next wave ${employerInfoButton('opportunityValue')}</div>
         <div class="opp-foot-v">${o.estMonthly}<span>/month</span> &nbsp;·&nbsp; ${o.estAnnual}<span>/year</span></div>
-        <div class="opp-foot-note">Direct your broker to activate these segments Not available the diagnosis is already done.</div>
+        <div class="opp-foot-note">Direct your broker to activate these segments — the diagnosis is already done.</div>
       </div>
       <div class="opp-foot-ref">
         <div class="opp-ref-v">${r.shareRate}%</div>
@@ -2188,7 +2192,7 @@ function renderChatThemes(){
     wrap.innerHTML='<div class="muted" style="padding:28px 12px;text-align:center;color:#8497a7;font-size:13px;">No themes tagged in the selected period.</div>';
     return;
   }
-  document.getElementById('chat-theme-title').textContent='Top themes Not available '+j.name;
+  document.getElementById('chat-theme-title').textContent='Top themes — '+j.name;
   document.getElementById('chat-theme-note').textContent=window.__LIVE__
     ? 'Most frequent themes tagged for this journey in the selected period.'
     : 'Illustrative demonstration themes for this journey.';
@@ -2238,7 +2242,7 @@ const STATE = {
   audience: 'employer',
 };
 
-/* period scaling Not available figures shrink for shorter windows so the demo feels live */
+/* period scaling — figures shrink for shorter windows so the demo feels live */
 const PERIOD = {
   '30':  { f:0.12, label:'Last 30 days',      ratings:142,  shares:118 },
   'q':   { f:0.34, label:'This quarter',      ratings:486,  shares:402 },
@@ -2392,7 +2396,7 @@ function applyState(){
     return;
   }
   const p=PERIOD[STATE.period], f=p.f;
-  // region filter factor (relative share of that site) Not available illustrative
+  // region filter factor (relative share of that site) — illustrative
   const regionShare = { 'all':1, 'Vaalwater Plant':0.34, 'Secunda Site':0.22, 'Sasolburg':0.18, 'Head Office':0.14, 'Field / Remote':0.12 };
   const incomeShare = { 'all':1, 'Under R8k/mo':0.30, 'R8k–R15k/mo':0.42, 'R15k–R25k/mo':0.19, 'Over R25k/mo':0.09 };
   const segF = (regionShare[STATE.region]||1) * (incomeShare[STATE.income]||1);
@@ -2533,7 +2537,7 @@ function syncPeriodControl(){
     else if(rangeParam==='30d') sel.value='30d';
     else if(rangeParam==='quarter') sel.value='qtd';
     else if(rangeParam==='all') sel.value='all';
-    else sel.value=''; // no params, or range=latest Not available both mean "Latest period"
+    else sel.value=''; // no params, or range=latest — both mean "Latest period"
   } else {
     sel.value = STATE.period==='30'?'30d' : STATE.period==='q'?'qtd' : 'all';
   }
@@ -2757,13 +2761,15 @@ function renderPortfolioBody(){
   const E=pfVisibleEmployers(); const count=E.length;
   updatePfSelectionSummary();
   if(!count){
-    document.getElementById('pf-kpis').innerHTML='<div class="card" style="padding:28px;grid-column:1/-1"><b>No employers selected.</b><div class="muted" style="margin-top:8px">Use the Employers filter above or choose Select all.</div></div>';
+    const title=PORTFOLIO.loading?'Loading portfolio…':PORTFOLIO.error?'Portfolio unavailable':PORTFOLIO.employers.length?'No employers selected.':'No portfolio data available.';
+    const message=PORTFOLIO.loading?'Retrieving your authorised employer data.':PORTFOLIO.error?'The request could not complete. Reload to try again. No demonstration figures are shown.':PORTFOLIO.employers.length?'Use the Employers filter above or choose Select all.':'There are no reportable employers for this reporting window.';
+    document.getElementById('pf-kpis').innerHTML=`<div class="card" role="status" style="padding:28px;grid-column:1/-1"><b>${title}</b><div class="muted" style="margin-top:8px">${message}</div></div>`;
     document.getElementById('pf-heatmap').innerHTML=''; document.getElementById('pf-metric-picker').innerHTML=''; document.getElementById('pf-league').innerHTML=''; document.getElementById('pf-league-note').textContent='';
   } else { renderPfKpis(E); renderPfHeatmap(E); renderPfPicker(); renderPfLeague(E); }
-  const periodNote=PORTFOLIO.filterContext?.label?` Reporting window: ${PORTFOLIO.filterContext.label}.`:'';
+  const periodNote=PORTFOLIO.filterContext?.label?` Reporting window: ${pfEsc(PORTFOLIO.filterContext.label)}.`:'';
   document.getElementById('pf-footnote').innerHTML=(PORTFOLIO.live
     ? `Internal portfolio view calculated from the same dated source records and score rules as each employer dashboard.${periodNote}`
-    : (PORTFOLIO.explicitDemo?'Internal portfolio view Not available explicit demonstration mode.':'Internal portfolio view is unavailable because the live portfolio feed could not be loaded. No demonstration values are shown.'))
+    : (PORTFOLIO.explicitDemo?'Internal portfolio view — explicit demonstration mode.':'Internal portfolio view is unavailable because the live portfolio feed could not be loaded. No demonstration values are shown.'))
     + ` Currently showing ${count} of ${PORTFOLIO.employers.length} authorised employer${PORTFOLIO.employers.length===1?'':'s'}. Heatmap colouring is relative within each metric column; with only one employer the cell is intentionally neutral. Missing measures are shown as unavailable and are not ranked as zero. For stress index and arrears, higher values indicate greater risk. Not shared with employer clients.`;
   wireMetricTips(document.getElementById('portfolio-view'));
 }
@@ -2822,7 +2828,7 @@ function preparePdfPrint(){
   const footer=document.getElementById('pdf-footer-date');
   // The header markup is shared between employer-view and portfolio-view's
   // print output, so it has to be filled in differently depending on which
-  // one is actually on screen Not available otherwise "Export book" prints a portfolio
+  // one is actually on screen — otherwise "Export book" prints a portfolio
   // report headed with a single employer's name and score.
   const portfolioActive=document.getElementById('portfolio-view')?.style.display!=='none';
   if(portfolioActive){
@@ -3078,7 +3084,7 @@ function creditorDrill(c){
         `<div class="hbar-row" style="grid-template-columns:190px 1fr 68px"><div class="hbar-lbl">${s.label}</div><div class="hbar-track"><div class="hbar-fill" style="width:${s.pct}%"></div></div><div class="hbar-val">${s.count} · ${s.pct}%</div></div>`).join('')
         :'<div class="muted" style="padding:10px 0;font-size:12.5px;">No status breakdown available for this creditor.</div>'}
     </div>
-    <div class="drawer-note">Employees deal with ${esc(c.name)} directly through a guided, do-it-yourself settlement Not available no debt-review flag, no third party taking over their money. Figures aggregated across ${esc(c.accounts)} employees.</div>`;
+    <div class="drawer-note">Employees deal with ${esc(c.name)} directly through a guided, do-it-yourself settlement — no debt-review flag, no third party taking over their money. Figures aggregated across ${esc(c.accounts)} employees.</div>`;
   openDrawer(c.name, 'Unsecured arrears, settlement journey', body, 'creditor');
 }
 
@@ -3194,17 +3200,25 @@ async function loadLiveData({refreshOnly=false}={}){
 }
 
 async function fetchPortfolioInBackground(requestSeq){
+  PORTFOLIO.loading=true;
+  PORTFOLIO.error=false;
+  if(!PORTFOLIO.explicitDemo) PORTFOLIO.employers=[];
+  PORTFOLIO.live=false;
+  PF_RENDERED=false;
+  if(document.getElementById('portfolio-view')?.style.display !== 'none') renderPortfolio();
   try{
     const pfParams=new URLSearchParams(), pageParams=new URLSearchParams(location.search);
     ['period','quarter','range'].forEach(k=>{ const v=pageParams.get(k); if(v) pfParams.set(k,v); });
     if(!pfParams.has('period')&&!pfParams.has('quarter')&&!pfParams.has('range')) pfParams.set('range','latest');
-    const pf=await fetch(`${API_BASE}/api/portfolio?${pfParams.toString()}`).then(async r=>{ if(!r.ok) throw new Error('portfolio unavailable'); return r.json(); });
+    const pf=await fetch(`${API_BASE}/api/portfolio?${pfParams.toString()}`, { cache: 'no-store', signal: AbortSignal.timeout(60_000) }).then(async r=>{ if(!r.ok) throw new Error('portfolio unavailable'); return r.json(); });
     if(requestSeq!==LIVE_REQUEST_SEQ) return;
-    if(Array.isArray(pf.employers)){ PORTFOLIO.employers=pf.employers; PORTFOLIO.filterContext=pf.filterContext||null; PORTFOLIO.live=true; PF_SELECTION_INITIALIZED=false; PF_SELECTED_IDS.clear(); PF_RENDERED=false; }
-  }catch(_){ PORTFOLIO.live=false; PORTFOLIO.error=true; if(!PORTFOLIO.explicitDemo) PORTFOLIO.employers=[]; PF_RENDERED=false; }
+    if(!Array.isArray(pf.employers)) throw new Error('Invalid portfolio response');
+    if(Array.isArray(pf.employers)){ PORTFOLIO.loading=false; PORTFOLIO.error=false; PORTFOLIO.employers=pf.employers; PORTFOLIO.filterContext=pf.filterContext||null; PORTFOLIO.live=true; PF_SELECTION_INITIALIZED=false; PF_SELECTED_IDS.clear(); PF_RENDERED=false; }
+  }catch(_){ if(requestSeq!==LIVE_REQUEST_SEQ) return; PORTFOLIO.live=false; PORTFOLIO.loading=false; PORTFOLIO.error=true; if(!PORTFOLIO.explicitDemo) PORTFOLIO.employers=[]; PF_RENDERED=false; }
+  if(requestSeq===LIVE_REQUEST_SEQ && document.getElementById('portfolio-view')?.style.display !== 'none'){ renderPortfolio(); PF_RENDERED=true; }
 }
 
-// month picker Not available populated from the snapshots that actually exist
+// month picker — populated from the snapshots that actually exist
 const PERIOD_SCORE_TONE = {
   strong: { c: '#137a47', bg: '#e3f6ec', border: '#b8e6cc' },
   risk: { c: '#8a5a10', bg: '#fff2df', border: '#f3cf98' },
@@ -3212,6 +3226,7 @@ const PERIOD_SCORE_TONE = {
 };
 
 function periodScoreTone(score){
+  if(score===null || score===undefined || score==='') return null;
   const n=Number(score);
   if(!Number.isFinite(n)) return null;
   if(n>=60) return PERIOD_SCORE_TONE.strong;
@@ -3240,7 +3255,9 @@ async function populateMonthSelect(employerId, selected, selectedQuarter){
     if(page.get('site')) qs.set('site',page.get('site'));
     if(page.get('income')) qs.set('income',page.get('income'));
     const suffix=qs.toString()?`?${qs.toString()}`:'';
-    const periods=await fetch(`${API_BASE}/api/employers/${employerId}/periods${suffix}`, { cache: 'no-store' }).then(r=>r.json());
+    const rows=await fetch(`${API_BASE}/api/employers/${encodeURIComponent(employerId)}/periods${suffix}`, { cache: 'no-store', signal: AbortSignal.timeout(30_000) }).then(r=>{if(!r.ok) throw new Error('Periods unavailable'); return r.json();});
+    const now=new Date().toISOString().slice(0,7);
+    const periods=Array.isArray(rows)?rows.filter(p=>/^\d{4}-(0[1-9]|1[0-2])$/.test(p?.period)&&p.period<=now):[];
     if(!Array.isArray(periods) || periods.length<1){
       updatePeriodControlTone();
       return;
@@ -3249,13 +3266,13 @@ async function populateMonthSelect(employerId, selected, selectedQuarter){
       const [y,m]=p.split('-');
       return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m-1]+' '+y;
     };
-    const scoreText=score=>Number.isFinite(Number(score)) ? ` · Score ${Math.round(Number(score))}` : ' · Score unavailable';
+    const scoreText=score=>hasValue(score)&&Number.isFinite(Number(score)) ? ` · Score ${Math.round(Number(score))}` : ' · Score unavailable';
     const quarters=new Map();
     periods.forEach(p=>{
       const [y,m]=p.period.split('-').map(Number);
       const q=Math.floor((m-1)/3)+1, key=`${y}-Q${q}`;
       const bucket=quarters.get(key)||{label:`Q${q} ${y}`,scores:[]};
-      if(Number.isFinite(Number(p.optimiseScore))) bucket.scores.push(Number(p.optimiseScore));
+      if(hasValue(p.optimiseScore)&&Number.isFinite(Number(p.optimiseScore))) bucket.scores.push(Number(p.optimiseScore));
       quarters.set(key,bucket);
     });
     const quarterKeys=[...quarters.keys()].sort().reverse();
@@ -3268,7 +3285,7 @@ async function populateMonthSelect(employerId, selected, selectedQuarter){
       }).join('')+`</optgroup>`;
     }
     extra+=`<optgroup label="Months / dates">`+periods.map(p=>{
-      const score=Number.isFinite(Number(p.optimiseScore)) ? Math.round(Number(p.optimiseScore)) : null;
+      const score=hasValue(p.optimiseScore)&&Number.isFinite(Number(p.optimiseScore)) ? Math.round(Number(p.optimiseScore)) : null;
       return `<option value="${esc(p.period)}" data-score="${score??''}" ${p.period===selected?'selected':''}>${fmt(p.period)}${scoreText(score).replace(" · Score ", ": Score ")}</option>`;
     }).join('')+`</optgroup>`;
     sel.insertAdjacentHTML('beforeend', extra);
@@ -3293,7 +3310,7 @@ function switchPeriod(value){
   else if(value==='all') params.set('range','all');
   else if(value.startsWith('q:')) params.set('quarter',value.slice(2));
   else if(value) params.set('period',value);
-  // else "" (Latest period): leave every filter param cleared Not available that's
+  // else "" (Latest period): leave every filter param cleared — that's
   // exactly the state apiFilterQuery() resolves to range=latest itself, so
   // it always matches whatever the server considers the newest period.
   if(id) params.set('employer',id);
@@ -3347,7 +3364,7 @@ function setLiveFootnote(context){
 
 // apply the channel partner's white-label theme (colours, logo, name)
 // hide dashboard sections the signed-in user isn't permitted to see (server
-// also redacts the underlying data for gated sections Not available this just matches
+// also redacts the underlying data for gated sections — this just matches
 // the UI to it, and skips wasted rendering work for hidden sections).
 function applySectionVisibility(me){
   const sections = me.sections || {};
@@ -3365,7 +3382,7 @@ const DEFAULT_PORTAL_CHARTS = {
   '--chart-insurance':'#6D5BB0','--chart-workforce':'#2B1D73','--chart-low':'#187A4D',
   '--chart-mid':'#9A5B00','--chart-high':'#B5391F'
 };
-const DEFAULT_HEAD_SUB='How the financial wellbeing programme is landing across your workforce Not available who is using it, the outcomes achieved, and how employees rate the service.';
+const DEFAULT_HEAD_SUB='How the financial wellbeing programme is landing across your workforce — who is using it, the outcomes achieved, and how employees rate the service.';
 function restoreDefaultPortalIdentity(){
   const defaultBrand=document.getElementById('portal-brand-default');
   const partnerBrand=document.getElementById('portal-brand-partner');
@@ -3545,7 +3562,7 @@ function applyTheme(theme, user){
     if(partnerBrandEl) partnerBrandEl.hidden=true;
     if(brandName) brandName.textContent=theme.name && theme.name!==baseName ? theme.name : '';
   }
-  document.title=(theme.name||baseName)+' Not available Employer Insights';
+  document.title=(theme.name||baseName)+' — Employer Insights';
   if(theme.tagline){
     const sub=document.querySelector('#employer-view > .head .head-sub');
     if(sub) sub.textContent=theme.tagline;
@@ -3637,7 +3654,7 @@ function tint(hex,pct){
   return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('');
 }
 
-// brief "Hi <name>" splash right after sign-in Not available shown once per browser tab
+// brief "Hi <name>" splash right after sign-in — shown once per browser tab
 // session so repeat navigation within the dashboard doesn't keep re-showing it
 function handleWelcomeSplash(me){
   var el=document.getElementById('welcome-splash');
@@ -3811,7 +3828,7 @@ function showDemoBanner(){
   const b = document.createElement('div');
   b.id = 'demo-banner';
   b.style.cssText = 'position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#fdf3e2;color:#8a5a00;border:1px solid #f0d8a8;padding:10px 18px;border-radius:12px;font:600 13px Manrope,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:999;';
-  b.textContent = 'Explicit demonstration mode Not available these figures are not live source data.';
+  b.textContent = 'Explicit demonstration mode — these figures are not live source data.';
   document.body.appendChild(b);
 }
 
