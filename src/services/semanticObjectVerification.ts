@@ -39,6 +39,14 @@ async function fetchBounded(url:string, init:RequestInit, maxBytes:number) {
   return content;
 }
 
+// Canary reads must stream within the manifest byte budget; arrayBuffer() on
+// an untrusted external object may otherwise allocate arbitrarily large memory.
+export async function readBoundedSemanticObject(url:string,maxBytes:number):Promise<Uint8Array> {
+  if(!Number.isSafeInteger(maxBytes) || maxBytes<1 || maxBytes>8*1024*1024)
+    throw new Error("Invalid semantic read byte budget");
+  return fetchBounded(url,{method:"GET"},maxBytes);
+}
+
 // Upload once, then independently GET the bytes back. Some S3-compatible
 // stores may return success before a read-after-write verification succeeds.
 export async function putAndVerifySemanticObject(input:{
