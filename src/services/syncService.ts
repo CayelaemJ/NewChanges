@@ -7,6 +7,7 @@
 
 import { PrismaClient, Prisma } from "@prisma/client";
 import { sourceChangePollSeconds } from "./sourceChangePollConfig.js";
+import { classifySourceWatermark } from "./sourceWatermarkDrift.js";
 import { Client } from "pg";
 import { LOAD_ORDER, getFormat } from "./reportFormats.js";
 import { validate } from "./importParser.js";
@@ -253,24 +254,31 @@ export async function detectSourceChanges() {
     });
     const byReport = new Map(cursors.map((cursor) => [cursor.reportKey, cursor.lastSourceUpdatedAt]));
     const reports: Array<{ reportKey: string; newest: string | null; cursor: string | null; location: string }> = [];
+    const anomalies: Array<{ reportKey:string; kind:"REGRESSED"|"MISSING"|"INVALID" }> = [];
 
     for (const reportKey of LOAD_ORDER) {
       const watermark = await adapter.watermark(reportKey);
-      const newestMs = sourceWatermarkMillis(watermark.newest);
       const cursor = byReport.get(reportKey) ?? null;
-      const cursorMs = cursor?.getTime() ?? null;
-      if (newestMs != null && (cursorMs == null || newestMs > cursorMs)) {
+      const decision = classifySourceWatermark(watermark.newest,cursor);
+      if (decision === "CHANGED") {
         reports.push({
           reportKey,
           newest: watermark.newest,
           cursor: cursor?.toISOString() ?? null,
           location: watermark.location,
         });
+      } else if(decision==="REGRESSED"||decision==="MISSING"||decision==="INVALID"){
+        // Avoid source table names, raw cursor values and credentials in
+        // system health responses. Human review is required before resetting.
+        anomalies.push({reportKey,kind:decision});
       }
     }
     return {
       supported: true,
-      changed: reports.length > 0,
+      // Never launch an ordinary incremental run when source identity or
+      // timestamp semantics have changed unexpectedly.
+      changed: anomalies.length===0 && reports.length>0,
+      anomalies,
       reports,
       checkedAt: new Date().toISOString(),
       pollSeconds: SOURCE_CHANGE_POLL_SECONDS,
