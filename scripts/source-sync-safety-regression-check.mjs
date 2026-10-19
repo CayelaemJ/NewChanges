@@ -62,6 +62,31 @@ const queue = read("../src/services/semanticRefreshQueue.ts");
 const storage = read("../src/services/semanticObjectVerification.ts");
 assert(schema.includes("model SemanticRefreshJob {"), "Durable semantic queue schema required");
 assert(queue.includes("skipDuplicates:true"), "Coalesced queue must deduplicate writes");
+const semanticWake=read("../src/services/semanticQueueWake.ts");
+const semanticListener=read("../scripts/run-semantic-event-worker.ts");
+assert(semanticWake.includes('ENABLE_SEMANTIC_QUEUE_WAKE==="true"'),
+  "Semantic NOTIFY must require explicit opt-in");
+assert(semanticWake.includes('ENABLE_SEMANTIC_EVENT_WORKER==="true"'),
+  "Continuous worker must require a separate explicit opt-in");
+assert(semanticWake.includes('env.STANDBY_MODE!=="true"'),
+  "Standby must never start the semantic listener or queue wake");
+assert(queue.indexOf("createMany({") < queue.indexOf("if(shouldWakeSemanticWorker(queued))"),
+  "Queue wake must occur only after durable queue inserts");
+assert(queue.includes("pg_notify(") && queue.includes("shouldWakeSemanticWorker(queued)"),
+  "Queue must have a guarded best-effort PostgreSQL wake signal");
+assert(semanticListener.includes("semanticListenerEnabled()") &&
+  semanticListener.indexOf("semanticListenerEnabled()") <
+  semanticListener.indexOf("createSemanticStorageBroker()"),
+  "Listener must reject disabled deployment before opening storage");
+assert(semanticListener.includes("LISTEN ") &&
+  semanticListener.includes("setInterval(wake,60_000)"),
+  "Listener must combine database wake events with a missed-signal sweep");
+assert(semanticListener.includes("if(closed||draining)return") &&
+  semanticListener.includes("i<5 && Date.now()-started<45_000"),
+  "Listener must prevent overlap and bound queue draining");
+assert(!server.includes("run-semantic-event-worker") &&
+  !server.includes("processOneShadowSemanticRefresh("),
+  "Web server must not embed the dedicated semantic processing loop");
 assert(queue.includes("FOR UPDATE SKIP LOCKED"), "Workers must avoid competing claims");
 assert(queue.includes('"leasedUntil"'), "Worker lease required");
 assert(storage.includes('redirect:"error"'), "External object requests must not follow redirects");
