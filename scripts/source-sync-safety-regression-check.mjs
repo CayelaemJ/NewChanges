@@ -86,6 +86,7 @@ const shadow=read("../src/services/semanticShadowWorker.ts");
 assert(shadow.includes('ENABLE_SEMANTIC_SHADOW_WORKER'), "shadow worker must be opt in");
 assert(shadow.includes('getPublishedDashboardPayload'), "shadow worker must use last published payload, never raw source scans");
 assert(shadow.includes('finishSemanticRefresh'), "worker must complete durable queue jobs");
+assert(shadow.indexOf('if(process.env.ENABLE_SEMANTIC_RECOMPUTE!=="true")') < shadow.indexOf("const job=await claimSemanticRefresh"), "Disabled recomputation must not consume durable queue leases or retries");
 assert(!server.includes("processOneShadowSemanticRefresh("), "web server must not accidentally start shadow worker");
 assert(sync.includes('ENABLE_SEMANTIC_SHADOW_ENQUEUE'), "shadow enqueue must be explicitly opt-in");
 assert(sync.includes('generation?.state !== "ACTIVE"'), "shadow enqueue must validate the assigned source generation");
