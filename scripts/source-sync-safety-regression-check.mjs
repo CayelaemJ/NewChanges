@@ -121,6 +121,13 @@ assert(storageSettings.includes('secretAccessKey'),"Server-side storage credenti
 assert(storageSettings.includes('secretsReturned:false'),"Storage health must never expose credentials");
 assert(server.includes('"/api/admin/mlops/semantic-storage-health"'),"Admin-only storage health required");
 assert(server.includes('"/api/dashboard/semantic-version-changes"'), "Signed-in users need scoped version notifications");
+const visiblePolling=react.slice(react.indexOf("// Low-cost, opt-in live updates."),react.indexOf("if(!employer)return <Card"));
+assert(visiblePolling.includes('features.pollingEnabled'),"Dashboard polling must require the explicit feature flag");
+assert(visiblePolling.includes('document.visibilityState!=="visible"'),"Dashboard polling must pause when hidden");
+assert(visiblePolling.includes('window.setInterval(()=>void check(),30_000)'),"Dashboard must check for publications at most 30s while visible");
+assert(visiblePolling.includes('Promise.all([') && visiblePolling.includes('setPeriodOptions(availablePeriods)'),"Relevant publications must refresh both dashboard scores and available months");
+assert(visiblePolling.includes('if(!cancelled)setData') || visiblePolling.includes('if(!cancelled){'),"Stale or cancelled publication refreshes must not mutate dashboard state");
+
 assert(server.includes('employerIds: ids === null ? undefined : ids'), "Semantic user polling must be permission-scoped");
 assert(server.includes('ids !== null && ids.length === 0'), "Users without employers cannot view events");
 const activation=read("../src/services/sourceActivation.ts");
