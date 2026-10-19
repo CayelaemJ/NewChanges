@@ -24,7 +24,7 @@ INSERT INTO "SalaryAdvance" ("id","advanceRef","employerId","employeeId","client
 
 INSERT INTO "AchievableTarget" ("id","employerId","driver","config","effectiveFrom") VALUES ('__synthetic_semantic_e2e_20261019__-target','__synthetic_semantic_e2e_20261019__','CASHFLOW','{"monthlyAchievableRand":500}'::jsonb,'2026-10-01') ON CONFLICT ("id") DO NOTHING;
 
-INSERT INTO "SourceGeneration" ("id","fingerprint","sourceMode","endpointLabel","state","validation","validatedAt","activatedAt") VALUES ('__synthetic_semantic_generation_20261019__','bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb','SYNTHETIC','SYNTHETIC TEST DATA ONLY','ACTIVE','{"synthetic":true,"testingOnly":true}'::jsonb,now(),now()) ON CONFLICT ("id") DO NOTHING;
+INSERT INTO "SourceGeneration" ("id","fingerprint","sourceMode","endpointLabel","state","validation","validatedAt","activatedAt","updatedAt") VALUES ('__synthetic_semantic_generation_20261019__','bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb','SYNTHETIC','SYNTHETIC TEST DATA ONLY','ACTIVE','{"synthetic":true,"testingOnly":true}'::jsonb,now(),now(),now()) ON CONFLICT ("id") DO NOTHING;
 
 INSERT INTO "SourceGenerationCursor" ("id","generationId","reportKey","reconciledAt","rowCount") VALUES ('__synthetic_semantic_generation_20261019__-cursor-0','__synthetic_semantic_generation_20261019__','employers',now(),1) ON CONFLICT ("id") DO NOTHING;
 
