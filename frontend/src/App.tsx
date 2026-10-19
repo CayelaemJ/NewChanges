@@ -194,8 +194,14 @@ function DashboardView({me}:{me:Me}) {
         if(cancelled)return;
         cursor=changes.nextCursor??cursor;
         if(initialized&&changes.changes?.some(change=>change.employerId===employer.id)){
-          const refreshed=await api<Dashboard>("/api/employers/"+encodeURIComponent(employer.id)+"/dashboard?"+query);
-          if(!cancelled)setData(refreshed);
+          const [refreshed,availablePeriods]=await Promise.all([
+            api<Dashboard>("/api/employers/"+encodeURIComponent(employer.id)+"/dashboard?"+query),
+            api<string[]>("/api/employers/"+encodeURIComponent(employer.id)+"/periods"),
+          ]);
+          if(!cancelled){
+            setData(refreshed);
+            if(Array.isArray(availablePeriods))setPeriodOptions(availablePeriods);
+          }
         }
         initialized=true;
       }catch {
@@ -206,7 +212,7 @@ function DashboardView({me}:{me:Me}) {
       .then(features=>{
         if(cancelled||!features.pollingEnabled)return;
         void check();
-        timer=window.setInterval(()=>void check(),60_000);
+        timer=window.setInterval(()=>void check(),30_000);
       }).catch(()=>{});
     return ()=>{cancelled=true;if(timer!==undefined)window.clearInterval(timer);};
   },[employer?.id,query]);
