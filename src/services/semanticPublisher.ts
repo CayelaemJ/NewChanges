@@ -1,6 +1,7 @@
 // Semantic write-side publisher. Never changes the live dashboard read path.
 // Only verified objects become candidates; CAS prevents concurrent clobbers.
 import { prisma } from "./snapshotBuilder.js";
+import { requireMonotonicSemanticWatermark } from "./semanticPublicationOrdering.js";
 
 export async function publishVerifiedSemanticManifest(input:{
   manifestId:string; expectedPreviousManifestId:string|null;
@@ -23,6 +24,16 @@ export async function publishVerifiedSemanticManifest(input:{
     const key={employerId:m.employerId,period:m.period,partitionKey:m.partitionKey};
     const existing=await tx.semanticPublicationPointer.findUnique({where:{employerId_period_partitionKey:key}});
     if((existing?.manifestId??null)!==input.expectedPreviousManifestId) throw new Error("Publication version conflict");
+    const previousManifest = existing
+      ? await tx.semanticSnapshotManifest.findUnique({
+          where:{id:existing.manifestId},select:{sourceWatermark:true},
+        })
+      : null;
+    if(existing && !previousManifest) throw new Error("Previous semantic manifest missing");
+    // A late retry must not publish an older cursor over a newer manifest.
+    // Explicit audited rollback is the only supported way to move backward.
+    requireMonotonicSemanticWatermark(m.sourceWatermark,
+      existing ? previousManifest?.sourceWatermark ?? null : undefined);
     // Atomic insert/update with optimistic comparison. Row-locking avoids
     // concurrent publishers both committing from the same previous version.
     if(existing) {
