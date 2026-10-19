@@ -21,3 +21,21 @@ export function semanticListenerEnabled(env:NodeJS.ProcessEnv=process.env):boole
 export function shouldWakeSemanticWorker(queued:number,env:NodeJS.ProcessEnv=process.env):boolean {
   return Number.isSafeInteger(queued) && queued>0 && semanticQueueWakeEnabled(env);
 }
+
+export function semanticListenerConnectionString(env:NodeJS.ProcessEnv=process.env):string {
+  if(!semanticListenerEnabled(env)) throw new Error("Semantic event listener is disabled");
+  const main=env.DATABASE_URL??"";
+  const direct=env.SEMANTIC_LISTEN_DATABASE_URL??"";
+  let source:URL,listen:URL;
+  try {source=new URL(main);listen=new URL(direct);}
+  catch {throw new Error("Semantic listener needs a separate direct PostgreSQL connection URL");}
+  const normalizedHost=(hostname:string)=>hostname.replace(/-pooler(?=\\.)/g,"");
+  if(!["postgres:","postgresql:"].includes(listen.protocol) ||
+     listen.hostname.includes("-pooler.") ||
+     !listen.hostname.endsWith(".neon.tech") ||
+     listen.searchParams.get("sslmode")!=="require" ||
+     listen.pathname!==source.pathname ||
+     normalizedHost(listen.hostname)!==normalizedHost(source.hostname))
+    throw new Error("Semantic listener requires a direct non-pooler connection to the SAME Neon database");
+  return direct;
+}
