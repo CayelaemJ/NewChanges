@@ -70,4 +70,12 @@ for(const [feed,dateField,dateValue] of feedCases){
   assert.deepEqual(actual,[{employerId:"VIG",period:"2026-03",feeds:[feed],deleted:false}],feed);
 }
 assert.equal(feedCases.length,10);
+// Historical correction and tombstone must invalidate later snapshots too.
+const deletedMarch=partitionsFromCanonicalSourceRows("debt_accounts",[{
+  employer_ref:"VIG",observed_at:"2026-03-31",source_updated_at:"2026-10-19T08:00:00Z",is_deleted:true,
+}]);
+const expandedDeletion=mergeAndExpandSemanticPartitions(deletedMarch,"2026-10");
+assert.equal(expandedDeletion.length,8);
+assert(expandedDeletion.every(part=>part.deleted && part.feeds.includes("debt_accounts")));
+assert.deepEqual(expandedDeletion.map(part=>part.period),["2026-03","2026-04","2026-05","2026-06","2026-07","2026-08","2026-09","2026-10"]);
 console.log("Incremental semantic partition planner tests passed");
