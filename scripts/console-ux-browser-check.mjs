@@ -9,7 +9,7 @@ const results=[];
 const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
 mkdirSync('test-results/console-ux',{recursive:true});
 try {
-  for(const viewport of [...[320,360,390,768,1366].map(width=>({width,height:900})),{width:844,height:390}]) for(const dark of [false,true]) for(const consoleName of ['admin','users']) {
+  for(const viewport of [...[320,360,390,768,940,1024,1366].map(width=>({width,height:900})),{width:844,height:390}]) for(const dark of [false,true]) for(const consoleName of ['admin','users']) {
     const {width,height}=viewport;
     const context=await browser.newContext({viewport,reducedMotion:'reduce'});
     const page=await context.newPage();
@@ -36,6 +36,7 @@ try {
         else if(url.pathname==='/api/users')body=users;
         else if(url.pathname==='/api/admin/reports')body={loadOrder:['fixture'],reports:[{key:'fixture',title:'Workforce eligibility and employee observations',description:'A fixture report for checking format and upload controls.',naturalKey:['employerId'],fields:[{name:'employerId',type:'string',required:true,description:'A long field description to check that governed import documentation wraps without squeezing other columns.'}]}]};
         else if(url.pathname==='/api/admin/integration')body={configured:true,sourceMode:'SQL',effectiveSourceMode:'SQL',sqlDialect:'MYSQL',enabled:true,scheduleHours:24,lastSyncStatus:'OK'};
+        else if(url.pathname==='/api/admin/partners')body=[{id:'fixture-partner',name:'Fixture partner with a long regional business name',displayName:'Fixture branded portal',slug:'fixture-partner',primaryColor:'003053',accentColor:'1078BE',navyColor:'003053',_count:{users:12,employers:3}}];
         else if(/partners|batches|sections|sessions|alerts|logins|devices|data-access|revoked|mlops\/events/.test(url.pathname))body=[];
         else if(url.pathname.endsWith('/security/overview'))body={activeSessions:0,failedLogins24h:0,openAlerts:0,successfulLogins24h:0,riskState:'Good'};
         return route.fulfill({contentType:'application/json',body:JSON.stringify(body)});
@@ -95,6 +96,13 @@ try {
         assert.equal(await page.locator('#live-integration .compact-toggle').getAttribute('aria-expanded'),'false');
         await page.locator('#live-integration .compact-toggle').click();
         assert.equal(await page.locator('#live-integration .compact-toggle').getAttribute('aria-expanded'),'true');
+      }
+      if(consoleName==='admin'){
+        assert.equal(await page.locator('.partner-card').count(),1,'populated branding editor is rendered');
+        if(width<=1100){
+          for(const grid of await page.locator('.partner-editor-grid').all())assert.equal(await grid.evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),1,'branding editor stacks its controls');
+          assert.equal(await page.locator('#efs-admin-source-status').evaluate(el=>getComputedStyle(el).position),'static','source status does not cover phone/tablet forms');
+        }
       }
       const layout=await page.evaluate(()=>({
         width:innerWidth,scrollWidth:document.documentElement.scrollWidth,

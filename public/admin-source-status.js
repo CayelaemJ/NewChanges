@@ -70,7 +70,8 @@
     el.id = ID;
     el.setAttribute("aria-live","polite");
     el.setAttribute("aria-label","Admin connected data source status");
-    document.body.appendChild(el);
+    const heading=document.querySelector('.console-admin .wrap .head');
+    if(heading)heading.after(el); else document.body.appendChild(el);
     return el;
   }
   function render(config) {
@@ -140,3 +141,4 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start, { once:true });
   else start();
 })();
+

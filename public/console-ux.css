@@ -65,3 +65,17 @@ html.portal-dark .console-page .head p{color:#B7B2C8!important}
   .console-page .topbar-inner>.pill{display:none}
   .console-page .topbar-inner{gap:10px!important}
 }
+
+.console-admin .partner-editor-grid>*{min-width:0}
+.console-admin .partner-card-header{flex-wrap:wrap}
+.console-admin .partner-card-header>.muted{flex-basis:100%;overflow-wrap:anywhere}
+.console-admin .partner-card-header>div:nth-child(2){min-width:0;overflow-wrap:anywhere}
+@media(max-width:1100px){
+  .console-admin .partner-editor-grid{grid-template-columns:minmax(0,1fr)!important;gap:16px!important}
+  .console-admin #efs-admin-source-status{position:static!important;max-width:none!important;width:100%;margin:0 0 20px;box-shadow:none}
+}
+@media(max-width:600px){
+  .console-admin .partner-preview{flex-wrap:wrap}
+  .console-admin .partner-preview-copy{flex:1 1 150px}
+  .console-admin .partner-preview-copy :is(strong,span){white-space:normal;overflow:visible;overflow-wrap:anywhere}
+}

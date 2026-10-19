@@ -1402,7 +1402,7 @@ function renderPartners(){
       : `<div class="partner-preview-logo partner-preview-fallback" style="background:${ac};">${(p.displayName||p.name||'?').slice(0,2).toUpperCase()}</div>`;
     const pv=partnerPreviewTokens(p);
     return `<div class="card partner-card" style="margin-bottom:16px;padding:20px;border:1px solid #e8e1f7;">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+      <div class="partner-card-header" style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
         <div style="width:34px;height:34px;border-radius:8px;background:${pc};box-shadow:inset 0 0 0 1px rgba(255,255,255,.35);"></div>
         <div style="font-weight:800;font-size:15px;color:#32217c;flex:1;">${esc(p.name)}</div>
         <span class="muted" style="font-size:12px;">${esc(p._count.users)} users · ${esc(p._count.employers)} employers · /p/${esc(p.slug)}</span>
@@ -1413,17 +1413,17 @@ function renderPartners(){
         <span class="partner-preview-badge">Live preview</span>
       </div>
       <button class="btn partner-preview-open" type="button" onclick="openClientPreview('${esc(p.id)}')">View client dashboard</button>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr) 2fr;gap:12px;align-items:end;margin-top:16px;">
+      <div class="partner-editor-grid" style="display:grid;grid-template-columns:repeat(3,1fr) 2fr;gap:12px;align-items:end;margin-top:16px;">
         <label style="font-size:11.5px;font-weight:700;color:#5b6b7a;">Primary<input type="color" value="${pc}" onchange="editPartner('${esc(p.id)}','primaryColor',this.value)" style="display:block;width:100%;height:34px;border:1px solid #e8e1f7;border-radius:7px;margin-top:4px;"></label>
         <label style="font-size:11.5px;font-weight:700;color:#5b6b7a;">Accent<input type="color" value="${ac}" onchange="editPartner('${esc(p.id)}','accentColor',this.value)" style="display:block;width:100%;height:34px;border:1px solid #e8e1f7;border-radius:7px;margin-top:4px;"></label>
         <label style="font-size:11.5px;font-weight:700;color:#5b6b7a;">Navy<input type="color" value="${nv}" onchange="editPartner('${esc(p.id)}','navyColor',this.value)" style="display:block;width:100%;height:34px;border:1px solid #e8e1f7;border-radius:7px;margin-top:4px;"></label>
         <label style="font-size:11.5px;font-weight:700;color:#5b6b7a;">Display name<input value="${esc(p.displayName||'')}" onchange="editPartner('${esc(p.id)}','displayName',this.value)" style="display:block;width:100%;padding:7px 10px;border:1px solid #e8e1f7;border-radius:7px;margin-top:4px;font:inherit;"></label>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;align-items:end;">
+      <div class="partner-editor-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;align-items:end;">
         <label style="font-size:11.5px;font-weight:700;color:#5b6b7a;">Tagline (optional)<input value="${esc(p.tagline||'')}" onchange="editPartner('${esc(p.id)}','tagline',this.value)" style="display:block;width:100%;padding:7px 10px;border:1px solid #e8e1f7;border-radius:7px;margin-top:4px;font:inherit;"></label>
         <label style="font-size:11.5px;font-weight:700;color:#5b6b7a;">Logo (PNG)<input type="file" accept="image/png,image/jpeg" onchange="uploadPartnerLogo('${esc(p.id)}',this)" style="display:block;margin-top:4px;font-size:12px;"></label>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;margin-top:12px;align-items:center;">
+      <div class="partner-editor-grid" style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;margin-top:12px;align-items:center;">
         <select id="pt-u-${esc(p.id)}" style="font:inherit;padding:7px 10px;border:1px solid #e8e1f7;border-radius:7px;"><option value="">Assign a user…</option>${ALL_USERS.map(u=>`<option value="${esc(u.id)}">${u.name||u.email}</option>`).join('')}</select>
         <select id="pt-e-${esc(p.id)}" style="font:inherit;padding:7px 10px;border:1px solid #e8e1f7;border-radius:7px;"><option value="">Assign an employer…</option>${(ALL_EMP||[]).map(e=>`<option value="${e.id||e.employerId}">${e.name||e.employer}</option>`).join('')}</select>
         <button class="btn btn-ghost" onclick="assignToPartner('${esc(p.id)}')">Assign</button>
