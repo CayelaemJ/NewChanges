@@ -3,9 +3,9 @@
 // Emits three diagnostic NOTIFY messages on an isolated test channel only.
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { performance } from "node:perf_hooks";
 import { Client } from "pg";
 import { semanticListenerConnectionString } from "../src/services/semanticQueueWake.js";
+import { measureSemanticNotificationDelivery } from "../src/services/semanticNotificationDelivery.js";
 
 const database="newchanges_testing_20261017";
 const diagnosticChannel="newchanges_semantic_testing_probe";
@@ -52,31 +52,13 @@ async function main(){
     const deliveryMs:number[]=[];
     for(let i=0;i<maxSamples;i++){
       const marker=randomUUID();
-      const started=performance.now();
-      // Attach the handler before publishing, so fast deliveries are observed.
-      const message=new Promise<number>((resolve,reject)=>{
-        const timer=setTimeout(()=>{
-          listening.off("notification",onNotification);
-          reject(new Error("Neon Testing notification was not delivered within "+timeoutMs+"ms"));
-        },timeoutMs);
-        const onNotification=(msg:{channel:string;payload?:string})=>{
-          if(msg.channel!==diagnosticChannel || msg.payload!==marker)return;
-          clearTimeout(timer);
-          listening.off("notification",onNotification);
-          resolve(performance.now()-started);
-        };
-        listening.on("notification",onNotification);
+      const elapsed=await measureSemanticNotificationDelivery({
+        receiver:listening,channel:diagnosticChannel,payload:marker,
+        timeoutMs,
+        publish:()=>sending.query("SELECT pg_notify($1,$2)",[diagnosticChannel,marker]),
       });
-      try {
-        await sending.query("SELECT pg_notify($1,$2)",[diagnosticChannel,marker]);
-        const observed=await message;
-        assert(Number.isFinite(observed)&&observed>=0);
-        deliveryMs.push(Math.round(observed*100)/100);
-      }catch(error){
-        // Consume the waiter if the publisher failed before NOTIFY was sent.
-        await message.catch(()=>{});
-        throw error;
-      }
+      assert(Number.isFinite(elapsed)&&elapsed>=0);
+      deliveryMs.push(Math.round(elapsed*100)/100);
     }
     const sorted=[...deliveryMs].sort((a,b)=>a-b);
     const p95=sorted[Math.ceil(sorted.length*0.95)-1];
