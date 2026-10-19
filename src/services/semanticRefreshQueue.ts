@@ -7,7 +7,7 @@ import type { RefreshPartition } from "./semanticRefreshPlanner.js";
 const CANONICAL_FEEDS = new Set(["employers","workforce_snapshots","employees","platform_users","journeys","debt_accounts","policies","ratings","referrals","salary_advances"]);
 
 export async function enqueueSemanticRefresh(generationId:string, watermark:Date, partitions:RefreshPartition[]) {
-  if (!generationId || !Number.isFinite(watermark.getTime())) throw new Error("Invalid source generation or watermark");
+  if (!generationId?.trim() || !(watermark instanceof Date) || !Number.isFinite(watermark.getTime())) throw new Error("Invalid source generation or watermark");
   // Bulk insert bounded chunks rather than one SQL round trip per partition.
   // The unique idempotency key still protects concurrent schedulers.
   if(partitions.length>500) throw new Error("Semantic queue partition budget exceeded");
@@ -17,7 +17,7 @@ export async function enqueueSemanticRefresh(generationId:string, watermark:Date
   // with incomplete changedFeeds depending on partition order.
   const grouped=new Map<string,{employerId:string;period:string;feeds:Set<string>}>();
   for(const part of partitions){
-    if(!part.employerId?.trim() || !/^\d{4}-(0[1-9]|1[0-2])$/.test(part.period) ||
+    if(!part.employerId?.trim() || part.employerId.length > 200 || !/^\d{4}-(0[1-9]|1[0-2])$/.test(part.period) ||
        !Array.isArray(part.feeds) || part.feeds.length===0)
       throw new Error("Invalid semantic employer, period or changed feeds");
     const key=JSON.stringify([part.employerId,part.period]);
