@@ -72,4 +72,23 @@ assert(circleci.includes("npm run semantic:e2e:publication-metadata"),
   "Manual CircleCI Testing workflow must include publication and rollback rehearsal");
 assert(circleci.includes("context: newchanges-neon-testing"),
   "Manual CircleCI Testing workflow must use restricted Testing credentials");
+const transportPublication=readFileSync("scripts/semantic-testing-storage-publication.ts","utf8");
+assert(transportPublication.includes('SEMANTIC_SYNTHETIC_E2E_APPROVED!=="YES_TEST_ONLY"'),
+  "Storage/publication rehearsal must require explicit Testing-only approval");
+assert(transportPublication.includes('u.pathname!=="/"+database'),
+  "Storage/publication rehearsal must reject any other database");
+assert(transportPublication.includes("stageAndPublishSemanticObject({"),
+  "Storage/publication rehearsal must execute the real application stage-and-publish service");
+assert(transportPublication.includes("rollbackSemanticPublication({"),
+  "Storage/publication rehearsal must exercise real audited rollback");
+assert(transportPublication.includes("globalThis.fetch=async(input,init)=>") &&
+  transportPublication.includes('u.hostname!=="synthetic-s3.example.invalid"'),
+  "Synthetic storage must use a fail-closed in-memory transport without network egress");
+assert(transportPublication.includes("externalDurabilityVerified:false"),
+  "In-memory transport must never claim durable S3 verification");
+assert(transportPublication.includes("if(pointer && !ids.includes(pointer.manifestId))") &&
+  transportPublication.includes("semanticSnapshotManifest.deleteMany"),
+  "Cleanup must reject foreign pointers and remove only owned manifests");
+assert(circleci.includes("npm run semantic:e2e:storage-publication"),
+  "Storage publication rehearsal must only run in manual CircleCI Testing job");
 console.log("Isolated Neon synthetic fixture and score-delta runner safety assertions passed");
