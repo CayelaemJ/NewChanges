@@ -55,7 +55,7 @@
     "semantic:e2e:score-delta": "tsx scripts/semantic-testing-score-delta.ts",
     "semantic:e2e:queue": "tsx scripts/semantic-testing-queue.ts",
     "semantic:e2e:publication-metadata": "tsx scripts/semantic-testing-publication.ts",
-    "check:semantic-storage": "tsx tests/semantic-storage.test.ts && tsx tests/semantic-object-transport.test.ts",
+    "check:semantic-storage": "tsx tests/semantic-storage.test.ts && tsx tests/semantic-object-transport.test.ts && tsx tests/semantic-s3-roundtrip.test.ts",
     "check:source-vault": "tsx tests/source-connection-vault.test.ts",
     "check:source-continuity": "tsx tests/source-continuity.test.ts",
     "semantic:reconcile:once": "tsx scripts/reconcile-source-generations.ts",
