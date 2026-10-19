@@ -1,0 +1,17 @@
+import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
+import {syncStatusNeedsAlert,safeSyncAlertSummary} from "../src/services/syncAlertPolicy.js";
+for(const status of ["PARTIAL","FAILED"])assert.equal(syncStatusNeedsAlert(status),true);
+for(const status of ["OK","PENDING","RUNNING",null,undefined,""])assert.equal(syncStatusNeedsAlert(status),false);
+const summary={status:"PARTIAL",summary:{error:"password=must_never_be_emailed",records:["private row"]}};
+const content=JSON.stringify(safeSyncAlertSummary(summary));
+assert(content.includes("PARTIAL"));
+assert(!content.includes("must_never_be_emailed"));
+assert(!content.includes("private row"));
+assert.equal(safeSyncAlertSummary({status:"FAILED"}).status,"FAILED");
+const server=readFileSync(new URL("../src/server.ts",import.meta.url),"utf8");
+const report=server.slice(server.indexOf("const reportFailure ="),server.indexOf("const tick = async"));
+assert(report.includes("syncStatusNeedsAlert(r?.status)"));
+assert(report.includes("safeSyncAlertSummary(r)"));
+assert(!report.includes("JSON.stringify(r.summary"));
+console.log("Partial source sync notifies Admin without leaking raw source rows or errors");
