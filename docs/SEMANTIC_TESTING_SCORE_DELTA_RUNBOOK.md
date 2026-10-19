@@ -72,3 +72,7 @@ The manual `semantic_testing_e2e=true` workflow also runs `npm run semantic:e2e:
 - Cleanup of the unique synthetic manifests, pointers and audit entries produced by that invocation.
 
 **Boundaries:** This proves code-level cryptographic signing and transport verification in normal CI, and can prove integrated storage verification / Neon publication transactions on a manual Testing run. It does not establish durable third-party bucket storage, browser freshness, automatic SQL-source change detection, 30–60 second update timing, or production readiness. Until the manual workflow is actually run, even the integrated Neon behavior is *unverified*. Never turn this Testing emulator into a production storage provider.
+
+
+### Presigned object identity guard
+Production semantic publication now refuses to upload unless **both** signed S3 URLs address exactly the same immutable `semantic/<generation>/<employer>/<period>/<version>.json` key recorded in the manifest. It also requires HTTPS and Signature V4 metadata. This avoids treating a successful digest verification for a different object as proof that the manifest's referenced key is durable. The ordinary, offline storage test exercises this guard with valid signatures, mismatched keys, missing signatures, insecure protocols and encoded key names.
