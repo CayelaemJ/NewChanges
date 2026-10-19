@@ -209,11 +209,14 @@ function DashboardView({me}:{me:Me}) {
         // Keep the last good dashboard if a notification or refresh fails.
       }finally{polling=false;}
     };
-    api<{pollingEnabled:boolean}>("/api/dashboard/semantic-features")
+    api<{pollingEnabled:boolean;pollIntervalSeconds?:number}>("/api/dashboard/semantic-features")
       .then(features=>{
         if(cancelled||!features.pollingEnabled)return;
+        // Only a server-approved fast pilot may poll every 15 seconds;
+        // normal user sessions keep the existing low-cost 30-second rate.
+        const intervalMs=features.pollIntervalSeconds===15?15_000:30_000;
         void check();
-        timer=window.setInterval(()=>void check(),30_000);
+        timer=window.setInterval(()=>void check(),intervalMs);
       }).catch(()=>{});
     return ()=>{cancelled=true;if(timer!==undefined)window.clearInterval(timer);};
   },[employer?.id,query]);
