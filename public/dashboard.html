@@ -1641,7 +1641,7 @@ function sparkline(points, color){
 function renderExec(){
   const wrap=document.getElementById('exec-summary');
   const tick='<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7.5" stroke="var(--chart-cashflow)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  const items=DATA.exec.items.map(it=>{ const mk=employerMetricKey(it.l); return `<div class="exec-item">${tick}<div><div class="exec-v">${it.v}</div><div class="exec-l">${it.l} ${employerInfoButton(mk)}</div></div></div>`; }).join('');
+  const items=DATA.exec.items.map(item=>{ const it={...item}; if(/employee satisfaction/i.test(it.l) && Number(DATA.ratings?.responses)===0) it.v='No ratings yet'; const mk=employerMetricKey(it.l); return `<div class="exec-item">${tick}<div><div class="exec-v">${it.v}</div><div class="exec-l">${it.l} ${employerInfoButton(mk)}</div></div></div>`; }).join('');
   const incomplete=window.__LIVE__ && (DATA.wellness?.complete===false || !hasValue(DATA.wellness?.score));
   const verdict=incomplete?'Data incomplete':(window.__LIVE__ ? (DATA.wellness.score>=75?'Strong':DATA.wellness.score>=60?'On track':'Needs attention') : 'On track');
   const verdictClass=incomplete?'is-incomplete':verdict==='Needs attention'?'is-needs-attention':'';
@@ -1718,7 +1718,7 @@ function renderWellness(){
     </div>`; 
   }).join('');
   const bt=bandTone(Number(w.score)||0);
-  wrap.appendChild(el(`<div class="wellness-inner"><div class="wellness-left">${gauge}<div class="wellness-band" style="color:${bt.c};background:${bt.bg};border-color:${bt.border}">${ragLights(bt.rag)}${w.band||'Index'}</div><div class="wellness-delta">${delta===null?'No prior period':(delta>0?'▲ +'+delta:'▼ '+delta)+' pts vs. '+(DATA.filterContext?.comparison?.label||'previous period')}</div><div class="wellness-note">A composite of four weighted drivers. Use it to track workforce financial health over time.</div></div><div class="wellness-right">${drivers}</div></div>`));
+  wrap.appendChild(el(`<div class="wellness-inner"><div class="wellness-left">${gauge}<div class="wellness-band" style="color:${bt.c};background:${bt.bg};border-color:${bt.border}">${ragLights(bt.rag)}${w.band||'Index'}</div><div class="wellness-delta">${delta===null?'No prior period':(delta>0?'▲ +'+delta:delta<0?'▼ '+delta:'• 0')+' pts vs. '+(DATA.filterContext?.comparison?.label||'previous period')}</div><div class="wellness-note">A composite of four weighted drivers. Use it to track workforce financial health over time.</div></div><div class="wellness-right">${drivers}</div></div>`));
   setTimeout(()=>wrap.querySelectorAll('.wd-fill').forEach(f=>f.style.width=f.dataset.w+'%'),150);
 }
 
@@ -1733,9 +1733,10 @@ function renderKPIs(){
   ];
   const wrap=document.getElementById('kpis');
   cards.forEach((c,i)=>{
-    const available=c.data?.available!==false && hasValue(c.num);
+    const noRatings=c.infoKey==='rating' && Number(DATA.ratings?.responses)===0;
+    const available=!noRatings && c.data?.available!==false && hasValue(c.num);
     const delta=hasValue(c.data?.delta)?(()=>{const n=Number(c.data.delta);if(!Number.isFinite(n))return String(c.data.delta)+' vs. '+(DATA.filterContext?.comparison?.label||'previous period');const sign=n>0?'▲':n<0?'▼':'•';const abs=Math.abs(n);const value=c.money?formatRand(abs):(c.decimals?abs.toFixed(c.decimals)+' pts':Math.round(abs)+' pts');return sign+' '+(n>0?'+':n<0?'-':'')+value+' vs. '+(DATA.filterContext?.comparison?.label||'previous period');})():'No comparison available';
-    const card=el(`<div class="card kpi reveal" style="animation-delay:${i*.06}s"><div class="kpi-label"><span class="kpi-ico" style="background:${c.ico.bg}"><svg width="18" height="18" viewBox="0 0 24 24">${c.ico.path}</svg></span>${c.label}${employerInfoButton(c.infoKey)}</div><div class="kpi-value">${available&&c.prefix?'<span class="cur">'+c.prefix+'</span>':''}<span class="kpi-num">${available?'0':'Not available'}</span>${available&&c.suffix?'<span style="font-size:18px">'+c.suffix+'</span>':''}</div><div class="kpi-sub">${available?`<span class="delta">${delta}</span>`:'<span style="color:#8497a7">Data not loaded</span>'}</div>${available?c.spark:''}</div>`);
+    const card=el(`<div class="card kpi reveal" style="animation-delay:${i*.06}s"><div class="kpi-label"><span class="kpi-ico" style="background:${c.ico.bg}"><svg width="18" height="18" viewBox="0 0 24 24">${c.ico.path}</svg></span>${c.label}${employerInfoButton(c.infoKey)}</div><div class="kpi-value">${available&&c.prefix?'<span class="cur">'+c.prefix+'</span>':''}<span class="kpi-num">${available?'0':noRatings?'No ratings yet':'Not available'}</span>${available&&c.suffix?'<span style="font-size:18px">'+c.suffix+'</span>':''}</div><div class="kpi-sub">${available?`<span class="delta">${delta}</span>`:noRatings?'No responses in this period':'<span style="color:#8497a7">Data not loaded</span>'}</div>${available?c.spark:''}</div>`);
     wrap.appendChild(card); if(available) countUp(card.querySelector('.kpi-num'),Number(c.num),{money:c.money,decimals:c.decimals||0,delay:120+i*60});
   });
 }
@@ -1987,6 +1988,10 @@ function renderIncome(){
 /* ─────────────────── ACT 4: ratings ─────────────────── */
 function renderRatings(){
   const wrap=document.getElementById('ratings'); const rt=DATA.ratings;
+  if(!rt || rt.available===false || !Number(rt.responses)){
+    wrap.appendChild(el('<div class="rating-empty"><strong>'+(rt?.available===false?'Ratings unavailable':'No ratings yet')+'</strong><p>No employee ratings are available for the selected reporting period.</p></div>'));
+    return;
+  }
   const avg=Math.max(0,Math.min(5,Number(rt.avg)||0));
   const rounded=Math.round(avg*2)/2;
   const stars=Array.from({length:5},(_,i)=>{
