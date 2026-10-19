@@ -21,7 +21,7 @@ Do not print or paste connection URLs into logs.
 1. Obtain the Neon connection URL for the **Testing branch, Testing database**, with `sslmode=require`, through approved environment secrets.
 2. Explicitly disable `ENABLE_SEMANTIC_SHADOW_WORKER` and `ENABLE_SEMANTIC_OBJECT_PUBLISH` for this isolated runner.
 3. Set `SEMANTIC_SYNTHETIC_E2E_APPROVED=YES_TEST_ONLY`.
-4. Run `npm run semantic:e2e:preflight` and `npm run semantic:e2e:score-delta`.
+4. Run `npm run semantic:e2e:preflight`, `npm run semantic:e2e:score-delta` and `npm run semantic:e2e:queue`.
 5. Check that the output reports `scoreChanged:true` and numeric `baselineScore` / `changedScore`, then `Synthetic Testing journey and baseline score restored`. On an exception, inspect the synthetic row before retrying; do not overwrite other records.
 
 The harness deliberately:
@@ -30,6 +30,9 @@ The harness deliberately:
 - checks that `ScoreSnapshot` and `getDashboardPayload()` agree on the changed score;
 - restores the synthetic journey and recalculates the baseline in `finally`;
 - does **not** mark a semantic refresh job as published or create a durable object without a real object store.
+
+## Scope of the durable queue rehearsal
+The queue script uses actual Testing PostgreSQL and Prisma, but **does not** execute the semantic publisher or storage upload. It first refuses an occupied pending/running queue, inserts only a namespaced synthetic job, verifies an idempotent duplicate enqueue, claims with exact `generationId` and `employerId` scope, confirms `COMPLETED`, then deletes only its own synthetic job in `finally`. The standard worker continues to claim globally when no testing scope is supplied.
 
 ## Gates still outstanding
 This is database-backed **source-row → score/read-model** verification, not a full live source → browser rehearsal. Still required: external source extraction across all ten feeds, queue enqueue/claim/retry, authenticated durable S3-compatible PUT/GET SHA-256, manifest CAS publication, canary/dashboard UI refresh and measured 30–60 second update under load. Production flag activation remains prohibited until explicitly approved.
@@ -40,7 +43,7 @@ The PR adds an isolated `semantic_testing_score_delta` job with top-level Circle
 To run manually, an authorized CircleCI operator must:
 1. Store the **Testing-branch** Neon connection string as the masked CircleCI project environment variable `SEMANTIC_TESTING_DATABASE_URL` (not `DATABASE_URL`). Use `newchanges_testing_20261017`, verified Neon host, `sslmode=require`. Do **not** paste credentials into a PR, chat, pipeline parameter, or job output.
 2. Trigger a CircleCI pipeline on the feature branch with boolean parameter `semantic_testing_e2e=true`.
-3. Confirm the `semantic_testing_score_delta` job reports a changed numerical score and restoration. The job requires the dedicated secret; it overrides inherited `DATABASE_URL`, refuses the Production Railway environment and sets semantic publication/worker switches off.
+3. Confirm the `semantic_testing_score_delta` job reports a changed numerical score and restoration, followed by a scoped durable queue enqueue/dedupe/claim/complete result and removal of its own test job. The job requires the dedicated secret; it overrides inherited `DATABASE_URL`, refuses the Production Railway environment and sets semantic publication/worker switches off.
 4. Review the normal `verify`, source-quality, browser and security checks separately.
 
 This does not deploy the app, run a background worker, or publish object storage manifests. It consumes existing CircleCI runner minutes; verify free-plan limits with the organization before starting. No CircleCI credentials or Testing secret are accessible through the current GitHub and Neon connectors, so the pipeline cannot be triggered or configured from this session.
