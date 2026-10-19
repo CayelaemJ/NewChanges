@@ -274,8 +274,9 @@
   <link rel="stylesheet" href="/static/enterprise-v3.css?v=4">
 <link rel="stylesheet" href="/static/dark-theme-v2.css?v=6">
 <link rel="stylesheet" href="/static/the-fixer-brand.css?v=13">
+<link rel="stylesheet" href="/static/console-ux.css?v=1">
 </head>
-<body data-portal-build="0.10.0">
+<body class="console-page console-admin" data-portal-build="0.10.0">
 <div id="welcome-splash">
   <div class="welcome-splash-inner">
     <img id="welcome-splash-logo" class="welcome-splash-logo efs-brand-logo" src="/static/the-fixer-logo.svg?v=6" alt="The Fixer logo">
@@ -406,7 +407,7 @@
           </div>
           <div id="ops-architecture" style="margin-top:14px;padding:14px;border:1px solid var(--line);border-radius:12px;background:#fff;font-size:12px;color:#617486;line-height:1.55;"></div>
           <div style="margin-top:14px;overflow:auto;">
-            <table><thead><tr><th>Feed</th><th>Workload</th><th>Execution</th><th>Source view</th><th>Replica</th><th>Enabled</th><th>Reason</th></tr></thead><tbody id="ops-routes"><tr><td colspan="7" class="muted">Loading routes...</td></tr></tbody></table>
+            <div class="console-table-scroll" role="region" tabindex="0" aria-label="Administration data table"><table><thead><tr><th>Feed</th><th>Workload</th><th>Execution</th><th>Source view</th><th>Replica</th><th>Enabled</th><th>Reason</th></tr></thead><tbody id="ops-routes"><tr><td colspan="7" class="muted">Loading routes...</td></tr></tbody></table></div>
           </div>
           <div id="ops-quality-detail" style="margin-top:14px;"></div>
         </div>
@@ -416,8 +417,8 @@
       <div class="card section-gap" id="import-history-card">
         <div class="card-hd"><h2>Import history</h2><div class="note">Refreshes every 30s while in view · Import jobs update immediately · Rows show validated totals and live changes</div><button class="btn btn-sm" type="button" onclick="loadHistory()">Refresh</button></div>
         <div class="card-bd" style="padding:6px 8px 12px;">
-          <table class="hist"><thead><tr><th>Report</th><th>File</th><th>Rows</th><th>Status</th><th>When</th><th>Download</th><th></th></tr></thead>
-          <tbody id="hist-body"><tr><td colspan="7" class="muted" style="padding:14px;">No imports yet.</td></tr></tbody></table>
+          <div class="console-table-scroll" role="region" tabindex="0" aria-label="Administration data table"><table class="hist"><thead><tr><th>Report</th><th>File</th><th>Rows</th><th>Status</th><th>When</th><th>Download</th><th></th></tr></thead>
+          <tbody id="hist-body"><tr><td colspan="7" class="muted" style="padding:14px;">No imports yet.</td></tr></tbody></table></div>
         </div>
       </div>
 
@@ -571,7 +572,7 @@
           <div id="integ-result" style="margin-top:12px;"></div>
           <div style="margin-top:18px;">
             <div style="font-size:12.5px;font-weight:700;color:#5b6b7a;margin-bottom:8px;">Recent syncs</div>
-            <table class="hist"><tbody id="integ-logs"><tr><td class="muted" style="padding:10px;">No syncs yet.</td></tr></tbody></table>
+            <div class="console-table-scroll" role="region" tabindex="0" aria-label="Administration data table"><table class="hist"><tbody id="integ-logs"><tr><td class="muted" style="padding:10px;">No syncs yet.</td></tr></tbody></table></div>
           </div>
         </div>
       </div>
@@ -638,9 +639,9 @@
           <div id="mail-result" style="margin-top:12px;"></div>
 
           <div style="margin-top:24px;font-size:12.5px;font-weight:800;color:#32217c;">Scheduled reports</div>
-          <div style="overflow:auto;margin-top:8px;"><table class="hist"><thead><tr><th>Report</th><th>User</th><th>Frequency</th><th>Next send</th><th>Status</th></tr></thead><tbody id="mail-schedules"><tr><td colspan="5" class="muted" style="padding:10px;">No schedules yet.</td></tr></tbody></table></div>
+          <div style="overflow:auto;margin-top:8px;"><div class="console-table-scroll" role="region" tabindex="0" aria-label="Administration data table"><table class="hist"><thead><tr><th>Report</th><th>User</th><th>Frequency</th><th>Next send</th><th>Status</th></tr></thead><tbody id="mail-schedules"><tr><td colspan="5" class="muted" style="padding:10px;">No schedules yet.</td></tr></tbody></table></div></div>
           <div style="margin-top:20px;font-size:12.5px;font-weight:800;color:#32217c;">Recent email deliveries</div>
-          <div style="overflow:auto;margin-top:8px;"><table class="hist"><thead><tr><th>When</th><th>Report</th><th>Status</th><th>Recipients</th></tr></thead><tbody id="mail-deliveries"><tr><td colspan="4" class="muted" style="padding:10px;">No deliveries yet.</td></tr></tbody></table></div>
+          <div style="overflow:auto;margin-top:8px;"><div class="console-table-scroll" role="region" tabindex="0" aria-label="Administration data table"><table class="hist"><thead><tr><th>When</th><th>Report</th><th>Status</th><th>Recipients</th></tr></thead><tbody id="mail-deliveries"><tr><td colspan="4" class="muted" style="padding:10px;">No deliveries yet.</td></tr></tbody></table></div></div>
         </div>
       </div>
 
@@ -648,7 +649,7 @@
       <div class="card section-gap">
         <div class="card-hd"><h2>Admin Audit Log</h2><div class="note">Top 5 most critical admin changes · full history remains available in the CSV export</div></div>
         <div class="card-bd">
-          <div style="overflow:auto;"><table class="hist"><thead><tr><th>When</th><th>Admin</th><th>Action</th><th>Details</th></tr></thead><tbody id="audit-rows"><tr><td colspan="4" class="muted" style="padding:10px;">Loading…</td></tr></tbody></table></div>
+          <div style="overflow:auto;"><div class="console-table-scroll" role="region" tabindex="0" aria-label="Administration data table"><table class="hist"><thead><tr><th>When</th><th>Admin</th><th>Action</th><th>Details</th></tr></thead><tbody id="audit-rows"><tr><td colspan="4" class="muted" style="padding:10px;">Loading…</td></tr></tbody></table></div></div>
           <div class="row" style="justify-content:space-between;margin-top:14px;">
             <span class="muted">Audit events continue recording without display limits.</span>
             <a class="btn btn-primary" href="/api/admin/audit-log.csv" download>Download all logs (CSV)</a>
@@ -711,7 +712,7 @@
             </div>
           </div>
           <div style="margin-top:22px;font-size:12.5px;font-weight:800;color:#32217c;">Most engaged users</div>
-          <div style="overflow:auto;margin-top:8px;"><table class="hist"><thead><tr><th>User</th><th>Logins</th><th>Pageviews</th><th>Avg. scroll depth</th></tr></thead><tbody id="eng-users"><tr><td colspan="4" class="muted" style="padding:10px;">Loading…</td></tr></tbody></table></div>
+          <div style="overflow:auto;margin-top:8px;"><div class="console-table-scroll" role="region" tabindex="0" aria-label="Administration data table"><table class="hist"><thead><tr><th>User</th><th>Logins</th><th>Pageviews</th><th>Avg. scroll depth</th></tr></thead><tbody id="eng-users"><tr><td colspan="4" class="muted" style="padding:10px;">Loading…</td></tr></tbody></table></div></div>
         </div>
       </div>
       <style>@media(max-width:820px){.eng-grid{grid-template-columns:1fr!important;}}</style>
@@ -1074,7 +1075,7 @@ async function syncNow(){
       return `<tr><td style="font-weight:700">${esc(k)}</td><td>${txt}</td></tr>`;
     }).join('');
     const cls = result.status==='OK'?'ok':result.status==='FAILED'?'err':'ok';
-    $('#integ-result').innerHTML = `<div class="banner ${cls}">${esc(result.status)}: ${esc(result.note)}</div><table class="hist" style="margin-top:8px"><tbody>${rows}</tbody></table>`;
+    $('#integ-result').innerHTML = `<div class="banner ${cls}">${esc(result.status)}: ${esc(result.note)}</div><div class="console-table-scroll" role="region" tabindex="0" aria-label="Administration data table"><table class="hist" style="margin-top:8px"><tbody>${rows}</tbody></table></div>`;
     await Promise.allSettled([loadHistory(),loadInteg(),loadIntegLogs()]);
   }catch(e){
     $('#integ-result').innerHTML = `<div class="banner err">✕ ${esc(e.message)}</div>`;
@@ -1984,14 +1985,14 @@ function renderRepList(){
   const order = MANIFEST.loadOrder;
   $('#rep-list').innerHTML = order.map((key,i)=>{
     const rep = MANIFEST.reports.find(r=>r.key===key);
-    return `<div class="rep" data-key="${key}" onclick="selectReport('${key}')">
-      <span class="step">STEP ${i+1}</span><span class="t">${esc(rep.title)}</span></div>`;
+    return `<button type="button" class="rep" aria-pressed="false" data-key="${key}" onclick="selectReport('${key}')">
+      <span class="step">STEP ${i+1}</span><span class="t">${esc(rep.title)}</span></button>`;
   }).join('');
 }
 
 function selectReport(key){
   CURRENT = MANIFEST.reports.find(r=>r.key===key);
-  document.querySelectorAll('.rep').forEach(el=>el.classList.toggle('on',el.dataset.key===key));
+  document.querySelectorAll('.rep').forEach(el=>{el.classList.toggle('on',el.dataset.key===key);el.setAttribute('aria-pressed',String(el.dataset.key===key));});
   $('#rep-title').textContent = CURRENT.title;
   $('#rep-note').textContent = CURRENT.description;
 
@@ -2015,7 +2016,7 @@ function selectReport(key){
     </div>
     <div id="result"></div>
     <details class="section-gap"><summary class="muted" style="cursor:pointer;font-weight:700;">View format (${CURRENT.fields.length} columns)</summary>
-      <table style="margin-top:10px;"><thead><tr><th>Column</th><th>Type</th><th>Req</th><th>Description</th></tr></thead><tbody>${fields}</tbody></table>
+      <div class="console-table-scroll" role="region" tabindex="0" aria-label="Administration data table"><table style="margin-top:10px;"><thead><tr><th>Column</th><th>Type</th><th>Req</th><th>Description</th></tr></thead><tbody>${fields}</tbody></table></div>
     </details>`;
   wireDrop();
 }
@@ -2207,15 +2208,15 @@ function renderResult(res){
     $('#result').innerHTML = `
       <div class="banner err">✕ ${esc(res.errorCount)} problem(s) found across ${esc(res.rowCount)} rows. Nothing was loaded. Fix the file and re-upload.</div>
       ${missing}
-      <div class="err-list"><table><thead><tr><th>Row</th><th>Column</th><th>Value</th><th>Problem</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+      <div class="err-list"><div class="console-table-scroll" role="region" tabindex="0" aria-label="Administration data table"><table><thead><tr><th>Row</th><th>Column</th><th>Value</th><th>Problem</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
   }
 }
 
 function previewTable(rows){
   if(!rows || !rows.length) return '';
   const cols = Object.keys(rows[0]);
-  return `<div class="err-list" style="margin-top:12px;"><table><thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead>
-    <tbody>${rows.map(r=>`<tr>${cols.map(c=>`<td>${r[c]??''}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+  return `<div class="err-list" style="margin-top:12px;"><div class="console-table-scroll" role="region" tabindex="0" aria-label="Administration data table"><table><thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead>
+    <tbody>${rows.map(r=>`<tr>${cols.map(c=>`<td>${r[c]??''}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div>`;
 }
 
 async function commit(batchId){
@@ -2479,3 +2480,4 @@ function toggleChannelPartners(){
   const collapsed=body.style.display==='none'; body.style.display=collapsed?'':'none'; if(btn) btn.textContent=collapsed?'Collapse':'Expand';
 }
 </script>
+

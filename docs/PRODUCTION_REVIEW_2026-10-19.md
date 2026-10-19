@@ -37,3 +37,14 @@ The existing script CSP still permits unsafe-inline for legacy event handlers. A
 The release must pass remote CI and deployment verification before merge/promotion. Confirm the Render workspace and intended service, inspect its deployed commit, backups, readiness configuration, source-leader/scheduler settings and production variables, then verify the candidate in the browser. No production data writes, reset/rebuild, or infrastructure configuration changes were performed during this review.
 
 F12 will always reveal browser HTML, CSS, JavaScript and authorised API responses. Protection comes from server permissions and keeping credentials/secret records out of responses, not disabling developer tools. The password supplied in chat should be rotated through the normal account flow.
+
+
+## Additional Administration and Users UI/UX review
+
+The live consoles were reviewed separately, including rendered header spacing, labels, table layout, user search, inline edit/cancel and API/database integration tab switching. No live account, permission or data mutations were submitted.
+
+Verified defects fixed: header descriptions touching controls, clipped search hints, unlabelled user fields, visible temporary passwords, blank no-match user search, missing submission error handling, cramped role choices, page-wide mobile overflow from the account header and admin tables, low-contrast dark introductory text, and security-drawer keyboard handling. Tables now have keyboard-accessible scrolling regions; narrow forms stack, controls wrap, and focusable actions have larger touch targets.
+
+The additional isolated Chromium suite covers Administration and Users at 320, 360, 390, 768 and 1366 CSS pixels in light and dark mode: 20 combinations. It asserts no page-wide horizontal overflow, no clipped heading/label/button text and no uncaught page errors. It also tests tab/collapse controls, labels, search no-match/reset, editor cancellation, drawer Escape dismissal, password/link mode switching, invalid name/email validation, and a failed mocked creation response preserving input and re-enabling the button. All writes are intercepted locally; the suite uses fake identities and no production session. Screenshots and a JSON result are generated under test-results/console-ux and retained by the CircleCI browser job.
+
+This verifies the patched source with isolated browser fixtures. It does not replace deployed verification, real role-matrix checks or database-backed integration testing. Deployment remains pending.
