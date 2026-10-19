@@ -18,9 +18,24 @@ const BUSINESS_DATES: Record<string,readonly string[]> = {
 };
 function dateString(raw: unknown):string|null {
   if(raw == null || raw === "")return null;
-  const date = raw instanceof Date ? raw : typeof raw === "string" ? new Date(raw) : null;
-  if(!date || !Number.isFinite(date.getTime()))throw new Error("Invalid business date in canonical source row");
-  return date.toISOString();
+  if(typeof raw==="string"){
+    // Reject rolled-over dates (e.g. February 31) and timezone-less timestamps.
+    if(/^\\d{4}-\\d{2}-\\d{2}$/.test(raw)){
+      const parsed=new Date(raw+"T00:00:00Z");
+      if(!Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0,10)!==raw)
+        throw new Error("Invalid business date in canonical source row");
+      return parsed.toISOString();
+    }
+    if(!/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?Z$/.test(raw))
+      throw new Error("Invalid business date in canonical source row");
+    const parsed=new Date(raw);
+    if(!Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0,10)!==raw.slice(0,10))
+      throw new Error("Invalid business date in canonical source row");
+    return parsed.toISOString();
+  }
+  if(!(raw instanceof Date) || !Number.isFinite(raw.getTime()))
+    throw new Error("Invalid business date in canonical source row");
+  return raw.toISOString();
 }
 export function partitionsFromCanonicalSourceRows(feed:string,rows:Record<string,unknown>[],maxPartitions=500):RefreshPartition[] {
   const fields=BUSINESS_DATES[feed];
