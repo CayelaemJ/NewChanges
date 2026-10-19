@@ -5,10 +5,44 @@ parameters:
   semantic_testing_e2e:
     type: boolean
     default: false
+  semantic_notify_probe:
+    type: boolean
+    default: false
 
 # CI independent of GitHub-hosted Actions billing.
 # Connect this private GitHub repository to CircleCI (free plan) to activate.
 jobs:
+  semantic_testing_notify_probe:
+    docker:
+      - image: cimg/node:22.14
+    resource_class: small
+    working_directory: ~/newchanges
+    steps:
+      - checkout
+      - run:
+          name: Require isolated Neon Testing credentials and feature branch
+          command: |
+            set -eu
+            if [ -z "${SEMANTIC_TESTING_DATABASE_URL:-}" ] || [ -z "${SEMANTIC_LISTEN_DATABASE_URL:-}" ]; then
+              echo "Isolated Testing pooled and direct listener secrets are both required; refusing probe."
+              exit 1
+            fi
+            if [ "${CIRCLE_BRANCH:-}" != "fix/semantic-refresh-period-validation-20261019" ]; then
+              echo "Isolated LISTEN/NOTIFY probe refuses other branches."
+              exit 1
+            fi
+      - run:
+          name: Install locked packages without provisioning services
+          command: npm ci --no-audit --no-fund
+      - run:
+          name: Measure three short-lived Neon Testing notification deliveries
+          command: |
+            set -eu
+            export DATABASE_URL="${SEMANTIC_TESTING_DATABASE_URL}"
+            export SEMANTIC_SYNTHETIC_E2E_APPROVED=YES_TEST_ONLY
+            export SEMANTIC_NOTIFY_PROBE_APPROVED=YES_TEST_ONLY
+            npm run semantic:e2e:notify-probe
+
   semantic_testing_score_delta:
     docker:
       - image: cimg/node:22.14
@@ -242,6 +276,11 @@ jobs:
           command: semgrep scan --config p/javascript --config p/typescript --config p/security-audit --error --exclude node_modules --exclude dist --exclude build .
 
 workflows:
+  semantic_notification_rehearsal:
+    when: << pipeline.parameters.semantic_notify_probe >>
+    jobs:
+      - semantic_testing_notify_probe:
+          context: newchanges-neon-testing
   semantic_database_rehearsal:
     when: << pipeline.parameters.semantic_testing_e2e >>
     jobs:
