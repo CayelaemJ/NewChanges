@@ -129,4 +129,28 @@ assert(readOnlyStorage.includes('presignS3Request({method:"GET"') &&
 assert(readOnlyCli.includes("verifyExistingSemanticObjectRead(process.env)") &&
   !readOnlyCli.includes("ENABLE_SEMANTIC_OBJECT_PUBLISH"),
   "Real storage CLI must never enable semantic publication");
+const notifyProbe=readFileSync("scripts/semantic-testing-notify-probe.ts","utf8");
+const notifyMeasure=readFileSync("src/services/semanticNotificationDelivery.ts","utf8");
+assert(notifyProbe.includes('SEMANTIC_NOTIFY_PROBE_APPROVED!=="YES_TEST_ONLY"') &&
+  notifyProbe.includes('SEMANTIC_SYNTHETIC_E2E_APPROVED!=="YES_TEST_ONLY"'),
+  "LISTEN probe requires two explicit Testing approvals");
+assert(notifyProbe.includes('u.pathname!=="/"+database') &&
+  notifyProbe.includes("semanticListenerConnectionString({"),
+  "LISTEN probe must reject non-Testing databases and pooled listener URLs");
+assert(notifyProbe.includes('diagnosticChannel="newchanges_semantic_testing_probe"') &&
+  notifyProbe.includes("maxSamples=3") &&
+  !notifyProbe.includes('enqueueSemanticRefresh(') &&
+  !notifyProbe.includes('processOneShadowSemanticRefresh('),
+  "LISTEN probe must be short-lived and never mutate or drain the application queue");
+assert(notifyMeasure.includes("input.receiver.on") &&
+  notifyMeasure.includes("input.receiver.off") &&
+  notifyMeasure.includes("setTimeout("),
+  "Notification measurement must listen before publish and release handlers on timeout");
+assert(circleci.includes("semantic_notify_probe:") &&
+  circleci.includes("<< pipeline.parameters.semantic_notify_probe >>") &&
+  circleci.includes("context: newchanges-neon-testing") &&
+  circleci.includes("npm run semantic:e2e:notify-probe"),
+  "Short-lived database notification probe must be separately manually gated");
+assert(circleci.includes('if [ -z "${SEMANTIC_TESTING_DATABASE_URL:-}" ] || [ -z "${SEMANTIC_LISTEN_DATABASE_URL:-}" ]'),
+  "Testing notification job must require both pooled and direct Neon secrets");
 console.log("Isolated Neon synthetic fixture and score-delta runner safety assertions passed");
