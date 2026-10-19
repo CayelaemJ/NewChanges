@@ -28,6 +28,10 @@ jobs:
               echo "Refusing to run synthetic E2E in a production environment."
               exit 1
             fi
+            if [ "${CIRCLE_BRANCH:-}" != "fix/semantic-refresh-period-validation-20261019" ]; then
+              echo "Refusing synthetic E2E outside its isolated feature branch."
+              exit 1
+            fi
       - run:
           name: Install application dependencies for isolated Testing
           command: npm ci --no-audit --no-fund && npx prisma generate
