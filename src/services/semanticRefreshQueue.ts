@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import { prisma } from "./snapshotBuilder.js";
 import type { RefreshPartition } from "./semanticRefreshPlanner.js";
 
-export async function enqueueSemanticRefresh(generationId:string, watermark:Date, partitions:RefreshPartition[]) {
+const CANONICAL_FEEDS = new Set(["employers","workforce_snapshots","employees","platform_users","journeys","debt_accounts","policies","ratings","referrals","salary_advances"]);\n\nexport async function enqueueSemanticRefresh(generationId:string, watermark:Date, partitions:RefreshPartition[]) {
   if (!generationId || !Number.isFinite(watermark.getTime())) throw new Error("Invalid source generation or watermark");
   // Bulk insert bounded chunks rather than one SQL round trip per partition.
   // The unique idempotency key still protects concurrent schedulers.
@@ -21,7 +21,7 @@ export async function enqueueSemanticRefresh(generationId:string, watermark:Date
     const key=JSON.stringify([part.employerId,part.period]);
     const current=grouped.get(key) ?? {employerId:part.employerId,period:part.period,feeds:new Set<string>()};
     for(const feed of part.feeds){
-      if(typeof feed!=="string" || !feed.trim())throw new Error("Invalid semantic changed feed");
+      if(typeof feed!=="string" || !CANONICAL_FEEDS.has(feed))throw new Error("Invalid semantic changed feed");
       current.feeds.add(feed);
     }
     grouped.set(key,current);
