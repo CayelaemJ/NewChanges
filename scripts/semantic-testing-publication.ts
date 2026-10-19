@@ -68,6 +68,16 @@ async function main() {
     const stale=await stage("late-old",new Date(now-60_000));
     const actor="synthetic-e2e";
     const reason="Testing metadata-only publication rehearsal";
+    // Manifest digest and byte size must match the verified evidence supplied
+    // by the storage pipeline. This test only exercises DB metadata matching.
+    await assert.rejects(publishVerifiedSemanticManifest({
+      ...original,verifiedSha256:"f".repeat(64),
+      expectedPreviousManifestId:null,actor,reason,
+    }),/Object integrity or validation mismatch/);
+    await assert.rejects(publishVerifiedSemanticManifest({
+      ...original,verifiedBytes:original.verifiedBytes+1,
+      expectedPreviousManifestId:null,actor,reason,
+    }),/Object integrity or validation mismatch/);
     const first=await publishVerifiedSemanticManifest({
       ...original,expectedPreviousManifestId:null,actor,reason,
     });
