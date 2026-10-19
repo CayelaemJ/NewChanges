@@ -3,6 +3,10 @@ import {readFileSync} from "node:fs";
 import {sourceChangePollSeconds} from "../src/services/sourceChangePollConfig.js";
 assert.equal(sourceChangePollSeconds({}),60);
 assert.equal(sourceChangePollSeconds({SOURCE_CHANGE_POLL_SECONDS:"30"}),30);
+assert.equal(sourceChangePollSeconds({SOURCE_CHANGE_POLL_SECONDS:"15"}),30,"Fast source checks must not activate by accident");
+assert.equal(sourceChangePollSeconds({SOURCE_CHANGE_POLL_SECONDS:"15",ENABLE_SEMANTIC_FAST_SOURCE_WATCH:"true"}),15);
+assert.equal(sourceChangePollSeconds({SOURCE_CHANGE_POLL_SECONDS:"15",ENABLE_SEMANTIC_FAST_SOURCE_WATCH:"true",STANDBY_MODE:"true"}),30);
+
 assert.equal(sourceChangePollSeconds({SOURCE_CHANGE_POLL_SECONDS:"60"}),60);
 assert.equal(sourceChangePollSeconds({SOURCE_CHANGE_POLL_SECONDS:"12"}),30);
 assert.equal(sourceChangePollSeconds({SOURCE_CHANGE_POLL_SECONDS:"3601"}),3600);
