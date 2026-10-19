@@ -52,3 +52,10 @@ This does not deploy the app, run a background worker, or publish object storage
 - A new `SemanticSnapshotManifest` may not replace a newer published source watermark. The monotonic check occurs within the pointer's serializable transaction.
 - Canary reads stream only the manifest-recorded object size; oversized or corrupted content is rejected before serving.
 - Tests run in normal CircleCI verification without requiring a database or external object store.
+
+## Metadata publisher + rollback rehearsal (manual CircleCI)
+The opt-in Testing job additionally executes `npm run semantic:e2e:publication-metadata`. Its guarded code uses the application's real Prisma publisher/rollback methods on only the seeded synthetic employer, creating three uniquely identified **synthetic metadata-only manifests** with calculated fixture hashes. It verifies digest/byte mismatch rejection, optimistic compare-and-swap, increasing source-watermark enforcement, audited rollback, and stale rollback rejection. Its `finally` cleanup deletes only this invocation's synthetic publication metadata.
+
+**This rehearsal deliberately does not store object bytes in S3 or perform signed PUT/GET.** A green result must not be used as evidence that real durable storage or dashboard serving works.
+
+The workflow is restricted to feature branch `fix/semantic-refresh-period-validation-20261019`, with CircleCI context `newchanges-neon-testing` and boolean pipeline parameter `semantic_testing_e2e=true` (default false). An authorized CircleCI operator must confirm that this context actually exists, limit its access to the approved project and feature branch, and install the masked Testing-only `SEMANTIC_TESTING_DATABASE_URL` secret. The current connections cannot inspect CircleCI context settings or trigger the job. Do not use production credentials or enable this job on ordinary PR builds.
