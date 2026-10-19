@@ -1,8 +1,47 @@
 version: 2.1
 
+# Explicit manual opt-in; NEVER runs against a database on ordinary PR pushes.
+parameters:
+  semantic_testing_e2e:
+    type: boolean
+    default: false
+
 # CI independent of GitHub-hosted Actions billing.
 # Connect this private GitHub repository to CircleCI (free plan) to activate.
 jobs:
+  semantic_testing_score_delta:
+    docker:
+      - image: cimg/node:22.14
+    resource_class: small
+    working_directory: ~/newchanges
+    steps:
+      - checkout
+      - run:
+          name: Require dedicated isolated Neon Testing secret
+          command: |
+            set -eu
+            if [ -z "${SEMANTIC_TESTING_DATABASE_URL:-}" ]; then
+              echo "Missing dedicated SEMANTIC_TESTING_DATABASE_URL CircleCI project secret; refusing E2E."
+              exit 1
+            fi
+            if [ "${RAILWAY_ENVIRONMENT_NAME:-}" = "Production" ]; then
+              echo "Refusing to run synthetic E2E in a production environment."
+              exit 1
+            fi
+      - run:
+          name: Install application dependencies for isolated Testing
+          command: npm ci --no-audit --no-fund && npx prisma generate
+      - run:
+          name: Execute and restore isolated Neon synthetic score delta
+          command: |
+            set -eu
+            export DATABASE_URL="${SEMANTIC_TESTING_DATABASE_URL}"
+            export SEMANTIC_SYNTHETIC_E2E_APPROVED=YES_TEST_ONLY
+            export ENABLE_SEMANTIC_SHADOW_WORKER=false
+            export ENABLE_SEMANTIC_OBJECT_PUBLISH=false
+            npm run semantic:e2e:preflight
+            npm run semantic:e2e:score-delta
+
   admin_browser_smoke:
     docker:
       - image: mcr.microsoft.com/playwright:v1.56.1-noble
@@ -195,6 +234,10 @@ jobs:
           command: semgrep scan --config p/javascript --config p/typescript --config p/security-audit --error --exclude node_modules --exclude dist --exclude build .
 
 workflows:
+  semantic_database_rehearsal:
+    when: << pipeline.parameters.semantic_testing_e2e >>
+    jobs:
+      - semantic_testing_score_delta
   verify_pull_requests_and_main:
     jobs:
       - verify
