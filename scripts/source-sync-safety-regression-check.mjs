@@ -124,7 +124,11 @@ assert(server.includes('"/api/dashboard/semantic-version-changes"'), "Signed-in 
 const visiblePolling=react.slice(react.indexOf("// Low-cost, opt-in live updates."),react.indexOf("if(!employer)return <Card"));
 assert(visiblePolling.includes('features.pollingEnabled'),"Dashboard polling must require the explicit feature flag");
 assert(visiblePolling.includes('document.visibilityState!=="visible"'),"Dashboard polling must pause when hidden");
-assert(visiblePolling.includes('window.setInterval(()=>void check(),30_000)'),"Dashboard must check for publications at most 30s while visible");
+assert(visiblePolling.includes('features.pollIntervalSeconds===15?15_000:30_000') &&
+  visiblePolling.includes('window.setInterval(()=>void check(),intervalMs)'),
+  "Fast browser polling must require a server-approved interval and default to 30 seconds");
+assert(server.includes('pollIntervalSeconds: semanticBrowserPollSeconds()'),
+  "The server must advertise its feature-gated browser polling interval");
 assert(visiblePolling.includes('Promise.allSettled([') && visiblePolling.includes('setPeriodOptions(periodsResult.value)'),"Relevant publications must independently refresh dashboard scores and available months");
 assert(visiblePolling.includes('if(!cancelled)setData') || visiblePolling.includes('if(!cancelled){'),"Stale or cancelled publication refreshes must not mutate dashboard state");
 
