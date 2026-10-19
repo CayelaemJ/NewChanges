@@ -194,13 +194,14 @@ function DashboardView({me}:{me:Me}) {
         if(cancelled)return;
         cursor=changes.nextCursor??cursor;
         if(initialized&&changes.changes?.some(change=>change.employerId===employer.id)){
-          const [refreshed,availablePeriods]=await Promise.all([
+          const [dashboardResult,periodsResult]=await Promise.allSettled([
             api<Dashboard>("/api/employers/"+encodeURIComponent(employer.id)+"/dashboard?"+query),
             api<string[]>("/api/employers/"+encodeURIComponent(employer.id)+"/periods"),
           ]);
           if(!cancelled){
-            setData(refreshed);
-            if(Array.isArray(availablePeriods))setPeriodOptions(availablePeriods);
+            if(dashboardResult.status==="fulfilled")setData(dashboardResult.value);
+            if(periodsResult.status==="fulfilled"&&Array.isArray(periodsResult.value))
+              setPeriodOptions(periodsResult.value);
           }
         }
         initialized=true;
