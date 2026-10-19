@@ -8,7 +8,8 @@ import { reconcileExpiredSemanticRefreshLeases } from "../src/services/semanticR
 
 async function main() {
   if (process.env.ENABLE_SEMANTIC_SHADOW_WORKER !== "true" ||
-      process.env.ENABLE_SEMANTIC_OBJECT_PUBLISH !== "true") {
+      process.env.ENABLE_SEMANTIC_OBJECT_PUBLISH !== "true" ||
+      process.env.ENABLE_SEMANTIC_RECOMPUTE !== "true") {
     console.log("Shadow semantic worker disabled; no database or object-store work.");
     return;
   }
