@@ -150,6 +150,9 @@ async function run(){
     });
     assert.equal(edit.count,1);
     changed=true;
+    // This starts AFTER the synthetic canonical write. It deliberately
+    // excludes source-change detection, ingestion and real browser polling.
+    const sourceCommittedAt=Date.now();
     const revised=await completeScore();
     assert.notEqual(revised.score,baseline.score,"Canonical change must affect real score calculation");
     const second=await publish("after",revised.payload,first.manifestId,new Date(start-10_000));
@@ -157,6 +160,7 @@ async function run(){
     const canaryAfter=await readPublishedSemanticPartition(key);
     assert.equal(Number((canaryAfter?.payload as any)?.wellness?.score),revised.score);
     assert.equal(canaryAfter?.manifestId,second.manifestId);
+    const verifiedCanaryElapsedMs=Date.now()-sourceCommittedAt;
 
     const events=await readSemanticPublicationChanges({afterId:cursor,employerIds:[employerId]});
     assert.equal(events.changes.filter(x=>x.action==="PUBLISH").length,2);
@@ -178,6 +182,9 @@ async function run(){
       test:"isolated-Neon-canonical-to-publication-feed-to-canary",
       baselineScore:baseline.score,revisedScore:revised.score,
       persistedScoreDelta:true,publicationEvents:2,rollbackObserved:true,
+      scoreChangeToVerifiedCanaryMs:verifiedCanaryElapsedMs,
+      latencyMeasurementScope:"post-canonical-commit-to-emulated-canary",
+      fullSourceToBrowserSlaVerified:false,
       externalDurabilityVerified:false,browserWithRealApiTested:false,
       syntheticStorage:"in-memory-HTTPS",productionModified:false,
     }));
