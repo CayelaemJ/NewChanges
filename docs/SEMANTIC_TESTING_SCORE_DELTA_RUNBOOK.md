@@ -41,12 +41,12 @@ This is database-backed **source-row → score/read-model** verification, not a 
 The PR adds an isolated `semantic_testing_score_delta` job with top-level CircleCI pipeline parameter `semantic_testing_e2e` (default `false`). Ordinary PR pushes **never** execute the data-changing test.
 
 To run manually, an authorized CircleCI operator must:
-1. Store the **Testing-branch** Neon connection string as the masked CircleCI project environment variable `SEMANTIC_TESTING_DATABASE_URL` (not `DATABASE_URL`). Use `newchanges_testing_20261017`, verified Neon host, `sslmode=require`. Do **not** paste credentials into a PR, chat, pipeline parameter, or job output.
+1. Store the **Testing-branch** Neon connection string as masked environment variable `SEMANTIC_TESTING_DATABASE_URL` in a restricted CircleCI context named `newchanges-neon-testing` (not `DATABASE_URL`). Restrict this context to authorized operators and the feature branch; do not place the Testing credential in project-wide variables. Use `newchanges_testing_20261017`, verified Neon host, `sslmode=require`. Do **not** paste credentials into a PR, chat, pipeline parameter, or job output.
 2. Trigger a CircleCI pipeline on the feature branch with boolean parameter `semantic_testing_e2e=true`.
 3. Confirm the `semantic_testing_score_delta` job reports a changed numerical score and restoration, followed by a scoped durable queue enqueue/dedupe/claim/complete result and removal of its own test job. The job requires the dedicated secret; it overrides inherited `DATABASE_URL`, refuses the Production Railway environment and sets semantic publication/worker switches off.
 4. Review the normal `verify`, source-quality, browser and security checks separately.
 
-This does not deploy the app, run a background worker, or publish object storage manifests. It consumes existing CircleCI runner minutes; verify free-plan limits with the organization before starting. No CircleCI credentials or Testing secret are accessible through the current GitHub and Neon connectors, so the pipeline cannot be triggered or configured from this session.
+This does not deploy the app, run a background worker, or publish object storage manifests. It consumes existing CircleCI runner minutes; verify free-plan limits with the organization before starting. The restricted CircleCI context has not been verified or configured through the available tools. No CircleCI credentials or Testing secret are accessible here, so the pipeline cannot be triggered from this session.
 
 ## Publication-ordering and bounded-canary safeguards
 - A new `SemanticSnapshotManifest` may not replace a newer published source watermark. The monotonic check occurs within the pointer's serializable transaction.
