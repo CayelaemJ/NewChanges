@@ -12,7 +12,7 @@ export async function readSemanticPublicationChanges(input:{
   const limit=Math.max(1,Math.min(100,Math.floor(requested)));
   // START is a durable empty-history cursor. Without it, clients repeatedly
   // initialize at latest and silently miss the very first publication event.
-  const after=shouldLookupSemanticCursor(input.afterId) ? await prisma.semanticPublicationAudit.findUnique({where:{id:input.afterId},select:{id:true,createdAt:true}}) : null;
+  const after=shouldLookupSemanticCursor(input.afterId) ? await prisma.semanticPublicationAudit.findUnique({where:{id:input.afterId!},select:{id:true,createdAt:true}}) : null;
   if(shouldLookupSemanticCursor(input.afterId) && !after) throw new Error("Unknown publication cursor");
   const employers=[...new Set(input.employerIds??[])];
   if(employers.length>200) throw new Error("Employer filter exceeds limit");
