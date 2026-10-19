@@ -56,6 +56,7 @@
     "semantic:e2e:queue": "tsx scripts/semantic-testing-queue.ts",
     "semantic:e2e:publication-metadata": "tsx scripts/semantic-testing-publication.ts",
     "semantic:e2e:storage-publication": "tsx scripts/semantic-testing-storage-publication.ts",
+    "semantic:e2e:canonical-to-canary": "tsx scripts/semantic-testing-full-e2e.ts",
     "check:semantic-storage": "tsx tests/semantic-storage.test.ts && tsx tests/semantic-object-transport.test.ts && tsx tests/semantic-s3-roundtrip.test.ts && tsx tests/semantic-real-storage-read.test.ts",
     "semantic:e2e:real-storage-read": "tsx scripts/semantic-testing-real-storage-read.ts",
     "check:source-vault": "tsx tests/source-connection-vault.test.ts",
