@@ -56,3 +56,11 @@ The initial immediate-claim attempt exposed an important micro-timing edge: `ava
 These direct database exercises prove the **SQL-level queue mechanics**, not the separately configured Node runner's Prisma call graph, real NOTIFY-to-LISTEN receipt or downstream score-to-browser latency. The manual Node integration remains an independent release gate.
 
 The exact guarded single-statement rehearsal is preserved in `scripts/fixtures/semantic-neon-testing-queue-proof.sql`. Its `DO` block aborts atomically on a failed assertion, refuses non-Testing databases and foreign rows, and deletes only the synthetic probe job upon success. A separate read-only query must still confirm zero residual synthetic probe jobs after execution.
+
+
+### 19 October storage and runner recheck
+- Neon Testing branch `br-soft-mouse-b9rnii5t` reports **branchable storage enabled**, region `eu-central-1`, and path-style S3 support. **Its visible bucket list is empty**. This is not evidence of external-object durability and does not provide an existing object to verify. No bucket or object was created.
+- CircleCI status checks remain accessible via GitHub, but the current connected tools cannot inspect restricted CircleCI contexts or trigger manual pipelines. Plugin discovery for `CircleCI` returned no available connector. An authorized operator must verify the `newchanges-neon-testing` context and configure Testing-only secrets out of band.
+- Two-session LISTEN/NOTIFY measurement, the real Node score-delta rehearsal, and durable Testing S3 GET remain **unexecuted**. Existing Testing SQL confirms `pg_notify` support and exercised the synthetic atomic queue flow; it does not establish worker or browser latency.
+- The dedicated event worker now continues another bounded claim pass after successfully processing five jobs, rather than unnecessarily waiting for a fresh notification or 60-second sweep when backlog already exists. This behavior is in normal CI regression checks; it has not been runtime-load-tested.
+- Under the **no paid infrastructure** constraint, do not provision Neon Storage buckets or enable an always-connected listener. Choose an already-approved, company-funded Testing storage bucket and worker before attempting full integration.
