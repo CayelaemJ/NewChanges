@@ -60,12 +60,12 @@ async function main(){
       assert(Number.isFinite(elapsed)&&elapsed>=0);
       deliveryMs.push(Math.round(elapsed*100)/100);
     }
-    const sorted=[...deliveryMs].sort((a,b)=>a-b);
-    const p95=sorted[Math.ceil(sorted.length*0.95)-1];
+    // Three observations diagnose delivery but cannot establish a reliable
+    // p95 for release acceptance; keep the metric scope explicit.
     console.log(JSON.stringify({
       test:"neon-isolated-listen-notify-delivery",database,
       samples:deliveryMs.length,deliveryMs,
-      maximumObservedMs:Math.max(...deliveryMs),p95ObservedMs:p95,
+      minimumObservedMs:Math.min(...deliveryMs),maximumObservedMs:Math.max(...deliveryMs),
       measured:true,
       scope:"diagnostic-notification-only",
       noApplicationJobsCreated:true,workerStarted:false,
