@@ -38,3 +38,12 @@ A modeled pilot might be 15s source detection + 5s ingestion + 1s queue wake + 1
 - No existing approved durable S3 Testing object plus safe read credentials.
 - No live ten-feed source-to-browser acceptance test or real 30–60s measurement.
 - No end-to-end disaster recovery or production release approval.
+ 
+### Testing-only two-session LISTEN/NOTIFY proof (no worker or storage)
+The isolated Neon project was checked on 19 October: PostgreSQL 18.6 supports `pg_notify`, synthetic source generation is ACTIVE, and no synthetic queue jobs existed. One **diagnostic** `pg_notify('newchanges_semantic_testing_probe',...)` was accepted by Testing; it emitted no application jobs or persistent table changes. Without a listener that query alone cannot prove delivery.
+
+A new `npm run semantic:e2e:notify-probe` uses two short-lived PostgreSQL connections (direct session for `LISTEN`, Testing data connection for `pg_notify`) to measure three independent deliveries on the isolated `newchanges_semantic_testing_probe` channel. It accepts only `newchanges_testing_20261017` on Neon, requires BOTH `SEMANTIC_SYNTHETIC_E2E_APPROVED=YES_TEST_ONLY` and `SEMANTIC_NOTIFY_PROBE_APPROVED=YES_TEST_ONLY`, validates that the direct connection matches the data connection, and closes both clients after a bounded timeout. It never creates, claims, processes or deletes semantic refresh jobs and does not touch storage.
+
+This has a **separate** optional CircleCI parameter `semantic_notify_probe=true` (default false), using restricted context `newchanges-neon-testing`. An authorized CircleCI administrator must install the masked `SEMANTIC_TESTING_DATABASE_URL` **and** `SEMANTIC_LISTEN_DATABASE_URL` (direct non-pooler endpoint for the same isolated database) before triggering it on branch `fix/semantic-refresh-period-validation-20261019`. Its output includes only three measured delivery durations and min/max—**not** production source-to-browser latency, an empirically reliable p95 or evidence a permanent worker is operating. The actual two-session run remains pending connection access.
+
+The offline notification test runs in regular CI and asserts channel/payload matching, 100ms timeout behavior, publisher failures, and handler cleanup. Normal PR builds never run database-writing or diagnostic connection workflows.
