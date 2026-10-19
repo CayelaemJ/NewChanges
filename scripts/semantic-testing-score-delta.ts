@@ -56,7 +56,8 @@ async function run() {
     const generation=await prisma.sourceGeneration.findUnique({
       where:{id:generationId},include:{cursors:{select:{reportKey:true,reconciledAt:true}}},
     });
-    assert.equal((generation?.validation as any)?.testingOnly,true,"Testing-only generation required");
+    assert(generation,"Synthetic source generation missing");
+    assert.equal((generation.validation as any)?.testingOnly,true,"Testing-only generation required");
     assert.equal(generation?.state,"ACTIVE");
     assert.deepEqual(
       generation.cursors.filter(c=>c.reconciledAt).map(c=>c.reportKey).sort(),
