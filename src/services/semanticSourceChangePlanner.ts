@@ -26,7 +26,10 @@ export function partitionsFromCanonicalSourceRows(feed:string,rows:Record<string
   const fields=BUSINESS_DATES[feed];
   if(!fields)throw new Error("Unrecognized canonical feed");
   const changes=rows.map(row=>{
-    const employerId=String(row.employer_ref??"");
+    if(!row || typeof row!=="object" || Array.isArray(row)) throw new Error("Invalid canonical source row");
+    if(typeof row.employer_ref!=="string" || !row.employer_ref.trim() || row.employer_ref.length>200)
+      throw new Error("Invalid canonical employer key");
+    const employerId=row.employer_ref;
     const businessDates=fields.map(key=>dateString(row[key])).filter((x):x is string=>x!=null);
     const earliest=businessDates.length?businessDates.sort()[0]:dateString(row.source_updated_at);
     if(!earliest)throw new Error("Missing business and source change timestamp");
