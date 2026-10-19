@@ -32,6 +32,7 @@ import { activateEquivalentSource, bootstrapExistingSource } from "./services/so
 import { startDailyRefresh, triggerRefreshNow } from "./services/dailyRefresh.js";
 import { getConfig as getSyncConfig, saveConfig as saveSyncConfig, publicConfig as publicSyncConfig, testConnection as testSyncConnection, runSync, recentSyncLogs, detectSourceChanges, previewSourceSwitch, SOURCE_CHANGE_POLL_SECONDS } from "./services/syncService.js";
 import { recordSourceWatch, sourceWatchPublicStatus } from "./services/sourceWatchHealth.js";
+import {syncStatusNeedsAlert,safeSyncAlertSummary} from "./services/syncAlertPolicy.js";
 import { listPartners, createPartner, updatePartner, deletePartner, assignUserToPartner, assignEmployerToPartner, themeForUser, themeForEmployer, themeForSlug } from "./services/partnerService.js";
 import { login, resolveSession, destroySession, destroySessionById, destroyAllSessionsForUser, canViewEmployer, canAccessModule, allowedEmployerIds, AuthUser, isAdminRole } from "./services/authService.js";
 import { createUser, listUsers, updateUser, resetPassword, completeSetup, deactivateSelf, listRevokedUsers, deleteUserPermanently, requestPasswordReset } from "./services/userService.js";
@@ -2080,11 +2081,12 @@ function startSyncScheduler(app: any) {
   let tickRunning = false;
 
   const reportFailure = (r: any) => {
-    if (r?.status !== "FAILED") return;
+    if (!syncStatusNeedsAlert(r?.status)) return;
+    const alert=safeSyncAlertSummary(r);
     notifyAdmins({
-      subject: "Scheduled data sync failed",
-      html: `<div style="font-family:Arial,sans-serif;color:#241536"><h2 style="color:#b5391f">Sync failed</h2><p>The scheduled external data sync failed.</p><pre style="background:#f7fafd;padding:12px;border-radius:8px;font-size:12px;overflow:auto">${JSON.stringify(r.summary ?? r, null, 2).slice(0, 2000)}</pre></div>`,
-      slackText: `:rotating_light: Scheduled data sync failed — check Administration → Live Data Integration.`,
+      subject: `Scheduled data sync ${alert.status.toLowerCase()}`,
+      html: `<div style="font-family:Arial,sans-serif"><h2>Source refresh ${alert.status}</h2><p>${alert.reason}</p></div>`,
+      slackText: `Scheduled data sync ${alert.status} — review Administration → Live Data Integration.`,
     }).catch(() => {});
   };
 
