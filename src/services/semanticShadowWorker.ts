@@ -46,7 +46,17 @@ export async function processOneShadowSemanticRefresh(workerId:string,storage:Se
     if(!refreshed.persisted || !refreshed.scoreReady)
       throw new Error("Semantic score recomputation did not persist a complete score snapshot");
     const payload=await getDashboardPayload(job.employerId,{period:job.period});
-    if(!payload) throw new Error("No previously published dashboard payload for shadow semantic snapshot");
+    if(!payload) throw new Error("No recalculated dashboard payload for semantic snapshot");
+    // Validate that the payload we are about to publish is the score just
+    // persisted to PostgreSQL, rather than a stale process-local/read-model hit.
+    const score=await prisma.scoreSnapshot.findUnique({
+      where:{employerId_period:{employerId:job.employerId,period:job.period}},
+      select:{optimiseScore:true,payloadVersion:true},
+    });
+    if(!score || score.payloadVersion<4 ||
+       !Number.isFinite(Number(payload?.wellness?.score)) ||
+       Math.abs(Number(score.optimiseScore)-Number(payload.wellness.score))>0.005)
+      throw new Error("Recalculated semantic payload does not match persisted score snapshot");
     const body=Buffer.from(JSON.stringify({
       schemaVersion:"semantic-shadow-v1",calculationMode:recompute?"RECOMPUTED":"PUBLISHED_COPY",generationId:job.generationId,employerId:job.employerId,
       period:job.period,asAt:job.sourceWatermark.toISOString(),payload,
