@@ -43,9 +43,18 @@ export async function enqueueSemanticRefresh(generationId:string, watermark:Date
   return {queued,deduplicated:partitions.length-queued};
 }
 
-export async function claimSemanticRefresh(workerId:string, leaseSeconds=120) {
+export async function claimSemanticRefresh(
+  workerId:string, leaseSeconds=120,
+  scope?:{generationId:string;employerId:string},
+) {
   if (!/^[a-zA-Z0-9_-]{1,100}$/.test(workerId)) throw new Error("Invalid worker");
   if (!Number.isInteger(leaseSeconds) || leaseSeconds < 30 || leaseSeconds > 900) throw new Error("Invalid lease");
+  if(scope && (!scope.generationId?.trim() || !scope.employerId?.trim() || scope.employerId.length>200))
+    throw new Error("Invalid scoped semantic refresh claim");
+  // Empty filters preserve the ordinary production worker's global claim.
+  // Synthetic rehearsals supply both IDs, preventing unrelated job claims.
+  const scopeGeneration=scope?.generationId??"";
+  const scopeEmployer=scope?.employerId??"";
   const rows=await prisma.$queryRaw<Array<{id:string;generationId:string;employerId:string;period:string;partitionKey:string;sourceWatermark:Date}>>`
     UPDATE "SemanticRefreshJob"
     SET status='RUNNING', "workerId"=${workerId}, "leasedUntil"=now()+(${leaseSeconds} * interval '1 second'),
@@ -54,6 +63,8 @@ export async function claimSemanticRefresh(workerId:string, leaseSeconds=120) {
       SELECT id FROM "SemanticRefreshJob"
       WHERE ((status='PENDING' AND "availableAt"<=now()) OR (status='RUNNING' AND "leasedUntil"<now()))
         AND attempts < 5
+        AND (${scopeGeneration} = '' OR "generationId" = ${scopeGeneration})
+        AND (${scopeEmployer} = '' OR "employerId" = ${scopeEmployer})
       ORDER BY "availableAt" ASC
       FOR UPDATE SKIP LOCKED LIMIT 1
     )
