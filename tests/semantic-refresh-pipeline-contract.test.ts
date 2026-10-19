@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { partitionsFromCanonicalSourceRows, mergeAndExpandSemanticPartitions } from "../src/services/semanticSourceChangePlanner.js";
 import { assessShadowSemanticProvenance } from "../src/services/semanticShadowProvenance.js";
+import { evaluatePublicationGates } from "../src/services/semanticPublicationGates.js";
+import { LOAD_ORDER } from "../src/services/reportFormats.js";
 
 // Isolated pipeline CONTRACT rehearsal. Deliberately no database, storage credentials,
 // production scores or real publication. A live integration test is still required.
@@ -32,7 +34,20 @@ assert.equal(assessShadowSemanticProvenance({...proven, activeSourceFingerprint:
 assert.equal(assessShadowSemanticProvenance({...proven, generationState: "STAGED"}).allowed, false,
   "Unactivated source must fail closed");
 
-// Source change -> dependency expansion -> provenance gate is covered.
+const now = new Date("2026-10-19T10:00:00Z");
+const goodGates = {sourceValidated:true,reconciledFeeds:[...LOAD_ORDER],storageVerified:true,
+  sha256Verified:true,partitionNonempty:true,watermark:new Date("2026-10-19T09:59:30Z"),now};
+assert.equal(evaluatePublicationGates(goodGates).ready,true,"All ten reconciled feeds and verified object may publish");
+assert.equal(evaluatePublicationGates({...goodGates,reconciledFeeds:LOAD_ORDER.slice(0,-1)}).ready,false,
+  "Missing one canonical feed blocks snapshot publication");
+assert.equal(evaluatePublicationGates({...goodGates,sha256Verified:false}).ready,false,
+  "Object digest mismatch blocks snapshot publication");
+assert.equal(evaluatePublicationGates({...goodGates,watermark:new Date("2026-10-18T09:00:00Z")}).ready,false,
+  "Stale source watermark blocks publication");
+assert.equal(evaluatePublicationGates({...goodGates,watermark:new Date("2026-10-20T09:00:00Z")}).ready,false,
+  "Future source watermark blocks publication");
+
+// Source change -> dependency expansion -> provenance gate and publication gate are covered.
 // Durable ingestion, actual score recomputation, publication and browser refresh
 // MUST be tested using isolated live services before production signoff.
 console.log("Isolated semantic refresh pipeline contract passed (not live E2E)");
