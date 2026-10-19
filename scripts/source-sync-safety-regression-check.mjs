@@ -91,6 +91,8 @@ assert(shadow.includes('getPublishedDashboardPayload'), "shadow worker must use 
 assert(shadow.includes('finishSemanticRefresh'), "worker must complete durable queue jobs");
 assert(shadow.includes("await snapshotEmployer(job.employerId,job.period)"), "Semantic worker must rebuild source-backed score snapshots before publication");
 assert(shadow.includes("!refreshed.persisted || !refreshed.scoreReady"), "Semantic worker must reject incomplete score snapshots");
+assert(shadow.includes("prisma.scoreSnapshot.findUnique"), "Semantic worker must verify the newly persisted score before publication");
+assert(shadow.includes("Recalculated semantic payload does not match persisted score snapshot"), "Stale semantic payloads must be rejected");
 assert(shadow.indexOf("await snapshotEmployer(job.employerId,job.period)") < shadow.indexOf("await getDashboardPayload(job.employerId,{period:job.period})"), "Worker must rebuild before loading persisted dashboard read model");
 assert(shadow.indexOf('if(process.env.ENABLE_SEMANTIC_RECOMPUTE!=="true")') < shadow.indexOf("const job=await claimSemanticRefresh"), "Disabled recomputation must not consume durable queue leases or retries");
 const oneShotWorker=read("../scripts/run-semantic-shadow-worker.ts");
