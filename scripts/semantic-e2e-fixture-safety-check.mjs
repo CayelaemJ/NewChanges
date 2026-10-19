@@ -153,4 +153,21 @@ assert(circleci.includes("semantic_notify_probe:") &&
   "Short-lived database notification probe must be separately manually gated");
 assert(circleci.includes('if [ -z "${SEMANTIC_TESTING_DATABASE_URL:-}" ] || [ -z "${SEMANTIC_LISTEN_DATABASE_URL:-}" ]'),
   "Testing notification job must require both pooled and direct Neon secrets");
+const contextPreflight=readFileSync("scripts/semantic-testing-context-readiness.ts","utf8");
+assert(contextPreflight.includes('SEMANTIC_SYNTHETIC_E2E_APPROVED!=="YES_TEST_ONLY"') &&
+  contextPreflight.includes('parsed.pathname!=="/"+database'),
+  "CircleCI context readiness must require exact isolated Testing approval and database");
+assert(contextPreflight.includes('new Client({connectionString:direct') &&
+  contextPreflight.includes('new Client({connectionString:url'),
+  "Readiness must establish direct and main Testing database identities");
+assert(contextPreflight.includes('BEGIN READ ONLY') &&
+  !contextPreflight.includes('snapshotEmployer(') &&
+  !contextPreflight.includes('enqueueSemanticRefresh('),
+  "Readiness must never rebuild scores or alter semantic queue");
+assert(circleci.includes('semantic_context_readiness:') &&
+  circleci.includes('<< pipeline.parameters.semantic_context_readiness >>') &&
+  circleci.includes('semantic_testing_context_readiness:') &&
+  circleci.includes('context: newchanges-neon-testing') &&
+  circleci.includes('npm run semantic:e2e:context-readiness'),
+  "Context readiness must be separately opted in with restricted Testing context");
 console.log("Isolated Neon synthetic fixture and score-delta runner safety assertions passed");
