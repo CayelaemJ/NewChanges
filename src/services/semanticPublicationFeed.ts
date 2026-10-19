@@ -2,7 +2,7 @@
 // not process-local SSE state. This is a bounded polling endpoint suitable for
 // both Railway and Render; it never recalculates the dashboard.
 import { prisma } from "./snapshotBuilder.js";
-import { EMPTY_SEMANTIC_PUBLICATION_CURSOR, shouldLookupSemanticCursor, initialSemanticCursor, nextSemanticCursor } from "./semanticPublicationCursor.js";
+import { shouldLookupSemanticCursor, initialSemanticCursor, nextSemanticCursor } from "./semanticPublicationCursor.js";
 
 export async function readSemanticPublicationChanges(input:{
   afterId?:string;limit?:number;employerIds?:string[];initializeAtLatest?:boolean;
@@ -12,7 +12,6 @@ export async function readSemanticPublicationChanges(input:{
   const limit=Math.max(1,Math.min(100,Math.floor(requested)));
   // START is a durable empty-history cursor. Without it, clients repeatedly
   // initialize at latest and silently miss the very first publication event.
-  const isStart=input.afterId===EMPTY_SEMANTIC_PUBLICATION_CURSOR;
   const after=shouldLookupSemanticCursor(input.afterId) ? await prisma.semanticPublicationAudit.findUnique({where:{id:input.afterId},select:{id:true,createdAt:true}}) : null;
   if(shouldLookupSemanticCursor(input.afterId) && !after) throw new Error("Unknown publication cursor");
   const employers=[...new Set(input.employerIds??[])];
