@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { createHash, createHmac } from "node:crypto";
 import { createSemanticStorageBroker } from "../src/services/semanticS3Broker.js";
 import { putAndVerifySemanticObject } from "../src/services/semanticObjectVerification.js";
+import { requireSemanticObjectUrlBinding } from "../src/services/semanticObjectKeyBinding.js";
 
 // Entirely local S3 HTTPS request emulator. It verifies the *independently*
 // reconstructed AWS Signature V4 canonical request before accepting PUT/GET.
@@ -88,6 +89,27 @@ try {
     objectKey:"semantic/synthetic/gen/2026-10/v1.json",bytes:body.length,
   });
   assert.notEqual(signed.putUrl,signed.getUrl,"S3 signatures are method-scoped");
+  requireSemanticObjectUrlBinding("semantic/synthetic/gen/2026-10/v1.json",signed.putUrl,signed.getUrl);
+  const other=await broker.presign({
+    objectKey:"semantic/synthetic/gen/2026-10/different.json",bytes:body.length,
+  });
+  assert.throws(()=>requireSemanticObjectUrlBinding(
+    "semantic/synthetic/gen/2026-10/v1.json",signed.putUrl,other.getUrl),
+    /does not match manifest object key/,"Different storage objects must never share a manifest");
+  assert.throws(()=>requireSemanticObjectUrlBinding(
+    "semantic/synthetic/gen/2026-10/v1.json",signed.putUrl,"http://unsafe.example.invalid/object"),
+    /clean HTTPS/);
+  const forgedPut=new URL(signed.putUrl);
+  forgedPut.searchParams.delete("X-Amz-Signature");
+  assert.throws(()=>requireSemanticObjectUrlBinding(
+    "semantic/synthetic/gen/2026-10/v1.json",forgedPut.toString(),signed.getUrl),
+    /requires presigned S3 URLs/);
+  const encoded=await broker.presign({
+    objectKey:"semantic/synthetic/gen/2026-10/encoded!special.json",bytes:body.length,
+  });
+  requireSemanticObjectUrlBinding("semantic/synthetic/gen/2026-10/encoded!special.json",
+    encoded.putUrl,encoded.getUrl);
+
   const first=await putAndVerifySemanticObject({
     putUrl:signed.putUrl,getUrl:signed.getUrl,content:body,
   });
