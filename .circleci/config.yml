@@ -47,6 +47,7 @@ jobs:
             npm run semantic:e2e:score-delta
             npm run semantic:e2e:queue
             npm run semantic:e2e:publication-metadata
+            npm run semantic:e2e:storage-publication
 
   admin_browser_smoke:
     docker:
