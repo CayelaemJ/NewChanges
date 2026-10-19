@@ -56,7 +56,7 @@ async function main() {
     assert.equal(again.deduplicated,1);
 
     const workerId="synthetic_"+randomUUID().replaceAll("-","");
-    const claimed=await claimSemanticRefresh(workerId,180);
+    const claimed=await claimSemanticRefresh(workerId,180,{generationId,employerId});
     assert.equal(claimed?.id,ownJobId,"Worker must claim only the isolated synthetic job");
     await finishSemanticRefresh(ownJobId!,workerId,true);
     const finished=await prisma.semanticRefreshJob.findUnique({
