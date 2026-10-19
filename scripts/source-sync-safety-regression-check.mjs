@@ -82,6 +82,9 @@ assert(governance.includes('update: { validation, validatedAt: now }'), "source 
 const queueHealth = read("../src/services/semanticQueueHealth.ts");
 assert(queueHealth.includes("semanticRefreshJob.groupBy"), "MLOps queue health must aggregate without raw dashboard scans");
 assert(server.includes('"/api/admin/mlops/semantic-queue-health"'), "Admin queue health endpoint required");
+const semanticCanary=read("../src/services/semanticCanaryRead.ts");
+assert(semanticCanary.includes('result.calculationMode!=="RECOMPUTED"'),"Canary must reject published-copy snapshots");
+assert(semanticCanary.includes("result.generationId!==manifest.generationId"),"Canary must reject mismatched source generations");
 const shadow=read("../src/services/semanticShadowWorker.ts");
 assert(shadow.includes('ENABLE_SEMANTIC_SHADOW_WORKER'), "shadow worker must be opt in");
 assert(shadow.includes('getPublishedDashboardPayload'), "shadow worker must use last published payload, never raw source scans");
