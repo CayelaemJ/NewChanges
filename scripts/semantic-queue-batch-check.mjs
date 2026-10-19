@@ -24,4 +24,7 @@ assert(feedSetSource,"Queue must declare supported canonical feeds");
 const feedSet=JSON.parse(feedSetSource.replaceAll("'",'"'));
 assert.deepEqual([...feedSet].sort(),[...canonicalFeeds].sort(),"Queue must accept exactly ten canonical feeds");
 assert(enqueue.includes("!CANONICAL_FEEDS.has(feed)"),"Queue must reject unknown feeds before writes");
+assert(enqueue.includes("generationId?.trim()"),"Queue must reject blank source generations");
+assert(enqueue.includes("watermark instanceof Date"),"Queue must validate the watermark type before attempting queue writes");
+assert(enqueue.includes("part.employerId.length > 200"),"Queue employer keys must honour the canonical planner length limit");
 console.log("Batched semantic refresh queue safety assertions passed");
