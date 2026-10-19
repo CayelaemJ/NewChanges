@@ -3,6 +3,7 @@
 import { createHash } from "node:crypto";
 import { prisma } from "./snapshotBuilder.js";
 import type { RefreshPartition } from "./semanticRefreshPlanner.js";
+import { SEMANTIC_QUEUE_WAKE_CHANNEL, shouldWakeSemanticWorker } from "./semanticQueueWake.js";
 
 const CANONICAL_FEEDS = new Set(["employers","workforce_snapshots","employees","platform_users","journeys","debt_accounts","policies","ratings","referrals","salary_advances"]);
 
@@ -39,6 +40,19 @@ export async function enqueueSemanticRefresh(generationId:string, watermark:Date
       data:records.slice(i,i+100),skipDuplicates:true,
     });
     queued+=inserted.count;
+  }
+  // PostgreSQL delivers NOTIFY only to listeners currently connected. This
+  // deliberately supplements the persisted queue, never replaces it.
+  // The dedicated listener also sweeps on startup and periodically.
+  if(shouldWakeSemanticWorker(queued)) {
+    try {
+      await prisma.$queryRaw`SELECT pg_notify(${SEMANTIC_QUEUE_WAKE_CHANNEL}, 'ready')`;
+    } catch(error) {
+      // Source sync remains committed and queue rows remain pending: failures
+      // here must not turn a successful ingestion into a phantom rollback.
+      console.error("[semantic] optional queue wake failed; durable queue still pending",
+        error instanceof Error ? error.message : String(error));
+    }
   }
   return {queued,deduplicated:partitions.length-queued};
 }
