@@ -9,8 +9,11 @@ export async function readSemanticPublicationChanges(input:{
   const requested = input.limit ?? 50;
   if (!Number.isFinite(requested)) throw new Error("Invalid publication page size");
   const limit=Math.max(1,Math.min(100,Math.floor(requested)));
-  const after=input.afterId ? await prisma.semanticPublicationAudit.findUnique({where:{id:input.afterId},select:{id:true,createdAt:true}}) : null;
-  if(input.afterId && !after) throw new Error("Unknown publication cursor");
+  // START is a durable empty-history cursor. Without it, clients repeatedly
+  // initialize at latest and silently miss the very first publication event.
+  const isStart=input.afterId==="START";
+  const after=input.afterId && !isStart ? await prisma.semanticPublicationAudit.findUnique({where:{id:input.afterId},select:{id:true,createdAt:true}}) : null;
+  if(input.afterId && !isStart && !after) throw new Error("Unknown publication cursor");
   const employers=[...new Set(input.employerIds??[])];
   if(employers.length>200) throw new Error("Employer filter exceeds limit");
   if (!input.afterId && input.initializeAtLatest) {
@@ -19,7 +22,7 @@ export async function readSemanticPublicationChanges(input:{
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       select: { id: true },
     });
-    return { changes: [], nextCursor: latest?.id ?? null, servingEnabled: false, transport: "DURABLE_POLL" };
+    return { changes: [], nextCursor: latest?.id ?? "START", servingEnabled: false, transport: "DURABLE_POLL" };
   }
   const rows=await prisma.semanticPublicationAudit.findMany({
     where:{
