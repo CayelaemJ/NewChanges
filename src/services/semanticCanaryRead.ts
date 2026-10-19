@@ -22,8 +22,9 @@ export async function readPublishedSemanticPartition(input:{employerId:string;pe
  if(bytes.length!==manifest.bytes||
     createHash("sha256").update(bytes).digest("hex")!==manifest.contentSha256)
     throw new Error("Semantic object integrity mismatch");
- const result=JSON.parse(bytes.toString("utf8")) as {schemaVersion?:string;employerId?:string;period?:string;payload?:unknown};
- if(result.schemaVersion!=="semantic-shadow-v1"||result.employerId!==input.employerId||result.period!==input.period)
+ const result=JSON.parse(bytes.toString("utf8")) as {schemaVersion?:string;calculationMode?:string;generationId?:string;employerId?:string;period?:string;payload?:unknown};
+ if(result.schemaVersion!=="semantic-shadow-v1"||result.calculationMode!=="RECOMPUTED"||
+    result.generationId!==manifest.generationId||result.employerId!==input.employerId||result.period!==input.period)
     throw new Error("Semantic object identity mismatch");
  return {manifestId:manifest.id,version:manifest.version,payload:result.payload};
 }
