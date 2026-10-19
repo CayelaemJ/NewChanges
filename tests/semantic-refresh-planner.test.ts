@@ -50,4 +50,24 @@ for(const created_at of ["2026-02-31","2026-13-01","2026-10-01T12:00:00","2026-1
   assert.throws(()=>partitionsFromCanonicalSourceRows("ratings",[{employer_ref:"VIG",created_at}]),/Invalid business date/);
 assert.deepEqual(partitionsFromCanonicalSourceRows("ratings",[{employer_ref:"VIG",created_at:"2026-10-01T12:00:00Z"}]),
   [{employerId:"VIG",period:"2026-10",feeds:["ratings"],deleted:false}]);
+// Every canonical feed must map an October transport update to its actual business month.
+const feedCases: [string,string,string][] = [
+  ["employers","eligible_count_as_at","2026-03-31"],
+  ["workforce_snapshots","as_of_date","2026-03-31"],
+  ["employees","observed_at","2026-03-31"],
+  ["platform_users","enrolled_at","2026-03-31"],
+  ["journeys","started_at","2026-03-31"],
+  ["debt_accounts","observed_at","2026-03-31"],
+  ["policies","observed_at","2026-03-31"],
+  ["ratings","created_at","2026-03-31"],
+  ["referrals","shared_at","2026-03-31"],
+  ["salary_advances","advanced_at","2026-03-31"],
+];
+for(const [feed,dateField,dateValue] of feedCases){
+  const actual=partitionsFromCanonicalSourceRows(feed,[{
+    employer_ref:"VIG",[dateField]:dateValue,source_updated_at:"2026-10-19T08:00:00Z",
+  }]);
+  assert.deepEqual(actual,[{employerId:"VIG",period:"2026-03",feeds:[feed],deleted:false}],feed);
+}
+assert.equal(feedCases.length,10);
 console.log("Incremental semantic partition planner tests passed");
