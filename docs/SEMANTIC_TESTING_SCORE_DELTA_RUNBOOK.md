@@ -33,3 +33,19 @@ The harness deliberately:
 
 ## Gates still outstanding
 This is database-backed **source-row → score/read-model** verification, not a full live source → browser rehearsal. Still required: external source extraction across all ten feeds, queue enqueue/claim/retry, authenticated durable S3-compatible PUT/GET SHA-256, manifest CAS publication, canary/dashboard UI refresh and measured 30–60 second update under load. Production flag activation remains prohibited until explicitly approved.
+
+## Existing CircleCI Node runner — explicit opt-in only
+The PR adds an isolated `semantic_testing_score_delta` job with top-level CircleCI pipeline parameter `semantic_testing_e2e` (default `false`). Ordinary PR pushes **never** execute the data-changing test.
+
+To run manually, an authorized CircleCI operator must:
+1. Store the **Testing-branch** Neon connection string as the masked CircleCI project environment variable `SEMANTIC_TESTING_DATABASE_URL` (not `DATABASE_URL`). Use `newchanges_testing_20261017`, verified Neon host, `sslmode=require`. Do **not** paste credentials into a PR, chat, pipeline parameter, or job output.
+2. Trigger a CircleCI pipeline on the feature branch with boolean parameter `semantic_testing_e2e=true`.
+3. Confirm the `semantic_testing_score_delta` job reports a changed numerical score and restoration. The job requires the dedicated secret; it overrides inherited `DATABASE_URL`, refuses the Production Railway environment and sets semantic publication/worker switches off.
+4. Review the normal `verify`, source-quality, browser and security checks separately.
+
+This does not deploy the app, run a background worker, or publish object storage manifests. It consumes existing CircleCI runner minutes; verify free-plan limits with the organization before starting. No CircleCI credentials or Testing secret are accessible through the current GitHub and Neon connectors, so the pipeline cannot be triggered or configured from this session.
+
+## Publication-ordering and bounded-canary safeguards
+- A new `SemanticSnapshotManifest` may not replace a newer published source watermark. The monotonic check occurs within the pointer's serializable transaction.
+- Canary reads stream only the manifest-recorded object size; oversized or corrupted content is rejected before serving.
+- Tests run in normal CircleCI verification without requiring a database or external object store.
