@@ -84,6 +84,9 @@ assert(semanticListener.includes("LISTEN ") &&
 assert(semanticListener.includes("if(closed||draining)return") &&
   semanticListener.includes("i<5 && Date.now()-started<45_000"),
   "Listener must prevent overlap and bound queue draining");
+assert(semanticListener.includes("if(processedThisPass===5)pending=true") &&
+  semanticListener.includes("}while(pending&&!closed&&Date.now()-started<45_000)"),
+  "Listener must drain known queued backlog without requiring a new NOTIFY");
 assert(!server.includes("run-semantic-event-worker") &&
   !server.includes("processOneShadowSemanticRefresh("),
   "Web server must not embed the dedicated semantic processing loop");
