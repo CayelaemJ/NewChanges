@@ -45,4 +45,9 @@ assert.throws(()=>partitionsFromCanonicalSourceRows("ratings",[{employer_ref:"VI
 for(const employer_ref of [null,42,"", "   ", "x".repeat(201)])
   assert.throws(()=>partitionsFromCanonicalSourceRows("ratings",[{employer_ref,created_at:"2026-10-01",source_updated_at:"2026-10-01T00:00:00Z"}]),/Invalid canonical employer key/);
 assert.throws(()=>partitionsFromCanonicalSourceRows("ratings",[null as unknown as Record<string,unknown>]),/Invalid canonical source row/);
+// Invalid dates must never dirty historical score/snapshot partitions.
+for(const created_at of ["2026-02-31","2026-13-01","2026-10-01T12:00:00","2026-10-01T12:00:00+02:00"])
+  assert.throws(()=>partitionsFromCanonicalSourceRows("ratings",[{employer_ref:"VIG",created_at}]),/Invalid business date/);
+assert.deepEqual(partitionsFromCanonicalSourceRows("ratings",[{employer_ref:"VIG",created_at:"2026-10-01T12:00:00Z"}]),
+  [{employerId:"VIG",period:"2026-10",feeds:["ratings"],deleted:false}]);
 console.log("Incremental semantic partition planner tests passed");
