@@ -48,6 +48,7 @@ jobs:
             npm run semantic:e2e:queue
             npm run semantic:e2e:publication-metadata
             npm run semantic:e2e:storage-publication
+            npm run semantic:e2e:canonical-to-canary
 
   admin_browser_smoke:
     docker:
