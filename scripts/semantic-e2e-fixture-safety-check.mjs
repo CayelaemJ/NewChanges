@@ -28,4 +28,22 @@ assert(runner.includes("if(changed) {") && runner.includes("Synthetic Testing jo
 assert(!runner.includes("stageAndPublishSemanticObject("),
   "Synthetic-only rehearsal must not publish manifests without durable storage");
 assert(preflight.includes("BEGIN READ ONLY"),"Preflight must not write to database");
+const queueRunner=readFileSync("scripts/semantic-testing-queue.ts","utf8");
+const queueService=readFileSync("src/services/semanticRefreshQueue.ts","utf8");
+const circleci=readFileSync(".circleci/config.yml","utf8");
+assert(queueRunner.includes("claimSemanticRefresh(workerId,180,{generationId,employerId})"),
+  "Testing queue must claim only its synthetic source and employer");
+assert(queueRunner.includes("prisma.semanticRefreshJob.deleteMany"),
+  "Testing queue must clean only its own synthetic job");
+assert(queueRunner.includes('SEMANTIC_SYNTHETIC_E2E_APPROVED!=="YES_TEST_ONLY"'),
+  "Testing queue requires explicit approval");
+assert(queueService.includes('AND (${scopeGeneration} = \'\' OR "generationId" = ${scopeGeneration})'),
+  "Source-scoped claim SQL must filter by exact generation");
+assert(queueService.includes('AND (${scopeEmployer} = \'\' OR "employerId" = ${scopeEmployer})'),
+  "Source-scoped claim SQL must filter by exact employer");
+assert(circleci.includes("semantic_testing_e2e:") && circleci.includes("default: false"),
+  "Database-backed CI pipeline must default to disabled");
+assert(circleci.includes("npm run semantic:e2e:score-delta") &&
+  circleci.includes("npm run semantic:e2e:queue"),
+  "Manual CircleCI Testing job must execute both isolated database rehearsals");
 console.log("Isolated Neon synthetic fixture and score-delta runner safety assertions passed");
