@@ -21,7 +21,8 @@ test("visible semantic version update refreshes rendered wellness score and mont
     if(path==="/api/dashboard/semantic-version-changes"){
       versionReads++;
       const after=url.searchParams.get("afterId");
-      if(!after)return json({changes:[],nextCursor:"synthetic-cursor-1"});
+      if(!after)return json({changes:[],nextCursor:"START"});
+      if(after!=="START" && after!=="synthetic-cursor-2")throw new Error("Unexpected publication cursor");
       return json({changes:[{employerId,period:"2026-10",action:"PUBLISH"}],nextCursor:"synthetic-cursor-2"});
     }
     if(path==="/api/employers/"+employerId+"/dashboard"){
