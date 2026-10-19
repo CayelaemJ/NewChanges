@@ -2104,6 +2104,15 @@ function startSyncScheduler(app: any) {
       // source_updated_at triggers the normal cursor-based incremental sync;
       // unchanged databases avoid re-reading the large views entirely.
       const changes = await detectSourceChanges();
+      if (changes.supported && "anomalies" in changes && changes.anomalies.length > 0) {
+        // A source reset, hard deletion or invalid timestamp cannot be
+        // represented by normal cursor-only incremental sync. Stop rather
+        // than silently reporting unchanged or clearing durable data.
+        app.log.error({sourceWatermarkDrift:changes.anomalies},
+          "Source watermark drift detected; ordinary incremental sync paused pending review");
+        recordSourceWatch({outcome:"ERROR",durationMs:Date.now()-startedAt});
+        return;
+      }
       if (changes.supported && changes.changed) {
         app.log.info(
           { reports: changes.reports.map((x: any) => x.reportKey) },
