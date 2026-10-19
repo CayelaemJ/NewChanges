@@ -36,6 +36,7 @@ async function main() {
       let processed=0;
       do {
         pending=false;
+        let processedThisPass=0;
         await reconcileExpiredSemanticRefreshLeases();
         for(let i=0;i<5 && Date.now()-started<45_000;i++) {
           const result=await processOneShadowSemanticRefresh(workerId,storage);
@@ -47,7 +48,12 @@ async function main() {
           }
           if(!result.processed)break;
           processed++;
+          processedThisPass++;
         }
+        // Five claimed jobs imply the durable queue MAY still contain backlog.
+        // Continue within the same 45-second budget without requiring a fresh
+        // NOTIFY. If the budget expires, the 60-second sweep provides recovery.
+        if(processedThisPass===5)pending=true;
         // If work arrived during the drain, run another bounded pass.
       }while(pending&&!closed&&Date.now()-started<45_000);
       if(processed>0) console.log(JSON.stringify({worker:"semantic-event",processed}));
