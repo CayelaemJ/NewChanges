@@ -17,6 +17,7 @@ for(const period of ["2026-01","2026-10","2026-12"])
  assert(monthRegex.test(period),`Valid semantic period rejected: ${period}`);
 for(const period of ["2026-00","2026-13","2026-1","invalid","2026-12-extra"])
  assert(!monthRegex.test(period),`Invalid semantic period accepted: ${period}`);
+assert(!code.includes(String.raw`\\n\\nexport async function`),"Queue source must not contain literal escaped newline tokens");
 const canonicalFeeds=["employers","workforce_snapshots","employees","platform_users","journeys","debt_accounts","policies","ratings","referrals","salary_advances"];
 const feedSetSource=code.match(/const CANONICAL_FEEDS = new Set\((\[[^;]+?\])\);/)?.[1];
 assert(feedSetSource,"Queue must declare supported canonical feeds");
