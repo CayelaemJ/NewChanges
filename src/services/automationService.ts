@@ -24,7 +24,8 @@ function alertEmailList(cfg: any): string[] {
 // sends to configured admin alert emails + a Slack webhook, if either is set.
 // Never throws — alerting must never take down the thing it's alerting about.
 export async function notifyAdmins(opts: { subject: string; html: string; slackText?: string }) {
-  const cfg = await config();
+  const cfg = await config().catch(() => null);
+  if(!cfg)return {emailed:0,slack:false};
   const emails = alertEmailList(cfg);
   const results = { emailed: 0, slack: false };
   if (emails.length) {
@@ -35,11 +36,13 @@ export async function notifyAdmins(opts: { subject: string; html: string; slackT
   }
   if (cfg.alertSlackWebhookUrl) {
     try {
-      await fetch(cfg.alertSlackWebhookUrl, {
+      const response = await fetch(cfg.alertSlackWebhookUrl, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: opts.slackText || opts.subject }),
+        signal: AbortSignal.timeout(10_000),
+        redirect: "error",
       });
-      results.slack = true;
+      results.slack = response.ok;
     } catch { /* best-effort */ }
   }
   return results;
@@ -151,3 +154,4 @@ export async function notifyScoreChangeIfCurrentPeriod(employerId: string, perio
   }
   return { notified: true, recipients: recipients.length, delta };
 }
+

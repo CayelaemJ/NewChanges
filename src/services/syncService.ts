@@ -6,11 +6,13 @@
 // ════════════════════════════════════════════════════════════════════
 
 import { PrismaClient, Prisma } from "@prisma/client";
+import { syncStatusNeedsAlert } from "./syncAlertPolicy.js";
 import { sourceChangePollSeconds } from "./sourceChangePollConfig.js";
 import { classifySourceWatermark } from "./sourceWatermarkDrift.js";
 import { Client } from "pg";
 import { LOAD_ORDER, getFormat } from "./reportFormats.js";
-import { validate } from "./importParser.js";
+import { recoverInterruptedSyncs, reportOperationalFailure } from "./operationalFailureService.js";
+import { prepareSourceFeed } from "./boundedSourceFeed.js";
 import { snapshotEmployer } from "./snapshotBuilder.js";
 import { notifyAdmins, notifyScoreChangeIfCurrentPeriod } from "./automationService.js";
 import { commitBatch, commitSyncRows, SYNC_BULK_CHUNK_SIZE, type CommitProgress } from "./importService.js";
@@ -344,11 +346,20 @@ export async function closeIncrementalSyncLease(client: Client | null) {
   }
 }
 
+export async function recoverSourceSyncState() {
+  const lease=await openIncrementalSyncLease();
+  if(!lease)return;
+  try{await recoverInterruptedSyncs();}finally{await closeIncrementalSyncLease(lease);}
+}
+
 export async function runSync(trigger: "manual" | "scheduled" | "full-refresh" = "manual", options: RunSyncOptions = {}) {
   // dailyRefresh.ts already owns the exclusive database lease while it calls
   // the full-refresh path. Every other sync takes a shared lease so an ordinary
   // sync can never overlap the purge/reload phase on another Railway replica.
-  if (trigger === "full-refresh") return runSyncUnlocked(trigger, options);
+  if (trigger === "full-refresh") {
+    await recoverInterruptedSyncs();
+    return runSyncUnlocked(trigger, options);
+  }
 
   const lease = await openIncrementalSyncLease();
   if (!lease) {
@@ -359,6 +370,7 @@ export async function runSync(trigger: "manual" | "scheduled" | "full-refresh" =
     };
   }
   try {
+    await recoverInterruptedSyncs();
     return await runSyncUnlocked(trigger, options);
   } finally {
     await closeIncrementalSyncLease(lease);
@@ -420,6 +432,8 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
         update: { lastAttemptAt: new Date(), lastStatus: "RUNNING", lastNote: null },
       });
 
+      let prepared: Awaited<ReturnType<typeof prepareSourceFeed>> | null = null;
+      let activeBatchId: string | null = null;
       try {
         const isFirstSync = cursor.lastSourceUpdatedAt === null && cursor.lastSuccessAt === null;
         const authoritativeOverwrite = trigger === "full-refresh";
@@ -458,72 +472,22 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
           committedRows: 0,
         });
 
-        const pulled = await adapter.fetchReport(reportKey, {
-          // Incremental syncs use a bounded source window. Authoritative
-          // Reset/Refresh deliberately uses NO time window at all: reconnecting
-          // the same database must be equivalent to reloading the Power BI
-          // source from scratch, regardless of old cursors or source timestamps.
-          since: requestSince,
-          through: authoritativeOverwrite ? undefined : throughAt,
-        }, useSourceRoute ? route.sourceView : null, {
+        const window = {since: requestSince, through: authoritativeOverwrite ? undefined : throughAt};
+        const sourceOptions = {
           useReplica: Boolean(useSourceRoute && (route.useReplica || config.sourceAnalyticsUseReplica)),
           authoritative: authoritativeOverwrite,
-        });
-
-        if (authoritativeOverwrite && sourceTotalRows != null && sourceTotalRows > 0 && pulled.records.length === 0) {
-          throw new Error(
-            `${reportKey}: authoritative rebuild found ${sourceTotalRows.toLocaleString("en-ZA")} row(s) in the connected source view but extracted 0. Refusing to publish an empty rebuild; check the selected source route/view and SQL connection.`,
-          );
+        };
+        const sourceView = useSourceRoute ? route.sourceView : null;
+        const pages = adapter.iterateReportPages
+          ? adapter.iterateReportPages(reportKey, window, sourceView, sourceOptions)
+          : (async function* () { yield await adapter!.fetchReport(reportKey, window, sourceView, sourceOptions); })();
+        prepared = await prepareSourceFeed(format, pages, {through:throughAt, authoritative:authoritativeOverwrite});
+        const pulled = {location:prepared.location};
+        const result = {rowCount:prepared.rowCount, rows:prepared.sample};
+        const newestPulledAt = prepared.newest;
+        if (authoritativeOverwrite && sourceTotalRows != null && sourceTotalRows > 0 && result.rowCount === 0) {
+          throw new Error(`${reportKey}: source contains rows but extraction was empty; refusing empty rebuild`);
         }
-        await emitSyncProgress(options, {
-          phase: "VALIDATING",
-          progress: Math.round(feedStart + 2),
-          message: `Validating ${pulled.records.length.toLocaleString("en-ZA")} ${reportKey} row(s)`,
-          reportKey,
-          feedIndex: reportIndex + 1,
-          feedCount: LOAD_ORDER.length,
-          sourceTotalRows,
-          pulledRows: pulled.records.length,
-          committedRows: 0,
-        });
-        const result = validate(format, pulled.records);
-
-        const skewCeiling = new Date(throughAt.getTime() + CLOCK_SKEW_TOLERANCE_MS);
-        const genuinelyFutureRows = result.rows.filter((row: any) => row.source_updated_at > skewCeiling);
-        if (genuinelyFutureRows.length && !authoritativeOverwrite) {
-          throw new Error(`${reportKey}: ${genuinelyFutureRows.length} record(s) had source_updated_at more than ${CLOCK_SKEW_TOLERANCE_MS / 60000} minute(s) later than the requested through timestamp — check the source database's clock/timezone settings.`);
-        }
-        result.rows = result.rows.map((row: any) =>
-          row.source_updated_at > throughAt ? { ...row, source_updated_at: throughAt } : row
-        );
-        const newestPulledAt = result.rows.reduce<Date | null>((latest: Date | null, row: any) => {
-          const value = row.source_updated_at instanceof Date ? row.source_updated_at : new Date(row.source_updated_at);
-          if (!Number.isFinite(value.getTime())) return latest;
-          return !latest || value > latest ? value : latest;
-        }, null);
-
-        if (!result.ok) {
-          const note = `Validation failed: ${result.errors.length} cell error(s), ${result.missingColumns.length} required column(s) missing.`;
-          summary[reportKey] = {
-            source: pulled.location,
-            pulled: pulled.records.length,
-            committed: 0,
-            errorCount: result.errors.length,
-            missingColumns: result.missingColumns,
-            unknownColumns: result.unknownColumns,
-            errors: result.errors.slice(0, 20),
-            note,
-          };
-          await prisma.integrationCursor.update({
-            where: { reportKey },
-            data: { lastStatus: "FAILED", lastNote: note },
-          });
-          anyFailed = true;
-          failedStep = { reportIndex, reportKey, title: format.title, reason: note };
-          console.error(`[sync] STEP ${reportIndex + 1} ${format.title} failed validation: ${note}`);
-          break;
-        }
-
         if (result.rowCount === 0) {
           if (isFirstSync && trigger !== "full-refresh") {
             // A first sync that returns nothing is almost always a wrong
@@ -581,7 +545,7 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
         // source is the truth and every structurally valid row must be rewritten.
         const quality = authoritativeOverwrite
           ? { status: "PASS" as const, findings: [] as any[], bypassed: true }
-          : await assessIncomingRows({ reportKey, rows: result.rows as Record<string, unknown>[] });
+          : await assessIncomingRows({ reportKey, rows: result.rows as Record<string, unknown>[], totalRows:result.rowCount });
         if (!authoritativeOverwrite && quality.status === "QUARANTINE") {
           const qualityErrors = quality.findings.map((f) => ({
             row: f.row ?? 0,
@@ -631,10 +595,7 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
         // validated rows into ImportBatch/ImportBatchRow only to read them back.
         // PostgreSQL performs the natural-key INSERT ... ON CONFLICT merge in
         // bounded bulk operations instead of one Prisma lookup/upsert per row.
-        const syncTouchedEmployers = new Set<string>();
-        for (const row of result.rows as Record<string, any>[]) {
-          if (row.employer_ref) syncTouchedEmployers.add(String(row.employer_ref));
-        }
+        const syncTouchedEmployers = prepared.employers;
         for (const employerId of syncTouchedEmployers) touchedEmployers.add(employerId);
 
         const batch = await prisma.importBatch.create({
@@ -650,7 +611,9 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
             sourceThrough: throughAt,
           },
         });
-        let committed;
+        const committed = {inserted:0,updated:0,deleted:0,skipped:0,historyRows:0};
+        let processedRows = 0;
+        activeBatchId = batch.id;
         const historicalObservationFeed = ["employees", "debt_accounts", "policies"].includes(reportKey);
         const reportProgress = async (p: CommitProgress) => {
           const historyRows = p.historyRows ?? (historicalObservationFeed
@@ -674,7 +637,7 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
             feedIndex: reportIndex + 1,
             feedCount: LOAD_ORDER.length,
             sourceTotalRows,
-            pulledRows: pulled.records.length,
+            pulledRows: result.rowCount,
             validatedRows: result.rowCount,
             committedRows: p.processed,
             inserted: p.inserted,
@@ -693,7 +656,7 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
           feedIndex: reportIndex + 1,
           feedCount: LOAD_ORDER.length,
           sourceTotalRows,
-          pulledRows: pulled.records.length,
+          pulledRows: result.rowCount,
           validatedRows: result.rowCount,
           committedRows: 0,
           inserted: 0,
@@ -703,8 +666,15 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
           batchId: batch.id,
         });
         let usedCompatibilityFallback = false;
-        try {
-          committed = await commitSyncRows(reportKey, result.rows as Record<string, any>[], reportProgress, { authoritativeOverwrite });
+        for await (const pageRows of prepared.rows()) {
+          let pageCommitted;
+          const pageProgress = async (p: CommitProgress) => reportProgress({...p,
+            total:result.rowCount,processed:processedRows+p.processed,
+            inserted:committed.inserted+p.inserted,updated:committed.updated+p.updated,
+            deleted:committed.deleted+p.deleted,skipped:committed.skipped+p.skipped,
+            historyRows:committed.historyRows+(p.historyRows??0)});
+          try {
+          pageCommitted = await commitSyncRows(reportKey, pageRows, pageProgress, { authoritativeOverwrite });
         } catch (error: any) {
           // Correctness-first compatibility path. Missing procedures are a deploy
           // problem; SQLSTATE 21000 means a set-based projection encountered more
@@ -721,8 +691,12 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
           console.warn(
             `[sync] ${reportKey} bulk path unavailable (${code || "compat"}); using proven chunked importer for this feed.`,
           );
-          await prisma.importBatch.update({ where: { id: batch.id }, data: { stagedRows: result.rows as Json } });
-          committed = await commitBatch(batch.id, { recompute: false, onProgress: reportProgress });
+          await prisma.importBatch.update({ where: { id: batch.id }, data: { stagedRows: pageRows as Json } });
+          pageCommitted = await commitBatch(batch.id, { recompute: false, finalizeAudit: false, onProgress: pageProgress });
+        }
+          for (const k of ["inserted","updated","deleted","skipped","historyRows"] as const)
+            committed[k] += pageCommitted[k] ?? 0;
+          processedRows += pageRows.length;
         }
         if (authoritativeOverwrite) {
           if (historicalObservationFeed && committed.historyRows == null) {
@@ -736,8 +710,14 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
             !historicalPlanningError && (committed.inserted + committed.updated + committed.deleted + (committed.historyRows ?? 0) > 0)) {
           try {
             const { partitionsFromCanonicalSourceRows } = await import("./semanticSourceChangePlanner.js");
-            historicalShadowPartitions.push(...partitionsFromCanonicalSourceRows(
-              reportKey, result.rows as Record<string, unknown>[], 500));
+            for await (const pageRows of prepared.rows()) {
+              for(const next of partitionsFromCanonicalSourceRows(reportKey,pageRows,500)) {
+                const existing=historicalShadowPartitions.find(p=>p.employerId===next.employerId&&p.period===next.period);
+                if(existing){existing.feeds=[...new Set([...existing.feeds,...next.feeds])];existing.deleted ||= next.deleted;}
+                else historicalShadowPartitions.push(next);
+              }
+              if (historicalShadowPartitions.length > 500) throw new Error("Historical semantic partition budget exceeded");
+            }
             if (historicalShadowPartitions.length > 500) throw new Error("Historical semantic partition budget exceeded");
           } catch(error:any) {
             historicalPlanningError = error?.message ?? String(error);
@@ -749,6 +729,8 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
           where: { id: batch.id },
           data: {
             status: "COMMITTED",
+            stagedRows: Prisma.DbNull,
+            rowCount: result.rowCount,
             committedAt: new Date(),
             insertedCount: committed.inserted,
             updatedCount: committed.updated,
@@ -758,7 +740,7 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
         });
         summary[reportKey] = {
           source: pulled.location,
-          pulled: pulled.records.length,
+          pulled: result.rowCount,
           committed: result.rowCount,
           inserted: committed.inserted,
           updated: committed.updated,
@@ -779,7 +761,7 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
           feedIndex: reportIndex + 1,
           feedCount: LOAD_ORDER.length,
           sourceTotalRows,
-          pulledRows: pulled.records.length,
+          pulledRows: result.rowCount,
           validatedRows: result.rowCount,
           committedRows: result.rowCount,
           inserted: committed.inserted,
@@ -811,6 +793,7 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
         }
         anyOk = true;
       } catch (error: any) {
+        if(activeBatchId) await prisma.importBatch.update({where:{id:activeBatchId},data:{status:"FAILED",stagedRows:Prisma.DbNull}}).catch(()=>{});
         const note = error?.message ?? String(error);
         summary[reportKey] = { error: note, since: cursor.lastSourceUpdatedAt, through: throughAt };
         await prisma.integrationCursor.update({
@@ -821,6 +804,8 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
         failedStep = { reportIndex, reportKey, title: format.title, reason: note };
         console.error(`[sync] STEP ${reportIndex + 1} ${format.title} failed: ${note}`);
         break;
+      } finally {
+        await prepared?.close();
       }
     }
 
@@ -865,7 +850,7 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
         const r = await snapshotEmployer(employerId);
         if (r.persisted) {
           notifyScoreChangeIfCurrentPeriod(employerId, r.period, r.period).catch(() => {});
-          runMLOpsAssessment(employerId).catch((error: any) => console.error(`[sync] MLOps assessment failed for ${employerId}:`, error?.message ?? error));
+          runMLOpsAssessment(employerId).catch(() => reportOperationalFailure("MLOPS"));
         }
       } catch (error: any) {
         anyFailed = true;
@@ -886,9 +871,10 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
               pendingSnapshotEmployers.delete(employerId);
               try {
                 const r = await snapshotEmployer(employerId);
-                if (r.persisted) { notifyScoreChangeIfCurrentPeriod(employerId, r.period, r.period).catch(() => {}); runMLOpsAssessment(employerId).catch((error: any) => console.error(`[sync] MLOps assessment failed for ${employerId}:`, error?.message ?? error)); }
+                if (r.persisted) { notifyScoreChangeIfCurrentPeriod(employerId, r.period, r.period).catch(() => {}); runMLOpsAssessment(employerId).catch(() => reportOperationalFailure("MLOPS")); }
               } catch (error: any) {
                 console.error(`[sync] background snapshot failed for ${employerId}:`, error?.message ?? error);
+                await reportOperationalFailure("DASHBOARD_REFRESH");
               }
             }
           } finally {
@@ -975,6 +961,7 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
     });
   }
 
+  if(syncStatusNeedsAlert(status)) await reportOperationalFailure("SOURCE_SYNC");
   await emitSyncProgress(options, {
     phase: status === "OK" ? "COMPLETE" : "FAILED",
     progress: 100,
