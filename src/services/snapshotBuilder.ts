@@ -23,6 +23,15 @@ const DASHBOARD_CACHE_TTL_MS = Math.min(30 * 60_000, Math.max(60_000,
 const SEMANTIC_PERSIST_ON_READ = process.env.SEMANTIC_PERSIST_ON_READ === "true";
 const DASHBOARD_CACHE_SCHEMA = "financial-comparison-v3";
 const dashboardCache = new Map<string, { expiresAt: number; payload: any }>();
+// Each serving replica observes the durable completed-sync version on dashboard
+// requests, avoiding stale process-local cached payloads after another replica syncs.
+let observedSuccessfulSyncVersion: string | null | undefined;
+export function syncDashboardCacheVersion(version: string | null): void {
+  if (observedSuccessfulSyncVersion !== undefined && observedSuccessfulSyncVersion !== version) {
+    dashboardCache.clear();
+  }
+  observedSuccessfulSyncVersion = version;
+}
 const PUBLISHED_DASHBOARD_CACHE_KEY = "__published_dashboard_v1__";
 // Historical DISTINCT site lookup is expensive on EmployeeVersion. Reuse only
 // this non-sensitive dimension for at most 60s, across dashboard filter variants.
