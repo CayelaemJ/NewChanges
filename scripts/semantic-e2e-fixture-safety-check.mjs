@@ -170,4 +170,13 @@ assert(circleci.includes('semantic_context_readiness:') &&
   circleci.includes('context: newchanges-neon-testing') &&
   circleci.includes('npm run semantic:e2e:context-readiness'),
   "Context readiness must be separately opted in with restricted Testing context");
+for(const [self,others] of [
+  ["semantic_context_readiness",["semantic_notify_probe","semantic_testing_e2e"]],
+  ["semantic_notify_probe",["semantic_context_readiness","semantic_testing_e2e"]],
+  ["semantic_testing_e2e",["semantic_context_readiness","semantic_notify_probe"]],
+]){
+  const guard='if [ "<< pipeline.parameters.'+self+' >>" != "true" ] || [ "<< pipeline.parameters.'+
+    others[0]+' >>" = "true" ] || [ "<< pipeline.parameters.'+others[1]+' >>" = "true" ]';
+  assert(circleci.includes(guard),"Manual workflow must refuse concurrent Testing flags: "+self);
+}
 console.log("Isolated Neon synthetic fixture and score-delta runner safety assertions passed");
