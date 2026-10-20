@@ -18,7 +18,7 @@ try {
     assert.equal(response.status, 302, `${path} requires sign-in`);
     assert.equal(response.headers.get('location'), '/login');
   }
-  for (const path of ['/api/auth/me', '/api/users', '/api/portfolio', '/api/dashboard/first', '/api/admin/integration']) {
+  for (const path of ['/api/auth/me', '/api/users', '/api/portfolio', '/api/dashboard/first', '/api/dashboard/version', '/api/dashboard/events', '/api/admin/integration']) {
     const response = await request(path);
     assert.equal(response.status, 401, `${path} rejects anonymous access`);
     assert.equal(response.headers.get('cache-control'), 'no-store');
@@ -46,7 +46,7 @@ try {
   });
   authPrisma.dataAccessEvent.create=async()=>({id:'fixture-audit'});
   try {
-    const headers={cookie:'session=fixture-only-token',origin:'http://localhost'};
+    const headers={host:'localhost',cookie:'session=fixture-only-token',origin:'http://localhost'};
     for(role of ['VIEWER','EMPLOYER_MANAGER','PORTFOLIO_MANAGER']){
       for(const path of ['/admin','/react/admin'])assert.equal((await request(path,{headers})).status,403,role+' cannot open '+path);
       assert.equal((await request('/users',{headers})).status,302,role+' cannot open Users');
@@ -58,6 +58,15 @@ try {
     for(role of ['ADMIN','SUPERADMIN']){
       for(const path of ['/admin','/users','/dashboard'])assert.equal((await request(path,{headers})).status,200,role+' can reach '+path);
     }
+    process.env.STANDBY_MODE='true';
+    try {
+      role='SUPERADMIN';
+      for(const path of ['/api/admin/integration/sync-now','/api/admin/integration/sync','/api/admin/integration/refresh','/api/admin/integration/full-resync']) {
+        assert.equal((await request(path,{headers,method:'POST'})).status,423,'standby blocks '+path);
+      }
+      const {triggerRefreshNow}=await import('../dist/services/dailyRefresh.js');
+      assert.equal((await triggerRefreshNow('reset')).status,'STANDBY','direct reset is also blocked');
+    } finally {delete process.env.STANDBY_MODE;}
     active=false;
     assert.equal((await request('/api/users',{headers})).status,401,'inactive identity cannot authenticate');
     active=true;revoked=true;

@@ -28,8 +28,6 @@ const CLOCK_SKEW_TOLERANCE_MS = 5 * 60 * 1000;
 // sources. This schedules cheap watermarks, NEVER a full ten-feed import.
 // Operators can increase the interval if their source cannot sustain it.
 export const SOURCE_CHANGE_POLL_SECONDS = sourceChangePollSeconds();
-const pendingSnapshotEmployers = new Set<string>();
-let snapshotDrainScheduled = false;
 
 export interface SyncProgress {
   phase: "CONNECTING" | "READING_SOURCE" | "VALIDATING" | "COMMITTING" | "FEED_COMPLETE" | "REBUILDING_DASHBOARD" | "COMPLETE" | "FAILED";
@@ -235,6 +233,19 @@ function sourceWatermarkMillis(value: string | null | undefined): number | null 
   return Number.isFinite(ms) ? ms : null;
 }
 
+export async function pendingDashboardRetryDue(config: { lastSyncStatus?: string | null; lastSyncAt?: Date | null }, now = Date.now()) {
+  if (!["FAILED", "PARTIAL"].includes(config.lastSyncStatus ?? "")) return false;
+  const latest = await prisma.syncLog.findFirst({ orderBy: { startedAt: "desc" }, select: { summary: true } });
+  const summary = latest?.summary as Record<string, any> | null;
+  if (!Array.isArray(summary?.pendingSnapshotEmployerIds) || !summary.pendingSnapshotEmployerIds.length) return false;
+  const attempts = Math.max(1, Number(summary.snapshotRetryAttempt) || 1);
+  // Exhausted work remains durable and visible in the failed sync log. An
+  // operator can explicitly retry after repair; do not loop forever at cost.
+  if (attempts >= 5) return false;
+  const delay = Math.min(15 * 60_000, 30_000 * 2 ** (attempts - 1));
+  return now >= (config.lastSyncAt?.getTime() ?? now) + delay;
+}
+
 export async function detectSourceChanges() {
   const config = await getConfig();
   if (!config.enabled) return { supported: false, changed: false, reports: [], reason: "integration disabled" };
@@ -353,6 +364,7 @@ export async function recoverSourceSyncState() {
 }
 
 export async function runSync(trigger: "manual" | "scheduled" | "full-refresh" = "manual", options: RunSyncOptions = {}) {
+  if (process.env.STANDBY_MODE === "true") return { ok: false, status: "STANDBY", note: "Source ingestion is disabled on this standby.", error: "Source ingestion is disabled on this standby." };
   // dailyRefresh.ts already owns the exclusive database lease while it calls
   // the full-refresh path. Every other sync takes a shared lease so an ordinary
   // sync can never overlap the purge/reload phase on another Railway replica.
@@ -390,6 +402,12 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
     return { ok: false, error: mode === "SQL" ? "SQL source settings are incomplete." : "No API base URL configured." };
   }
 
+  // Carry recalculation debt forward before opening a new audit record. Feed
+  // cursors may already have advanced when a later snapshot or process failed.
+  const previous = await prisma.syncLog.findFirst({ orderBy: { startedAt: "desc" }, select: { summary: true } });
+  const priorSummary = previous?.summary as Record<string, any> | null;
+  const pendingSnapshots = Array.isArray(priorSummary?.pendingSnapshotEmployerIds)
+    ? priorSummary.pendingSnapshotEmployerIds.filter((id: unknown): id is string => typeof id === "string" && id.length > 0) : [];
   const throughAt = new Date();
   const log = await prisma.syncLog.create({ data: { trigger, status: "RUNNING", throughAt } });
   if (trigger !== "full-refresh") {
@@ -403,8 +421,9 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
       },
     });
   }
-  const summary: Record<string, any> = {};
-  const touchedEmployers = new Set<string>();
+  const summary: Record<string, any> = { pendingSnapshotEmployerIds: pendingSnapshots,
+    snapshotRetryAttempt: trigger === "manual" || !pendingSnapshots.length ? 1 : Math.max(1, Number(priorSummary?.snapshotRetryAttempt) || 1) + 1 };
+  const touchedEmployers = new Set<string>(pendingSnapshots);
   let historicalShadowPartitions: import("./semanticRefreshPlanner.js").RefreshPartition[] = [];
   let historicalPlanningError: string | null = null;
   let anyFailed = false;
@@ -597,6 +616,10 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
         // bounded bulk operations instead of one Prisma lookup/upsert per row.
         const syncTouchedEmployers = prepared.employers;
         for (const employerId of syncTouchedEmployers) touchedEmployers.add(employerId);
+        // Persist BEFORE any live writes. Recovery retains this JSON, so even a
+        // crash after the feed checkpoint cannot forget affected employers.
+        summary.pendingSnapshotEmployerIds = [...touchedEmployers];
+        await prisma.syncLog.update({ where: { id: log.id }, data: { summary: summary as Json } });
 
         const batch = await prisma.importBatch.create({
           data: {
@@ -860,28 +883,24 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
       }
     }
   } else if (!anyFailed) {
-    for (const employerId of touchedEmployers) pendingSnapshotEmployers.add(employerId);
-    if (touchedEmployers.size && !snapshotDrainScheduled) {
-      snapshotDrainScheduled = true;
-      setImmediate(() => {
-        void (async () => {
-          try {
-            while (pendingSnapshotEmployers.size) {
-              const employerId = pendingSnapshotEmployers.values().next().value as string;
-              pendingSnapshotEmployers.delete(employerId);
-              try {
-                const r = await snapshotEmployer(employerId);
-                if (r.persisted) { notifyScoreChangeIfCurrentPeriod(employerId, r.period, r.period).catch(() => {}); runMLOpsAssessment(employerId).catch(() => reportOperationalFailure("MLOPS")); }
-              } catch (error: any) {
-                console.error(`[sync] background snapshot failed for ${employerId}:`, error?.message ?? error);
-                await reportOperationalFailure("DASHBOARD_REFRESH");
-              }
-            }
-          } finally {
-            snapshotDrainScheduled = false;
-          }
-        })();
-      });
+    // A successful source sync must not be published until affected employer
+    // dashboard calculations have completed. Background setImmediate work could
+    // previously finish AFTER lastSuccessfulSyncAt was advanced.
+    for (const employerId of touchedEmployers) {
+      try {
+        const result = await snapshotEmployer(employerId);
+        if (result.persisted) {
+          void notifyScoreChangeIfCurrentPeriod(employerId, result.period, result.period).catch(() => {});
+          void runMLOpsAssessment(employerId).catch(() => reportOperationalFailure("MLOPS"));
+        }
+      } catch (error: any) {
+        anyFailed = true;
+        summary.snapshots ??= {};
+        summary.snapshots[employerId] = { error: error?.message ?? String(error) };
+        console.error(`[sync] incremental dashboard snapshot failed for ${employerId}:`, error?.message ?? error);
+        await reportOperationalFailure("DASHBOARD_REFRESH");
+        break;
+      }
     }
   }
 
@@ -936,12 +955,13 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
   const note = status === "OK"
     ? trigger === "full-refresh"
       ? `All 10 reports synced successfully from ${mode} in dependency order; dashboard snapshots were rebuilt before completion.`
-      : `All 10 reports synced successfully from ${mode} in dependency order; changed employer snapshots were queued in the background.`
+      : `All 10 reports synced successfully from ${mode} in dependency order; affected employer dashboard snapshots were recalculated before completion.`
     : failedDetail
       ? `${failedDetail} ${blockedCount} downstream step${blockedCount === 1 ? "" : "s"} blocked to preserve load order. Last successful dashboard remains in place; failed and blocked cursors were not advanced.`
       : `${mode} sync failed before the ordered feed chain completed. Last successful dashboard remains in place.`;
   const finishedAt = new Date();
 
+  if (status === "OK") summary.pendingSnapshotEmployerIds = [];
   await prisma.syncLog.update({
     where: { id: log.id },
     data: { status, finishedAt, summary: summary as Json, note },

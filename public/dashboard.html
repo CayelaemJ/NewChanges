@@ -3152,6 +3152,7 @@ async function loadLiveData({refreshOnly=false}={}){
   if(!refreshOnly){
     try{ const r=await fetch('/api/auth/me'); if(!r.ok){ location.href='/login'; return; } me=await r.json(); }
     catch(e){ location.href='/login'; return; }
+    if(requestSeq!==LIVE_REQUEST_SEQ) return;
     window.__ME__=me;
     addAuthBar(me); applyTheme(me.theme, me); handleWelcomeSplash(me); applySectionVisibility(me); populateEmployerSelect(me); applySyntheticDataNotice(me);
   }
@@ -3166,8 +3167,8 @@ async function loadLiveData({refreshOnly=false}={}){
     const url=id ? `${API_BASE}/api/employers/${id}/dashboard${qs}` : `${API_BASE}/api/dashboard/first${qs}`;
     // Do not make the dashboard wait for the period picker or portfolio.
     // Mobile users get the actual visual payload as soon as it arrives.
-    const periodsPromise=id ? populateMonthSelect(id,period,quarter).catch(()=>{}) : Promise.resolve();
-    const dashboardPromise=fetch(url,{cache:'no-store'}).then(async r=>{
+    const periodsPromise=id ? populateMonthSelect(id,period,quarter,requestSeq).catch(()=>{}) : Promise.resolve();
+    const dashboardPromise=fetch(url,{cache:'no-store',signal:AbortSignal.timeout(60_000)}).then(async r=>{
       const body=await r.json().catch(()=>({}));
       if(!r.ok){
         const error=new Error(body.error||'no data');
@@ -3184,6 +3185,9 @@ async function loadLiveData({refreshOnly=false}={}){
     DATA=live; BASE=JSON.parse(JSON.stringify(DATA)); window.__LIVE__=true;
     if(live.employer){ const h1=document.querySelector('.head h1'); if(h1) h1.firstChild.textContent=live.employer+' '; }
     const sourceAt=live.sourceDataUpdatedAt||live.dataAsOf;
+    // Record the version corresponding to THIS payload so a subsequent
+    // successful publication cannot be mistaken for the initial poll.
+    if(live.syncStatus?.lastSuccessfulSyncAt) __SOURCE_VERSION__=live.syncStatus.lastSuccessfulSyncAt;
     renderRefreshStatus(live.syncStatus,sourceAt);
     renderMonthActivity(live.monthActivity,live.filterContext); renderDataQuality(live.dataQuality); setLiveFootnote(live.filterContext);
     document.getElementById('demo-banner')?.remove();
@@ -3195,12 +3199,19 @@ async function loadLiveData({refreshOnly=false}={}){
     await periodsPromise;
     if(requestSeq===LIVE_REQUEST_SEQ){ syncPeriodControl(); updatePeriodControlTone(); }
   }catch(e){
+    if(requestSeq!==LIVE_REQUEST_SEQ) return;
+    if(refreshOnly && window.__LIVE__){
+      const label=document.getElementById('data-fresh-label');
+      if(label) label.textContent='Update failed — showing last loaded data';
+      document.querySelector('.data-fresh')?.classList.add('is-error');
+      return;
+    }
     const demoMode=new URLSearchParams(location.search).get('demo')==='1';
     if(demoMode){ showDemoBanner(); const fl=document.getElementById('data-fresh-label'); if(fl) fl.textContent='Demo data'; window.__LIVE__=false; applyState(); }
     else { showLiveError(e); wireAudience(); wireHeaderBtns(); }
   }finally{
     if(splash && (window.__LIVE__ || new URLSearchParams(location.search).get('demo')==='1')) splash.classList.add('hide');
-    if(refreshOnly && view){ view.removeAttribute('aria-busy'); view.classList.remove('is-refreshing'); }
+    if(requestSeq===LIVE_REQUEST_SEQ && refreshOnly && view){ view.removeAttribute('aria-busy'); view.classList.remove('is-refreshing'); }
   }
 }
 
@@ -3251,7 +3262,7 @@ function updatePeriodControlTone(){
   sel.style.backgroundColor=tone?.bg||'';
 }
 
-async function populateMonthSelect(employerId, selected, selectedQuarter){
+async function populateMonthSelect(employerId, selected, selectedQuarter, requestSeq=LIVE_REQUEST_SEQ){
   const sel=document.getElementById('month-select'); if(!sel) return;
   sel.querySelectorAll('optgroup').forEach(g=>g.remove());
   try{
@@ -3261,6 +3272,7 @@ async function populateMonthSelect(employerId, selected, selectedQuarter){
     if(page.get('income')) qs.set('income',page.get('income'));
     const suffix=qs.toString()?`?${qs.toString()}`:'';
     const rows=await fetch(`${API_BASE}/api/employers/${encodeURIComponent(employerId)}/periods${suffix}`, { cache: 'no-store', signal: AbortSignal.timeout(30_000) }).then(r=>{if(!r.ok) throw new Error('Periods unavailable'); return r.json();});
+    if(requestSeq!==LIVE_REQUEST_SEQ) return;
     const now=new Date().toISOString().slice(0,7);
     const periods=Array.isArray(rows)?rows.filter(p=>/^\d{4}-(0[1-9]|1[0-2])$/.test(p?.period)&&p.period<=now):[];
     if(!Array.isArray(periods) || periods.length<1){
@@ -3842,27 +3854,37 @@ loadLiveData();
 let __SOURCE_VERSION__ = null;
 let __SOURCE_REFRESH_BUSY__ = false;
 async function checkSourceVersion(){
-  if(document.visibilityState !== 'visible' || __SOURCE_REFRESH_BUSY__) return;
+  if(!window.__LIVE__ || document.visibilityState !== 'visible' || __SOURCE_REFRESH_BUSY__) return;
+  __SOURCE_REFRESH_BUSY__=true;
   try{
-    const r=await fetch('/api/dashboard/version',{cache:'no-store'});
+    const r=await fetch('/api/dashboard/version',{cache:'no-store',signal:AbortSignal.timeout(15_000)});
     if(!r.ok) return;
     const d=await r.json();
     const status=d.syncStatus?.lastSyncStatus||null;
     renderRefreshStatus(d.syncStatus);
     if(status==='REBUILDING' || status==='FULL_REFRESH_FAILED') return;
-    if(!__SOURCE_VERSION__) { __SOURCE_VERSION__=d.version||null; return; }
     if(d.version && d.version !== __SOURCE_VERSION__){
-      __SOURCE_VERSION__=d.version;
-      __SOURCE_REFRESH_BUSY__=true;
-      try{
-        await loadLiveData({refreshOnly:true});
-      }finally{
-        __SOURCE_REFRESH_BUSY__=false;
-      }
+      // Only loadLiveData may acknowledge the version of a rendered payload.
+      // A failed request must leave the previous version eligible for retry.
+      await loadLiveData({refreshOnly:true});
     }
-  }catch(_){}
+  }catch(_){}finally{ __SOURCE_REFRESH_BUSY__=false; }
 }
-setInterval(checkSourceVersion,180000);
+setInterval(checkSourceVersion,30000);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible') void checkSourceVersion();});
+window.addEventListener('focus',()=>{void checkSourceVersion();});
+let dashboardEvents=null;
+function connectDashboardEvents(){
+  dashboardEvents?.close(); dashboardEvents=null;
+  if(document.visibilityState!=='visible' || typeof EventSource==='undefined') return;
+  dashboardEvents=new EventSource('/api/dashboard/events');
+  dashboardEvents.addEventListener('publication',()=>{void checkSourceVersion();});
+  dashboardEvents.addEventListener('open',()=>{void checkSourceVersion();});
+}
+document.addEventListener('visibilitychange',connectDashboardEvents);
+window.addEventListener('pagehide',()=>{dashboardEvents?.close();});
+window.addEventListener('pageshow',connectDashboardEvents);
+connectDashboardEvents();
 </script>
 <script>
 /* Employer chart recolouring pass: applies to all present and future chart marks,
@@ -3896,3 +3918,4 @@ setInterval(checkSourceVersion,180000);
 <script src="/static/admin-source-status.js?v=1"></script>
 </body>
 </html>
+

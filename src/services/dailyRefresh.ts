@@ -128,6 +128,7 @@ async function setRefreshState(status: string, note: string, at = new Date(), su
 }
 
 async function runAuthoritativeFullRefresh(reason: "scheduled" | "manual" | "reset") {
+  if (process.env.STANDBY_MODE === "true") return { ok: false, status: "STANDBY", error: "Source reset is disabled on this standby." };
   if (activeFullRefresh) return activeFullRefresh;
 
   activeFullRefresh = (async () => {

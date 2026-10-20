@@ -41,7 +41,7 @@ let options = '';
 const current = new Date().toISOString().slice(0, 7);
 const select = { querySelectorAll: () => [], insertAdjacentHTML: (_position, html) => { options += html; } };
 const periodContext = vm.createContext({
-  URLSearchParams, AbortSignal, Date, API_BASE: '', location: { search: '' },
+  URLSearchParams, AbortSignal, Date, API_BASE: '', LIVE_REQUEST_SEQ: 1, location: { search: '' },
   document: { getElementById: () => select }, updatePeriodControlTone: () => {},
   hasValue: value => value !== null && value !== undefined && value !== '',
   esc: value => String(value).replaceAll('<', '&lt;'),
@@ -58,3 +58,9 @@ assert.ok(options.includes('Score unavailable'), 'missing scores stay unavailabl
 assert.ok(!options.includes('Score 0'), 'null is never coerced to a zero score');
 assert.ok(!options.includes('2999') && !options.includes('<script>'), 'future and malformed periods are excluded');
 console.log('Reporting period behaviour passed: future/invalid months rejected and null score preserved.');
+
+options='';
+run('LIVE_REQUEST_SEQ=2',periodContext);
+await run("populateMonthSelect('obsolete-employer', '', '', 1)",periodContext);
+assert.equal(options,'','obsolete month-picker response cannot overwrite the current employer');
+console.log('Reporting period race protection passed.');

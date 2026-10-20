@@ -1,3 +1,4 @@
+import { createDashboardPublicationStream } from "./services/dashboardPublicationStream.js";
 import { inspectReplacementDependencies } from "./services/datasetReplacementDependencies.js";
 import { previewDatasetReplacement } from "./services/datasetReplacementPreview.js";
 // ════════════════════════════════════════════════════════════════════
@@ -16,7 +17,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { prisma, snapshotEmployer, getDashboardPayload, getPublishedDashboardPayload, getPublishedDashboardState, publishedDashboardEmployerIds, monthKey } from "./services/snapshotBuilder.js";
+import { prisma, snapshotEmployer, getDashboardPayload, getPublishedDashboardPayload, getPublishedDashboardState, publishedDashboardEmployerIds, monthKey, syncDashboardCacheVersion } from "./services/snapshotBuilder.js";
 import { REPORT_FORMATS, LOAD_ORDER, getFormat } from "./services/reportFormats.js";
 import { csvTemplate, xlsxTemplate, formatManifest } from "./services/templateGenerator.js";
 import { uploadAndValidate, commitBatch, revertBatch } from "./services/importService.js";
@@ -30,7 +31,7 @@ import { publicSemanticStorageHealth } from "./services/semanticStorageSettings.
 import { readPublishedSemanticPartition } from "./services/semanticCanaryRead.js";
 import { activateEquivalentSource, bootstrapExistingSource } from "./services/sourceActivation.js";
 import { startDailyRefresh, triggerRefreshNow } from "./services/dailyRefresh.js";
-import { getConfig as getSyncConfig, saveConfig as saveSyncConfig, publicConfig as publicSyncConfig, testConnection as testSyncConnection, runSync, recoverSourceSyncState, recentSyncLogs, detectSourceChanges, previewSourceSwitch, SOURCE_CHANGE_POLL_SECONDS } from "./services/syncService.js";
+import { getConfig as getSyncConfig, saveConfig as saveSyncConfig, publicConfig as publicSyncConfig, testConnection as testSyncConnection, runSync, recoverSourceSyncState, recentSyncLogs, detectSourceChanges, pendingDashboardRetryDue, previewSourceSwitch, SOURCE_CHANGE_POLL_SECONDS } from "./services/syncService.js";
 import { recordSourceWatch, sourceWatchPublicStatus } from "./services/sourceWatchHealth.js";
 import {reportOperationalFailure} from "./services/operationalFailureService.js";
 import { listPartners, createPartner, updatePartner, deletePartner, assignUserToPartner, assignEmployerToPartner, themeForUser, themeForEmployer, themeForSlug } from "./services/partnerService.js";
@@ -519,7 +520,7 @@ app.get("/api/auth/me", async (req, reply) => {
   const user = await currentUser(req);
   if (!user) return reply.code(401).send({ error: "not signed in" });
   const ids = allowedEmployerIds(user);
-  const syncStatus = await dashboardSyncState();
+  const syncStatus = await dashboardSyncState(req);
   const publishedFallback = dashboardUsesPublishedSnapshot(syncStatus);
   const publishedIds = publishedFallback ? await publishedDashboardEmployerIds() : null;
   const visibleIds = ids === null
@@ -1429,12 +1430,20 @@ app.get("/api/admin/integration/changes", async (req, reply) => {
 // fetches incremental source changes, and never resets integration cursors.
 app.post("/api/admin/integration/sync-now", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
+  // Render standby serves reads; only the authoritative leader may import or reset data.
+  if (process.env.STANDBY_MODE === "true") {
+    return reply.code(423).send({ ok: false, error: "Source refresh is disabled on this standby. Use the designated ingestion leader." });
+  }
   const jobId = startSyncJob("manual");
   return reply.code(202).send({ ok: true, status: "ACCEPTED", jobId });
 });
 
 app.post("/api/admin/integration/sync", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
+  // Render standby serves reads; only the authoritative leader may import or reset data.
+  if (process.env.STANDBY_MODE === "true") {
+    return reply.code(423).send({ ok: false, error: "Source refresh is disabled on this standby. Use the designated ingestion leader." });
+  }
   const jobId = startSyncJob("manual");
   return reply.code(202).send({ status: "ACCEPTED", jobId });
 });
@@ -1464,6 +1473,10 @@ app.get<{ Params: { jobId: string } }>(
 // Ordinary refreshes must NEVER purge facts or reset source cursors.
 app.post("/api/admin/integration/refresh", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
+  // Render standby serves reads; only the authoritative leader may import or reset data.
+  if (process.env.STANDBY_MODE === "true") {
+    return reply.code(423).send({ ok: false, error: "Source refresh is disabled on this standby. Use the designated ingestion leader." });
+  }
   const result = await runSync("manual");
   if (!result?.ok) return reply.code(409).send(result);
   return result;
@@ -1525,6 +1538,10 @@ app.get("/api/admin/integration/dataset-replacement/preview", async (req, reply)
 //    from a stray click. ──
 app.post<{ Body: { confirm?: string } }>("/api/admin/integration/full-resync", async (req, reply) => {
   const admin = await requireAdmin(req, reply); if (!admin) return;
+  // Render standby serves reads; only the authoritative leader may import or reset data.
+  if (process.env.STANDBY_MODE === "true") {
+    return reply.code(423).send({ ok: false, error: "Source refresh is disabled on this standby. Use the designated ingestion leader." });
+  }
   if ((req.body?.confirm) !== "RESET") {
     return reply.code(400).send({ error: 'confirmation phrase missing — expected confirm: "RESET"' });
   }
@@ -1783,7 +1800,8 @@ app.get<{ Params: { slug: string } }>("/api/partner-theme/:slug", async (req) =>
   return themeForSlug(req.params.slug);
 });
 
-async function dashboardSyncState() {
+const dashboardReadVersions = new WeakMap<object, { lastSuccessfulSyncAt: string | null; lastSyncStatus: string | null }>();
+async function dashboardSyncState(request?: object) {
   const syncConfig = await prisma.integrationConfig.findUnique({
     where: { id: "default" },
     select: {
@@ -1793,16 +1811,40 @@ async function dashboardSyncState() {
       lastSyncNote: true,
     },
   });
-  return {
-    lastSuccessfulSyncAt: syncConfig?.lastSuccessfulSyncAt?.toISOString() ?? null,
+  // A different Railway/Render process may have published new dashboard data.
+  // Clear this worker's in-memory read model when the durable successful version changes.
+  const publishedVersion = syncConfig?.lastSuccessfulSyncAt?.toISOString() ?? null;
+  syncDashboardCacheVersion(publishedVersion);
+  const state = {
+    lastSuccessfulSyncAt: publishedVersion,
     lastSyncAt: syncConfig?.lastSyncAt?.toISOString() ?? null,
     lastSyncStatus: syncConfig?.lastSyncStatus ?? null,
     lastSyncNote: syncConfig?.lastSyncNote ?? null,
   };
+  if (request) dashboardReadVersions.set(request, state);
+  return state;
 }
 
+// A source import may start or finish while a large raw dashboard query is
+// running. Recheck immediately before sending; never label a mixed read with
+// the version observed before it began. Immutable fallback responses are exempt.
+app.addHook("onSend", async (req, reply, payload) => {
+  const path = req.url.split("?", 1)[0];
+  if (req.method !== "GET" || reply.statusCode !== 200 || typeof payload !== "string" ||
+      !(path === "/api/portfolio" || path === "/api/dashboard/first" || /^\/api\/employers\/[^/]+\/(dashboard|periods|score-history)$/.test(path))) return payload;
+  const body = JSON.parse(payload);
+  const started = body.syncStatus ?? dashboardReadVersions.get(req);
+  if (!started || started.servingLastSuccessful || dashboardUsesPublishedSnapshot(started)) return payload;
+  const current = await dashboardSyncState();
+  if (dashboardUsesPublishedSnapshot(current) || current.lastSuccessfulSyncAt !== started.lastSuccessfulSyncAt) {
+    reply.code(503).header("Retry-After", "5");
+    return JSON.stringify({ error: "Dashboard publication changed during this read; retrying is safe.", syncStatus: current });
+  }
+  return payload;
+});
+
 function dashboardUsesPublishedSnapshot(syncStatus: Awaited<ReturnType<typeof dashboardSyncState>>) {
-  return ["REBUILDING", "PARTIAL", "FAILED", "FULL_REFRESH_FAILED", "FULL_REFRESH_PRECHECK_FAILED"].includes(String(syncStatus.lastSyncStatus || ""));
+  return ["PROCESSING", "REBUILDING", "PARTIAL", "FAILED", "FULL_REFRESH_FAILED", "FULL_REFRESH_PRECHECK_FAILED"].includes(String(syncStatus.lastSyncStatus || ""));
 }
 
 function syncStatusForPublishedSnapshot(
@@ -1837,7 +1879,7 @@ app.get<{
     if (!canViewEmployer(user, employerId)) return reply.code(403).send({ error: "no access to this employer" });
     const queryError = dashboardQueryError(req.query);
     if (queryError) return reply.code(400).send({ error: queryError });
-    const syncStatus = await dashboardSyncState();
+    const syncStatus = await dashboardSyncState(req);
     const query = {
       period: req.query.period,
       quarter: req.query.quarter,
@@ -1891,7 +1933,7 @@ app.get<{ Params: { employerId: string }; Querystring: { site?: string; income?:
   async (req, reply) => {
     const user = await requireUser(req, reply); if (!user) return;
     if (!canViewEmployer(user, req.params.employerId)) return reply.code(403).send({ error: "no access" });
-    const syncStatus = await dashboardSyncState();
+    const syncStatus = await dashboardSyncState(req);
     if (dashboardUsesPublishedSnapshot(syncStatus)) {
       const published = await getPublishedDashboardState(req.params.employerId);
       if (!published) return sendPublishedDashboardUnavailable(reply, syncStatus);
@@ -2019,6 +2061,8 @@ app.get<{ Params: { employerId: string } }>(
   async (req, reply) => {
     const user = await requireUser(req, reply); if (!user) return;
     if (!canViewEmployer(user, req.params.employerId)) return reply.code(403).send({ error: "no access to this employer" });
+    const syncStatus = await dashboardSyncState(req);
+    if (dashboardUsesPublishedSnapshot(syncStatus)) return sendPublishedDashboardUnavailable(reply, syncStatus);
     const snaps = await prisma.scoreSnapshot.findMany({
       where: { employerId: req.params.employerId },
       orderBy: { period: "asc" },
@@ -2137,6 +2181,11 @@ function startSyncScheduler(app: any) {
         recordSourceWatch({outcome:"ERROR",durationMs:Date.now()-startedAt});
         return;
       }
+      if (await pendingDashboardRetryDue(cfg)) {
+        const result = await runSync("scheduled");
+        report(result.status === "OK" ? "SYNC_OK" : "SYNC_FAILED");
+        return;
+      }
       if (changes.supported && changes.changed) {
         app.log.info(
           { reports: changes.reports.map((x: any) => x.reportKey) },
@@ -2213,7 +2262,7 @@ app.get<{ Querystring: { period?: string; quarter?: string; range?: "30d" | "qua
   async (req, reply) => {
     const user = await requireUser(req, reply); if (!user) return;
     if (!canAccessModule(user, "portfolio")) return reply.code(403).send({ error: "no portfolio access" });
-    const syncStatus = await dashboardSyncState();
+    const syncStatus = await dashboardSyncState(req);
     const usePublished = dashboardUsesPublishedSnapshot(syncStatus);
     const queryError = dashboardQueryError(req.query);
     if (queryError) return reply.code(400).send({ error: queryError });
@@ -2237,7 +2286,7 @@ app.get<{ Querystring: { period?: string; quarter?: string; range?: "30d" | "qua
       const payload: any = usePublished
         ? await getPublishedDashboardPayload(employer.id, req.query)
         : await getDashboardPayload(employer.id, req.query);
-      if (!payload) continue;
+      if (!payload) return sendPublishedDashboardUnavailable(reply, syncStatus);
       publishedAt ??= published?.capturedAt ?? null;
       filterContext ??= payload.filterContext;
       out.push({ id: employer.id, name: employer.name, heads: payload.headcount, ...payload.portfolio });
@@ -2252,14 +2301,46 @@ app.get<{ Querystring: { period?: string; quarter?: string; range?: "30d" | "qua
 );
 
 // ── convenience: live dashboard of the first employer THIS USER can see ──
+const dashboardPublications = createDashboardPublicationStream(async () => {
+  const config = await prisma.integrationConfig.findUnique({
+    where: { id: "default" }, select: { lastSuccessfulSyncAt: true },
+  });
+  return config?.lastSuccessfulSyncAt?.toISOString() ?? null;
+});
+app.get("/api/dashboard/events", async (req, reply) => {
+  if (!(await requireUser(req, reply))) return;
+  let ready = false;
+  const unsubscribe = dashboardPublications.subscribe(version => {
+    if (!ready || reply.raw.destroyed) return;
+    if (!reply.raw.write(`event: publication\ndata: ${JSON.stringify({ version })}\n\n`)) reply.raw.end();
+  });
+  if (!unsubscribe) return reply.code(503).send({ error: "Live notifications busy; use version polling." });
+  reply.hijack();
+  reply.raw.writeHead(200, {
+    "Content-Type": "text/event-stream; charset=utf-8",
+    "Cache-Control": "private, no-store, no-transform",
+    "X-Accel-Buffering": "no",
+    "Connection": "keep-alive",
+  });
+  ready = true;
+  reply.raw.write("retry: 3000\n\n: connected\n\n");
+  const heartbeat = setInterval(() => {
+    if (!reply.raw.write(": heartbeat\n\n")) reply.raw.end();
+  }, 15000);
+  // Reconnect through requireUser regularly; a revoked session cannot keep an
+  // authenticated stream indefinitely. Payload APIs always authorize each read.
+  const expiry = setTimeout(() => reply.raw.end(), 60000);
+  const cleanup = () => { clearInterval(heartbeat); clearTimeout(expiry); unsubscribe(); };
+  reply.raw.once("close", cleanup);
+  req.raw.once("aborted", cleanup);
+});
+
 app.get("/api/dashboard/version", async (req, reply) => {
   const user = await requireUser(req, reply); if (!user) return;
-  const syncStatus = await dashboardSyncState();
-  // Version the browser by the source watermark, not by a no-op heartbeat.
-  // This avoids repainting dashboards when the scheduler merely confirms that
-  // nothing changed in the connected database.
-  const latest = await prisma.integrationCursor.aggregate({ _max: { lastSourceUpdatedAt: true } });
-  return { version: latest._max.lastSourceUpdatedAt?.toISOString() ?? null, syncStatus };
+  const syncStatus = await dashboardSyncState(req);
+  // Only advertise a new browser version after its affected dashboard snapshots
+  // have completed successfully; a source cursor alone is not publish evidence.
+  return { version: syncStatus.lastSuccessfulSyncAt, syncStatus };
 });
 
 app.get<{ Querystring: { period?: string; quarter?: string; range?: "30d" | "quarter" | "all" | "month" | "30" | "q" | "latest"; site?: string; income?: string } }>(
@@ -2269,7 +2350,7 @@ app.get<{ Querystring: { period?: string; quarter?: string; range?: "30d" | "qua
     if (!user) return;
     const queryError = dashboardQueryError(req.query);
     if (queryError) return reply.code(400).send({ error: queryError });
-    const syncStatus = await dashboardSyncState();
+    const syncStatus = await dashboardSyncState(req);
     const usePublished = dashboardUsesPublishedSnapshot(syncStatus);
     const ids = allowedEmployerIds(user);
     const publishedIds = usePublished ? await publishedDashboardEmployerIds() : null;
