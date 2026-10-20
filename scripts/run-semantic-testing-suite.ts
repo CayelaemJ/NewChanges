@@ -3,6 +3,7 @@
 // concurrent CircleCI pipeline fails closed rather than corrupting fixtures.
 import { spawn } from "node:child_process";
 import { Client } from "pg";
+import { semanticListenerConnectionString } from "../src/services/semanticQueueWake.js";
 
 const database="newchanges_testing_20261017";
 const lockKey=16920261019;
@@ -41,7 +42,17 @@ async function child(script:string) {
 
 async function main() {
   validate();
-  const client=new Client({connectionString:process.env.DATABASE_URL,connectionTimeoutMillis:10_000});
+  // The lock must live on a direct session: transaction poolers cannot
+  // provide safe session-level advisory lock semantics.
+  const direct=semanticListenerConnectionString({
+    ...process.env,
+    ENABLE_SEMANTIC_EVENT_WORKER:"true",
+    ENABLE_SEMANTIC_SHADOW_WORKER:"true",
+    ENABLE_SEMANTIC_OBJECT_PUBLISH:"true",
+    ENABLE_SEMANTIC_RECOMPUTE:"true",
+    STANDBY_MODE:"false",
+  });
+  const client=new Client({connectionString:direct,connectionTimeoutMillis:10_000});
   let acquired=false;
   try {
     await client.connect();
