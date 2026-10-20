@@ -99,8 +99,8 @@ jobs:
               echo "Refusing concurrent or incorrectly scoped semantic Testing workflows."
               exit 1
             fi
-            if [ -z "${SEMANTIC_TESTING_DATABASE_URL:-}" ]; then
-              echo "Missing dedicated SEMANTIC_TESTING_DATABASE_URL restricted Testing context secret; refusing E2E."
+            if [ -z "${SEMANTIC_TESTING_DATABASE_URL:-}" ] || [ -z "${SEMANTIC_LISTEN_DATABASE_URL:-}" ]; then
+              echo "Both pooled and direct restricted Neon Testing connection secrets are required; refusing E2E."
               exit 1
             fi
             if [ "${RAILWAY_ENVIRONMENT_NAME:-}" = "Production" ]; then
