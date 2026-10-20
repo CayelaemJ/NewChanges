@@ -181,8 +181,11 @@ for(const [self,others] of [
   assert(circleci.includes(guard),"Manual workflow must refuse concurrent Testing flags: "+self);
 }
 assert(suite.includes("pg_try_advisory_lock") && suite.includes("pg_advisory_unlock") &&
-  suite.includes('url.pathname')===false && suite.includes('u.pathname!=="/"+database'),
-  "Testing suite must hold a session lock and refuse non-Testing databases");
+  suite.includes('url.pathname')===false && suite.includes('u.pathname!=="/"+database') &&
+  suite.includes('semanticListenerConnectionString({'),
+  "Testing suite must hold a direct Neon session lock and refuse non-Testing databases");
+assert(circleci.includes('if [ -z "${SEMANTIC_TESTING_DATABASE_URL:-}" ] || [ -z "${SEMANTIC_LISTEN_DATABASE_URL:-}" ]'),
+  "Data-writing CI must require a direct Neon Testing lock connection");
 assert(circleci.includes("npm run semantic:e2e:suite"),
   "CircleCI must run stages under the exclusive Testing lock");
 console.log("Isolated Neon synthetic fixture and score-delta runner safety assertions passed");
