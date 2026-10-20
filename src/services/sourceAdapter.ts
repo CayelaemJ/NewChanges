@@ -10,6 +10,7 @@
 //  calculations.
 // ════════════════════════════════════════════════════════════════════
 
+import { readSourceJson } from "./boundedSourceJson.js";
 import { LOAD_ORDER, getFormat } from "./reportFormats.js";
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
@@ -66,6 +67,15 @@ export interface SourceAdapter {
   describe?(reportKey: string): Promise<{ database: string | null; totalRows: number; newest: string | null; location: string }>;
   watermark?(reportKey: string): Promise<{ newest: string | null; location: string }>;
   close(): Promise<void>;
+}
+
+function sourceOrder(reportKey:string):string {
+  const format=getFormat(reportKey);
+  if(!format)throw new Error("Unknown canonical feed");
+  return ["source_updated_at",...format.naturalKey].map(k=>{
+    if(!/^[A-Za-z_][A-Za-z0-9_]*$/.test(k))throw new Error("Invalid canonical key");
+    return `${k} ASC`;
+  }).join(", ");
 }
 
 const IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
@@ -230,7 +240,7 @@ function privateOrLocalAddress(address: string): boolean {
 async function assertSafeApiBaseUrl(raw: string): Promise<string> {
   let url: URL;
   try { url = new URL(raw); } catch { throw new Error("API base URL must be a valid URL."); }
-  if (url.protocol !== "https:" && url.protocol !== "http:") throw new Error("API base URL must use HTTP or HTTPS.");
+  if (url.protocol !== "https:") throw new Error("API base URL must use HTTPS to protect source credentials and records.");
   if (url.username || url.password || url.hash) throw new Error("API base URL must not contain credentials or fragments.");
   const hostname = url.hostname.toLowerCase().replace(/^\[|\]$/g, "");
   if (!hostname || hostname === "localhost" || hostname.endsWith(".local") || hostname === "metadata.google.internal") {
@@ -261,12 +271,14 @@ async function createApiAdapter(config: IntegrationSourceConfig): Promise<Source
   const baseUrl = await assertSafeApiBaseUrl(rawBaseUrl);
   const token = process.env.SOURCE_API_TOKEN || config.authToken || null;
 
-  async function fetchReport(reportKey: string, window?: SourceWindow): Promise<SourceFetchResult> {
+  async function fetchPage(reportKey: string, window?: SourceWindow, cursor?:string): Promise<SourceFetchResult & {nextCursor?:string}> {
     const root = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
     const url = new URL(`api/empower-fin/${reportKey}`, root);
     if (window?.since) url.searchParams.set("since", window.since.toISOString());
     if (window?.through) url.searchParams.set("through", window.through.toISOString());
 
+    url.searchParams.set("limit", "5000");
+    if(cursor)url.searchParams.set("cursor",cursor);
     // Revalidate immediately before each request; a pinned connection or egress firewall
     // is still required to eliminate the DNS lookup-to-connect race completely.
     await assertSafeApiBaseUrl(url.toString());
@@ -279,19 +291,42 @@ async function createApiAdapter(config: IntegrationSourceConfig): Promise<Source
     });
     if (!response.ok) throw new Error(`HTTP ${response.status} from ${reportKey} endpoint`);
 
-    const body: any = await response.json();
+    const body: any = await readSourceJson(response);
     const records = Array.isArray(body) ? body : body?.records;
     if (!Array.isArray(records)) throw new Error(`${reportKey}: response missing "records" array`);
-    return { records, location: url.toString() };
+    const nextCursor=Array.isArray(body)?undefined:body?.nextCursor;
+    if(nextCursor!=null && (typeof nextCursor!=="string" || !nextCursor || nextCursor.length>2048))
+      throw new Error(`${reportKey}: invalid API pagination cursor`);
+    return { records, location: `${baseUrl} [${reportKey}]`, nextCursor:nextCursor??undefined };
   }
 
+  async function* iterateReportPages(reportKey:string,window?:SourceWindow):AsyncGenerator<SourceFetchResult> {
+    let cursor:string|undefined;
+    const seen=new Set<string>();
+    for(let page=0;page<10000;page++) {
+      const result=await fetchPage(reportKey,window,cursor);
+      for(let start=0;start<result.records.length;start+=5000)
+        yield {records:result.records.slice(start,start+5000),location:result.location};
+      if(!result.nextCursor)return;
+      if(seen.has(result.nextCursor))throw new Error("API pagination cursor repeated");
+      seen.add(result.nextCursor);cursor=result.nextCursor;
+    }
+    throw new Error("API pagination exceeds page budget");
+  }
+  const fetchReport=(reportKey:string,window?:SourceWindow)=>fetchPage(reportKey,window);
   return {
     mode: "API",
     label: `API ${baseUrl}`,
     fetchReport,
+    iterateReportPages,
     async test() {
-      const result = await fetchReport("employers", { through: new Date() });
-      return { ok: true, note: `Connected to API. The employers endpoint returned ${result.records.length} record(s).` };
+      for(const reportKey of LOAD_ORDER){
+        const result=await fetchPage(reportKey,{through:new Date()});
+        const format=getFormat(reportKey)!;
+        if(result.records.length && format.fields.some(f=>f.required && !(f.name in result.records[0])))
+          throw new Error(`${reportKey}: API record is missing contracted columns`);
+      }
+      return {ok:true,note:"Connected to API. All 10 canonical endpoints passed bounded response preflight (first page only)."};
     },
     async close() {},
   };
@@ -304,6 +339,7 @@ interface SqlQueryResult {
 
 interface SqlExecutor {
   dialect: SqlDialect;
+  beginSnapshot(): Promise<() => Promise<void>>;
   queryReport(reportKey: string, window: SourceWindow, maxRows: number | null, sourceViewOverride?: string | null, offset?: number): Promise<SqlQueryResult>;
   probe(reportKey: string): Promise<string[]>;
   describe(reportKey: string): Promise<{ database: string | null; totalRows: number; newest: string | null }>;
@@ -352,6 +388,10 @@ async function openPostgresExecutor(config: IntegrationSourceConfig): Promise<Sq
 
   return {
     dialect: "POSTGRESQL",
+    async beginSnapshot() {
+      await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
+      return async()=>{await client.query("ROLLBACK");};
+    },
     async queryReport(reportKey, window, maxRows, sourceViewOverride, offset = 0) {
       const view = qualifiedView("POSTGRESQL", config, reportKey, sourceViewOverride);
       const params: unknown[] = [];
@@ -361,10 +401,10 @@ async function openPostgresExecutor(config: IntegrationSourceConfig): Promise<Sq
       let limitSql = "";
       if (maxRows != null) {
         params.push(maxRows);
-        limitSql = ` LIMIT ${params.length}`;
+        limitSql = ` LIMIT $${params.length}`;
       }
       const offsetSql = maxRows != null && offset > 0 ? ` OFFSET ${Math.max(0, Math.trunc(offset))}` : "";
-      const sql = `SELECT * FROM ${view}${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY source_updated_at ASC${limitSql}${offsetSql}`;
+      const sql = `SELECT * FROM ${view}${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY ${sourceOrder(reportKey)}${limitSql}${offsetSql}`;
       const result = await client.query(sql, params);
       return { rows: result.rows, columns: result.fields?.map((f: any) => String(f.name)) ?? [] };
     },
@@ -410,6 +450,11 @@ async function openMysqlExecutor(config: IntegrationSourceConfig): Promise<SqlEx
 
   return {
     dialect: "MYSQL",
+    async beginSnapshot() {
+      await connection.query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ");
+      await connection.query("START TRANSACTION WITH CONSISTENT SNAPSHOT, READ ONLY");
+      return async()=>{await connection.query("ROLLBACK");};
+    },
     async queryReport(reportKey, window, maxRows, sourceViewOverride, offset = 0) {
       const view = qualifiedView("MYSQL", config, reportKey, sourceViewOverride);
       const params: unknown[] = [];
@@ -423,7 +468,7 @@ async function openMysqlExecutor(config: IntegrationSourceConfig): Promise<SqlEx
       }
       const offsetSql = maxRows != null && offset > 0 ? " OFFSET ?" : "";
       if (maxRows != null && offset > 0) params.push(Math.max(0, Math.trunc(offset)));
-      const sql = `SELECT * FROM ${view}${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY source_updated_at ASC${limitSql}${offsetSql}`;
+      const sql = `SELECT * FROM ${view}${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY ${sourceOrder(reportKey)}${limitSql}${offsetSql}`;
       const [rows, fields] = await connection.query({ sql, timeout: queryTimeout }, params);
       return {
         rows: Array.isArray(rows) ? rows as Record<string, unknown>[] : [],
@@ -471,19 +516,26 @@ async function openMssqlExecutor(config: IntegrationSourceConfig): Promise<SqlEx
     options: { encrypt, trustServerCertificate: trust, enableArithAbort: true, useUTC: true },
   }).connect();
 
+  let snapshot:any=null;
   return {
     dialect: "MSSQL",
+    async beginSnapshot() {
+      snapshot=new mssql.Transaction(pool);
+      try{await snapshot.begin(mssql.ISOLATION_LEVEL.SNAPSHOT);}
+      catch(error){snapshot=null;throw error;}
+      return async()=>{try{await snapshot.rollback();}finally{snapshot=null;}};
+    },
     async queryReport(reportKey, window, maxRows, sourceViewOverride, offset = 0) {
       const view = qualifiedView("MSSQL", config, reportKey, sourceViewOverride);
-      const request = pool.request();
+      const request = snapshot ? new mssql.Request(snapshot) : pool.request();
       if (maxRows != null) request.input("limit", mssql.Int, maxRows);
       if (maxRows != null) request.input("offset", mssql.Int, Math.max(0, Math.trunc(offset)));
       const where: string[] = [];
       if (window.since) { request.input("since", mssql.DateTimeOffset, window.since); where.push("source_updated_at > @since"); }
       if (window.through) { request.input("through", mssql.DateTimeOffset, window.through); where.push("source_updated_at <= @through"); }
       const sql = maxRows == null
-        ? `SELECT * FROM ${view}${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY source_updated_at ASC`
-        : `SELECT * FROM ${view}${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY source_updated_at ASC OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY`;
+        ? `SELECT * FROM ${view}${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY ${sourceOrder(reportKey)}`
+        : `SELECT * FROM ${view}${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY ${sourceOrder(reportKey)} OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY`;
       const result = await request.query(sql);
       const rows = Array.isArray(result.recordset) ? result.recordset as Record<string, unknown>[] : [];
       const columns = result.recordset?.columns ? Object.keys(result.recordset.columns) : (rows[0] ? Object.keys(rows[0]) : []);
@@ -566,7 +618,7 @@ async function createSqlAdapter(config: IntegrationSourceConfig): Promise<Source
   // force one enormous source query. Keep pages bounded to protect the source
   // database and Railway memory while the write side continues using its own
   // 20k bulk chunks.
-  const extractionPageSize = intSetting(config.sqlMaxRowsPerReport, 50_000, 1_000, 250_000);
+  const extractionPageSize = Math.min(5000, intSetting(config.sqlMaxRowsPerReport, 5000, 1000, 250_000));
   let executor: SqlExecutor;
   let replicaExecutor: SqlExecutor | null = null;
   try {
@@ -609,6 +661,8 @@ async function createSqlAdapter(config: IntegrationSourceConfig): Promise<Source
     if (options?.useReplica && !selectedExecutor) throw new Error("Read replica is required for " + reportKey + ", but no approved replica is configured.");
     const activeExecutor = selectedExecutor ?? executor;
     const location = `${dialect}${options?.useReplica ? "-REPLICA" : ""}:${formatSqlLocation(options?.useReplica && replicaExecutor ? { ...config, sqlSchema: config.sqlReplicaSchema ?? config.sqlSchema } : config, reportKey)}`;
+    const endSnapshot=await activeExecutor.beginSnapshot();
+    try {
     let offset = 0;
     while (true) {
       const page = await activeExecutor.queryReport(reportKey, window, extractionPageSize, sourceViewOverride, offset);
@@ -621,6 +675,7 @@ async function createSqlAdapter(config: IntegrationSourceConfig): Promise<Source
       offset += page.rows.length;
       if(!Number.isSafeInteger(offset))throw new Error("SQL pagination offset exceeded safe integer range");
     }
+    } finally {await endSnapshot();}
   }
 
   async function fetchReport(reportKey: string, window: SourceWindow = {}, sourceViewOverride?: string | null, options?: { useReplica?: boolean; authoritative?: boolean }): Promise<SourceFetchResult> {
@@ -636,6 +691,8 @@ async function createSqlAdapter(config: IntegrationSourceConfig): Promise<Source
     // database without one giant SELECT monopolising the source connection.
     while (true) {
       const page = await activeExecutor.queryReport(reportKey, window, extractionPageSize, sourceViewOverride, offset);
+      if(records.length+page.rows.length>50_000)
+        throw new Error("Full-array reconciliation exceeds 50,000 rows; use the bounded staging reconciliation workflow");
       records.push(...normalizeSqlRows(reportKey, page.rows));
       if (page.rows.length < extractionPageSize) break;
       offset += page.rows.length;

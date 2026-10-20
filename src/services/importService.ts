@@ -32,6 +32,8 @@ export interface CommitProgress {
 
 interface CommitOptions {
   recompute?: boolean;
+  // A source feed owns one audit record across many bounded staging pages.
+  finalizeAudit?: boolean;
   onProgress?: (progress: CommitProgress) => void | Promise<void>;
 }
 
@@ -815,7 +817,7 @@ export async function commitBatch(batchId: string, options: CommitOptions = {}) 
     });
   }
 
-  await prisma.importBatch.update({
+  if(options.finalizeAudit !== false) await prisma.importBatch.update({
     where: { id: batchId },
     data: {
       status: "COMMITTED",
@@ -1044,3 +1046,4 @@ export async function resetAllData() {
 }
 
 export { prisma };
+

@@ -69,11 +69,11 @@ must(sync.includes('trigger: "manual" | "scheduled" | "full-refresh"'), "sync pi
 must(sync.includes('const authoritativeOverwrite = trigger === "full-refresh"'), "full refresh must explicitly enter authoritative overwrite mode");
 must(sync.includes('const requestSince = authoritativeOverwrite ? null'), "authoritative overwrite must always read the source from the beginning, regardless of old cursors");
 must(sync.includes('through: authoritativeOverwrite ? undefined : throughAt'), "authoritative overwrite must remove the through timestamp too, so Reset rereads the entire connected source without any time-window filter");
-must(sync.includes('authoritativeOverwrite && sourceTotalRows != null && sourceTotalRows > 0 && pulled.records.length === 0'), "authoritative rebuild must reject a false 0-row extraction when the connected SQL source view actually contains rows");
+must(sync.includes('authoritativeOverwrite && sourceTotalRows != null && sourceTotalRows > 0 && result.rowCount === 0'), "authoritative rebuild must reject a false 0-row extraction when the connected SQL source view actually contains rows");
 must(sync.includes('authoritativeOverwrite\n          ? { status: "PASS"') && sync.includes('BYPASSED_AUTHORITATIVE_OVERWRITE'), "authoritative overwrite must bypass MLOps gating rather than inherit prior decisions");
-must(sync.includes('commitSyncRows(reportKey, result.rows as Record<string, any>[], reportProgress, { authoritativeOverwrite })'), "bulk writes must receive authoritative overwrite semantics");
+must(sync.includes('commitSyncRows(reportKey, pageRows, pageProgress, { authoritativeOverwrite })'), "bulk writes must receive authoritative overwrite semantics");
 must(sync.includes('authoritative: authoritativeOverwrite'), "authoritative source extraction must be explicitly requested");
-must(sourceAdapter.includes('const extractionPageSize = intSetting(config.sqlMaxRowsPerReport, 50_000, 1_000, 250_000)'), "SQL extraction must use a bounded page size rather than a total-feed row cap");
+must(sourceAdapter.includes('const extractionPageSize = Math.min(5000, intSetting(config.sqlMaxRowsPerReport, 5000, 1000, 250_000))'), "SQL extraction must use a bounded page size rather than a total-feed row cap");
 must(sourceAdapter.includes('while (true)') && sourceAdapter.includes('offset += page.rows.length'), "large SQL feeds must continue page-by-page instead of failing at a fixed total row count");
 must(!sourceAdapter.includes('SQL extraction exceeded the configured'), "ordinary SQL sync must not reject a feed merely because its total row count exceeds one extraction page");
 must(sourceAdapter.includes('OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY'), "MSSQL extraction must support bounded pagination");
@@ -116,3 +116,4 @@ if (failures.length) {
   process.exit(1);
 }
 console.log("Daily refresh regression check passed: authoritative reset/refresh ignores prior cursors/MLOps/staleness, reloads from source truth, and preserves Power BI-style last-successful publishing.");
+

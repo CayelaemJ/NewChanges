@@ -30,7 +30,7 @@ function flattenNumbers(row:Record<string,unknown>) {
   return out;
 }
 
-export async function assessIncomingRows(input:{reportKey:string; rows:Record<string,unknown>[]}) {
+export async function assessIncomingRows(input:{reportKey:string; rows:Record<string,unknown>[];totalRows?:number}) {
   const rows=input.rows.slice(0,MAX_SCAN_ROWS);
   const findings:Finding[]=[];
   const fields=new Map<string,NumericStats>();
@@ -163,7 +163,7 @@ for (let i=0;i<rows.length;i++) {
     metadata:{
       reportKey:input.reportKey,
       scannedRows:rows.length,
-      truncated:input.rows.length>MAX_SCAN_ROWS,
+      truncated:(input.totalRows??input.rows.length)>MAX_SCAN_ROWS,
       findings:findings.slice(0,100),
       findingCount:findings.length
     }
@@ -172,3 +172,4 @@ for (let i=0;i<rows.length;i++) {
 }
 
 export const DATA_QUALITY_VERSION=VERSION;
+

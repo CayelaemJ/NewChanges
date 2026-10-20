@@ -30,9 +30,9 @@ import { publicSemanticStorageHealth } from "./services/semanticStorageSettings.
 import { readPublishedSemanticPartition } from "./services/semanticCanaryRead.js";
 import { activateEquivalentSource, bootstrapExistingSource } from "./services/sourceActivation.js";
 import { startDailyRefresh, triggerRefreshNow } from "./services/dailyRefresh.js";
-import { getConfig as getSyncConfig, saveConfig as saveSyncConfig, publicConfig as publicSyncConfig, testConnection as testSyncConnection, runSync, recentSyncLogs, detectSourceChanges, previewSourceSwitch, SOURCE_CHANGE_POLL_SECONDS } from "./services/syncService.js";
+import { getConfig as getSyncConfig, saveConfig as saveSyncConfig, publicConfig as publicSyncConfig, testConnection as testSyncConnection, runSync, recoverSourceSyncState, recentSyncLogs, detectSourceChanges, previewSourceSwitch, SOURCE_CHANGE_POLL_SECONDS } from "./services/syncService.js";
 import { recordSourceWatch, sourceWatchPublicStatus } from "./services/sourceWatchHealth.js";
-import {syncStatusNeedsAlert,safeSyncAlertSummary} from "./services/syncAlertPolicy.js";
+import {reportOperationalFailure} from "./services/operationalFailureService.js";
 import { listPartners, createPartner, updatePartner, deletePartner, assignUserToPartner, assignEmployerToPartner, themeForUser, themeForEmployer, themeForSlug } from "./services/partnerService.js";
 import { login, resolveSession, destroySession, destroySessionById, destroyAllSessionsForUser, canViewEmployer, canAccessModule, allowedEmployerIds, AuthUser, isAdminRole } from "./services/authService.js";
 import { createUser, listUsers, updateUser, resetPassword, completeSetup, deactivateSelf, listRevokedUsers, deleteUserPermanently, requestPasswordReset } from "./services/userService.js";
@@ -1662,7 +1662,7 @@ app.post<{ Params: { id: string } }>("/api/report-schedules/:id/send-now", async
 app.get<{ Params: { employerId: string } }>("/api/admin/mlops/assessment/:employerId", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
   try { return await runMLOpsAssessment(req.params.employerId); }
-  catch (e:any) { return reply.code(400).send({ error:e?.message||"MLOps assessment failed" }); }
+  catch (e:any) { await reportOperationalFailure("MLOPS"); return reply.code(400).send({ error:e?.message||"MLOps assessment failed" }); }
 });
 app.get("/api/admin/mlops/models", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
@@ -2102,14 +2102,11 @@ function startSyncScheduler(app: any) {
   const CHECK_MS = SOURCE_CHANGE_POLL_SECONDS * 1000;
   let tickRunning = false;
 
-  const reportFailure = (r: any) => {
-    if (!syncStatusNeedsAlert(r?.status)) return;
-    const alert=safeSyncAlertSummary(r);
-    notifyAdmins({
-      subject: `Scheduled data sync ${alert.status.toLowerCase()}`,
-      html: `<div style="font-family:Arial,sans-serif"><h2>Source refresh ${alert.status}</h2><p>${alert.reason}</p></div>`,
-      slackText: `Scheduled data sync ${alert.status} — review Administration → Live Data Integration.`,
-    }).catch(() => {});
+  let lastWatchAlert=0;
+  const reportWatchFailure=async()=>{
+    if(Date.now()-lastWatchAlert<15*60_000)return;
+    lastWatchAlert=Date.now();
+    await reportOperationalFailure("SOURCE_SYNC");
   };
 
   const tick = async () => {
@@ -2136,6 +2133,7 @@ function startSyncScheduler(app: any) {
         // than silently reporting unchanged or clearing durable data.
         app.log.error({sourceWatermarkDrift:sourceAnomalies},
           "Source watermark drift detected; ordinary incremental sync paused pending review");
+        await reportWatchFailure();
         recordSourceWatch({outcome:"ERROR",durationMs:Date.now()-startedAt});
         return;
       }
@@ -2146,7 +2144,6 @@ function startSyncScheduler(app: any) {
         );
         const r = await runSync("scheduled");
         app.log.info(`Change-triggered sync: ${r.status ?? "done"}`);
-        reportFailure(r);
         report(r.status==="OK"?"SYNC_OK":"SYNC_FAILED",changes.reports.length);
         return;
       }
@@ -2171,7 +2168,6 @@ function startSyncScheduler(app: any) {
         app.log.info("Running scheduled fallback source reconciliation…");
         const r = await runSync("scheduled");
         app.log.info(`Scheduled sync: ${r.status ?? "done"}`);
-        reportFailure(r);
         report(r.status==="OK"?"FALLBACK":"SYNC_FAILED");
       }else{
         report("UNSUPPORTED");
@@ -2179,6 +2175,7 @@ function startSyncScheduler(app: any) {
     } catch (e) {
       recordSourceWatch({outcome:"ERROR",durationMs:Date.now()-startedAt});
       app.log.error(e);
+      await reportWatchFailure();
     } finally {
       tickRunning = false;
     }
@@ -2338,6 +2335,7 @@ app.listen({ port: PORT, host: "0.0.0.0" })
     if (!standby) {
       await bootstrapAdmin();
       await ensureSectionDefaults();
+      await recoverSourceSyncState().catch(error=>app.log.error(error,"Interrupted sync recovery failed"));
       // Independent source ingestion switch: maintain dashboard freshness while
       // leaving mail, reports and maintenance jobs asleep in traffic-saver mode.
       // Never activate this on a standby or a second ingest leader.

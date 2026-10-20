@@ -54,6 +54,8 @@ jobs:
             npm run check:contract
             npm run check:neon-egress
             npm run check:source-sync-safety
+            node --max-old-space-size=192 --import tsx tests/bounded-source-feed.test.ts
+            node --import tsx tests/interrupted-sync-recovery.test.ts
             npm run check:admin-ui
             node scripts/admin-refresh-clarity-check.mjs
             node scripts/dataset-replacement-preview-check.mjs
