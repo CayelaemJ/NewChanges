@@ -36,6 +36,7 @@ assert(preflight.includes("BEGIN READ ONLY"),"Preflight must not write to databa
 const queueRunner=readFileSync("scripts/semantic-testing-queue.ts","utf8");
 const queueService=readFileSync("src/services/semanticRefreshQueue.ts","utf8");
 const circleci=readFileSync(".circleci/config.yml","utf8");
+const suite=readFileSync("scripts/run-semantic-testing-suite.ts","utf8");
 assert(queueRunner.includes("claimSemanticRefresh(workerId,180,{generationId,employerId})"),
   "Testing queue must claim only its synthetic source and employer");
 assert(queueRunner.includes("prisma.semanticRefreshJob.deleteMany"),
@@ -48,8 +49,8 @@ assert(queueService.includes('AND (${scopeEmployer} = \'\' OR "employerId" = ${s
   "Source-scoped claim SQL must filter by exact employer");
 assert(circleci.includes("semantic_testing_e2e:") && circleci.includes("default: false"),
   "Database-backed CI pipeline must default to disabled");
-assert(circleci.includes("npm run semantic:e2e:score-delta") &&
-  circleci.includes("npm run semantic:e2e:queue"),
+assert(suite.includes('"semantic:e2e:score-delta"') &&
+  suite.includes('"semantic:e2e:queue"'),
   "Manual CircleCI Testing job must execute both isolated database rehearsals");
 const publicationRunner=readFileSync("scripts/semantic-testing-publication.ts","utf8");
 assert(publicationRunner.includes('SEMANTIC_SYNTHETIC_E2E_APPROVED!=="YES_TEST_ONLY"'),
@@ -68,7 +69,7 @@ assert(publicationRunner.includes("ownedIds.includes(existing.manifestId)") &&
   "Publication cleanup must be limited to records owned by its invocation");
 assert(publicationRunner.includes("objectStoreVerified:false"),
   "Metadata-only rehearsal must never claim external durability");
-assert(circleci.includes("npm run semantic:e2e:publication-metadata"),
+assert(suite.includes('"semantic:e2e:publication-metadata"'),
   "Manual CircleCI Testing workflow must include publication and rollback rehearsal");
 assert(circleci.includes("context: newchanges-neon-testing"),
   "Manual CircleCI Testing workflow must use restricted Testing credentials");
@@ -89,7 +90,7 @@ assert(transportPublication.includes("externalDurabilityVerified:false"),
 assert(transportPublication.includes("if(pointer && !ids.includes(pointer.manifestId))") &&
   transportPublication.includes("semanticSnapshotManifest.deleteMany"),
   "Cleanup must reject foreign pointers and remove only owned manifests");
-assert(circleci.includes("npm run semantic:e2e:storage-publication"),
+assert(suite.includes('"semantic:e2e:storage-publication"'),
   "Storage publication rehearsal must only run in manual CircleCI Testing job");
 const fullRehearsal=readFileSync("scripts/semantic-testing-full-e2e.ts","utf8");
 assert(fullRehearsal.includes('SEMANTIC_SYNTHETIC_E2E_APPROVED!=="YES_TEST_ONLY"'),
@@ -112,7 +113,7 @@ assert(fullRehearsal.includes("externalDurabilityVerified:false") &&
 assert(fullRehearsal.includes("where:{id:journeyId,monthlySavingCents:30000}") &&
   fullRehearsal.includes("await prisma.$disconnect()"),
   "Synthetic source must be restored and Neon client disconnected");
-assert(circleci.includes("npm run semantic:e2e:canonical-to-canary") &&
+assert(suite.includes('"semantic:e2e:canonical-to-canary"') &&
   circleci.includes("context: newchanges-neon-testing"),
   "Full integration test must only run with manually authorized Testing credentials");
 const readOnlyStorage=readFileSync("src/services/semanticRealStorageRead.ts","utf8");
@@ -179,4 +180,9 @@ for(const [self,others] of [
     others[0]+' >>" = "true" ] || [ "<< pipeline.parameters.'+others[1]+' >>" = "true" ]';
   assert(circleci.includes(guard),"Manual workflow must refuse concurrent Testing flags: "+self);
 }
+assert(suite.includes("pg_try_advisory_lock") && suite.includes("pg_advisory_unlock") &&
+  suite.includes('url.pathname')===false && suite.includes('u.pathname!=="/"+database'),
+  "Testing suite must hold a session lock and refuse non-Testing databases");
+assert(circleci.includes("npm run semantic:e2e:suite"),
+  "CircleCI must run stages under the exclusive Testing lock");
 console.log("Isolated Neon synthetic fixture and score-delta runner safety assertions passed");
