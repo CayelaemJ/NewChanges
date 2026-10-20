@@ -122,12 +122,7 @@ jobs:
             export SEMANTIC_SYNTHETIC_E2E_APPROVED=YES_TEST_ONLY
             export ENABLE_SEMANTIC_SHADOW_WORKER=false
             export ENABLE_SEMANTIC_OBJECT_PUBLISH=false
-            npm run semantic:e2e:preflight
-            npm run semantic:e2e:score-delta
-            npm run semantic:e2e:queue
-            npm run semantic:e2e:publication-metadata
-            npm run semantic:e2e:storage-publication
-            npm run semantic:e2e:canonical-to-canary
+            npm run semantic:e2e:suite
 
   admin_browser_smoke:
     docker:
