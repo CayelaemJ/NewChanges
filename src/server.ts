@@ -1429,12 +1429,22 @@ app.get("/api/admin/integration/changes", async (req, reply) => {
 // fetches incremental source changes, and never resets integration cursors.
 app.post("/api/admin/integration/sync-now", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
+  // Standby is a read-only serving fallback, not a source-ingestion leader.
+  // In particular, never allocate a full SQL extract on a small standby instance.
+  if (process.env.STANDBY_MODE === "true") {
+    return reply.code(423).send({ok:false,error:"Source refresh is disabled on this standby. Run it on the designated ingestion leader."});
+  }
   const jobId = startSyncJob("manual");
   return reply.code(202).send({ ok: true, status: "ACCEPTED", jobId });
 });
 
 app.post("/api/admin/integration/sync", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
+  // Standby is a read-only serving fallback, not a source-ingestion leader.
+  // In particular, never allocate a full SQL extract on a small standby instance.
+  if (process.env.STANDBY_MODE === "true") {
+    return reply.code(423).send({ok:false,error:"Source refresh is disabled on this standby. Run it on the designated ingestion leader."});
+  }
   const jobId = startSyncJob("manual");
   return reply.code(202).send({ status: "ACCEPTED", jobId });
 });
@@ -1464,6 +1474,11 @@ app.get<{ Params: { jobId: string } }>(
 // Ordinary refreshes must NEVER purge facts or reset source cursors.
 app.post("/api/admin/integration/refresh", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
+  // Standby is a read-only serving fallback, not a source-ingestion leader.
+  // In particular, never allocate a full SQL extract on a small standby instance.
+  if (process.env.STANDBY_MODE === "true") {
+    return reply.code(423).send({ok:false,error:"Source refresh is disabled on this standby. Run it on the designated ingestion leader."});
+  }
   const result = await runSync("manual");
   if (!result?.ok) return reply.code(409).send(result);
   return result;
@@ -1525,6 +1540,11 @@ app.get("/api/admin/integration/dataset-replacement/preview", async (req, reply)
 //    from a stray click. ──
 app.post<{ Body: { confirm?: string } }>("/api/admin/integration/full-resync", async (req, reply) => {
   const admin = await requireAdmin(req, reply); if (!admin) return;
+  // Standby is a read-only serving fallback, not a source-ingestion leader.
+  // In particular, never allocate a full SQL extract on a small standby instance.
+  if (process.env.STANDBY_MODE === "true") {
+    return reply.code(423).send({ok:false,error:"Source refresh is disabled on this standby. Run it on the designated ingestion leader."});
+  }
   if ((req.body?.confirm) !== "RESET") {
     return reply.code(400).send({ error: 'confirmation phrase missing — expected confirm: "RESET"' });
   }
