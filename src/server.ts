@@ -31,7 +31,7 @@ import { publicSemanticStorageHealth } from "./services/semanticStorageSettings.
 import { readPublishedSemanticPartition } from "./services/semanticCanaryRead.js";
 import { activateEquivalentSource, bootstrapExistingSource } from "./services/sourceActivation.js";
 import { startDailyRefresh, triggerRefreshNow } from "./services/dailyRefresh.js";
-import { getConfig as getSyncConfig, saveConfig as saveSyncConfig, publicConfig as publicSyncConfig, testConnection as testSyncConnection, runSync, recoverSourceSyncState, recentSyncLogs, detectSourceChanges, previewSourceSwitch, SOURCE_CHANGE_POLL_SECONDS } from "./services/syncService.js";
+import { getConfig as getSyncConfig, saveConfig as saveSyncConfig, publicConfig as publicSyncConfig, testConnection as testSyncConnection, runSync, recoverSourceSyncState, recentSyncLogs, detectSourceChanges, pendingDashboardRetryDue, previewSourceSwitch, SOURCE_CHANGE_POLL_SECONDS } from "./services/syncService.js";
 import { recordSourceWatch, sourceWatchPublicStatus } from "./services/sourceWatchHealth.js";
 import {reportOperationalFailure} from "./services/operationalFailureService.js";
 import { listPartners, createPartner, updatePartner, deletePartner, assignUserToPartner, assignEmployerToPartner, themeForUser, themeForEmployer, themeForSlug } from "./services/partnerService.js";
@@ -2156,6 +2156,11 @@ function startSyncScheduler(app: any) {
           "Source watermark drift detected; ordinary incremental sync paused pending review");
         await reportWatchFailure();
         recordSourceWatch({outcome:"ERROR",durationMs:Date.now()-startedAt});
+        return;
+      }
+      if (await pendingDashboardRetryDue(cfg)) {
+        const result = await runSync("scheduled");
+        report(result.status === "OK" ? "SYNC_OK" : "SYNC_FAILED");
         return;
       }
       if (changes.supported && changes.changed) {

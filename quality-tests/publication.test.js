@@ -12,6 +12,14 @@ describe('publication cache fencing',()=>{
     expect(cache.set('x',{old:true},Date.now()+10000,old)).toBe(false);
     expect(cache.get('x')).toBeUndefined();
   });
+  it('invalidates an employer and fences its outstanding read',()=>{
+    const cache=createPublicationCache(),generation=cache.generation();
+    const key=JSON.stringify(['schema','employer','2026-10']);
+    cache.set(key,1,Date.now()+10000,generation);
+    cache.invalidateEmployer('employer');
+    expect(cache.get(key)).toBeUndefined();
+    expect(cache.set(key,2,Date.now()+10000,generation)).toBe(false);
+  });
   it('enforces the entry budget even when no entries have expired',()=>{
     const cache=createPublicationCache(1), generation=cache.generation();
     cache.set('a',1,Date.now()+10000,generation);cache.set('b',2,Date.now()+10000,generation);

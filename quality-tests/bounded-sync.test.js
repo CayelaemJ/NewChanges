@@ -1,7 +1,7 @@
 import {beforeEach,describe,it,expect,vi} from 'vitest';
 const state=vi.hoisted(()=>{
-  const model=()=>({upsert:vi.fn(),update:vi.fn(async()=>({})),create:vi.fn(async()=>({id:'synthetic-batch'})),findUnique:vi.fn(async()=>null)});
-  return {bad:false,extraPage:false,feeds:[],closed:[],db:{integrationConfig:model(),integrationCursor:model(),syncLog:model(),importBatch:model(),analyticsRoute:model()},commit:vi.fn(async()=>({inserted:1,updated:0,deleted:0,skipped:0,historyRows:0})),snapshot:vi.fn(async()=>({persisted:false})),alert:vi.fn()};
+  const model=()=>({upsert:vi.fn(),update:vi.fn(async()=>({})),create:vi.fn(async()=>({id:'synthetic-batch'})),findUnique:vi.fn(async()=>null),findFirst:vi.fn(async()=>null)});
+  return {bad:false,empty:false,extraPage:false,feeds:[],closed:[],db:{integrationConfig:model(),integrationCursor:model(),syncLog:model(),importBatch:model(),analyticsRoute:model()},commit:vi.fn(async()=>({inserted:1,updated:0,deleted:0,skipped:0,historyRows:0})),snapshot:vi.fn(async()=>({persisted:false})),alert:vi.fn()};
 });
 vi.mock('@prisma/client',()=>({PrismaClient:class{constructor(){return state.db;}},Prisma:{DbNull:null}}));
 vi.mock('pg',()=>({Client:class{async connect(){} async query(){return {rows:[{acquired:true}]};}async end(){}}}));
@@ -18,6 +18,7 @@ vi.mock('../src/services/sourceAdapter.js',async()=>{
       async *iterateReportPages(key){
         state.feeds.push(key);
         try{
+          if(state.empty)return;
           const record=Object.fromEntries(getFormat(key).fields.map(f=>[f.name,f.example]));
           yield {records:[record],location:'synthetic'};
           if(state.extraPage && key==='employers')yield {records:[{...record,employer_ref:'SECOND'}],location:'synthetic'};
@@ -26,18 +27,27 @@ vi.mock('../src/services/sourceAdapter.js',async()=>{
       },
     })};
 });
-import {runSync} from '../src/services/syncService.js';
+import {runSync,pendingDashboardRetryDue} from '../src/services/syncService.js';
 import {LOAD_ORDER} from '../src/services/reportFormats.js';
 beforeEach(()=>{
-  vi.clearAllMocks();state.bad=false;state.extraPage=false;state.feeds=[];state.closed=[];
+  vi.clearAllMocks();state.bad=false;state.empty=false;state.extraPage=false;state.feeds=[];state.closed=[];
   process.env.DATABASE_URL='postgresql://synthetic.invalid/testing';
   delete process.env.ENABLE_SEMANTIC_SHADOW_ENQUEUE;
   delete process.env.STANDBY_MODE;
   state.snapshot.mockResolvedValue({persisted:false});
+  state.db.syncLog.findFirst.mockResolvedValue(null);
   state.db.integrationConfig.upsert.mockResolvedValue({sourceMode:'SQL'});
-  state.db.integrationCursor.upsert.mockImplementation(async args=>({reportKey:args.where.reportKey,lastSourceUpdatedAt:null,lastSuccessAt:null}));
+  state.db.integrationCursor.upsert.mockImplementation(async args=>({reportKey:args.where.reportKey,lastSourceUpdatedAt:state.empty?new Date('2026-10-01'):null,lastSuccessAt:state.empty?new Date('2026-10-01'):null}));
 });
 describe('bounded sync orchestration',()=>{
+  it('backs off durable dashboard retries and stops automatic retries after five attempts',async()=>{
+    const now=Date.now(),config={lastSyncStatus:'PARTIAL',lastSyncAt:new Date(now)};
+    state.db.syncLog.findFirst.mockResolvedValue({summary:{pendingSnapshotEmployerIds:['fixture'],snapshotRetryAttempt:2}});
+    expect(await pendingDashboardRetryDue(config,now+59999)).toBe(false);
+    expect(await pendingDashboardRetryDue(config,now+60000)).toBe(true);
+    state.db.syncLog.findFirst.mockResolvedValue({summary:{pendingSnapshotEmployerIds:['fixture'],snapshotRetryAttempt:5}});
+    expect(await pendingDashboardRetryDue(config,now+3600000)).toBe(false);
+  });
   it('blocks direct service calls on standby before any database or source action',async()=>{
     process.env.STANDBY_MODE='true';
     try {
@@ -56,6 +66,14 @@ describe('bounded sync orchestration',()=>{
     expect(state.db.integrationConfig.update.mock.calls.some(([a])=>a.data.lastSuccessfulSyncAt)).toBe(false);
     release();const result=await pending;expect(result.status).toBe('OK');
     expect(state.db.integrationConfig.update.mock.calls.some(([a])=>a.data.lastSuccessfulSyncAt)).toBe(true);
+  });
+  it('replays persisted snapshot debt even when a new sync has no changed employers',async()=>{
+    state.empty=true;
+    state.db.syncLog.findFirst.mockResolvedValue({summary:{pendingSnapshotEmployerIds:['previous-employer']}});
+    const result=await runSync('manual');expect(result.ok).toBe(true);
+    expect(state.snapshot).toHaveBeenCalledWith('previous-employer');
+    const completed=state.db.syncLog.update.mock.calls.find(([a])=>a.data.status==='OK');
+    expect(completed[0].data.summary.pendingSnapshotEmployerIds).toEqual([]);
   });
   it('retains the published version when recalculation fails and emits an operational alert',async()=>{
     state.snapshot.mockRejectedValueOnce(Error('synthetic snapshot failure'));
