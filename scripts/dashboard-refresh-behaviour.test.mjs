@@ -13,7 +13,7 @@ const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve
 
 test('failed refresh retries the same publication; focus events do not overlap polls',async()=>{
   const gate=deferred();let polls=0,loads=0;
-  const context=vm.createContext({document:{visibilityState:'visible'},AbortSignal,
+  const context=vm.createContext({window:{__LIVE__:true},document:{visibilityState:'visible'},AbortSignal,
     renderRefreshStatus(){},fetch:async()=>{polls++;await gate.promise;return {ok:true,json:async()=>({version:'v2'})};},
     loadLiveData:async()=>{loads++;}});
   vm.runInContext(poll,context);
@@ -99,4 +99,13 @@ test('historical array responses are also fenced against a concurrent import',as
   const reply={statusCode:200,code(n){this.statusCode=n;return this;},header(){return this;}};
   await hook(req,reply,JSON.stringify([{period:'2026-10',optimiseScore:50}]));
   assert.equal(reply.statusCode,503);
+});
+
+test('publication events cannot supersede the initial authenticated page setup',async()=>{
+  let polls=0;
+  const context=vm.createContext({window:{__LIVE__:false},document:{visibilityState:'visible'},
+    fetch:async()=>{polls++;}});
+  vm.runInContext(poll,context);
+  await vm.runInContext('checkSourceVersion()',context);
+  assert.equal(polls,0);
 });

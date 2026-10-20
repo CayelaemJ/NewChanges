@@ -3854,7 +3854,7 @@ loadLiveData();
 let __SOURCE_VERSION__ = null;
 let __SOURCE_REFRESH_BUSY__ = false;
 async function checkSourceVersion(){
-  if(document.visibilityState !== 'visible' || __SOURCE_REFRESH_BUSY__) return;
+  if(!window.__LIVE__ || document.visibilityState !== 'visible' || __SOURCE_REFRESH_BUSY__) return;
   __SOURCE_REFRESH_BUSY__=true;
   try{
     const r=await fetch('/api/dashboard/version',{cache:'no-store',signal:AbortSignal.timeout(15_000)});
