@@ -28,8 +28,6 @@ const CLOCK_SKEW_TOLERANCE_MS = 5 * 60 * 1000;
 // sources. This schedules cheap watermarks, NEVER a full ten-feed import.
 // Operators can increase the interval if their source cannot sustain it.
 export const SOURCE_CHANGE_POLL_SECONDS = sourceChangePollSeconds();
-const pendingSnapshotEmployers = new Set<string>();
-let snapshotDrainScheduled = false;
 
 export interface SyncProgress {
   phase: "CONNECTING" | "READING_SOURCE" | "VALIDATING" | "COMMITTING" | "FEED_COMPLETE" | "REBUILDING_DASHBOARD" | "COMPLETE" | "FAILED";
@@ -860,28 +858,24 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
       }
     }
   } else if (!anyFailed) {
-    for (const employerId of touchedEmployers) pendingSnapshotEmployers.add(employerId);
-    if (touchedEmployers.size && !snapshotDrainScheduled) {
-      snapshotDrainScheduled = true;
-      setImmediate(() => {
-        void (async () => {
-          try {
-            while (pendingSnapshotEmployers.size) {
-              const employerId = pendingSnapshotEmployers.values().next().value as string;
-              pendingSnapshotEmployers.delete(employerId);
-              try {
-                const r = await snapshotEmployer(employerId);
-                if (r.persisted) { notifyScoreChangeIfCurrentPeriod(employerId, r.period, r.period).catch(() => {}); runMLOpsAssessment(employerId).catch(() => reportOperationalFailure("MLOPS")); }
-              } catch (error: any) {
-                console.error(`[sync] background snapshot failed for ${employerId}:`, error?.message ?? error);
-                await reportOperationalFailure("DASHBOARD_REFRESH");
-              }
-            }
-          } finally {
-            snapshotDrainScheduled = false;
-          }
-        })();
-      });
+    // A successful source sync must not be published until affected employer
+    // dashboard calculations have completed. Background setImmediate work could
+    // previously finish AFTER lastSuccessfulSyncAt was advanced.
+    for (const employerId of touchedEmployers) {
+      try {
+        const result = await snapshotEmployer(employerId);
+        if (result.persisted) {
+          void notifyScoreChangeIfCurrentPeriod(employerId, result.period, result.period).catch(() => {});
+          void runMLOpsAssessment(employerId).catch(() => reportOperationalFailure("MLOPS"));
+        }
+      } catch (error: any) {
+        anyFailed = true;
+        summary.snapshots ??= {};
+        summary.snapshots[employerId] = { error: error?.message ?? String(error) };
+        console.error(`[sync] incremental dashboard snapshot failed for ${employerId}:`, error?.message ?? error);
+        await reportOperationalFailure("DASHBOARD_REFRESH");
+        break;
+      }
     }
   }
 
@@ -936,7 +930,7 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
   const note = status === "OK"
     ? trigger === "full-refresh"
       ? `All 10 reports synced successfully from ${mode} in dependency order; dashboard snapshots were rebuilt before completion.`
-      : `All 10 reports synced successfully from ${mode} in dependency order; changed employer snapshots were queued in the background.`
+      : `All 10 reports synced successfully from ${mode} in dependency order; affected employer dashboard snapshots were recalculated before completion.`
     : failedDetail
       ? `${failedDetail} ${blockedCount} downstream step${blockedCount === 1 ? "" : "s"} blocked to preserve load order. Last successful dashboard remains in place; failed and blocked cursors were not advanced.`
       : `${mode} sync failed before the ordered feed chain completed. Last successful dashboard remains in place.`;
