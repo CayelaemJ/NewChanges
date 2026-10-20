@@ -3184,6 +3184,9 @@ async function loadLiveData({refreshOnly=false}={}){
     DATA=live; BASE=JSON.parse(JSON.stringify(DATA)); window.__LIVE__=true;
     if(live.employer){ const h1=document.querySelector('.head h1'); if(h1) h1.firstChild.textContent=live.employer+' '; }
     const sourceAt=live.sourceDataUpdatedAt||live.dataAsOf;
+    // Record the version corresponding to THIS payload so a subsequent
+    // successful publication cannot be mistaken for the initial poll.
+    if(live.syncStatus?.lastSuccessfulSyncAt) __SOURCE_VERSION__=live.syncStatus.lastSuccessfulSyncAt;
     renderRefreshStatus(live.syncStatus,sourceAt);
     renderMonthActivity(live.monthActivity,live.filterContext); renderDataQuality(live.dataQuality); setLiveFootnote(live.filterContext);
     document.getElementById('demo-banner')?.remove();
@@ -3850,7 +3853,6 @@ async function checkSourceVersion(){
     const status=d.syncStatus?.lastSyncStatus||null;
     renderRefreshStatus(d.syncStatus);
     if(status==='REBUILDING' || status==='FULL_REFRESH_FAILED') return;
-    if(!__SOURCE_VERSION__) { __SOURCE_VERSION__=d.version||null; return; }
     if(d.version && d.version !== __SOURCE_VERSION__){
       __SOURCE_VERSION__=d.version;
       __SOURCE_REFRESH_BUSY__=true;
@@ -3862,7 +3864,9 @@ async function checkSourceVersion(){
     }
   }catch(_){}
 }
-setInterval(checkSourceVersion,180000);
+setInterval(checkSourceVersion,30000);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible') void checkSourceVersion();});
+window.addEventListener('focus',()=>{void checkSourceVersion();});
 </script>
 <script>
 /* Employer chart recolouring pass: applies to all present and future chart marks,
