@@ -16,7 +16,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { prisma, snapshotEmployer, getDashboardPayload, getPublishedDashboardPayload, getPublishedDashboardState, publishedDashboardEmployerIds, monthKey } from "./services/snapshotBuilder.js";
+import { prisma, snapshotEmployer, getDashboardPayload, getPublishedDashboardPayload, getPublishedDashboardState, publishedDashboardEmployerIds, monthKey, syncDashboardCacheVersion } from "./services/snapshotBuilder.js";
 import { REPORT_FORMATS, LOAD_ORDER, getFormat } from "./services/reportFormats.js";
 import { csvTemplate, xlsxTemplate, formatManifest } from "./services/templateGenerator.js";
 import { uploadAndValidate, commitBatch, revertBatch } from "./services/importService.js";
@@ -1429,12 +1429,20 @@ app.get("/api/admin/integration/changes", async (req, reply) => {
 // fetches incremental source changes, and never resets integration cursors.
 app.post("/api/admin/integration/sync-now", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
+  // Render standby serves reads; only the authoritative leader may import or reset data.
+  if (process.env.STANDBY_MODE === "true") {
+    return reply.code(423).send({ ok: false, error: "Source refresh is disabled on this standby. Use the designated ingestion leader." });
+  }
   const jobId = startSyncJob("manual");
   return reply.code(202).send({ ok: true, status: "ACCEPTED", jobId });
 });
 
 app.post("/api/admin/integration/sync", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
+  // Render standby serves reads; only the authoritative leader may import or reset data.
+  if (process.env.STANDBY_MODE === "true") {
+    return reply.code(423).send({ ok: false, error: "Source refresh is disabled on this standby. Use the designated ingestion leader." });
+  }
   const jobId = startSyncJob("manual");
   return reply.code(202).send({ status: "ACCEPTED", jobId });
 });
@@ -1464,6 +1472,10 @@ app.get<{ Params: { jobId: string } }>(
 // Ordinary refreshes must NEVER purge facts or reset source cursors.
 app.post("/api/admin/integration/refresh", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
+  // Render standby serves reads; only the authoritative leader may import or reset data.
+  if (process.env.STANDBY_MODE === "true") {
+    return reply.code(423).send({ ok: false, error: "Source refresh is disabled on this standby. Use the designated ingestion leader." });
+  }
   const result = await runSync("manual");
   if (!result?.ok) return reply.code(409).send(result);
   return result;
@@ -1525,6 +1537,10 @@ app.get("/api/admin/integration/dataset-replacement/preview", async (req, reply)
 //    from a stray click. ──
 app.post<{ Body: { confirm?: string } }>("/api/admin/integration/full-resync", async (req, reply) => {
   const admin = await requireAdmin(req, reply); if (!admin) return;
+  // Render standby serves reads; only the authoritative leader may import or reset data.
+  if (process.env.STANDBY_MODE === "true") {
+    return reply.code(423).send({ ok: false, error: "Source refresh is disabled on this standby. Use the designated ingestion leader." });
+  }
   if ((req.body?.confirm) !== "RESET") {
     return reply.code(400).send({ error: 'confirmation phrase missing — expected confirm: "RESET"' });
   }
@@ -1793,8 +1809,12 @@ async function dashboardSyncState() {
       lastSyncNote: true,
     },
   });
+  // A different Railway/Render process may have published new dashboard data.
+  // Clear this worker's in-memory read model when the durable successful version changes.
+  const publishedVersion = syncConfig?.lastSuccessfulSyncAt?.toISOString() ?? null;
+  syncDashboardCacheVersion(publishedVersion);
   return {
-    lastSuccessfulSyncAt: syncConfig?.lastSuccessfulSyncAt?.toISOString() ?? null,
+    lastSuccessfulSyncAt: publishedVersion,
     lastSyncAt: syncConfig?.lastSyncAt?.toISOString() ?? null,
     lastSyncStatus: syncConfig?.lastSyncStatus ?? null,
     lastSyncNote: syncConfig?.lastSyncNote ?? null,
@@ -2255,11 +2275,9 @@ app.get<{ Querystring: { period?: string; quarter?: string; range?: "30d" | "qua
 app.get("/api/dashboard/version", async (req, reply) => {
   const user = await requireUser(req, reply); if (!user) return;
   const syncStatus = await dashboardSyncState();
-  // Version the browser by the source watermark, not by a no-op heartbeat.
-  // This avoids repainting dashboards when the scheduler merely confirms that
-  // nothing changed in the connected database.
-  const latest = await prisma.integrationCursor.aggregate({ _max: { lastSourceUpdatedAt: true } });
-  return { version: latest._max.lastSourceUpdatedAt?.toISOString() ?? null, syncStatus };
+  // Only advertise a new browser version after its affected dashboard snapshots
+  // have completed successfully; a source cursor alone is not publish evidence.
+  return { version: syncStatus.lastSuccessfulSyncAt, syncStatus };
 });
 
 app.get<{ Querystring: { period?: string; quarter?: string; range?: "30d" | "quarter" | "all" | "month" | "30" | "q" | "latest"; site?: string; income?: string } }>(
