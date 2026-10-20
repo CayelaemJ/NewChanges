@@ -26,6 +26,10 @@ jobs:
           name: Require restricted context and isolated feature branch
           command: |
             set -eu
+            if [ "<< pipeline.parameters.semantic_context_readiness >>" != "true" ] || [ "<< pipeline.parameters.semantic_notify_probe >>" = "true" ] || [ "<< pipeline.parameters.semantic_testing_e2e >>" = "true" ]; then
+              echo "Refusing concurrent or incorrectly scoped semantic Testing workflows."
+              exit 1
+            fi
             if [ "${CIRCLE_BRANCH:-}" != "fix/semantic-refresh-period-validation-20261019" ]; then
               echo "Refusing context readiness outside isolated feature branch."
               exit 1
@@ -56,6 +60,10 @@ jobs:
           name: Require isolated Neon Testing credentials and feature branch
           command: |
             set -eu
+            if [ "<< pipeline.parameters.semantic_notify_probe >>" != "true" ] || [ "<< pipeline.parameters.semantic_context_readiness >>" = "true" ] || [ "<< pipeline.parameters.semantic_testing_e2e >>" = "true" ]; then
+              echo "Refusing concurrent or incorrectly scoped semantic Testing workflows."
+              exit 1
+            fi
             if [ -z "${SEMANTIC_TESTING_DATABASE_URL:-}" ] || [ -z "${SEMANTIC_LISTEN_DATABASE_URL:-}" ]; then
               echo "Isolated Testing pooled and direct listener secrets are both required; refusing probe."
               exit 1
@@ -87,6 +95,10 @@ jobs:
           name: Require dedicated isolated Neon Testing secret
           command: |
             set -eu
+            if [ "<< pipeline.parameters.semantic_testing_e2e >>" != "true" ] || [ "<< pipeline.parameters.semantic_context_readiness >>" = "true" ] || [ "<< pipeline.parameters.semantic_notify_probe >>" = "true" ]; then
+              echo "Refusing concurrent or incorrectly scoped semantic Testing workflows."
+              exit 1
+            fi
             if [ -z "${SEMANTIC_TESTING_DATABASE_URL:-}" ]; then
               echo "Missing dedicated SEMANTIC_TESTING_DATABASE_URL restricted Testing context secret; refusing E2E."
               exit 1
