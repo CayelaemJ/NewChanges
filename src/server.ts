@@ -520,7 +520,7 @@ app.get("/api/auth/me", async (req, reply) => {
   const user = await currentUser(req);
   if (!user) return reply.code(401).send({ error: "not signed in" });
   const ids = allowedEmployerIds(user);
-  const syncStatus = await dashboardSyncState();
+  const syncStatus = await dashboardSyncState(req);
   const publishedFallback = dashboardUsesPublishedSnapshot(syncStatus);
   const publishedIds = publishedFallback ? await publishedDashboardEmployerIds() : null;
   const visibleIds = ids === null
@@ -1800,7 +1800,8 @@ app.get<{ Params: { slug: string } }>("/api/partner-theme/:slug", async (req) =>
   return themeForSlug(req.params.slug);
 });
 
-async function dashboardSyncState() {
+const dashboardReadVersions = new WeakMap<object, { lastSuccessfulSyncAt: string | null; lastSyncStatus: string | null }>();
+async function dashboardSyncState(request?: object) {
   const syncConfig = await prisma.integrationConfig.findUnique({
     where: { id: "default" },
     select: {
@@ -1814,12 +1815,14 @@ async function dashboardSyncState() {
   // Clear this worker's in-memory read model when the durable successful version changes.
   const publishedVersion = syncConfig?.lastSuccessfulSyncAt?.toISOString() ?? null;
   syncDashboardCacheVersion(publishedVersion);
-  return {
+  const state = {
     lastSuccessfulSyncAt: publishedVersion,
     lastSyncAt: syncConfig?.lastSyncAt?.toISOString() ?? null,
     lastSyncStatus: syncConfig?.lastSyncStatus ?? null,
     lastSyncNote: syncConfig?.lastSyncNote ?? null,
   };
+  if (request) dashboardReadVersions.set(request, state);
+  return state;
 }
 
 // A source import may start or finish while a large raw dashboard query is
@@ -1828,11 +1831,12 @@ async function dashboardSyncState() {
 app.addHook("onSend", async (req, reply, payload) => {
   const path = req.url.split("?", 1)[0];
   if (req.method !== "GET" || reply.statusCode !== 200 || typeof payload !== "string" ||
-      !(path === "/api/portfolio" || path === "/api/dashboard/first" || /^\/api\/employers\/[^/]+\/dashboard$/.test(path))) return payload;
+      !(path === "/api/portfolio" || path === "/api/dashboard/first" || /^\/api\/employers\/[^/]+\/(dashboard|periods|score-history)$/.test(path))) return payload;
   const body = JSON.parse(payload);
-  if (!body.syncStatus || body.syncStatus.servingLastSuccessful) return payload;
+  const started = body.syncStatus ?? dashboardReadVersions.get(req);
+  if (!started || started.servingLastSuccessful || dashboardUsesPublishedSnapshot(started)) return payload;
   const current = await dashboardSyncState();
-  if (dashboardUsesPublishedSnapshot(current) || current.lastSuccessfulSyncAt !== body.syncStatus.lastSuccessfulSyncAt) {
+  if (dashboardUsesPublishedSnapshot(current) || current.lastSuccessfulSyncAt !== started.lastSuccessfulSyncAt) {
     reply.code(503).header("Retry-After", "5");
     return JSON.stringify({ error: "Dashboard publication changed during this read; retrying is safe.", syncStatus: current });
   }
@@ -1875,7 +1879,7 @@ app.get<{
     if (!canViewEmployer(user, employerId)) return reply.code(403).send({ error: "no access to this employer" });
     const queryError = dashboardQueryError(req.query);
     if (queryError) return reply.code(400).send({ error: queryError });
-    const syncStatus = await dashboardSyncState();
+    const syncStatus = await dashboardSyncState(req);
     const query = {
       period: req.query.period,
       quarter: req.query.quarter,
@@ -1929,7 +1933,7 @@ app.get<{ Params: { employerId: string }; Querystring: { site?: string; income?:
   async (req, reply) => {
     const user = await requireUser(req, reply); if (!user) return;
     if (!canViewEmployer(user, req.params.employerId)) return reply.code(403).send({ error: "no access" });
-    const syncStatus = await dashboardSyncState();
+    const syncStatus = await dashboardSyncState(req);
     if (dashboardUsesPublishedSnapshot(syncStatus)) {
       const published = await getPublishedDashboardState(req.params.employerId);
       if (!published) return sendPublishedDashboardUnavailable(reply, syncStatus);
@@ -2057,7 +2061,7 @@ app.get<{ Params: { employerId: string } }>(
   async (req, reply) => {
     const user = await requireUser(req, reply); if (!user) return;
     if (!canViewEmployer(user, req.params.employerId)) return reply.code(403).send({ error: "no access to this employer" });
-    const syncStatus = await dashboardSyncState();
+    const syncStatus = await dashboardSyncState(req);
     if (dashboardUsesPublishedSnapshot(syncStatus)) return sendPublishedDashboardUnavailable(reply, syncStatus);
     const snaps = await prisma.scoreSnapshot.findMany({
       where: { employerId: req.params.employerId },
@@ -2258,7 +2262,7 @@ app.get<{ Querystring: { period?: string; quarter?: string; range?: "30d" | "qua
   async (req, reply) => {
     const user = await requireUser(req, reply); if (!user) return;
     if (!canAccessModule(user, "portfolio")) return reply.code(403).send({ error: "no portfolio access" });
-    const syncStatus = await dashboardSyncState();
+    const syncStatus = await dashboardSyncState(req);
     const usePublished = dashboardUsesPublishedSnapshot(syncStatus);
     const queryError = dashboardQueryError(req.query);
     if (queryError) return reply.code(400).send({ error: queryError });
@@ -2333,7 +2337,7 @@ app.get("/api/dashboard/events", async (req, reply) => {
 
 app.get("/api/dashboard/version", async (req, reply) => {
   const user = await requireUser(req, reply); if (!user) return;
-  const syncStatus = await dashboardSyncState();
+  const syncStatus = await dashboardSyncState(req);
   // Only advertise a new browser version after its affected dashboard snapshots
   // have completed successfully; a source cursor alone is not publish evidence.
   return { version: syncStatus.lastSuccessfulSyncAt, syncStatus };
@@ -2346,7 +2350,7 @@ app.get<{ Querystring: { period?: string; quarter?: string; range?: "30d" | "qua
     if (!user) return;
     const queryError = dashboardQueryError(req.query);
     if (queryError) return reply.code(400).send({ error: queryError });
-    const syncStatus = await dashboardSyncState();
+    const syncStatus = await dashboardSyncState(req);
     const usePublished = dashboardUsesPublishedSnapshot(syncStatus);
     const ids = allowedEmployerIds(user);
     const publishedIds = usePublished ? await publishedDashboardEmployerIds() : null;

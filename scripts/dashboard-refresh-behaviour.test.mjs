@@ -70,7 +70,7 @@ test('the response hook rejects reads crossing an import or publication change',
       dashboardUsesPublishedSnapshot:state=>state.lastSyncStatus!=='OK'});
     const reply={statusCode:200,code(n){this.statusCode=n;return this;},header(){return this;}};
     const result=await hook({method:'GET',url:'/api/employers/fixture/dashboard'},reply,
-      JSON.stringify({syncStatus:{lastSuccessfulSyncAt:'v1'},headcount:123}));
+      JSON.stringify({syncStatus:{lastSuccessfulSyncAt:'v1',lastSyncStatus:'OK'},headcount:123}));
     assert.equal(reply.statusCode,503);
     assert.equal(JSON.parse(result).headcount,undefined);
   }
@@ -83,9 +83,20 @@ test('the response hook serves stable data and does not re-read immutable fallba
     dashboardUsesPublishedSnapshot:()=>false});
   for(const fallback of [false,true]){
     const reply={statusCode:200};
-    const payload=JSON.stringify({syncStatus:{lastSuccessfulSyncAt:'v1',servingLastSuccessful:fallback},headcount:123});
+    const payload=JSON.stringify({syncStatus:{lastSuccessfulSyncAt:'v1',lastSyncStatus:'OK',servingLastSuccessful:fallback},headcount:123});
     assert.equal(await hook({method:'GET',url:'/api/portfolio'},reply,payload),payload);
     assert.equal(reply.statusCode,200);
   }
   assert.equal(reads,1);
+});
+
+test('historical array responses are also fenced against a concurrent import',async()=>{
+  let hook;const req={method:'GET',url:'/api/employers/fixture/score-history'};
+  const starts=new WeakMap([[req,{lastSuccessfulSyncAt:'v1',lastSyncStatus:'OK'}]]);
+  vm.runInNewContext(fence,{app:{addHook(_event,handler){hook=handler;}},dashboardReadVersions:starts,
+    dashboardSyncState:async()=>({lastSuccessfulSyncAt:'v1',lastSyncStatus:'PROCESSING'}),
+    dashboardUsesPublishedSnapshot:state=>state.lastSyncStatus!=='OK'});
+  const reply={statusCode:200,code(n){this.statusCode=n;return this;},header(){return this;}};
+  await hook(req,reply,JSON.stringify([{period:'2026-10',optimiseScore:50}]));
+  assert.equal(reply.statusCode,503);
 });
