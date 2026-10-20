@@ -48,7 +48,7 @@ export async function prepareSourceFeed(format:ReportFormat, pages:AsyncIterable
       }
       const encoded=serialize(result.rows);
       const iv=randomBytes(12);
-      const cipher=createCipheriv("aes-256-gcm",key,iv);
+      const cipher=createCipheriv("aes-256-gcm",key,iv,{authTagLength:16});
       const ciphertext=Buffer.concat([cipher.update(encoded),cipher.final()]);
       const sealed=Buffer.concat([iv,cipher.getAuthTag(),ciphertext]);
       bytes+=sealed.byteLength;
@@ -64,7 +64,7 @@ export async function prepareSourceFeed(format:ReportFormat, pages:AsyncIterable
         for(const path of paths){
           if((await stat(path)).size>maxBytes)throw new Error("Invalid source staging page");
           const sealed=await readFile(path);
-          const decipher=createDecipheriv("aes-256-gcm",key,sealed.subarray(0,12));
+          const decipher=createDecipheriv("aes-256-gcm",key,sealed.subarray(0,12),{authTagLength:16});
           decipher.setAuthTag(sealed.subarray(12,28));
           yield deserialize(Buffer.concat([decipher.update(sealed.subarray(28)),decipher.final()]));
         }
