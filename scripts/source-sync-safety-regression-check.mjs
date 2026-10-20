@@ -23,6 +23,22 @@ const refresh = route(server, 'app.post("/api/admin/integration/refresh"', '// V
 assert(refresh.includes('runSync("manual")'), "refresh must be incremental");
 assert(!refresh.includes("triggerRefreshNow"), "refresh must not invoke full purge");
 assert(!refresh.includes("purge"), "refresh must not purge data");
+const standbyGuard='process.env.STANDBY_MODE === "true"';
+const syncNow = route(server, 'app.post("/api/admin/integration/sync-now"', 'app.post("/api/admin/integration/sync"');
+const syncLegacy = route(server, 'app.post("/api/admin/integration/sync"', 'app.get<{ Params: { jobId: string } }>(');
+const fullResync = route(server, 'app.post<{ Body: { confirm?: string } }>("/api/admin/integration/full-resync"', 'app.get("/api/admin/integration/replica-health"');
+for (const [name, handler, operation] of [
+  ["compatibility refresh", refresh, 'runSync("manual")'],
+  ["async sync-now", syncNow, 'startSyncJob("manual")'],
+  ["async sync", syncLegacy, 'startSyncJob("manual")'],
+  ["destructive full resync", fullResync, 'triggerRefreshNow("reset")'],
+]) {
+  assert(handler.includes(standbyGuard), name + " must be fenced when standby");
+  assert(handler.includes("reply.code(423)"), name + " must return a safe standby response");
+  assert(handler.indexOf(standbyGuard) < handler.indexOf(operation),
+    name + " must reject standby BEFORE starting an import or reset");
+}
+
 
 const reset = route(server, 'app.post<{ Body: { confirm?: string } }>("/api/admin/integration/full-resync"', 'app.get("/api/admin/integration/replica-health"');
 assert(reset.includes('req.body?.confirm') && reset.includes('"RESET"'), "full resync must require explicit confirmation");
