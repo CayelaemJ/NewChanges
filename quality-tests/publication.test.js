@@ -1,4 +1,5 @@
 import {afterEach,describe,it,expect,vi} from 'vitest';
+import {publishedCohortMatches} from '../src/services/publishedCohort.ts';
 import {createPublicationCache} from '../src/services/publicationCache.ts';
 import {createDashboardPublicationStream} from '../src/services/dashboardPublicationStream.ts';
 afterEach(()=>vi.useRealTimers());
@@ -40,5 +41,17 @@ describe('cross-instance publication observer',()=>{
     await vi.advanceTimersByTimeAsync(5000);expect(a).toHaveBeenLastCalledWith('v2');
     stopA();stopB();const count=read.mock.calls.length;
     await vi.advanceTimersByTimeAsync(15000);expect(read).toHaveBeenCalledTimes(count);
+  });
+});
+
+describe('published fallback cohorts',()=>{
+  const payload={filterContext:{period:'2026-10',range:'month',site:null,income:null}};
+  it('retains a matching immutable latest/month dashboard',()=>{
+    expect(publishedCohortMatches(payload,{range:'latest'})).toBe(true);
+    expect(publishedCohortMatches(payload,{period:'2026-10'})).toBe(true);
+  });
+  it('does not substitute latest/unfiltered data for a different selection',()=>{
+    for(const query of [{period:'2026-09'},{site:'Cape Town'},{income:'LOW'},{range:'all'},{quarter:'2026-Q4'}])
+      expect(publishedCohortMatches(payload,query)).toBe(false);
   });
 });

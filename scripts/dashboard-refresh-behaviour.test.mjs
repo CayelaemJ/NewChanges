@@ -6,6 +6,9 @@ import vm from 'node:vm';
 const html=readFileSync(new URL('../public/dashboard.html',import.meta.url),'utf8');
 const poll=html.slice(html.indexOf('let __SOURCE_VERSION__ = null;'),html.indexOf('setInterval(checkSourceVersion,30000);'));
 const loader=html.slice(html.indexOf('async function loadLiveData('),html.indexOf('async function fetchPortfolioInBackground('));
+const server=readFileSync(new URL('../src/server.ts',import.meta.url),'utf8');
+const fenceStart=server.indexOf('app.addHook("onSend"',server.indexOf('// A source import may start'));
+const fence=server.slice(fenceStart,server.indexOf('function dashboardUsesPublishedSnapshot(',fenceStart));
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return {promise,resolve,reject};};
 
 test('failed refresh retries the same publication; focus events do not overlap polls',async()=>{
@@ -53,4 +56,36 @@ test('an obsolete failed response cannot replace newer data or clear its busy st
   assert.equal(state.label.textContent,'');
   assert.equal(state.errors(),0);
   assert.equal(state.clears(),0);
+});
+
+test('the response hook rejects reads crossing an import or publication change',async()=>{
+  for(const current of [
+    {lastSuccessfulSyncAt:'v1',lastSyncStatus:'PROCESSING'},
+    {lastSuccessfulSyncAt:'v1',lastSyncStatus:'FAILED'},
+    {lastSuccessfulSyncAt:'v2',lastSyncStatus:'OK'},
+  ]){
+    let hook;
+    vm.runInNewContext(fence,{app:{addHook(_event,handler){hook=handler;}},
+      dashboardSyncState:async()=>current,
+      dashboardUsesPublishedSnapshot:state=>state.lastSyncStatus!=='OK'});
+    const reply={statusCode:200,code(n){this.statusCode=n;return this;},header(){return this;}};
+    const result=await hook({method:'GET',url:'/api/employers/fixture/dashboard'},reply,
+      JSON.stringify({syncStatus:{lastSuccessfulSyncAt:'v1'},headcount:123}));
+    assert.equal(reply.statusCode,503);
+    assert.equal(JSON.parse(result).headcount,undefined);
+  }
+});
+
+test('the response hook serves stable data and does not re-read immutable fallbacks',async()=>{
+  let hook,reads=0;
+  vm.runInNewContext(fence,{app:{addHook(_event,handler){hook=handler;}},
+    dashboardSyncState:async()=>{reads++;return {lastSuccessfulSyncAt:'v1',lastSyncStatus:'OK'};},
+    dashboardUsesPublishedSnapshot:()=>false});
+  for(const fallback of [false,true]){
+    const reply={statusCode:200};
+    const payload=JSON.stringify({syncStatus:{lastSuccessfulSyncAt:'v1',servingLastSuccessful:fallback},headcount:123});
+    assert.equal(await hook({method:'GET',url:'/api/portfolio'},reply,payload),payload);
+    assert.equal(reply.statusCode,200);
+  }
+  assert.equal(reads,1);
 });

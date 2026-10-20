@@ -3167,7 +3167,7 @@ async function loadLiveData({refreshOnly=false}={}){
     const url=id ? `${API_BASE}/api/employers/${id}/dashboard${qs}` : `${API_BASE}/api/dashboard/first${qs}`;
     // Do not make the dashboard wait for the period picker or portfolio.
     // Mobile users get the actual visual payload as soon as it arrives.
-    const periodsPromise=id ? populateMonthSelect(id,period,quarter).catch(()=>{}) : Promise.resolve();
+    const periodsPromise=id ? populateMonthSelect(id,period,quarter,requestSeq).catch(()=>{}) : Promise.resolve();
     const dashboardPromise=fetch(url,{cache:'no-store',signal:AbortSignal.timeout(60_000)}).then(async r=>{
       const body=await r.json().catch(()=>({}));
       if(!r.ok){
@@ -3262,7 +3262,7 @@ function updatePeriodControlTone(){
   sel.style.backgroundColor=tone?.bg||'';
 }
 
-async function populateMonthSelect(employerId, selected, selectedQuarter){
+async function populateMonthSelect(employerId, selected, selectedQuarter, requestSeq=LIVE_REQUEST_SEQ){
   const sel=document.getElementById('month-select'); if(!sel) return;
   sel.querySelectorAll('optgroup').forEach(g=>g.remove());
   try{
@@ -3272,6 +3272,7 @@ async function populateMonthSelect(employerId, selected, selectedQuarter){
     if(page.get('income')) qs.set('income',page.get('income'));
     const suffix=qs.toString()?`?${qs.toString()}`:'';
     const rows=await fetch(`${API_BASE}/api/employers/${encodeURIComponent(employerId)}/periods${suffix}`, { cache: 'no-store', signal: AbortSignal.timeout(30_000) }).then(r=>{if(!r.ok) throw new Error('Periods unavailable'); return r.json();});
+    if(requestSeq!==LIVE_REQUEST_SEQ) return;
     const now=new Date().toISOString().slice(0,7);
     const periods=Array.isArray(rows)?rows.filter(p=>/^\d{4}-(0[1-9]|1[0-2])$/.test(p?.period)&&p.period<=now):[];
     if(!Array.isArray(periods) || periods.length<1){

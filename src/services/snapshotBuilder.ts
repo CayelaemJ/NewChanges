@@ -1,3 +1,4 @@
+import { publishedCohortMatches } from "./publishedCohort.js";
 // ════════════════════════════════════════════════════════════════════
 //  SNAPSHOT + DASHBOARD BUILDER (v2)
 //
@@ -1482,15 +1483,10 @@ export async function getPublishedDashboardState(employerId: string): Promise<Pu
 }
 
 export async function getPublishedDashboardPayload(employerId: string, query: DashboardQuery = {}): Promise<any | null> {
-  // If the exact historical cohort was cached before the refresh started, keep
-  // honoring it. Otherwise fall back to the last successfully published latest
-  // dashboard rather than touching partially rebuilt raw tables.
-  if (query.period && query.range == null) {
-    const exact = await readPersistentDashboardCache(employerId, query);
-    if (exact) return exact;
-  }
+  // Working cohort caches are mutable during recalculation. Only the separate
+  // captured publication can be used while imports are in progress or failed.
   const published = await getPublishedDashboardState(employerId);
-  return published?.dashboard ?? null;
+  return published && publishedCohortMatches(published.dashboard, query) ? published.dashboard : null;
 }
 
 export async function publishedDashboardEmployerIds(): Promise<string[]> {

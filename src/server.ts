@@ -1822,8 +1822,25 @@ async function dashboardSyncState() {
   };
 }
 
+// A source import may start or finish while a large raw dashboard query is
+// running. Recheck immediately before sending; never label a mixed read with
+// the version observed before it began. Immutable fallback responses are exempt.
+app.addHook("onSend", async (req, reply, payload) => {
+  const path = req.url.split("?", 1)[0];
+  if (req.method !== "GET" || reply.statusCode !== 200 || typeof payload !== "string" ||
+      !(path === "/api/portfolio" || path === "/api/dashboard/first" || /^\/api\/employers\/[^/]+\/dashboard$/.test(path))) return payload;
+  const body = JSON.parse(payload);
+  if (!body.syncStatus || body.syncStatus.servingLastSuccessful) return payload;
+  const current = await dashboardSyncState();
+  if (dashboardUsesPublishedSnapshot(current) || current.lastSuccessfulSyncAt !== body.syncStatus.lastSuccessfulSyncAt) {
+    reply.code(503).header("Retry-After", "5");
+    return JSON.stringify({ error: "Dashboard publication changed during this read; retrying is safe.", syncStatus: current });
+  }
+  return payload;
+});
+
 function dashboardUsesPublishedSnapshot(syncStatus: Awaited<ReturnType<typeof dashboardSyncState>>) {
-  return ["REBUILDING", "PARTIAL", "FAILED", "FULL_REFRESH_FAILED", "FULL_REFRESH_PRECHECK_FAILED"].includes(String(syncStatus.lastSyncStatus || ""));
+  return ["PROCESSING", "REBUILDING", "PARTIAL", "FAILED", "FULL_REFRESH_FAILED", "FULL_REFRESH_PRECHECK_FAILED"].includes(String(syncStatus.lastSyncStatus || ""));
 }
 
 function syncStatusForPublishedSnapshot(
@@ -2040,6 +2057,8 @@ app.get<{ Params: { employerId: string } }>(
   async (req, reply) => {
     const user = await requireUser(req, reply); if (!user) return;
     if (!canViewEmployer(user, req.params.employerId)) return reply.code(403).send({ error: "no access to this employer" });
+    const syncStatus = await dashboardSyncState();
+    if (dashboardUsesPublishedSnapshot(syncStatus)) return sendPublishedDashboardUnavailable(reply, syncStatus);
     const snaps = await prisma.scoreSnapshot.findMany({
       where: { employerId: req.params.employerId },
       orderBy: { period: "asc" },
@@ -2263,7 +2282,7 @@ app.get<{ Querystring: { period?: string; quarter?: string; range?: "30d" | "qua
       const payload: any = usePublished
         ? await getPublishedDashboardPayload(employer.id, req.query)
         : await getDashboardPayload(employer.id, req.query);
-      if (!payload) continue;
+      if (!payload) return sendPublishedDashboardUnavailable(reply, syncStatus);
       publishedAt ??= published?.capturedAt ?? null;
       filterContext ??= payload.filterContext;
       out.push({ id: employer.id, name: employer.name, heads: payload.headcount, ...payload.portfolio });
