@@ -9,6 +9,7 @@
 
 import { IncomeBand, PrismaClient } from "@prisma/client";
 import { computeOptimiseScore, DEFAULT_WEIGHTS, DriverAvailability, ScoreInputs, Weights } from "./scoreEngine.js";
+import { createPublicationCache } from "./publicationCache.js";
 import { createBoundedDimensionCache } from "./boundedDimensionCache.js";
 
 const prisma = new PrismaClient();
@@ -22,13 +23,14 @@ const DASHBOARD_CACHE_TTL_MS = Math.min(30 * 60_000, Math.max(60_000,
   Number(process.env.SEMANTIC_CACHE_TTL_MS) || 5 * 60_000));
 const SEMANTIC_PERSIST_ON_READ = process.env.SEMANTIC_PERSIST_ON_READ === "true";
 const DASHBOARD_CACHE_SCHEMA = "financial-comparison-v3";
-const dashboardCache = new Map<string, { expiresAt: number; payload: any }>();
+const dashboardCache = createPublicationCache<any>();
 // Each serving replica observes the durable completed-sync version on dashboard
 // requests, avoiding stale process-local cached payloads after another replica syncs.
 let observedSuccessfulSyncVersion: string | null | undefined;
 export function syncDashboardCacheVersion(version: string | null): void {
   if (observedSuccessfulSyncVersion !== undefined && observedSuccessfulSyncVersion !== version) {
     dashboardCache.clear();
+    siteDimensionCache.clear();
   }
   observedSuccessfulSyncVersion = version;
 }
@@ -1565,6 +1567,7 @@ export async function capturePublishedDashboardState(employerIds?: string[]): Pr
 }
 
 export async function getDashboardPayload(employerId: string, query: DashboardQuery = {}) {
+  const cacheGeneration = dashboardCache.generation();
   // Resolve "latest" to the newest persisted monthly snapshot before cache
   // lookup. This makes the default landing page use the same fast read-model
   // path as an explicit month instead of rebuilding 100k-row source data.
@@ -1579,7 +1582,7 @@ export async function getDashboardPayload(employerId: string, query: DashboardQu
   const key = dashboardCacheKey(employerId, query);
   const hit = dashboardCache.get(key);
   const now = Date.now();
-  if (hit && hit.expiresAt > now) return hit.payload;
+  if (hit) return hit;
 
   // Exact month/cohort reads are the hot path for slicers. Resolve from the
   // persistent read model before touching Employee/Journey/Debt/Policy rows.
@@ -1588,21 +1591,18 @@ export async function getDashboardPayload(employerId: string, query: DashboardQu
   if (query.period && query.range == null) {
     const persisted = await readPersistentDashboardCache(employerId, query);
     if (persisted) {
-      dashboardCache.set(key, { expiresAt: now + DASHBOARD_CACHE_TTL_MS, payload: persisted });
+      dashboardCache.set(key, persisted, now + DASHBOARD_CACHE_TTL_MS, cacheGeneration);
       return persisted;
     }
   }
 
   const payload = await buildDashboardPayload(employerId, query);
-  dashboardCache.set(key, { expiresAt: now + DASHBOARD_CACHE_TTL_MS, payload });
+  dashboardCache.set(key, payload, now + DASHBOARD_CACHE_TTL_MS, cacheGeneration);
   // Do NOT write a cache row on ordinary dashboard reads by default.
   // Snapshot publication/refresh owns durable read-model writes; an explicit
   // opt-in preserves the legacy on-read warming behaviour if needed.
   if (SEMANTIC_PERSIST_ON_READ && query.period && query.range == null) {
     try { await persistDashboardCache(employerId, query, payload); } catch { /* cache failure must never break dashboard */ }
-  }
-  if (dashboardCache.size > 250) {
-    for (const [k, v] of dashboardCache) if (v.expiresAt <= now) dashboardCache.delete(k);
   }
   return payload;
 }
@@ -1697,7 +1697,7 @@ export async function snapshotEmployer(employerId: string, period: string = curr
   // Imported data invalidates the persistent read model. The next snapshot
   // rebuilds it from the authoritative source tables.
   await prisma.dashboardCohortCache.deleteMany({ where: { employerId, cacheKey: { not: PUBLISHED_DASHBOARD_CACHE_KEY } } });
-  for (const k of [...dashboardCache.keys()]) if (k.includes(`,"${employerId}",`)) dashboardCache.delete(k);
+  dashboardCache.invalidateEmployer(employerId);
   siteDimensionCache.invalidate(employerId);
   const payload: any = await buildDashboardPayload(employerId, { period });
   const persisted = await persistScoreSnapshot(employerId, period, payload);

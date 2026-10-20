@@ -351,6 +351,7 @@ export async function recoverSourceSyncState() {
 }
 
 export async function runSync(trigger: "manual" | "scheduled" | "full-refresh" = "manual", options: RunSyncOptions = {}) {
+  if (process.env.STANDBY_MODE === "true") return { ok: false, status: "STANDBY", note: "Source ingestion is disabled on this standby.", error: "Source ingestion is disabled on this standby." };
   // dailyRefresh.ts already owns the exclusive database lease while it calls
   // the full-refresh path. Every other sync takes a shared lease so an ordinary
   // sync can never overlap the purge/reload phase on another Railway replica.

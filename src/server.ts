@@ -1,3 +1,4 @@
+import { createDashboardPublicationStream } from "./services/dashboardPublicationStream.js";
 import { inspectReplacementDependencies } from "./services/datasetReplacementDependencies.js";
 import { previewDatasetReplacement } from "./services/datasetReplacementPreview.js";
 // ════════════════════════════════════════════════════════════════════
@@ -2272,6 +2273,40 @@ app.get<{ Querystring: { period?: string; quarter?: string; range?: "30d" | "qua
 );
 
 // ── convenience: live dashboard of the first employer THIS USER can see ──
+const dashboardPublications = createDashboardPublicationStream(async () => {
+  const config = await prisma.integrationConfig.findUnique({
+    where: { id: "default" }, select: { lastSuccessfulSyncAt: true },
+  });
+  return config?.lastSuccessfulSyncAt?.toISOString() ?? null;
+});
+app.get("/api/dashboard/events", async (req, reply) => {
+  if (!(await requireUser(req, reply))) return;
+  let ready = false;
+  const unsubscribe = dashboardPublications.subscribe(version => {
+    if (!ready || reply.raw.destroyed) return;
+    if (!reply.raw.write(`event: publication\ndata: ${JSON.stringify({ version })}\n\n`)) reply.raw.end();
+  });
+  if (!unsubscribe) return reply.code(503).send({ error: "Live notifications busy; use version polling." });
+  reply.hijack();
+  reply.raw.writeHead(200, {
+    "Content-Type": "text/event-stream; charset=utf-8",
+    "Cache-Control": "private, no-store, no-transform",
+    "X-Accel-Buffering": "no",
+    "Connection": "keep-alive",
+  });
+  ready = true;
+  reply.raw.write("retry: 3000\n\n: connected\n\n");
+  const heartbeat = setInterval(() => {
+    if (!reply.raw.write(": heartbeat\n\n")) reply.raw.end();
+  }, 15000);
+  // Reconnect through requireUser regularly; a revoked session cannot keep an
+  // authenticated stream indefinitely. Payload APIs always authorize each read.
+  const expiry = setTimeout(() => reply.raw.end(), 60000);
+  const cleanup = () => { clearInterval(heartbeat); clearTimeout(expiry); unsubscribe(); };
+  reply.raw.once("close", cleanup);
+  req.raw.once("aborted", cleanup);
+});
+
 app.get("/api/dashboard/version", async (req, reply) => {
   const user = await requireUser(req, reply); if (!user) return;
   const syncStatus = await dashboardSyncState();
