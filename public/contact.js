@@ -2,6 +2,7 @@
   'use strict';
   var f = document.getElementById('contact-form'); if (!f) return;
   var btn = document.getElementById('c-btn'), alertBox = document.getElementById('form-alert');
+  btn.disabled = f.dataset.availability !== 'available';
   var msg = document.getElementById('c-msg'), count = document.getElementById('c-count');
   msg.addEventListener('input', function () { count.textContent = msg.value.length; });
   function setErr(id, field, on) { var box = document.getElementById(id); box.parentNode.classList.toggle('has-error', on); field.setAttribute('aria-invalid', on ? 'true' : 'false'); if (on) field.setAttribute('aria-describedby', id); }

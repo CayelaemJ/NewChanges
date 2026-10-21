@@ -240,14 +240,6 @@ setInterval(() => {
   for (const [key, bucket] of rateBuckets) if (bucket.resetAt <= now) rateBuckets.delete(key);
 }, 5 * 60_000).unref();
 
-app.setErrorHandler((error, req, reply) => {
-  req.log.error({ err: error, method: req.method, url: req.url.split("?", 1)[0] }, "unhandled request error");
-  if (reply.sent) return;
-  const status = Number((error as any)?.statusCode);
-  if (status >= 400 && status < 500) { const message = error instanceof Error ? error.message : "request rejected"; return reply.code(status).send({ error: message }); }
-  return reply.code(500).send({ error: "internal server error" });
-});
-
 app.register(cookie);
 app.register(multipart, {
   limits: { fileSize: MAX_UPLOAD_BYTES, files: 1, fields: 10 },
@@ -312,15 +304,10 @@ function publicOrigin(req: FastifyRequest): string {
 }
 const CONTACT_EMAIL = (process.env.CONTACT_EMAIL || "").trim();
 const contactEmail = (override?: string) => override?.trim() || CONTACT_EMAIL;
-const contactHref = (override?: string) => contactEmail(override) ? `mailto:${contactEmail(override)}` : "/contact";
 const siteVars = (req: FastifyRequest): Record<string, string> => ({
   BASE_URL: publicOrigin(req),
   CONTACT_EMAIL: CONTACT_EMAIL || "Contact details",
-  CONTACT_HREF: CONTACT_EMAIL ? `mailto:${CONTACT_EMAIL}` : "/contact",
-  PRIVACY_HREF: contactHref(process.env.PRIVACY_EMAIL),
-  LEGAL_HREF: contactHref(process.env.LEGAL_EMAIL),
   CONTACT_AVAILABILITY: CONTACT_EMAIL ? "available" : "unavailable",
-  CONTACT_BUTTON_STATE: CONTACT_EMAIL ? "" : "disabled",
   CONTACT_INTRO: CONTACT_EMAIL ? "Tell us about your organisation and what you need. We reply within two business days." : "Contact requests are temporarily unavailable while support contact details are being configured.",
   PRIVACY_EMAIL: contactEmail(process.env.PRIVACY_EMAIL) || "privacy contact details",
   LEGAL_EMAIL: contactEmail(process.env.LEGAL_EMAIL) || "legal contact details",
