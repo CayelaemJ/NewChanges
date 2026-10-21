@@ -999,7 +999,7 @@ table tbody tr:hover { background: var(--ice-2, #f4f9fd); }
 
 
 /* Consolidated from public/responsive-v2.css; canonical dashboard UI/responsive stylesheet. */
-/* empower-fin Dashboard Portal 0.6.0
+/* The Fixer (Pty) Ltd Dashboard Portal 0.6.0
    Responsive system: phone / tablet / laptop / desktop.
    This layer deliberately overrides the older responsive-v1 rules rather than
    requiring every existing dashboard component to be rewritten at once. */

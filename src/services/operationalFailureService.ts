@@ -13,7 +13,7 @@ export async function reportOperationalFailure(kind:"SOURCE_SYNC"|"MLOPS"|"INTER
       eventType:"OPERATIONAL_FAILURE",modelKey:"operations",modelVersion:"1",status:"REVIEW",
       metadata:{reportKey:kind,findings:[{code:kind,message,action:"Review Administration and retry after correcting the cause."}],delivery:"PENDING"},
     }});
-    const delivery=await notifyAdmins({subject:`empower-fin: ${kind.replaceAll("_"," ")}`,html:`<p>${message}</p><p>Open Administration for details.</p>`});
+    const delivery=await notifyAdmins({subject:`The Fixer (Pty) Ltd: ${kind.replaceAll("_"," ")}`,html:`<p>${message}</p><p>Open Administration for details.</p>`});
     await prisma.mLOpsEvent.update({where:{id:event.id},data:{metadata:{
       reportKey:kind,findings:[{code:kind,message,action:"Review Administration and retry after correcting the cause."}],
       delivery:delivery.emailed>0?"EMAIL_ACCEPTED":"EMAIL_NOT_SENT",emailed:delivery.emailed,

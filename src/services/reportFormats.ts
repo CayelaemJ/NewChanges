@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════════════════════════════
-//  EMPOWER-FIN SOURCE REPORT FORMATS — canonical integration contract
+//  The Fixer (Pty) Ltd SOURCE REPORT FORMATS — canonical integration contract
 //
-//  The source sends raw records; the empower-fin Dashboard Portal owns aggregation.  The date model is
+//  The source sends raw records; The Fixer (Pty) Ltd Dashboard Portal owns aggregation.  The date model is
 //  intentionally split into:
 //    • event dates — activity that happened inside a selected period;
 //    • effective/observation dates — state that was true as at period end;

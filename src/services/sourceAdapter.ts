@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════════════════════════════
 //  EXTERNAL SOURCE ADAPTERS
 //
-//  The empower-fin Dashboard Portal can ingest the canonical 10 core feeds from either:
+//  The The Fixer (Pty) Ltd Dashboard Portal can ingest the canonical 10 core feeds from either:
 //    • HTTP API endpoints (bearer-token JSON), or
 //    • read-only SQL views in PostgreSQL, Microsoft SQL Server or MySQL.
 //

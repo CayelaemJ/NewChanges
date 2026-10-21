@@ -1,6 +1,6 @@
 {
-  "name": "empower-fin Dashboard Portal",
-  "short_name": "empower-fin",
+  "name": "The Fixer (Pty) Ltd Dashboard Portal",
+  "short_name": "The Fixer",
   "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#f6f4fb",

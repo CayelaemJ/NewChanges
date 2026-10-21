@@ -74,7 +74,7 @@ export async function createUser(opts: {
       const link = base ? `${base.replace(/\/$/, "")}${setupPath}` : setupPath;
       await sendMail({
         to: email,
-        subject: "Set up your empower-fin Dashboard Portal account",
+        subject: "Set up your The Fixer (Pty) Ltd Dashboard Portal account",
         html: `<div style="font-family:Arial,sans-serif;color:#241536;max-width:620px">
           <h2 style="color:#32217c">You've been added to the Dashboard Portal</h2>
           <p>Hi ${escapeHtml(opts.name || "")},</p>
@@ -113,7 +113,7 @@ export async function requestPasswordReset(email: string) {
     const link = base ? `${base.replace(/\/$/, "")}${setupPath}` : setupPath;
     await sendMail({
       to: user.email,
-      subject: "Reset your empower-fin Dashboard Portal password",
+      subject: "Reset your The Fixer (Pty) Ltd Dashboard Portal password",
       html: `<div style="font-family:Arial,sans-serif;color:#241536;max-width:620px">
         <h2 style="color:#32217c">Reset your password</h2>
         <p>Hi ${escapeHtml(user.name || "")},</p>
