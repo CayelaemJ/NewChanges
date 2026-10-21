@@ -258,7 +258,7 @@ async function assertSafeApiBaseUrl(raw: string): Promise<string> {
     }
   } catch (error: any) {
     if (error?.code || /resolv|ENOTFOUND|EAI_/i.test(String(error?.message ?? ""))) {
-      throw new Error("API base URL hostname could not be safely resolved.");
+      throw new Error("API base URL hostname could not be safely resolved.", { cause: error });
     }
     throw error;
   }
@@ -653,7 +653,7 @@ async function createSqlAdapter(config: IntegrationSourceConfig): Promise<Source
     // server, or vice versa. Surface that plainly instead of the raw
     // driver internals, which read as an unexplained crash.
     const note = error?.message ?? String(error);
-    throw new Error(`Could not open a ${dialect} connection to ${config.sqlHost}:${config.sqlPort ?? "(default port)"} — ${note}. If this looks like a protocol/handshake error rather than an auth or network error, double-check that "SQL platform" in Admin is actually set to the database engine you're running (and that Save settings was clicked after changing it), then re-test.`);
+    throw new Error(`Could not open a ${dialect} connection to ${config.sqlHost}:${config.sqlPort ?? "(default port)"} — ${note}. If this looks like a protocol/handshake error rather than an auth or network error, double-check that "SQL platform" in Admin is actually set to the database engine you're running (and that Save settings was clicked after changing it), then re-test.`, { cause: error });
   }
 
   async function* iterateReportPages(reportKey: string, window: SourceWindow = {}, sourceViewOverride?: string | null, options?: { useReplica?: boolean; authoritative?: boolean }): AsyncGenerator<SourceFetchResult> {
@@ -744,3 +744,4 @@ export async function createSourceAdapter(config: IntegrationSourceConfig): Prom
   const effective = effectiveSourceConfig(config);
   return mode === "SQL" ? createSqlAdapter(effective) : createApiAdapter(effective);
 }
+

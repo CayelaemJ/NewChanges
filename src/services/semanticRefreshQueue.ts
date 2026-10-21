@@ -3,9 +3,12 @@
 import { createHash } from "node:crypto";
 import { prisma } from "./snapshotBuilder.js";
 import type { RefreshPartition } from "./semanticRefreshPlanner.js";
+import { SEMANTIC_QUEUE_WAKE_CHANNEL, shouldWakeSemanticWorker } from "./semanticQueueWake.js";
+
+const CANONICAL_FEEDS = new Set(["employers","workforce_snapshots","employees","platform_users","journeys","debt_accounts","policies","ratings","referrals","salary_advances"]);
 
 export async function enqueueSemanticRefresh(generationId:string, watermark:Date, partitions:RefreshPartition[]) {
-  if (!generationId || !Number.isFinite(watermark.getTime())) throw new Error("Invalid source generation or watermark");
+  if (!generationId?.trim() || !(watermark instanceof Date) || !Number.isFinite(watermark.getTime())) throw new Error("Invalid source generation or watermark");
   // Bulk insert bounded chunks rather than one SQL round trip per partition.
   // The unique idempotency key still protects concurrent schedulers.
   if(partitions.length>500) throw new Error("Semantic queue partition budget exceeded");
@@ -15,13 +18,13 @@ export async function enqueueSemanticRefresh(generationId:string, watermark:Date
   // with incomplete changedFeeds depending on partition order.
   const grouped=new Map<string,{employerId:string;period:string;feeds:Set<string>}>();
   for(const part of partitions){
-    if(!part.employerId?.trim() || !/^\d{4}-(0[1-9]|1[0-2])$/.test(part.period) ||
+    if(!part.employerId?.trim() || part.employerId.length > 200 || !/^\d{4}-(0[1-9]|1[0-2])$/.test(part.period) ||
        !Array.isArray(part.feeds) || part.feeds.length===0)
       throw new Error("Invalid semantic employer, period or changed feeds");
     const key=JSON.stringify([part.employerId,part.period]);
     const current=grouped.get(key) ?? {employerId:part.employerId,period:part.period,feeds:new Set<string>()};
     for(const feed of part.feeds){
-      if(typeof feed!=="string" || !feed.trim())throw new Error("Invalid semantic changed feed");
+      if(typeof feed!=="string" || !CANONICAL_FEEDS.has(feed))throw new Error("Invalid semantic changed feed");
       current.feeds.add(feed);
     }
     grouped.set(key,current);
@@ -38,20 +41,48 @@ export async function enqueueSemanticRefresh(generationId:string, watermark:Date
     });
     queued+=inserted.count;
   }
+  // PostgreSQL delivers NOTIFY only to listeners currently connected. This
+  // deliberately supplements the persisted queue, never replaces it.
+  // The dedicated listener also sweeps on startup and periodically.
+  if(shouldWakeSemanticWorker(queued)) {
+    try {
+      await prisma.$queryRaw`SELECT pg_notify(${SEMANTIC_QUEUE_WAKE_CHANNEL}, 'ready')::text AS notified`;
+    } catch(error) {
+      // Source sync remains committed and queue rows remain pending: failures
+      // here must not turn a successful ingestion into a phantom rollback.
+      console.error("[semantic] optional queue wake failed; durable queue still pending",
+        error instanceof Error ? error.message : String(error));
+    }
+  }
   return {queued,deduplicated:partitions.length-queued};
 }
 
-export async function claimSemanticRefresh(workerId:string, leaseSeconds=120) {
+export async function claimSemanticRefresh(
+  workerId:string, leaseSeconds=120,
+  scope?:{generationId:string;employerId:string},
+) {
   if (!/^[a-zA-Z0-9_-]{1,100}$/.test(workerId)) throw new Error("Invalid worker");
   if (!Number.isInteger(leaseSeconds) || leaseSeconds < 30 || leaseSeconds > 900) throw new Error("Invalid lease");
+  if(scope && (!scope.generationId?.trim() || !scope.employerId?.trim() || scope.employerId.length>200))
+    throw new Error("Invalid scoped semantic refresh claim");
+  // Empty filters preserve the ordinary production worker's global claim.
+  // Synthetic rehearsals supply both IDs, preventing unrelated job claims.
+  const scopeGeneration=scope?.generationId??"";
+  const scopeEmployer=scope?.employerId??"";
+  // Prisma DateTime defaults are stored at millisecond precision while PostgreSQL
+  // now() retains microseconds. A just-inserted default availableAt can round
+  // ~0.5ms into the future, causing an immediate NOTIFY wake to miss the job.
+  // Permit only a 1ms timestamp-rounding margin, not early scheduled retries.
   const rows=await prisma.$queryRaw<Array<{id:string;generationId:string;employerId:string;period:string;partitionKey:string;sourceWatermark:Date}>>`
     UPDATE "SemanticRefreshJob"
     SET status='RUNNING', "workerId"=${workerId}, "leasedUntil"=now()+(${leaseSeconds} * interval '1 second'),
         attempts=attempts+1, "updatedAt"=now()
     WHERE id IN (
       SELECT id FROM "SemanticRefreshJob"
-      WHERE ((status='PENDING' AND "availableAt"<=now()) OR (status='RUNNING' AND "leasedUntil"<now()))
+      WHERE ((status='PENDING' AND "availableAt"<=now()+interval '1 millisecond') OR (status='RUNNING' AND "leasedUntil"<now()))
         AND attempts < 5
+        AND (${scopeGeneration} = '' OR "generationId" = ${scopeGeneration})
+        AND (${scopeEmployer} = '' OR "employerId" = ${scopeEmployer})
       ORDER BY "availableAt" ASC
       FOR UPDATE SKIP LOCKED LIMIT 1
     )
@@ -80,3 +111,4 @@ export async function finishSemanticRefresh(id:string,workerId:string,success:bo
   });
   if(row.count!==1) throw new Error("Refresh lease expired or owned by another worker");
 }
+

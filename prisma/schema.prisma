@@ -17,7 +17,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
   
 }
 
@@ -1518,3 +1517,4 @@ model SourceActivationAudit {
   createdAt            DateTime @default(now())
   @@index([nextGenerationId, createdAt])
 }
+

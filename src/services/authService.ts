@@ -10,10 +10,9 @@
 //  This same link table will power the future broker view with no rework.
 // ════════════════════════════════════════════════════════════════════
 
-import { PrismaClient } from "@prisma/client";
 import { createHash, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 
-const prisma = new PrismaClient();
+import { prisma } from "./database.js";
 
 const SESSION_DAYS = 7;          // default session length
 const SESSION_DAYS_REMEMBER = 30; // "remember me" session length
@@ -184,3 +183,4 @@ export function canAccessModule(user: AuthUser, module: "admin" | "dashboard" | 
 }
 
 export { prisma };
+

@@ -27,7 +27,7 @@ if (resetRequested) {
     process.exit(1);
   }
   console.warn("PRE-LIVE RESET CONFIRMED: rebuilding the application database schema and deleting existing application data.");
-  process.exit(run(["db", "push", "--force-reset", "--skip-generate"]));
+  process.exit(run(["db", "push", "--force-reset"]));
 }
 
 console.log("Applying non-destructive Prisma schema sync...");
@@ -38,7 +38,7 @@ if (roleMigration !== 0) {
   console.error("Role migration failed. No database reset was attempted.");
   process.exit(roleMigration);
 }
-const status = run(["db", "push", "--skip-generate"]);
+const status = run(["db", "push"]);
 if (status !== 0) {
   console.error("Database schema sync failed. Because destructive fallback is disabled, no reset was attempted.");
   console.error("For a disposable pre-live database only, set PRELIVE_RESET_DATABASE=true and PRELIVE_RESET_CONFIRM=DELETE_PRELIVE_DATA for one deployment, then remove both variables.");
@@ -75,3 +75,4 @@ if (process.env.APPLY_SYNC_MIGRATIONS === "true") {
 }
 
 process.exit(0);
+

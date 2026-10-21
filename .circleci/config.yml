@@ -1,11 +1,154 @@
 version: 2.1
 
+# Explicit manual opt-in; NEVER runs against a database on ordinary PR pushes.
+parameters:
+  semantic_context_readiness:
+    type: boolean
+    default: false
+  semantic_testing_e2e:
+    type: boolean
+    default: false
+  semantic_notify_probe:
+    type: boolean
+    default: false
+
 # CI independent of GitHub-hosted Actions billing.
 # Connect this private GitHub repository to CircleCI (free plan) to activate.
+# Reusable native CircleCI deployment marker.
+# Invoke this command *after* a real Railway deployment has succeeded, from
+# the job that performs or verifies the deploy. Never mark CI success as a deploy.
+commands:
+  record_railway_deploy:
+    description: Record an actual successful Railway deployment in CircleCI Deploys.
+    parameters:
+      environment:
+        type: string
+      component:
+        type: string
+        default: newchanges
+    steps:
+      - run:
+          name: Record successful Railway deployment marker
+          command: |
+            : "${CIRCLE_SHA1:?CircleCI commit SHA is required}"
+            circleci run release log \
+              --environment-name="<< parameters.environment >>" \
+              --component-name="<< parameters.component >>" \
+              --target-version="$CIRCLE_SHA1"
+
 jobs:
+  semantic_testing_context_readiness:
+    docker:
+      - image: cimg/node:24.22
+    resource_class: small
+    working_directory: ~/newchanges
+    steps:
+      - checkout
+      - run:
+          name: Require restricted context and isolated feature branch
+          command: |
+            set -eu
+            if [ "<< pipeline.parameters.semantic_context_readiness >>" != "true" ] || [ "<< pipeline.parameters.semantic_notify_probe >>" = "true" ] || [ "<< pipeline.parameters.semantic_testing_e2e >>" = "true" ]; then
+              echo "Refusing concurrent or incorrectly scoped semantic Testing workflows."
+              exit 1
+            fi
+            if [ "${CIRCLE_BRANCH:-}" != "fix/semantic-refresh-period-validation-20261019" ]; then
+              echo "Refusing context readiness outside isolated feature branch."
+              exit 1
+            fi
+            if [ -z "${SEMANTIC_TESTING_DATABASE_URL:-}" ] || [ -z "${SEMANTIC_LISTEN_DATABASE_URL:-}" ]; then
+              echo "Restricted Testing context requires both pooled and direct Neon connection secrets."
+              exit 1
+            fi
+      - run:
+          name: Install locked dependencies
+          command: npm ci --no-audit --no-fund
+      - run:
+          name: Verify both Neon Testing connections and synthetic fixtures read-only
+          command: |
+            set -eu
+            export DATABASE_URL="${SEMANTIC_TESTING_DATABASE_URL}"
+            export SEMANTIC_SYNTHETIC_E2E_APPROVED=YES_TEST_ONLY
+            npm run semantic:e2e:context-readiness
+
+  semantic_testing_notify_probe:
+    docker:
+      - image: cimg/node:24.22
+    resource_class: small
+    working_directory: ~/newchanges
+    steps:
+      - checkout
+      - run:
+          name: Require isolated Neon Testing credentials and feature branch
+          command: |
+            set -eu
+            if [ "<< pipeline.parameters.semantic_notify_probe >>" != "true" ] || [ "<< pipeline.parameters.semantic_context_readiness >>" = "true" ] || [ "<< pipeline.parameters.semantic_testing_e2e >>" = "true" ]; then
+              echo "Refusing concurrent or incorrectly scoped semantic Testing workflows."
+              exit 1
+            fi
+            if [ -z "${SEMANTIC_TESTING_DATABASE_URL:-}" ] || [ -z "${SEMANTIC_LISTEN_DATABASE_URL:-}" ]; then
+              echo "Isolated Testing pooled and direct listener secrets are both required; refusing probe."
+              exit 1
+            fi
+            if [ "${CIRCLE_BRANCH:-}" != "fix/semantic-refresh-period-validation-20261019" ]; then
+              echo "Isolated LISTEN/NOTIFY probe refuses other branches."
+              exit 1
+            fi
+      - run:
+          name: Install locked packages without provisioning services
+          command: npm ci --no-audit --no-fund
+      - run:
+          name: Measure three short-lived Neon Testing notification deliveries
+          command: |
+            set -eu
+            export DATABASE_URL="${SEMANTIC_TESTING_DATABASE_URL}"
+            export SEMANTIC_SYNTHETIC_E2E_APPROVED=YES_TEST_ONLY
+            export SEMANTIC_NOTIFY_PROBE_APPROVED=YES_TEST_ONLY
+            npm run semantic:e2e:notify-probe
+
+  semantic_testing_score_delta:
+    docker:
+      - image: cimg/node:24.22
+    resource_class: small
+    working_directory: ~/newchanges
+    steps:
+      - checkout
+      - run:
+          name: Require dedicated isolated Neon Testing secret
+          command: |
+            set -eu
+            if [ "<< pipeline.parameters.semantic_testing_e2e >>" != "true" ] || [ "<< pipeline.parameters.semantic_context_readiness >>" = "true" ] || [ "<< pipeline.parameters.semantic_notify_probe >>" = "true" ]; then
+              echo "Refusing concurrent or incorrectly scoped semantic Testing workflows."
+              exit 1
+            fi
+            if [ -z "${SEMANTIC_TESTING_DATABASE_URL:-}" ] || [ -z "${SEMANTIC_LISTEN_DATABASE_URL:-}" ]; then
+              echo "Both pooled and direct restricted Neon Testing connection secrets are required; refusing E2E."
+              exit 1
+            fi
+            if [ "${RAILWAY_ENVIRONMENT_NAME:-}" = "Production" ]; then
+              echo "Refusing to run synthetic E2E in a production environment."
+              exit 1
+            fi
+            if [ "${CIRCLE_BRANCH:-}" != "fix/semantic-refresh-period-validation-20261019" ]; then
+              echo "Refusing synthetic E2E outside its isolated feature branch."
+              exit 1
+            fi
+      - run:
+          name: Install application dependencies for isolated Testing
+          command: npm ci --no-audit --no-fund && npx prisma generate
+      - run:
+          name: Execute and restore isolated Neon synthetic score delta
+          command: |
+            set -eu
+            export DATABASE_URL="${SEMANTIC_TESTING_DATABASE_URL}"
+            export SEMANTIC_SYNTHETIC_E2E_APPROVED=YES_TEST_ONLY
+            export ENABLE_SEMANTIC_SHADOW_WORKER=false
+            export ENABLE_SEMANTIC_OBJECT_PUBLISH=false
+            npm run semantic:e2e:suite
+
   admin_browser_smoke:
     docker:
-      - image: mcr.microsoft.com/playwright:v1.56.1-noble
+      - image: mcr.microsoft.com/playwright:v1.64.1-noble
     resource_class: small
     working_directory: ~/newchanges
     steps:
@@ -18,7 +161,8 @@ jobs:
             node --version | tee test-results/admin-browser/environment.log
             npm --version | tee -a test-results/admin-browser/environment.log
             npm ci --no-audit --no-fund 2>&1 | tee test-results/admin-browser/install.log
-            npm install --no-save --no-package-lock --no-audit --no-fund playwright@1.56.1 2>&1 | tee -a test-results/admin-browser/install.log
+            npm run db:generate 2>&1 | tee -a test-results/admin-browser/install.log
+            npm install --no-save --no-package-lock --no-audit --no-fund playwright@1.64.1 2>&1 | tee -a test-results/admin-browser/install.log
             node scripts/admin-browser-smoke.mjs 2>&1 | tee test-results/admin-browser/browser.log
           no_output_timeout: 10m
       - store_artifacts:
@@ -26,8 +170,15 @@ jobs:
           destination: admin-browser
           when: always
   verify:
+    environment:
+      DATABASE_URL: postgresql://ci_fixture:ci_fixture@127.0.0.1:5432/newchanges_ci
     docker:
-      - image: cimg/node:22.14
+      - image: cimg/node:24.22
+      - image: postgres:18-alpine
+        environment:
+          POSTGRES_USER: ci_fixture
+          POSTGRES_PASSWORD: ci_fixture
+          POSTGRES_DB: newchanges_ci
     resource_class: small
     working_directory: ~/newchanges
     steps:
@@ -46,6 +197,9 @@ jobs:
           name: Generate Prisma and build backend and frontend
           command: npm run build
           no_output_timeout: 10m
+      - run:
+          name: Prisma 7 disposable database integration
+          command: node scripts/prisma-upgrade-integration.mjs
       - run:
           name: Semantic integration and source safeguards
           command: |
@@ -87,6 +241,7 @@ jobs:
             npx tsx tests/ten-feed-cutover-gate.test.ts
             npx tsx tests/testing-s3-smoke-guard.test.ts
             npx tsx tests/testing-cloud-mapped-rehearsal.test.ts
+            npx tsx tests/mapped-staging-evidence.test.ts
             npx tsx tests/near-realtime-source-watch.test.ts
             npx tsx tests/source-watch-health.test.ts
             npx tsx tests/source-watermark-drift.test.ts
@@ -143,17 +298,17 @@ jobs:
 
   source_quality:
     docker:
-      - image: cimg/node:22.14
+      - image: cimg/node:24.22
     resource_class: small
     working_directory: ~/newchanges
     steps:
       - checkout
       - run:
           name: Install app and frontend dependencies
-          command: npm ci --no-audit --no-fund && npm ci --prefix frontend --no-audit --no-fund
+          command: npm ci --no-audit --no-fund && npm ci --prefix frontend --no-audit --no-fund && npm run db:generate
       - run:
           name: Install standalone quality tooling
-          command: npm install --no-save --package-lock=false --no-audit --no-fund eslint@^9 @eslint/js@^9 globals@^16 @typescript-eslint/parser@^8 vitest@^3 @playwright/test@^1
+          command: npm ls eslint @typescript-eslint/parser vitest @playwright/test
       - run:
           name: ESLint
           command: npm run quality:lint
@@ -166,17 +321,17 @@ jobs:
 
   browser_smoke:
     docker:
-      - image: mcr.microsoft.com/playwright:v1.56.1-noble
+      - image: mcr.microsoft.com/playwright:v1.64.1-noble
     resource_class: small
     working_directory: ~/newchanges
     steps:
       - checkout
       - run:
           name: Install app and frontend dependencies
-          command: npm ci --no-audit --no-fund && npm ci --prefix frontend --no-audit --no-fund
+          command: npm ci --no-audit --no-fund && npm ci --prefix frontend --no-audit --no-fund && npm run db:generate
       - run:
           name: Install Playwright
-          command: npm install --no-save --package-lock=false --no-audit --no-fund @playwright/test@1.56.1
+          command: npm install --no-save --package-lock=false --no-audit --no-fund @playwright/test@1.64.1
       - run:
           name: Browser smoke test in Chromium
           command: npm run quality:e2e && node scripts/console-ux-browser-check.mjs && node scripts/header-responsive-check.mjs
@@ -199,6 +354,21 @@ jobs:
           command: semgrep scan --config p/javascript --config p/typescript --config p/security-audit --error --exclude node_modules --exclude dist --exclude build .
 
 workflows:
+  semantic_context_readiness_check:
+    when: << pipeline.parameters.semantic_context_readiness >>
+    jobs:
+      - semantic_testing_context_readiness:
+          context: newchanges-neon-testing
+  semantic_notification_rehearsal:
+    when: << pipeline.parameters.semantic_notify_probe >>
+    jobs:
+      - semantic_testing_notify_probe:
+          context: newchanges-neon-testing
+  semantic_database_rehearsal:
+    when: << pipeline.parameters.semantic_testing_e2e >>
+    jobs:
+      - semantic_testing_score_delta:
+          context: newchanges-neon-testing
   verify_pull_requests_and_main:
     jobs:
       - verify
@@ -206,4 +376,5 @@ workflows:
       - source_quality
       - browser_smoke
       - semgrep_security
+
 

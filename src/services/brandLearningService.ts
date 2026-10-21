@@ -10,7 +10,7 @@ function hueOf(hex: string) {
   const r=parseInt(h.slice(0,2),16)/255, g=parseInt(h.slice(2,4),16)/255, b=parseInt(h.slice(4,6),16)/255;
   const max=Math.max(r,g,b), min=Math.min(r,g,b), d=max-min;
   if(d < 0.04) return null;
-  let x=0;
+  let x: number;
   if(max===r) x=60*((g-b)/d%6);
   else if(max===g) x=60*((b-r)/d+2);
   else x=60*((r-g)/d+4);
@@ -75,3 +75,4 @@ export async function recordBrandCorrection(input:{engineVersion:string; palette
     update:{engineVersion:input.engineVersion||current.engineVersion,labelledCount:{increment:1},huePrior:next}
   });
 }
+

@@ -9,6 +9,7 @@ import {extractTenMappedFeeds} from "./canonicalMappedStagingRunner.js";
 import {createIsolatedCloudPageSink} from "./isolatedCloudPageSink.js";
 import {createBoundedCloudStageHttp} from "./boundedCloudStageHttp.js";
 import {createFencedCloudReceiptRecorder} from "./fencedCloudReceiptRecorder.js";
+import {createMappedStagingEvidenceSink} from "./mappedStagingEvidence.js";
 import type {CloudPageReceipt} from "./isolatedCloudPageSink.js";
 import type {PlaygroundMappedMysqlRehearsal} from "./playgroundMappedImportRehearsal.js";
 import type {StagingSqlExecutor} from "./fencedStagingLedger.js";
@@ -105,10 +106,11 @@ export async function rehearseCloudMappedMysqlImport(
    if(!recorder)throw new Error("Cloud receipt feed is not approved");
    await recorder.recordReceipt(receipt);
   },env,2*1024*1024,approved.networkBytes);
+  const evidence=createMappedStagingEvidenceSink(cloud.sink);
   const result=await extractTenMappedFeeds(feed=>({
     mapping:config.mapping,catalog,dialect:"MYSQL",feed,
     upperWatermark:config.upperWatermark,reader:source!,
-    sink:cloud.sink,canonicalValidation:"strict",
+    sink:evidence.sink,canonicalValidation:"strict",
     pageSize:config.pageSize,maxRows:config.maxRowsPerFeed,
     maxBytes:config.maxBytesPerFeed,maxPages:config.maxPagesPerFeed
    }),{maxTotalRows:config.maxTotalRows,maxTotalBytes:config.maxTotalBytes,
@@ -118,7 +120,10 @@ export async function rehearseCloudMappedMysqlImport(
    snapshotId:source.snapshotId,
    feeds:result.summaries.map(s=>({
     feed:s.feed,rowsStaged:s.rowsCommitted,pagesVerified:s.pagesCommitted,
-    sourceBytes:s.bytesRead
+    sourceBytes:s.bytesRead,
+    // This digest is of committed canonical rows, not a source parity attestation.
+    committedRowsSha256:evidence.finish().find(e=>e.feed===s.feed)!.committedRowsSha256,
+    digestScope:"current-process-committed-pages" as const,
    })),
    productionEnabled:false as const,publicationEnabled:false as const,
   };
@@ -127,3 +132,4 @@ export async function rehearseCloudMappedMysqlImport(
   await db.end();
  }
 }
+

@@ -4,7 +4,6 @@
 //  source_updated_at controls last-write ordering; is_deleted is a tombstone.
 // ════════════════════════════════════════════════════════════════════
 
-import { PrismaClient } from "@prisma/client";
 import { getFormat, LOAD_ORDER } from "./reportFormats.js";
 import { compareDateValues, dateMillis, rehydrateStagedRows } from "./stagedRows.js";
 import { validateRecordDeferred } from "./validationStrategies.js";
@@ -13,7 +12,7 @@ import { snapshotEmployer } from "./snapshotBuilder.js";
 import { notifyAdmins, notifyScoreChangeIfCurrentPeriod } from "./automationService.js";
 import { assessIncomingRows } from "./dataQualityService.js";
 
-const prisma = new PrismaClient();
+import { prisma } from "./database.js";
 type Json = any;
 
 const IMPORT_CHUNK_SIZE=Number(process.env.IMPORT_CHUNK_SIZE ?? 1000);
@@ -1046,4 +1045,5 @@ export async function resetAllData() {
 }
 
 export { prisma };
+
 

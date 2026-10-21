@@ -2,6 +2,7 @@
 // not process-local SSE state. This is a bounded polling endpoint suitable for
 // both Railway and Render; it never recalculates the dashboard.
 import { prisma } from "./snapshotBuilder.js";
+import { shouldLookupSemanticCursor, initialSemanticCursor, nextSemanticCursor } from "./semanticPublicationCursor.js";
 
 export async function readSemanticPublicationChanges(input:{
   afterId?:string;limit?:number;employerIds?:string[];initializeAtLatest?:boolean;
@@ -9,8 +10,10 @@ export async function readSemanticPublicationChanges(input:{
   const requested = input.limit ?? 50;
   if (!Number.isFinite(requested)) throw new Error("Invalid publication page size");
   const limit=Math.max(1,Math.min(100,Math.floor(requested)));
-  const after=input.afterId ? await prisma.semanticPublicationAudit.findUnique({where:{id:input.afterId},select:{id:true,createdAt:true}}) : null;
-  if(input.afterId && !after) throw new Error("Unknown publication cursor");
+  // START is a durable empty-history cursor. Without it, clients repeatedly
+  // initialize at latest and silently miss the very first publication event.
+  const after=shouldLookupSemanticCursor(input.afterId) ? await prisma.semanticPublicationAudit.findUnique({where:{id:input.afterId!},select:{id:true,createdAt:true}}) : null;
+  if(shouldLookupSemanticCursor(input.afterId) && !after) throw new Error("Unknown publication cursor");
   const employers=[...new Set(input.employerIds??[])];
   if(employers.length>200) throw new Error("Employer filter exceeds limit");
   if (!input.afterId && input.initializeAtLatest) {
@@ -19,7 +22,7 @@ export async function readSemanticPublicationChanges(input:{
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       select: { id: true },
     });
-    return { changes: [], nextCursor: latest?.id ?? null, servingEnabled: false, transport: "DURABLE_POLL" };
+    return { changes: [], nextCursor: initialSemanticCursor(latest?.id), servingEnabled: false, transport: "DURABLE_POLL" };
   }
   const rows=await prisma.semanticPublicationAudit.findMany({
     where:{
@@ -30,6 +33,7 @@ export async function readSemanticPublicationChanges(input:{
     orderBy:[{createdAt:"asc"},{id:"asc"}],
     take:limit,
   });
-  return { changes:rows, nextCursor:rows.at(-1)?.id??input.afterId??null,
+  return { changes:rows, nextCursor:nextSemanticCursor(rows.at(-1)?.id,input.afterId),
     servingEnabled:false, transport:"DURABLE_POLL" };
 }
+

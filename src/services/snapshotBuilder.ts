@@ -8,12 +8,12 @@ import { publishedCohortMatches } from "./publishedCohort.js";
 //  values from demonstration data.
 // ════════════════════════════════════════════════════════════════════
 
-import { IncomeBand, PrismaClient } from "@prisma/client";
+import { IncomeBand } from "@prisma/client";
 import { computeOptimiseScore, DEFAULT_WEIGHTS, DriverAvailability, ScoreInputs, Weights } from "./scoreEngine.js";
 import { createPublicationCache } from "./publicationCache.js";
 import { createBoundedDimensionCache } from "./boundedDimensionCache.js";
 
-const prisma = new PrismaClient();
+import { prisma } from "./database.js";
 
 // Short-lived server-side cache: dashboard reads are read-heavy and the same
 // cohort is commonly requested repeatedly while users move between tabs.
@@ -1751,3 +1751,4 @@ export async function buildMonthlySnapshots(employerId: string, currentP: string
 }
 
 export { prisma };
+

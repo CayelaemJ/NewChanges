@@ -75,7 +75,40 @@ const queue = read("../src/services/semanticRefreshQueue.ts");
 const storage = read("../src/services/semanticObjectVerification.ts");
 assert(schema.includes("model SemanticRefreshJob {"), "Durable semantic queue schema required");
 assert(queue.includes("skipDuplicates:true"), "Coalesced queue must deduplicate writes");
+const semanticWake=read("../src/services/semanticQueueWake.ts");
+const semanticListener=read("../scripts/run-semantic-event-worker.ts");
+assert(semanticWake.includes('ENABLE_SEMANTIC_QUEUE_WAKE==="true"'),
+  "Semantic NOTIFY must require explicit opt-in");
+assert(semanticWake.includes('ENABLE_SEMANTIC_EVENT_WORKER==="true"'),
+  "Continuous worker must require a separate explicit opt-in");
+assert(semanticWake.includes('env.STANDBY_MODE!=="true"'),
+  "Standby must never start the semantic listener or queue wake");
+assert(queue.indexOf("createMany({") < queue.indexOf("if(shouldWakeSemanticWorker(queued))"),
+  "Queue wake must occur only after durable queue inserts");
+assert(queue.includes("pg_notify(") && queue.includes("shouldWakeSemanticWorker(queued)"),
+  "Queue must have a guarded best-effort PostgreSQL wake signal");
+assert(semanticListener.includes("semanticListenerEnabled()") &&
+  semanticListener.indexOf("semanticListenerEnabled()") <
+  semanticListener.indexOf("createSemanticStorageBroker()"),
+  "Listener must reject disabled deployment before opening storage");
+assert(semanticListener.includes("LISTEN ") &&
+  semanticListener.includes("setInterval(wake,60_000)"),
+  "Listener must combine database wake events with a missed-signal sweep");
+assert(semanticListener.includes("if(closed||draining)return") &&
+  semanticListener.includes("i<5 && Date.now()-started<45_000"),
+  "Listener must prevent overlap and bound queue draining");
+assert(semanticListener.includes("if(processedThisPass===5)pending=true") &&
+  semanticListener.includes("}while(pending&&!closed&&Date.now()-started<45_000)"),
+  "Listener must drain known queued backlog without requiring a new NOTIFY");
+assert(!server.includes("run-semantic-event-worker") &&
+  !server.includes("processOneShadowSemanticRefresh("),
+  "Web server must not embed the dedicated semantic processing loop");
 assert(queue.includes("FOR UPDATE SKIP LOCKED"), "Workers must avoid competing claims");
+assert(queue.includes('"availableAt"<=now()+interval \'1 millisecond\''),
+  "Immediate semantic NOTIFY wake must tolerate PostgreSQL millisecond default timestamp rounding");
+assert(queue.includes('AND attempts < 5'),
+  "Timestamp tolerance must not bypass semantic retry safety");
+
 assert(queue.includes('"leasedUntil"'), "Worker lease required");
 assert(storage.includes('redirect:"error"'), "External object requests must not follow redirects");
 assert(storage.includes('actual!==expected'), "Object must pass independent SHA-256 verification");
@@ -95,10 +128,30 @@ assert(governance.includes('update: { validation, validatedAt: now }'), "source 
 const queueHealth = read("../src/services/semanticQueueHealth.ts");
 assert(queueHealth.includes("semanticRefreshJob.groupBy"), "MLOps queue health must aggregate without raw dashboard scans");
 assert(server.includes('"/api/admin/mlops/semantic-queue-health"'), "Admin queue health endpoint required");
+const semanticCanary=read("../src/services/semanticCanaryRead.ts");
+assert(semanticCanary.includes('result.calculationMode!=="RECOMPUTED"'),"Canary must reject published-copy snapshots");
+assert(semanticCanary.includes("result.generationId!==manifest.generationId"),"Canary must reject mismatched source generations");
+assert(semanticCanary.includes("result.partitionKey!==input.partitionKey"),"Canary must reject mismatched semantic partition identity");
+assert(semanticCanary.includes("readBoundedSemanticObject(url,manifest.bytes)"),"Semantic canary object GET must be bounded by manifest byte size");
+assert(!semanticCanary.includes("response.arrayBuffer()"),"Semantic canary must never buffer an unbounded external object");
 const shadow=read("../src/services/semanticShadowWorker.ts");
+assert(shadow.includes("partitionKey:job.partitionKey"),"Semantic worker must write partition identity into snapshot");
 assert(shadow.includes('ENABLE_SEMANTIC_SHADOW_WORKER'), "shadow worker must be opt in");
 assert(shadow.includes('getPublishedDashboardPayload'), "shadow worker must use last published payload, never raw source scans");
 assert(shadow.includes('finishSemanticRefresh'), "worker must complete durable queue jobs");
+assert(shadow.includes("await snapshotEmployer(job.employerId,job.period)"), "Semantic worker must rebuild source-backed score snapshots before publication");
+assert(shadow.includes("!refreshed.persisted || !refreshed.scoreReady"), "Semantic worker must reject incomplete score snapshots");
+assert(shadow.includes("prisma.scoreSnapshot.findUnique"), "Semantic worker must verify the newly persisted score before publication");
+assert(shadow.includes("Recalculated semantic payload does not match persisted score snapshot"), "Stale semantic payloads must be rejected");
+assert(shadow.indexOf("await snapshotEmployer(job.employerId,job.period)") < shadow.indexOf("await getDashboardPayload(job.employerId,{period:job.period})"), "Worker must rebuild before loading persisted dashboard read model");
+assert(shadow.indexOf('if(process.env.ENABLE_SEMANTIC_RECOMPUTE!=="true")') < shadow.indexOf("const job=await claimSemanticRefresh"), "Disabled recomputation must not consume durable queue leases or retries");
+const oneShotWorker=read("../scripts/run-semantic-shadow-worker.ts");
+assert(oneShotWorker.includes('process.env.ENABLE_SEMANTIC_RECOMPUTE !== "true"'),"One-shot worker must not initialise storage when recomputation is disabled");
+assert(oneShotWorker.indexOf('process.env.ENABLE_SEMANTIC_RECOMPUTE !== "true"') < oneShotWorker.indexOf("createSemanticStorageBroker();"),"Recompute gate must precede storage startup");
+assert(oneShotWorker.includes("const maxJobs=5"),"Scheduled semantic worker must bound queue drain size");
+assert(oneShotWorker.includes("const maxStartWindowMs=45_000"),"Scheduled semantic worker must bound its work-start window");
+assert(oneShotWorker.includes("if(!result.processed)break"),"Worker must stop draining when queue is empty or disabled");
+assert(oneShotWorker.includes('if("error" in result){process.exitCode=1;break;}'),"Worker must stop draining after a job failure");
 assert(!server.includes("processOneShadowSemanticRefresh("), "web server must not accidentally start shadow worker");
 assert(sync.includes('ENABLE_SEMANTIC_SHADOW_ENQUEUE'), "shadow enqueue must be explicitly opt-in");
 assert(sync.includes('generation?.state !== "ACTIVE"'), "shadow enqueue must validate the assigned source generation");
@@ -114,6 +167,17 @@ assert(storageSettings.includes('secretAccessKey'),"Server-side storage credenti
 assert(storageSettings.includes('secretsReturned:false'),"Storage health must never expose credentials");
 assert(server.includes('"/api/admin/mlops/semantic-storage-health"'),"Admin-only storage health required");
 assert(server.includes('"/api/dashboard/semantic-version-changes"'), "Signed-in users need scoped version notifications");
+const visiblePolling=react.slice(react.indexOf("// Low-cost, opt-in live updates."),react.indexOf("if(!employer)return <Card"));
+assert(visiblePolling.includes('features.pollingEnabled'),"Dashboard polling must require the explicit feature flag");
+assert(visiblePolling.includes('document.visibilityState!=="visible"'),"Dashboard polling must pause when hidden");
+assert(visiblePolling.includes('features.pollIntervalSeconds===15?15_000:30_000') &&
+  visiblePolling.includes('window.setInterval(()=>void check(),intervalMs)'),
+  "Fast browser polling must require a server-approved interval and default to 30 seconds");
+assert(server.includes('pollIntervalSeconds: semanticBrowserPollSeconds()'),
+  "The server must advertise its feature-gated browser polling interval");
+assert(visiblePolling.includes('Promise.allSettled([') && visiblePolling.includes('setPeriodOptions(periodsResult.value)'),"Relevant publications must independently refresh dashboard scores and available months");
+assert(visiblePolling.includes('if(!cancelled)setData') || visiblePolling.includes('if(!cancelled){'),"Stale or cancelled publication refreshes must not mutate dashboard state");
+
 assert(server.includes('employerIds: ids === null ? undefined : ids'), "Semantic user polling must be permission-scoped");
 assert(server.includes('ids !== null && ids.length === 0'), "Users without employers cannot view events");
 const activation=read("../src/services/sourceActivation.ts");
@@ -130,3 +194,4 @@ assert(legacy.includes('onclick="previewCandidateSource()"'),"Existing Admin nee
 assert(legacy.includes('onclick="stageCandidateSource()"'),"Existing Admin needs encrypted candidate staging control");
 assert(!legacy.includes('Refresh now</b> runs the full purge'),"Admin must not misrepresent incremental refresh");
 console.log("Source synchronization safety regression checks passed.");
+
