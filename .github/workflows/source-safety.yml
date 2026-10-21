@@ -40,7 +40,7 @@ jobs:
           node-version: '24'
           cache: npm
       - name: Install project dependencies
-        run: npm ci && npm ci --prefix frontend --no-audit --no-fund
+        run: npm ci && npm ci --prefix frontend --no-audit --no-fund && npm run db:generate
       - name: Install isolated quality tooling without changing project lockfile
         run: npm ls eslint @typescript-eslint/parser vitest @playwright/test
       - name: Lint source
@@ -59,7 +59,7 @@ jobs:
         with:
           node-version: '24'
       - name: Install project dependencies
-        run: npm ci && npm ci --prefix frontend --no-audit --no-fund
+        run: npm ci && npm ci --prefix frontend --no-audit --no-fund && npm run db:generate
       - name: Install browser
         run: npx playwright install --with-deps chromium
       - name: Test homepage in Chromium

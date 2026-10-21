@@ -161,6 +161,7 @@ jobs:
             node --version | tee test-results/admin-browser/environment.log
             npm --version | tee -a test-results/admin-browser/environment.log
             npm ci --no-audit --no-fund 2>&1 | tee test-results/admin-browser/install.log
+            npm run db:generate 2>&1 | tee -a test-results/admin-browser/install.log
             npm install --no-save --no-package-lock --no-audit --no-fund playwright@1.64.1 2>&1 | tee -a test-results/admin-browser/install.log
             node scripts/admin-browser-smoke.mjs 2>&1 | tee test-results/admin-browser/browser.log
           no_output_timeout: 10m
@@ -304,7 +305,7 @@ jobs:
       - checkout
       - run:
           name: Install app and frontend dependencies
-          command: npm ci --no-audit --no-fund && npm ci --prefix frontend --no-audit --no-fund
+          command: npm ci --no-audit --no-fund && npm ci --prefix frontend --no-audit --no-fund && npm run db:generate
       - run:
           name: Install standalone quality tooling
           command: npm ls eslint @typescript-eslint/parser vitest @playwright/test
@@ -327,7 +328,7 @@ jobs:
       - checkout
       - run:
           name: Install app and frontend dependencies
-          command: npm ci --no-audit --no-fund && npm ci --prefix frontend --no-audit --no-fund
+          command: npm ci --no-audit --no-fund && npm ci --prefix frontend --no-audit --no-fund && npm run db:generate
       - run:
           name: Install Playwright
           command: npm install --no-save --package-lock=false --no-audit --no-fund @playwright/test@1.64.1
