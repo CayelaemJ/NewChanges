@@ -59,7 +59,7 @@ const escapeHtml = (value: unknown) => String(value ?? "")
   .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 
 export async function getEmailConfig() {
-  return prisma.systemEmailConfig.upsert({ where: { id: "default" }, create: { id: "default" }, update: {} });
+  return prisma.systemEmailConfig.upsert({ where: { id: "default" }, create: { id: "default", fromName: "The Fixer (Pty) Ltd Dashboard Portal" }, update: {} });
 }
 
 function withEnv(cfg: any, draft: EmailDraft = {}) {
@@ -79,7 +79,11 @@ function withEnv(cfg: any, draft: EmailDraft = {}) {
     smtpRejectUnauthorized: pick(draft.smtpRejectUnauthorized, boolEnv("SMTP_REJECT_UNAUTHORIZED"), cfg.smtpRejectUnauthorized),
     smtpUsername: pick(draftString("smtpUsername") as any, envString("SMTP_USERNAME") as any, cfg.smtpUsername),
     smtpPassword: pick(draftString("smtpPassword") as any, envString("SMTP_PASSWORD") as any, cfg.smtpPassword),
-    fromName: pick(draftString("fromName") as any, envString("SMTP_FROM_NAME") as any, cfg.fromName),
+    fromName: (() => {
+      const name = clean(pick(draftString("fromName") as any, envString("SMTP_FROM_NAME") as any, cfg.fromName));
+      return !name || /^empower[ -]?(?:fin|fs)(?: \(Pty\) Ltd)?(?: Dashboard Portal)?$/i.test(name)
+        ? "The Fixer (Pty) Ltd Dashboard Portal" : name;
+    })(),
     fromEmail: pick(draftString("fromEmail") as any, envString("SMTP_FROM_EMAIL") as any, cfg.fromEmail),
     replyTo: pick(draftString("replyTo") as any, envString("SMTP_REPLY_TO") as any, cfg.replyTo),
     defaultTimezone: pick(draftString("defaultTimezone") as any, envString("REPORT_TIMEZONE") as any, cfg.defaultTimezone),
