@@ -49,6 +49,8 @@ export interface SyncProgress {
 }
 
 interface RunSyncOptions {
+  /** Internal only: the confirmed rebuild coordinator already owns the exclusive lease. */
+  standbyMaintenance?: boolean;
   onProgress?: (progress: SyncProgress) => void | Promise<void>;
 }
 
@@ -195,6 +197,7 @@ export function publicConfig(config: Awaited<ReturnType<typeof getConfig>>) {
   return {
     ...safe,
     effectiveSourceMode,
+    sourceResetAllowed: true,
     sourceIngestionAllowed: process.env.STANDBY_MODE !== "true",
     configured,
     environmentLocked,
@@ -365,7 +368,7 @@ export async function recoverSourceSyncState() {
 }
 
 export async function runSync(trigger: "manual" | "scheduled" | "full-refresh" = "manual", options: RunSyncOptions = {}) {
-  if (process.env.STANDBY_MODE === "true") return { ok: false, status: "STANDBY", note: "Source ingestion is disabled on this standby.", error: "Source ingestion is disabled on this standby." };
+  if (process.env.STANDBY_MODE === "true" && !(trigger === "full-refresh" && options.standbyMaintenance === true)) return { ok: false, status: "STANDBY", note: "Source ingestion is disabled on this standby.", error: "Source ingestion is disabled on this standby." };
   // dailyRefresh.ts already owns the exclusive database lease while it calls
   // the full-refresh path. Every other sync takes a shared lease so an ordinary
   // sync can never overlap the purge/reload phase on another Railway replica.

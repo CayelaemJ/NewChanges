@@ -44,7 +44,7 @@ must(daily.includes('{ timezone: REFRESH_TIMEZONE }'), "node-cron must receive t
 const preflightAt = daily.indexOf("await testConnection()");
 const rebuildingAt = daily.indexOf('await setRefreshState(\n        "REBUILDING"');
 const purgeAt = daily.indexOf("await purgeDashboardDataForFullRefresh()");
-const reloadAt = daily.indexOf('await runSync("full-refresh")');
+const reloadAt = daily.indexOf('await runSync("full-refresh",');
 must(preflightAt >= 0 && rebuildingAt > preflightAt && purgeAt > rebuildingAt && reloadAt > purgeAt, "full refresh order must be preflight -> rebuilding state -> purge -> authoritative reload");
 
 must(daily.includes("FULL_REFRESH_PRECHECK_FAILED"), "a failed preflight must be distinguishable from a post-purge failure");
@@ -84,7 +84,7 @@ must(admin.includes("/static/admin-source-status.js") && dashboard.includes("/st
 must(sourceStatus.includes("/api/admin/integration") && sourceStatus.includes("Connected source:") && sourceStatus.includes("COMPLETE"), "source status widget must use the protected admin integration endpoint and make completion explicit");
 must(admin.includes('Reset always reloads.') && !admin.includes('id="reset-then-sync"'), "Reset UI must always reload from source and must not offer an optional sync checkbox");
 must(imports.includes('options.authoritativeOverwrite || historicalObservationFeed ? 0 : projectionOnly'), "authoritative overwrite must not report source rows as stale skips");
-must(server.includes('triggerRefreshNow("reset")') && !server.includes('const result = await resetAllData()'), "Reset must be a single authoritative reset+reload operation, never a raw clear followed by optional sync");
+must(server.includes('startSyncJob("reset")') && syncJobs.includes('triggerRefreshNow("reset", progressOptions.onProgress)') && !server.includes('const result = await resetAllData()'), "Reset must be a single authoritative reset+reload operation, never a raw clear followed by optional sync");
 must(daily.includes('modelVersion: "authoritative-overwrite"') && daily.includes('bypassed: true'), "successful authoritative refresh must close older active MLOps warnings without deleting audit history");
 must(sync.includes('isFirstSync && trigger !== "full-refresh"'), "authoritative reload must accept a legitimately empty source feed");
 must(sync.includes('if (trigger === "full-refresh")') && sync.includes("await snapshotEmployer(employerId)"), "full refresh must rebuild snapshots before reporting success");

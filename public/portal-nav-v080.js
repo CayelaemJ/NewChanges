@@ -3,7 +3,7 @@
 
   const PORTAL_BUILD='0.10.0';
   window.__EMPOWER_PORTAL_BUILD__=PORTAL_BUILD;
-  console.info('[empower-fin Dashboard Portal] UI build', PORTAL_BUILD);
+  console.info('[The Fixer (Pty) Ltd Dashboard Portal] UI build', PORTAL_BUILD);
 
   const esc = (value) => String(value ?? '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
   const initials = (name) => String(name || 'User').trim().split(/\s+/).filter(Boolean).map(p=>p[0]).slice(0,2).join('').toUpperCase() || 'U';

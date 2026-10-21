@@ -10,9 +10,9 @@ const prisma = new PrismaClient();
 const slugify = (s: string) =>
   s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
 
-// empower-fin is the default portal brand. Channel partners override these values for their assigned users.
+// The Fixer (Pty) Ltd is the default portal brand. Channel partners override these values for their assigned users.
 export const DEFAULT_THEME = {
-  name: "empower-fin Dashboard Portal",
+  name: "The Fixer (Pty) Ltd Dashboard Portal",
   primaryColor: "32217C",
   accentColor: "B15BE8",
   navyColor: "330A36",

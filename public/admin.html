@@ -6,29 +6,29 @@
 <link rel="stylesheet" href="/static/portal-nav-v080.css?v=0.10.0">
 <script src="/static/safe.js?v=1"></script>
 <script src="/static/brand-engine.js?v=6"></script>
-<title>Administration Console | empower-fin</title>
-<meta name="description" content="Data imports, integrations, users and audit trail for the empower-fin Dashboard Portal.">
+<title>Administration Console | The Fixer (Pty) Ltd</title>
+<meta name="description" content="Data imports, integrations, users and audit trail for The Fixer (Pty) Ltd Dashboard Portal.">
 <meta name="robots" content="noindex,nofollow">
 <link rel="canonical" href="{{BASE_URL}}/admin">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="empower-fin Dashboard Portal">
-<meta property="og:title" content="Administration Console | empower-fin">
-<meta property="og:description" content="Data imports, integrations, users and audit trail for the empower-fin Dashboard Portal.">
+<meta property="og:site_name" content="The Fixer (Pty) Ltd Dashboard Portal">
+<meta property="og:title" content="Administration Console | The Fixer (Pty) Ltd">
+<meta property="og:description" content="Data imports, integrations, users and audit trail for The Fixer (Pty) Ltd Dashboard Portal.">
 <meta property="og:url" content="{{BASE_URL}}/admin">
 <meta property="og:image" content="{{BASE_URL}}/static/og-image.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="empower-fin Dashboard Portal: financial wellbeing, measured with rigour.">
+<meta property="og:image:alt" content="The Fixer (Pty) Ltd Dashboard Portal: financial wellbeing, measured with rigour.">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Administration Console | empower-fin">
-<meta name="twitter:description" content="Data imports, integrations, users and audit trail for the empower-fin Dashboard Portal.">
+<meta name="twitter:title" content="Administration Console | The Fixer (Pty) Ltd">
+<meta name="twitter:description" content="Data imports, integrations, users and audit trail for The Fixer (Pty) Ltd Dashboard Portal.">
 <meta name="twitter:image" content="{{BASE_URL}}/static/og-image.png">
 <meta name="theme-color" content="#17212b">
-<link rel="icon" href="/favicon.ico" sizes="48x48">
-<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png">
-<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
-<link rel="manifest" href="/static/site.webmanifest">
+<link rel="icon" href="/favicon.ico?v=fixer-20261021" sizes="48x48">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png?v=fixer-20261021">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png?v=fixer-20261021">
+<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png?v=fixer-20261021">
+<link rel="manifest" href="/static/site.webmanifest?v=fixer-20261021">
 <style>.compact-collapse{float:right}.compact-collapsed .card-bd{display:none!important}.compact-collapsed .card-hd{border-bottom:0!important}.compact-toggle{margin-left:auto}
   @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap');
   :root{
@@ -275,6 +275,7 @@
 <link rel="stylesheet" href="/static/dark-theme-v2.css?v=6">
 <link rel="stylesheet" href="/static/the-fixer-brand.css?v=13">
 <link rel="stylesheet" href="/static/console-ux.css?v=1">
+<link rel="stylesheet" href="/static/portal-polish.css?v=1">
 </head>
 <body class="console-page console-admin" data-portal-build="0.10.0">
 <div id="welcome-splash">
@@ -481,7 +482,7 @@
               <input id="integ-sql-host" placeholder="db.example.internal" style="display:block;width:100%;margin-top:5px;font:inherit;font-weight:500;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">
             </label>
             <label style="font-size:12.5px;font-weight:700;color:#5b6b7a;">Database / catalog
-              <input id="integ-sql-database" placeholder="empowerfin_source" style="display:block;width:100%;margin-top:5px;font:inherit;font-weight:500;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">
+              <input id="integ-sql-database" placeholder="fixer_source" style="display:block;width:100%;margin-top:5px;font:inherit;font-weight:500;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">
             </label>
             <label style="font-size:12.5px;font-weight:700;color:#5b6b7a;">Schema (optional)
               <input id="integ-sql-schema" placeholder="public or dbo" style="display:block;width:100%;margin-top:5px;font:inherit;font-weight:500;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">
@@ -490,7 +491,7 @@
               <input id="integ-sql-prefix" value="v_" placeholder="v_" style="display:block;width:100%;margin-top:5px;font:inherit;font-weight:500;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">
             </label>
             <label style="font-size:12.5px;font-weight:700;color:#5b6b7a;">Read-only username
-              <input id="integ-sql-user" autocomplete="off" placeholder="empowerfin_reader" style="display:block;width:100%;margin-top:5px;font:inherit;font-weight:500;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">
+              <input id="integ-sql-user" autocomplete="off" placeholder="fixer_reader" style="display:block;width:100%;margin-top:5px;font:inherit;font-weight:500;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">
             </label>
             <label style="font-size:12.5px;font-weight:700;color:#5b6b7a;">Password (kept private)
               <input id="integ-sql-password" type="password" autocomplete="new-password" placeholder="leave blank to keep existing" style="display:block;width:100%;margin-top:5px;font:inherit;font-weight:500;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">
@@ -605,7 +606,7 @@
               <input id="mail-password" type="password" autocomplete="new-password" placeholder="leave blank to keep existing" style="display:block;width:100%;margin-top:5px;font:inherit;font-weight:500;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">
             </label>
             <label style="font-size:12.5px;font-weight:700;color:#5b6b7a;">From name
-              <input id="mail-from-name" value="empower-fin Dashboard Portal" style="display:block;width:100%;margin-top:5px;font:inherit;font-weight:500;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">
+              <input id="mail-from-name" value="The Fixer (Pty) Ltd Dashboard Portal" style="display:block;width:100%;margin-top:5px;font:inherit;font-weight:500;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">
             </label>
             <label style="font-size:12.5px;font-weight:700;color:#5b6b7a;">From email
               <input id="mail-from-email" type="email" placeholder="reports@company.com" style="display:block;width:100%;margin-top:5px;font:inherit;font-weight:500;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">
@@ -784,7 +785,7 @@ const AdminBrandTheme = window.BrandEngine ? BrandEngine.themeController() : nul
 const DEFAULT_PORTAL_BRAND = {accentColor:'0FC79B',primaryColor:'0FC79B',navyColor:'2B1D73'};
 function applyAdminBrandTheme(){
   if(!AdminBrandTheme) return;
-  // Administration always uses the canonical empower-fin palette. Partner
+  // Administration always uses the canonical The Fixer (Pty) Ltd palette. Partner
   // branding belongs in client previews and client dashboards, never the control plane.
   AdminBrandTheme.set({brand:DEFAULT_PORTAL_BRAND,light:null});
 }
@@ -858,35 +859,41 @@ function setSqlPortDefault(force=false){
 async function setIntegHeartbeat(hours){ const input=document.getElementById('integ-hours');if(input)input.value=String(hours); }
 // Server capabilities are checked before offering any source-writing action.
 let SOURCE_INGESTION_ALLOWED = false;
+let SOURCE_RESET_ALLOWED = false;
 function renderIngestionCapability(config){
   SOURCE_INGESTION_ALLOWED = config?.sourceIngestionAllowed === true;
+  SOURCE_RESET_ALLOWED = config?.sourceResetAllowed === true;
   const message = SOURCE_INGESTION_ALLOWED
     ? 'This instance can sync and rebuild data from the connected source.'
     : config?.sourceIngestionAllowed === false
-      ? 'This portal is in standby mode. Sync, refresh and rebuild are unavailable here. Run these actions on the designated ingestion leader. Published dashboards remain available.'
+      ? 'This portal is in standby mode. Routine sync and refresh are paused here. You can still request a confirmed rebuild below. Published dashboards remain available.'
       : 'Source action availability could not be verified. Reload the admin page or retry when the server is available.';
-  for(const id of ['btn-sync-now','btn-refresh-now','reset-btn']){
+  for(const id of ['btn-sync-now','btn-refresh-now']){
     const button=document.getElementById(id);
     if(button){button.disabled=!SOURCE_INGESTION_ALLOWED;button.title=message;}
   }
-  for(const id of ['ingestion-capability','reset-capability']){
+  const resetButton=document.getElementById('reset-btn');
+  if(resetButton)resetButton.disabled=!SOURCE_RESET_ALLOWED;
+  const resetNote=document.getElementById('reset-capability');
+  if(resetNote)resetNote.textContent=SOURCE_RESET_ALLOWED?'A confirmed rebuild is available here, including standby. Automatic ingestion remains paused on standby. One worker rebuilds at a time; the last successful dashboard stays visible.':'Rebuild availability could not be verified. Reload the admin page to retry.';
+  for(const id of ['ingestion-capability']){
     const element=document.getElementById(id);
     if(element)element.textContent=message;
   }
-  if(!SOURCE_INGESTION_ALLOWED){
+  if(!SOURCE_RESET_ALLOWED){
     const area=document.getElementById('reset-area');
     const input=document.getElementById('reset-confirm');
     if(area)area.style.display='none';
     if(input)input.value='';
   }
 }
-async function verifySourceAction(){
+async function verifySourceAction(action='sync'){
   try{
     const response=await fetch(`${API}/api/admin/integration`,{cache:'no-store'});
     if(!response.ok)throw new Error('Capability check failed');
     renderIngestionCapability(await response.json());
   }catch{renderIngestionCapability(null);}
-  return SOURCE_INGESTION_ALLOWED;
+  return action==='reset'?SOURCE_RESET_ALLOWED:SOURCE_INGESTION_ALLOWED;
 }
 function renderIntegSyncStatus(c){
   renderIngestionCapability(c);
@@ -1211,7 +1218,7 @@ async function loadEmailSettings(){
   try{
     const r=await fetch(`${API}/api/admin/email-settings`); const c=await r.json(); if(!r.ok) throw new Error(c.error||'Could not load email settings');
     $('#mail-provider').value=c.emailProvider||'smtp'; $('#mail-host').value=c.smtpHost||''; $('#mail-port').value=c.smtpPort||587; $('#mail-user').value=c.smtpUsername||'';
-    $('#mail-from-name').value=c.fromName||'empower-fin Dashboard Portal'; $('#mail-from-email').value=c.fromEmail||''; $('#mail-reply-to').value=c.replyTo||'';
+    $('#mail-from-name').value=c.fromName||'The Fixer (Pty) Ltd Dashboard Portal'; $('#mail-from-email').value=c.fromEmail||''; $('#mail-reply-to').value=c.replyTo||'';
     $('#mail-timezone').value=c.defaultTimezone||'Africa/Johannesburg'; $('#mail-portal-url').value=c.portalBaseUrl||''; $('#mail-resend-from').value=c.resendFromEmail||'';
     $('#mail-secure').checked=!!c.smtpSecure; $('#mail-require-tls').checked=c.smtpRequireTls!==false; $('#mail-reject-unauth').checked=c.smtpRejectUnauthorized!==false;
     if(c.hasPassword) $('#mail-password').placeholder=c.passwordFromEnvironment?'•••••• (provided by SMTP_PASSWORD)':'•••••• (saved — leave blank to keep)';
@@ -1893,7 +1900,7 @@ async function previewDatasetReplacement(){
 }
 // ── danger zone: full reset ──
 async function openReset(){
-  if(!await verifySourceAction())return;
+  if(!await verifySourceAction('reset'))return;
   const area=$('#reset-area');
   const input=$('#reset-confirm');
   const msg=$('#reset-msg');
@@ -1905,7 +1912,7 @@ async function openReset(){
   input.focus();
 }
 async function doReset(){
-  if(!await verifySourceAction())return;
+  if(!await verifySourceAction('reset'))return;
   const input=$('#reset-confirm');
   const msg=$('#reset-msg');
   if(!input || !msg) return;
@@ -1928,7 +1935,11 @@ async function doReset(){
     let d={};
     try{ d=await r.json(); }catch(_){ }
     if(!r.ok || !d.ok) throw new Error(d.error || d.note || `Reset & rebuild failed (HTTP ${r.status})`);
-    const cleared=Object.values(d.cleared||{}).reduce((sum,value)=>sum+(Number(value)||0),0);
+    if(r.status===202 && d.jobId){
+      d=await pollJob(`${API}/api/admin/sync-jobs/${d.jobId}`, 'Rebuilding from source', null, '#reset-msg');
+    }
+    if(!d.ok || !d.publishedAt)throw new Error(d.error||d.note||'Rebuild did not publish');
+    const cleared=Object.values(d.cleared||d.purge?.cleared||{}).reduce((sum,value)=>sum+(Number(value)||0),0);
     const loaded=Number(d.overwrittenRows||0);
     input.value='';
     const resultArea=$('#result'); if(resultArea) resultArea.innerHTML='';

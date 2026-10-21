@@ -1,4 +1,5 @@
 // Background source synchronisation jobs with live SSE progress and polling fallback.
+import { triggerRefreshNow } from "./dailyRefresh.js";
 import { randomUUID } from "node:crypto";
 import { runSync } from "./syncService.js";
 import { publishAdminEvent } from "./adminEventStream.js";
@@ -38,7 +39,7 @@ function update(job: SyncJob, jobId: string, patch: Partial<SyncJob>) {
   }, jobId);
 }
 
-export function startSyncJob(trigger: "manual" | "scheduled" = "manual"): string {
+export function startSyncJob(trigger: "manual" | "scheduled" | "reset" = "manual"): string {
   const jobId = randomUUID();
   // Keep in-flight jobs observable even when a sync takes longer than 30 minutes.
   const timer = null;
@@ -67,8 +68,8 @@ export function startSyncJob(trigger: "manual" | "scheduled" = "manual"): string
         progress: 10,
         message: "Synchronising source data",
       });
-      job.result = await runSync(trigger, {
-        onProgress: async (detail) => {
+      const progressOptions = {
+        onProgress: async (detail: import("./syncService.js").SyncProgress) => {
           job.detail = detail;
           update(job, jobId, {
             status: "PROCESSING",
@@ -77,10 +78,14 @@ export function startSyncJob(trigger: "manual" | "scheduled" = "manual"): string
             message: detail.message,
           });
         },
-      });
+      };
+      job.result = trigger === "reset"
+        ? await triggerRefreshNow("reset", progressOptions.onProgress)
+        : await runSync(trigger, progressOptions);
       // runSync reports ordered-feed failures as a result rather than throwing.
       // PARTIAL is not a successful sync: later dependent feeds were blocked.
-      const complete = job.result?.status === "OK" && job.result?.ok === true;
+      const complete = job.result?.status === "OK" && job.result?.ok === true
+        && (trigger !== "reset" || Boolean(job.result?.publishedAt));
       update(job, jobId, {
         status: complete ? "DONE" : "FAILED",
         phase: complete ? "COMPLETE" : "FAILED",

@@ -25,7 +25,7 @@ for(const reply of [{sourceIngestionAllowed:false},{},null,new Error('offline')]
   });
 }
 test('leader capability opens confirmation and revocation closes it',async()=>{
-  const h=harness({sourceIngestionAllowed:true});
+  const h=harness({sourceIngestionAllowed:true,sourceResetAllowed:true});
   await vm.runInContext('openReset()',h.context);
   assert.equal(h.elements.get('reset-area').style.display,'block');
   assert.equal(h.elements.get('reset-confirm').focused,true);
@@ -36,4 +36,13 @@ test('leader capability opens confirmation and revocation closes it',async()=>{
 });
 test('source writing controls are disabled in the initial HTML',()=>{
   for(const id of ['btn-sync-now','btn-refresh-now','reset-btn'])assert.match(html,new RegExp(`<button[^>]*id="${id}"[^>]*disabled`));
+});
+
+test('standby permits confirmed reset while routine sync remains disabled',async()=>{
+ const h=harness({sourceIngestionAllowed:false,sourceResetAllowed:true});
+ await vm.runInContext('openReset()',h.context);
+ assert.equal(h.elements.get('reset-area').style.display,'block');
+ assert.equal(h.elements.get('reset-btn').disabled,false);
+ assert.equal(h.elements.get('btn-sync-now').disabled,true);
+ assert.equal(h.elements.get('btn-refresh-now').disabled,true);
 });

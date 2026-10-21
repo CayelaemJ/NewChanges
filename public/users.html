@@ -8,29 +8,29 @@
 <link rel="stylesheet" href="/static/enterprise.css?v=4">
 <script src="/static/safe.js?v=1"></script>
 <script src="/static/brand-engine.js?v=6"></script>
-<title>User Management | empower-fin</title>
+<title>User Management | The Fixer (Pty) Ltd</title>
 <meta name="description" content="Manage user access, roles and employer assignments.">
 <meta name="robots" content="noindex,nofollow">
 <link rel="canonical" href="{{BASE_URL}}/users">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="empower-fin Dashboard Portal">
-<meta property="og:title" content="User Management | empower-fin">
+<meta property="og:site_name" content="The Fixer (Pty) Ltd Dashboard Portal">
+<meta property="og:title" content="User Management | The Fixer (Pty) Ltd">
 <meta property="og:description" content="Manage user access, roles and employer assignments.">
 <meta property="og:url" content="{{BASE_URL}}/users">
 <meta property="og:image" content="{{BASE_URL}}/static/og-image.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="empower-fin Dashboard Portal: financial wellbeing, measured with rigour.">
+<meta property="og:image:alt" content="The Fixer (Pty) Ltd Dashboard Portal: financial wellbeing, measured with rigour.">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="User Management | empower-fin">
+<meta name="twitter:title" content="User Management | The Fixer (Pty) Ltd">
 <meta name="twitter:description" content="Manage user access, roles and employer assignments.">
 <meta name="twitter:image" content="{{BASE_URL}}/static/og-image.png">
 <meta name="theme-color" content="#32217c">
-<link rel="icon" href="/favicon.ico" sizes="48x48">
-<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png">
-<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
-<link rel="manifest" href="/static/site.webmanifest">
+<link rel="icon" href="/favicon.ico?v=fixer-20261021" sizes="48x48">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png?v=fixer-20261021">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png?v=fixer-20261021">
+<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png?v=fixer-20261021">
+<link rel="manifest" href="/static/site.webmanifest?v=fixer-20261021">
 <style>.compact-collapse{float:right}.compact-collapsed .card-bd{display:none!important}.compact-collapsed .card-hd{border-bottom:0!important}.compact-toggle{margin-left:auto}
   @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap');
   :root{--blue:#7d2fa3;--blue-d:#682487;--brand-primary:#2b1b68;--ice:#eee8fb;--ice-2:#edf4fa;--line:#d7cde9;--line-soft:#e8e3f1;--ink:#0f2438;--grey:#425466;--grey-l:#617486;--green:#187a4d;--green-soft:#dff3e8;--amber:#9a5b00;--amber-soft:#fcedd4;--red:#b5391f;--red-soft:#fbe4df;--shadow:0 1px 2px rgba(13,42,71,.06),0 8px 24px rgba(13,42,71,.08);}
@@ -100,6 +100,7 @@
 <link rel="stylesheet" href="/static/dark-theme-v2.css?v=6">
 <link rel="stylesheet" href="/static/the-fixer-brand.css?v=13">
 <link rel="stylesheet" href="/static/console-ux.css?v=1">
+<link rel="stylesheet" href="/static/portal-polish.css?v=1">
 </head>
 <body class="console-page console-users" data-portal-build="0.10.0">
 <div class="topbar"><div class="topbar-inner">
@@ -238,7 +239,7 @@
       </div>
       <div style="margin-top:14px;">
         <label for="n-partner">Channel partner <span class="muted">(applies their branding — optional)</span></label>
-        <select id="n-partner"><option value="">None (standard empower-fin branding)</option></select>
+        <select id="n-partner"><option value="">None (standard The Fixer (Pty) Ltd branding)</option></select>
       </div>
       <button class="btn btn-primary" style="margin-top:18px;" id="create-user-btn" type="button" onclick="addUser()">Create user</button>
       <div class="msg" id="add-msg" role="status" aria-live="polite"></div>
@@ -394,7 +395,7 @@ async function loadPartnersDropdown(){
     PARTNERS_LIST=Array.isArray(partners)?partners:[];
     const sel=$('#n-partner');
     if(!sel) return;
-    sel.innerHTML='<option value="">None (standard empower-fin branding)</option>'+
+    sel.innerHTML='<option value="">None (standard The Fixer (Pty) Ltd branding)</option>'+
       PARTNERS_LIST.map(p=>`<option value="${escHtml(p.id)}">${escHtml(p.displayName||p.name)}</option>`).join('');
   }catch(error){
     console.error('[users] partners load failed',error);

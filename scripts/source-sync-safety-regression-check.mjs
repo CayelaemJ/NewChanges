@@ -31,7 +31,6 @@ for (const [name, handler, operation] of [
   ["compatibility refresh", refresh, 'runSync("manual")'],
   ["async sync-now", syncNow, 'startSyncJob("manual")'],
   ["async sync", syncLegacy, 'startSyncJob("manual")'],
-  ["destructive full resync", fullResync, 'triggerRefreshNow("reset")'],
 ]) {
   assert(handler.includes(standbyGuard), name + " must be fenced when standby");
   assert(handler.includes("reply.code(423)"), name + " must return HTTP 423 on standby");
@@ -40,7 +39,7 @@ for (const [name, handler, operation] of [
 
 const reset = route(server, 'app.post<{ Body: { confirm?: string } }>("/api/admin/integration/full-resync"', 'app.get("/api/admin/integration/replica-health"');
 assert(reset.includes('req.body?.confirm') && reset.includes('"RESET"'), "full resync must require explicit confirmation");
-assert(reset.includes('triggerRefreshNow("reset")'), "recovery resync should retain the explicit full path");
+assert(reset.includes('startSyncJob("reset")'), "confirmed recovery rebuild should run as an observable background job");
 assert(react.includes('api("/api/admin/integration/changes")'), "health UI must perform read-only change check");
 assert(!react.includes('api("/api/admin/integration/refresh",{method:"POST"})'), "health UI must not trigger refresh");
 const legacyRefresh = legacy.slice(legacy.indexOf("async function refreshNow(btn){"), legacy.indexOf("function syncLogFailureDetail"));
