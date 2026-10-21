@@ -195,6 +195,7 @@ export function publicConfig(config: Awaited<ReturnType<typeof getConfig>>) {
   return {
     ...safe,
     effectiveSourceMode,
+    sourceIngestionAllowed: process.env.STANDBY_MODE !== "true",
     configured,
     environmentLocked,
     envOverrides,

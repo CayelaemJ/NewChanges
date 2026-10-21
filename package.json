@@ -13,7 +13,7 @@
     "db:push": "prisma db push --skip-generate",
     "check:contract": "tsx tests/contract-check.ts",
     "check:ui": "node scripts/ui-regression-check.mjs",
-    "check:admin-ui": "node scripts/admin-ui-check.mjs && node scripts/admin-inline-syntax-check.mjs && npm run check:admin-realtime && npm run check:admin-report-selector",
+    "check:admin-ui": "node scripts/admin-ui-check.mjs && node scripts/admin-inline-syntax-check.mjs && node --test scripts/admin-source-capabilities.test.mjs && npm run check:admin-realtime && npm run check:admin-report-selector",
     "db:deploy": "node scripts/deploy-db.mjs",
     "db:reset:prelive": "prisma db push --force-reset --skip-generate",
     "check:imports": "node scripts/import-regression-check.mjs",
