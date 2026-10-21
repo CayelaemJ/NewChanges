@@ -1949,3 +1949,9 @@ html.efs-default-brand.portal-dark .topbar:has(.topbar-inner > img.efs-brand-log
 html.efs-default-brand.portal-dark .topbar:has(.topbar-inner > img.efs-brand-logo) :is(.portal-nav-link,.nav-link).active{
   color:#fff!important;
 }
+
+/* Public headers stay indigo in both themes: use reversed artwork on this surface. */
+html.efs-default-brand .pub-header img.efs-brand-logo:not([data-custom-logo]){
+  content:url('/static/the-fixer-logo-reversed.svg?v=1')!important;
+  filter:none!important;
+}
