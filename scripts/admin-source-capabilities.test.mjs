@@ -46,3 +46,19 @@ test('standby permits confirmed reset while routine sync remains disabled',async
  assert.equal(h.elements.get('btn-sync-now').disabled,true);
  assert.equal(h.elements.get('btn-refresh-now').disabled,true);
 });
+
+test('job transport DONE cannot be overwritten by the business OK result',async()=>{
+ const server=readFileSync(new URL('../src/server.ts',import.meta.url),'utf8');
+ const start=server.indexOf('"/api/admin/sync-jobs/:jobId"');
+ const route=server.slice(start,server.indexOf('// Compatibility path for the existing Admin refresh button.',start));
+ const handler=route.slice(route.indexOf('async (req, reply) => {'),route.lastIndexOf('},')+1);
+ const business={ok:true,status:'OK',publishedAt:'2026-10-21T00:00:00Z'};
+ const context=vm.createContext({requireAdmin:async()=>true,getSyncJob:()=>({status:'DONE',result:business})});
+ const response=await vm.runInContext('('+handler+')',context)({params:{jobId:'synthetic'}},{});
+ assert.equal(response.status,'DONE');
+ assert.equal(response.result.status,'OK');
+ assert.equal(response.result.publishedAt,business.publishedAt);
+ const finish=html.slice(html.indexOf('const finishState = async (d) => {'),html.indexOf('const fallbackPoll = async () => {'));
+ vm.runInContext(finish,context);context.response=response;
+ assert.equal((await vm.runInContext('finishState(response)',context)).status,'OK');
+});

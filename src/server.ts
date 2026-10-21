@@ -1039,7 +1039,7 @@ app.get<{ Params: { jobId: string } }>(
       };
     }
     if (job.status === "FAILED") return { status: "FAILED", error: job.error };
-    return { status: "DONE", ...job.result };
+    return { ...job.result, status: "DONE", result: job.result };
   },
 );
 
@@ -1081,7 +1081,7 @@ app.get<{ Params: { jobId: string } }>(
       };
     }
     if (job.status === "FAILED") return { status: "FAILED", error: job.error };
-    return { status: "DONE", ...job.result };
+    return { ...job.result, status: "DONE", result: job.result };
   },
 );
 
@@ -1459,7 +1459,7 @@ app.get<{ Params: { jobId: string } }>(
       };
     }
     if (job.status === "FAILED") return { status: "FAILED", error: job.error };
-    return { status: "DONE", ...job.result };
+    return { ...job.result, status: "DONE", result: job.result };
   },
 );
 
