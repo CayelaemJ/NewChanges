@@ -30,7 +30,7 @@ import { readSemanticPublicationChanges } from "./services/semanticPublicationFe
 import { publicSemanticStorageHealth } from "./services/semanticStorageSettings.js";
 import { readPublishedSemanticPartition } from "./services/semanticCanaryRead.js";
 import { activateEquivalentSource, bootstrapExistingSource } from "./services/sourceActivation.js";
-import { startDailyRefresh, triggerRefreshNow } from "./services/dailyRefresh.js";
+import { startDailyRefresh } from "./services/dailyRefresh.js";
 import { getConfig as getSyncConfig, saveConfig as saveSyncConfig, publicConfig as publicSyncConfig, testConnection as testSyncConnection, runSync, recoverSourceSyncState, recentSyncLogs, detectSourceChanges, pendingDashboardRetryDue, previewSourceSwitch, SOURCE_CHANGE_POLL_SECONDS } from "./services/syncService.js";
 import { recordSourceWatch, sourceWatchPublicStatus } from "./services/sourceWatchHealth.js";
 import {reportOperationalFailure} from "./services/operationalFailureService.js";
@@ -1039,7 +1039,7 @@ app.get<{ Params: { jobId: string } }>(
       };
     }
     if (job.status === "FAILED") return { status: "FAILED", error: job.error };
-    return { status: "DONE", ...job.result };
+    return { ...job.result, status: "DONE", result: job.result };
   },
 );
 
@@ -1081,7 +1081,7 @@ app.get<{ Params: { jobId: string } }>(
       };
     }
     if (job.status === "FAILED") return { status: "FAILED", error: job.error };
-    return { status: "DONE", ...job.result };
+    return { ...job.result, status: "DONE", result: job.result };
   },
 );
 
@@ -1164,15 +1164,9 @@ app.post<{ Body: { confirm?: string } }>("/api/admin/reset-all", async (req, rep
     return reply.code(400).send({ error: 'confirmation phrase missing — expected confirm: "RESET"' });
   }
   try {
-    const result = await triggerRefreshNow("reset");
-    logAdminAction(admin, "data.reset_all", "Authoritative reset and complete source rebuild", { detail: result });
-    if (!result?.ok) return reply.code(500).send(result);
-    return {
-      ...result,
-      reset: true,
-      reloaded: true,
-      cleared: result?.purge?.cleared ?? {},
-    };
+    const jobId = startSyncJob("reset");
+    logAdminAction(admin, "data.reset_all.requested", "Confirmed authoritative rebuild queued", { detail: { jobId } });
+    return reply.code(202).send({ ok: true, status: "ACCEPTED", jobId });
   } catch (e: any) {
     req.log.error({ err: e }, "authoritative reset and rebuild failed");
     return reply.code(500).send({ error: e?.message || "Reset and rebuild failed." });
@@ -1465,7 +1459,7 @@ app.get<{ Params: { jobId: string } }>(
       };
     }
     if (job.status === "FAILED") return { status: "FAILED", error: job.error };
-    return { status: "DONE", ...job.result };
+    return { ...job.result, status: "DONE", result: job.result };
   },
 );
 
@@ -1538,18 +1532,13 @@ app.get("/api/admin/integration/dataset-replacement/preview", async (req, reply)
 //    from a stray click. ──
 app.post<{ Body: { confirm?: string } }>("/api/admin/integration/full-resync", async (req, reply) => {
   const admin = await requireAdmin(req, reply); if (!admin) return;
-  // Render standby serves reads; only the authoritative leader may import or reset data.
-  if (process.env.STANDBY_MODE === "true") {
-    return reply.code(423).send({ ok: false, error: "Source refresh is disabled on this standby. Use the designated ingestion leader." });
-  }
   if ((req.body?.confirm) !== "RESET") {
     return reply.code(400).send({ error: 'confirmation phrase missing — expected confirm: "RESET"' });
   }
   try {
-    const refreshed = await triggerRefreshNow("reset");
-    logAdminAction(admin, "data.full_refresh", "Purged and overwrote dashboard data from the authoritative source", { detail: refreshed });
-    if (!refreshed?.ok) return reply.code(500).send(refreshed);
-    return refreshed;
+    const jobId = startSyncJob("reset");
+    logAdminAction(admin, "data.full_refresh.requested", "Confirmed authoritative rebuild queued", { detail: { jobId } });
+    return reply.code(202).send({ ok: true, status: "ACCEPTED", jobId });
   } catch (e: any) {
     req.log.error({ err: e }, "full resync failed");
     return reply.code(500).send({ error: e?.message || "Full resync failed." });

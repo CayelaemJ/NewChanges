@@ -24,11 +24,11 @@
 <meta name="twitter:description" content="Data imports, integrations, users and audit trail for The Fixer (Pty) Ltd Dashboard Portal.">
 <meta name="twitter:image" content="{{BASE_URL}}/static/og-image.png">
 <meta name="theme-color" content="#17212b">
-<link rel="icon" href="/favicon.ico" sizes="48x48">
-<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png">
-<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
-<link rel="manifest" href="/static/site.webmanifest">
+<link rel="icon" href="/favicon.ico?v=fixer-20261021" sizes="48x48">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png?v=fixer-20261021">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16.png?v=fixer-20261021">
+<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png?v=fixer-20261021">
+<link rel="manifest" href="/static/site.webmanifest?v=fixer-20261021">
 <style>.compact-collapse{float:right}.compact-collapsed .card-bd{display:none!important}.compact-collapsed .card-hd{border-bottom:0!important}.compact-toggle{margin-left:auto}
   @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap');
   :root{
@@ -566,10 +566,11 @@
             <button class="btn btn-ghost" onclick="testInteg()">Test source</button>
             <button class="btn btn-ghost" onclick="previewCandidateSource()">Preview new source</button>
             <button class="btn btn-ghost" onclick="stageCandidateSource()">Stage validated source</button>
-            <button type="button" class="btn btn-ghost" onclick="syncNow()" title="Run an incremental sync now without clearing existing reporting records">Sync now</button>
-            <button id="btn-refresh-now" class="btn btn-ghost" onclick="refreshNow(this)" title="Safely synchronize changes from the current source without a data purge">Refresh changes</button>
+            <button id="btn-sync-now" disabled type="button" class="btn btn-ghost" onclick="syncNow()" title="Run an incremental sync now without clearing existing reporting records">Sync now</button>
+            <button id="btn-refresh-now" disabled class="btn btn-ghost" onclick="refreshNow(this)" title="Safely synchronize changes from the current source without a data purge">Refresh changes</button>
           </div>
           <div class="muted" style="margin-top:8px;max-width:820px;line-height:1.5;"><b>Sync now</b> and <b>Refresh changes</b> update the active source incrementally, without purging records. To switch databases, preview and stage the candidate first. A full reset is a separate confirmed recovery operation, never a normal refresh.</div>
+          <div id="ingestion-capability" role="status" aria-live="polite" class="muted" style="margin-top:8px;">Checking whether this instance can sync or rebuild data…</div>
           <div id="integ-result" style="margin-top:12px;"></div>
           <div style="margin-top:18px;">
             <div style="font-size:12.5px;font-weight:700;color:#5b6b7a;margin-bottom:8px;">Recent syncs</div>
@@ -757,7 +758,8 @@
             <button class="btn btn-ghost" type="button" onclick="previewDatasetReplacement()">Preview replacement impact</button>
             <div class="muted" id="dataset-replacement-preview" role="status" aria-live="polite" style="margin-top:9px;white-space:pre-wrap;"></div>
           </div>
-          <button class="btn" id="reset-btn" style="border-color:#e0492f;color:#b5391f;" onclick="openReset()">Reset &amp; rebuild from source…</button>
+          <p id="reset-capability" class="muted" role="status">Checking whether rebuilds are available…</p>
+          <button class="btn" id="reset-btn" disabled style="border-color:#e0492f;color:#b5391f;" onclick="openReset()">Reset &amp; rebuild from source…</button>
           <div id="reset-area" style="display:none;margin-top:16px;padding:16px;border:1px solid #f3c9c0;border-radius:11px;background:#fdf5f3;">
             <div style="font-weight:700;color:#b5391f;font-size:13.5px;margin-bottom:8px;">Are you sure? This cannot be undone.</div>
             <div class="muted" style="margin-bottom:10px;">Type <b>RESET</b> below to confirm.</div>
@@ -855,7 +857,46 @@ function setSqlPortDefault(force=false){
   field.value = dialect === 'MSSQL' ? '1433' : dialect === 'MYSQL' ? '3306' : '5432';
 }
 async function setIntegHeartbeat(hours){ const input=document.getElementById('integ-hours');if(input)input.value=String(hours); }
+// Server capabilities are checked before offering any source-writing action.
+let SOURCE_INGESTION_ALLOWED = false;
+let SOURCE_RESET_ALLOWED = false;
+function renderIngestionCapability(config){
+  SOURCE_INGESTION_ALLOWED = config?.sourceIngestionAllowed === true;
+  SOURCE_RESET_ALLOWED = config?.sourceResetAllowed === true;
+  const message = SOURCE_INGESTION_ALLOWED
+    ? 'This instance can sync and rebuild data from the connected source.'
+    : config?.sourceIngestionAllowed === false
+      ? 'This portal is in standby mode. Routine sync and refresh are paused here. You can still request a confirmed rebuild below. Published dashboards remain available.'
+      : 'Source action availability could not be verified. Reload the admin page or retry when the server is available.';
+  for(const id of ['btn-sync-now','btn-refresh-now']){
+    const button=document.getElementById(id);
+    if(button){button.disabled=!SOURCE_INGESTION_ALLOWED;button.title=message;}
+  }
+  const resetButton=document.getElementById('reset-btn');
+  if(resetButton)resetButton.disabled=!SOURCE_RESET_ALLOWED;
+  const resetNote=document.getElementById('reset-capability');
+  if(resetNote)resetNote.textContent=SOURCE_RESET_ALLOWED?'A confirmed rebuild is available here, including standby. Automatic ingestion remains paused on standby. One worker rebuilds at a time; the last successful dashboard stays visible.':'Rebuild availability could not be verified. Reload the admin page to retry.';
+  for(const id of ['ingestion-capability']){
+    const element=document.getElementById(id);
+    if(element)element.textContent=message;
+  }
+  if(!SOURCE_RESET_ALLOWED){
+    const area=document.getElementById('reset-area');
+    const input=document.getElementById('reset-confirm');
+    if(area)area.style.display='none';
+    if(input)input.value='';
+  }
+}
+async function verifySourceAction(action='sync'){
+  try{
+    const response=await fetch(`${API}/api/admin/integration`,{cache:'no-store'});
+    if(!response.ok)throw new Error('Capability check failed');
+    renderIngestionCapability(await response.json());
+  }catch{renderIngestionCapability(null);}
+  return action==='reset'?SOURCE_RESET_ALLOWED:SOURCE_INGESTION_ALLOWED;
+}
 function renderIntegSyncStatus(c){
+  renderIngestionCapability(c);
   const s = $('#integ-status');
   const changeMode=$('#integ-change-mode');
   if(changeMode){
@@ -1045,6 +1086,7 @@ async function testInteg(){
   }catch(e){ $('#integ-result').innerHTML = `<div class="banner err">✕ ${esc(e.message)}</div>`; }
 }
 async function syncNow(){
+  if(!await verifySourceAction())return;
   const mode = ($('#integ-mode').value || 'API').toUpperCase();
   $('#integ-result').innerHTML = `<div class="banner ok">Saving settings…</div>`;
   try{
@@ -1083,6 +1125,7 @@ async function syncNow(){
   }
 }
 async function refreshNow(btn){
+  if(!await verifySourceAction())return;
   if(!confirm('Run a safe incremental sync of the 10 canonical feeds? Only changes since the saved source cursors will be fetched. Existing dashboard records are not purged.')) return;
   const original=btn?.textContent||'Sync changes now';
   if(btn){ btn.disabled=true; btn.textContent='Syncing…'; }
@@ -1856,7 +1899,8 @@ async function previewDatasetReplacement(){
   }catch(error){area.textContent='Preview failed: '+(error?.message||String(error));}
 }
 // ── danger zone: full reset ──
-function openReset(){
+async function openReset(){
+  if(!await verifySourceAction('reset'))return;
   const area=$('#reset-area');
   const input=$('#reset-confirm');
   const msg=$('#reset-msg');
@@ -1868,6 +1912,7 @@ function openReset(){
   input.focus();
 }
 async function doReset(){
+  if(!await verifySourceAction('reset'))return;
   const input=$('#reset-confirm');
   const msg=$('#reset-msg');
   if(!input || !msg) return;
@@ -1890,7 +1935,11 @@ async function doReset(){
     let d={};
     try{ d=await r.json(); }catch(_){ }
     if(!r.ok || !d.ok) throw new Error(d.error || d.note || `Reset & rebuild failed (HTTP ${r.status})`);
-    const cleared=Object.values(d.cleared||{}).reduce((sum,value)=>sum+(Number(value)||0),0);
+    if(r.status===202 && d.jobId){
+      d=await pollJob(`${API}/api/admin/sync-jobs/${d.jobId}`, 'Rebuilding from source', null, '#reset-msg');
+    }
+    if(!d.ok || !d.publishedAt)throw new Error(d.error||d.note||'Rebuild did not publish');
+    const cleared=Object.values(d.cleared||d.purge?.cleared||{}).reduce((sum,value)=>sum+(Number(value)||0),0);
     const loaded=Number(d.overwrittenRows||0);
     input.value='';
     const resultArea=$('#result'); if(resultArea) resultArea.innerHTML='';

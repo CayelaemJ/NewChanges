@@ -61,11 +61,12 @@ try {
     process.env.STANDBY_MODE='true';
     try {
       role='SUPERADMIN';
-      for(const path of ['/api/admin/integration/sync-now','/api/admin/integration/sync','/api/admin/integration/refresh','/api/admin/integration/full-resync']) {
+      for(const path of ['/api/admin/integration/sync-now','/api/admin/integration/sync','/api/admin/integration/refresh']) {
         assert.equal((await request(path,{headers,method:'POST'})).status,423,'standby blocks '+path);
       }
       const {triggerRefreshNow}=await import('../dist/services/dailyRefresh.js');
-      assert.equal((await triggerRefreshNow('reset')).status,'STANDBY','direct reset is also blocked');
+      assert.equal((await triggerRefreshNow('manual')).status,'STANDBY','unconfirmed full refresh is blocked');
+      for(const path of ['/api/admin/reset-all','/api/admin/integration/full-resync'])assert.equal((await request(path,{headers,method:'POST'})).status,400,'reset still requires RESET on standby');
     } finally {delete process.env.STANDBY_MODE;}
     active=false;
     assert.equal((await request('/api/users',{headers})).status,401,'inactive identity cannot authenticate');

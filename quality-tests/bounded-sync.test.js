@@ -110,3 +110,12 @@ describe('bounded sync orchestration',()=>{
     expect(result.summary.platform_users.status).toBe('BLOCKED');expect(state.alert).toHaveBeenCalledWith('SOURCE_SYNC');
   });
 });
+
+it('standby rejects scheduled, ordinary manual and uncoordinated full refresh even with a maintenance flag',async()=>{
+ vi.stubEnv('STANDBY_MODE','true');
+ try{
+  for(const trigger of ['manual','scheduled'])expect((await runSync(trigger,{standbyMaintenance:true})).status).toBe('STANDBY');
+  expect((await runSync('full-refresh')).status).toBe('STANDBY');
+  expect(state.feeds).toEqual([]);
+ }finally{vi.unstubAllEnvs();}
+});

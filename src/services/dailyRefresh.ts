@@ -17,7 +17,7 @@
 
 import cron from "node-cron";
 import { Client } from "pg";
-import { runSync, testConnection } from "./syncService.js";
+import { runSync, testConnection, type SyncProgress } from "./syncService.js";
 import { purgeDashboardDataForFullRefresh } from "./importService.js";
 import { capturePublishedDashboardState, prisma } from "./snapshotBuilder.js";
 import { LOAD_ORDER } from "./reportFormats.js";
@@ -127,8 +127,8 @@ async function setRefreshState(status: string, note: string, at = new Date(), su
   });
 }
 
-async function runAuthoritativeFullRefresh(reason: "scheduled" | "manual" | "reset") {
-  if (process.env.STANDBY_MODE === "true") return { ok: false, status: "STANDBY", error: "Source reset is disabled on this standby." };
+async function runAuthoritativeFullRefresh(reason: "scheduled" | "manual" | "reset", onProgress?: (progress: SyncProgress) => void | Promise<void>) {
+  if (process.env.STANDBY_MODE === "true" && reason !== "reset") return { ok: false, status: "STANDBY", error: "Source reset is disabled on this standby." };
   if (activeFullRefresh) return activeFullRefresh;
 
   activeFullRefresh = (async () => {
@@ -179,7 +179,7 @@ async function runAuthoritativeFullRefresh(reason: "scheduled" | "manual" | "res
       );
 
       purgeResult = await purgeDashboardDataForFullRefresh();
-      const syncResult: any = await runSync("full-refresh");
+      const syncResult: any = await runSync("full-refresh", { standbyMaintenance: reason === "reset", onProgress });
 
       if (!syncResult || syncResult.status !== "OK") {
         throw new Error(syncFailureReason(syncResult));
@@ -305,9 +305,9 @@ export function startDailyRefresh() {
 
 // Manual trigger — wired to POST /api/admin/integration/refresh (admin only).
 // It deliberately runs the exact same purge+overwrite path as the midnight job.
-export async function triggerRefreshNow(reason: "manual" | "reset" = "manual") {
+export async function triggerRefreshNow(reason: "manual" | "reset" = "manual", onProgress?: (progress: SyncProgress) => void | Promise<void>) {
   try {
-    return await runAuthoritativeFullRefresh(reason);
+    return await runAuthoritativeFullRefresh(reason, onProgress);
   } catch (error: any) {
     const message = error?.message ?? String(error);
     console.error("Manual full refresh failed:", message);
