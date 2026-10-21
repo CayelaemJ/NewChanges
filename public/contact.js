@@ -15,6 +15,7 @@
   f.addEventListener('input', function (ev) { var p = ev.target.closest('.field'); if (p && p.classList.contains('has-error')) { validate(); } });
   f.addEventListener('submit', function (ev) {
     ev.preventDefault(); alertBox.classList.remove('show');
+    if(f.dataset.availability==='unavailable'){alertBox.textContent='Contact requests are temporarily unavailable.';alertBox.classList.add('show');return;}
     if (!validate()) return;
     btn.disabled = true; btn.setAttribute('aria-busy', 'true'); btn.innerHTML = '<span class="spin"></span>Sending…';
     fetch('/api/contact', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({

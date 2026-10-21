@@ -3,11 +3,28 @@ import assert from 'node:assert/strict';
 // or a live database. It also works in restricted CI sandboxes.
 process.env.DATABASE_URL = 'postgresql://unused:unused@127.0.0.1:1/unused?connect_timeout=1';
 const { app } = await import('../dist/server.js');
+// Test-only routes are registered here, never in the deployed application.
+app.get('/__boundary-only/throw', async () => { throw new Error('postgresql://fixture:boundary-secret@fixture.invalid/db'); });
+app.get('/__boundary-only/failure', async () => ({status:'FAILED',error:'mysql://fixture:boundary-secret@fixture.invalid/source',details:{password:'boundary-secret'}}));
 const request = async (path, options = {}) => {
   const response = await app.inject({ method: options.method || 'GET', url: path, headers: options.headers });
-  return { status: response.statusCode, headers: { get: key => response.headers[key] }, json: async () => response.json() };
+  return { status: response.statusCode, headers: { get: key => response.headers[key] }, text: async () => response.body, json: async () => response.json() };
 };
 try {
+  const thrown=await request('/__boundary-only/throw');
+  assert.equal(thrown.status,500);
+  assert.doesNotMatch(await thrown.text(),/boundary-secret|fixture.invalid|stack/);
+  const failed=await request('/__boundary-only/failure');
+  assert.equal(failed.status,200);
+  assert.equal((await failed.json()).status,'FAILED');
+  assert.doesNotMatch(await failed.text(),/boundary-secret|fixture.invalid/);
+  const originalOfficer=process.env.INFORMATION_OFFICER;
+  process.env.INFORMATION_OFFICER='<img src=x onerror=alert(1)>';
+  try {
+    const legal=await request('/privacy');const body=await legal.text();
+    assert.doesNotMatch(body,/<img src=x onerror/);
+    assert.match(body,/&lt;img src=x onerror=alert\(1\)&gt;/);
+  }finally{if(originalOfficer===undefined)delete process.env.INFORMATION_OFFICER;else process.env.INFORMATION_OFFICER=originalOfficer;}
   for (const path of ['/static/admin.html', '/static/dashboard.html', '/static/users.html', '/static/%61dmin.html', '/static/.env', '/react/index.html', '/react/assets/app.js.map']) {
     const response = await request(path);
     assert.equal(response.status, 404, `${path} must not expose source documents`);
@@ -22,6 +39,15 @@ try {
     const response = await request(path);
     assert.equal(response.status, 401, `${path} rejects anonymous access`);
     assert.equal(response.headers.get('cache-control'), 'no-store');
+  }
+  for(const path of ['/','/privacy','/terms','/cookies','/contact','/login']){
+    const response=await request(path);
+    assert.equal(response.status,200,path+' is available');
+    const html=await response.text();
+    assert.doesNotMatch(html,/\{\{[A-Z_]+\}\}/,path+' has no unresolved template values');
+    assert.doesNotMatch(html,/mailto:(?:the(?:%20| )portal|privacy(?:%20| )contact|legal(?:%20| )contact)/i,path+' has no fake email destination');
+    if(path==='/')for(const href of ['/privacy','/terms','/contact','/login'])assert.ok(html.includes('href="'+href+'"'), 'landing navigation includes '+href);
+    if(path==='/contact' && html.includes('data-availability="unavailable"'))assert.match(html,/<button[^>]*id="c-btn"[^>]*disabled/, 'unconfigured contact form cannot invite submissions');
   }
   const version = await (await request('/version')).json();
   assert.deepEqual(Object.keys(version).sort(), ['product', 'version']);

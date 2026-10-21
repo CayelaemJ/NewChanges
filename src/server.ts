@@ -53,6 +53,8 @@ import type { ScheduleInput } from "./services/reportScheduler.js";
 import { runMLOpsAssessment, getMLOpsPortfolioAssessment, recordMLOpsFeedback, listMLOpsModels, registerMLOpsModel, promoteMLOpsModel, rollbackMLOpsModel, listMLOpsEvents } from "./services/mlopsService.js";
 import { getBrandLearningProfile, learnFromBrandUpload, recordBrandCorrection } from "./services/brandLearningService.js";
 
+import { browserSafeFailure } from "./services/browserErrorSafety.js";
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = [join(__dirname, "public"), join(__dirname, "..", "public")]
   .find((p) => existsSync(join(p, "dashboard.html"))) ?? join(__dirname, "..", "public");
@@ -132,6 +134,26 @@ function rateLimit(reply: FastifyReply, key: string, limit: number, windowMs: nu
   }
   return true;
 }
+
+app.setErrorHandler((error, req, reply) => {
+  const cause = error as { statusCode?: number; message?: string };
+  const status = cause.statusCode && cause.statusCode >= 400 && cause.statusCode <= 599 ? cause.statusCode : 500;
+  req.log.error({ err: error, requestId: req.id }, "Request failed");
+  return reply.code(status).send({
+    error: status >= 500 ? "The request could not be completed. Contact the administrator with the request reference." : browserSafeFailure(cause.message || "Invalid request."),
+    requestId: req.id,
+  });
+});
+app.addHook("onSend", async (_req, reply, payload) => {
+  if (typeof payload !== "string" || !String(reply.getHeader("content-type") || "").includes("application/json")) return payload;
+  try {
+    const data = JSON.parse(payload);
+    if (reply.statusCode >= 400 || data?.ok === false || ["FAILED", "PARTIAL"].includes(data?.status)) {
+      return JSON.stringify(browserSafeFailure(data));
+    }
+  } catch { /* Non-JSON responses are handled by their own renderer. */ }
+  return payload;
+});
 
 app.addHook("onRequest", async (req, reply) => {
   applySecurityHeaders(reply);
@@ -289,11 +311,19 @@ function publicOrigin(req: FastifyRequest): string {
   return /^[a-z0-9.-]+(:\d+)?$/i.test(host) ? `${proto}://${host}` : "http://localhost";
 }
 const CONTACT_EMAIL = (process.env.CONTACT_EMAIL || "").trim();
+const contactEmail = (override?: string) => override?.trim() || CONTACT_EMAIL;
+const contactHref = (override?: string) => contactEmail(override) ? `mailto:${contactEmail(override)}` : "/contact";
 const siteVars = (req: FastifyRequest): Record<string, string> => ({
   BASE_URL: publicOrigin(req),
-  CONTACT_EMAIL: CONTACT_EMAIL || "the portal administrator",
-  PRIVACY_EMAIL: (process.env.PRIVACY_EMAIL || CONTACT_EMAIL || "the portal administrator").trim(),
-  LEGAL_EMAIL: (process.env.LEGAL_EMAIL || CONTACT_EMAIL || "the portal administrator").trim(),
+  CONTACT_EMAIL: CONTACT_EMAIL || "Contact details",
+  CONTACT_HREF: CONTACT_EMAIL ? `mailto:${CONTACT_EMAIL}` : "/contact",
+  PRIVACY_HREF: contactHref(process.env.PRIVACY_EMAIL),
+  LEGAL_HREF: contactHref(process.env.LEGAL_EMAIL),
+  CONTACT_AVAILABILITY: CONTACT_EMAIL ? "available" : "unavailable",
+  CONTACT_BUTTON_STATE: CONTACT_EMAIL ? "" : "disabled",
+  CONTACT_INTRO: CONTACT_EMAIL ? "Tell us about your organisation and what you need. We reply within two business days." : "Contact requests are temporarily unavailable while support contact details are being configured.",
+  PRIVACY_EMAIL: contactEmail(process.env.PRIVACY_EMAIL) || "privacy contact details",
+  LEGAL_EMAIL: contactEmail(process.env.LEGAL_EMAIL) || "legal contact details",
   INFORMATION_OFFICER: (process.env.INFORMATION_OFFICER || "our designated Information Officer").trim(),
   CONTACT_ADDRESS: (process.env.CONTACT_ADDRESS || "Business address available on request").trim(),
 });
