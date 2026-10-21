@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../dist/services/database.js";
 import { randomBytes, scryptSync } from "node:crypto";
 
 if (process.env.ROLE_TEST_SETUP_ENABLED !== "true") {
@@ -6,7 +6,7 @@ if (process.env.ROLE_TEST_SETUP_ENABLED !== "true") {
   process.exit(0);
 }
 
-const prisma = new PrismaClient();
+
 
 function hashPassword(plain) {
   const salt = randomBytes(16).toString("hex");
@@ -84,3 +84,4 @@ for (const [email, name, role] of accounts) {
 
 console.log(`Scoped role accounts are linked to employer: ${employer.name} (${employer.id})`);
 await prisma.$disconnect();
+

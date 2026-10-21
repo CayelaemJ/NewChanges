@@ -27,6 +27,7 @@ import { stageValidatedGeneration, listSourceGenerations, getSemanticPublication
 import { semanticPublicationReadiness } from "./services/semanticPublicationGates.js";
 import { getSemanticQueueHealth } from "./services/semanticQueueHealth.js";
 import { readSemanticPublicationChanges } from "./services/semanticPublicationFeed.js";
+import { semanticBrowserPollSeconds } from "./services/semanticLatencyBudget.js";
 import { publicSemanticStorageHealth } from "./services/semanticStorageSettings.js";
 import { readPublishedSemanticPartition } from "./services/semanticCanaryRead.js";
 import { activateEquivalentSource, bootstrapExistingSource } from "./services/sourceActivation.js";
@@ -160,7 +161,7 @@ app.addHook("onRequest", async (req, reply) => {
   const path = req.url.split("?", 1)[0];
   // HTML must go through its authorised route, never the public asset server.
   // Source maps and dotfiles are not production assets.
-  let assetPath = path;
+  let assetPath: string;
   try { assetPath = decodeURIComponent(path); } catch { return reply.code(400).send({ error: "invalid URL" }); }
   if ((assetPath.startsWith("/static/") || assetPath.startsWith("/react/")) &&
       (/\.(?:html?|map)(?:\/|$)/i.test(assetPath) || /(?:^|\/)\.[^/]/.test(assetPath))) {
@@ -1196,8 +1197,8 @@ app.get("/api/admin/database-status", async (req, reply) => {
   reply.header("Cache-Control", "no-store");
   const configured = process.env.DATABASE_URL;
   if (!configured) return { status: "red", provider: "Unconfigured", database: "Unknown", checkedAt: new Date().toISOString(), message: "DATABASE_URL is missing" };
-  let provider = "Other PostgreSQL";
-  let expectedDatabase = "";
+  let provider: string;
+  let expectedDatabase: string;
   try {
     const url = new URL(configured);
     const hostname = url.hostname.toLowerCase();
@@ -1348,6 +1349,7 @@ app.get("/api/dashboard/semantic-features", async (req, reply) => {
   if (!(await requireUser(req, reply))) return;
   return {
     pollingEnabled: process.env.ENABLE_SEMANTIC_LIVE_NOTIFICATIONS === "true",
+    pollIntervalSeconds: semanticBrowserPollSeconds(),
     servingEnabled: false,
   };
 });
@@ -2455,4 +2457,5 @@ app.listen({ port: PORT, host: "0.0.0.0" })
   })
   .catch((err) => { app.log.error(err); process.exit(1); });
 }
+
 

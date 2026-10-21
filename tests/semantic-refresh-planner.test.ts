@@ -41,4 +41,42 @@ assert.deepEqual(historical.find(x=>x.period==="2026-05")?.feeds,["employees","p
 assert.throws(()=>mergeAndExpandSemanticPartitions(datedCorrection,"2026-10",3),/budget exceeded/);
 assert.throws(()=>partitionsFromCanonicalSourceRows("ratings",[{employer_ref:"VIG",created_at:"invalid"}]),/Invalid business date/);
 
+// Reject bad source identity before queuing any score refresh work.
+for(const employer_ref of [null,42,"", "   ", "x".repeat(201)])
+  assert.throws(()=>partitionsFromCanonicalSourceRows("ratings",[{employer_ref,created_at:"2026-10-01",source_updated_at:"2026-10-01T00:00:00Z"}]),/Invalid canonical employer key/);
+assert.throws(()=>partitionsFromCanonicalSourceRows("ratings",[null as unknown as Record<string,unknown>]),/Invalid canonical source row/);
+// Invalid dates must never dirty historical score/snapshot partitions.
+for(const created_at of ["2026-02-31","2026-13-01","2026-10-01T12:00:00","2026-10-01T12:00:00+02:00"])
+  assert.throws(()=>partitionsFromCanonicalSourceRows("ratings",[{employer_ref:"VIG",created_at}]),/Invalid business date/);
+assert.deepEqual(partitionsFromCanonicalSourceRows("ratings",[{employer_ref:"VIG",created_at:"2026-10-01T12:00:00Z"}]),
+  [{employerId:"VIG",period:"2026-10",feeds:["ratings"],deleted:false}]);
+// Every canonical feed must map an October transport update to its actual business month.
+const feedCases: [string,string,string][] = [
+  ["employers","eligible_count_as_at","2026-03-31"],
+  ["workforce_snapshots","as_of_date","2026-03-31"],
+  ["employees","observed_at","2026-03-31"],
+  ["platform_users","enrolled_at","2026-03-31"],
+  ["journeys","started_at","2026-03-31"],
+  ["debt_accounts","observed_at","2026-03-31"],
+  ["policies","observed_at","2026-03-31"],
+  ["ratings","created_at","2026-03-31"],
+  ["referrals","shared_at","2026-03-31"],
+  ["salary_advances","advanced_at","2026-03-31"],
+];
+for(const [feed,dateField,dateValue] of feedCases){
+  const actual=partitionsFromCanonicalSourceRows(feed,[{
+    employer_ref:"VIG",[dateField]:dateValue,source_updated_at:"2026-10-19T08:00:00Z",
+  }]);
+  assert.deepEqual(actual,[{employerId:"VIG",period:"2026-03",feeds:[feed],deleted:false}],feed);
+}
+assert.equal(feedCases.length,10);
+// Historical correction and tombstone must invalidate later snapshots too.
+const deletedMarch=partitionsFromCanonicalSourceRows("debt_accounts",[{
+  employer_ref:"VIG",observed_at:"2026-03-31",source_updated_at:"2026-10-19T08:00:00Z",is_deleted:true,
+}]);
+const expandedDeletion=mergeAndExpandSemanticPartitions(deletedMarch,"2026-10");
+assert.equal(expandedDeletion.length,8);
+assert(expandedDeletion.every(part=>part.deleted && part.feeds.includes("debt_accounts")));
+assert.deepEqual(expandedDeletion.map(part=>part.period),["2026-03","2026-04","2026-05","2026-06","2026-07","2026-08","2026-09","2026-10"]);
 console.log("Incremental semantic partition planner tests passed");
+

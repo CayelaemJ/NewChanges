@@ -37,12 +37,12 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
-          node-version: '22'
+          node-version: '24'
           cache: npm
       - name: Install project dependencies
         run: npm ci && npm ci --prefix frontend --no-audit --no-fund
       - name: Install isolated quality tooling without changing project lockfile
-        run: npm install --no-save --package-lock=false --no-audit --no-fund eslint@^9 @eslint/js@^9 globals@^16 @typescript-eslint/parser@^8 vitest@^3 @playwright/test@^1
+        run: npm ls eslint @typescript-eslint/parser vitest @playwright/test
       - name: Lint source
         run: npm run quality:lint
       - name: Validate TypeScript
@@ -57,11 +57,12 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
-          node-version: '22'
+          node-version: '24'
       - name: Install project dependencies
-        run: npm ci && npm ci --prefix frontend --no-audit --no-fund && npm install --no-save --package-lock=false --no-audit --no-fund @playwright/test@^1
+        run: npm ci && npm ci --prefix frontend --no-audit --no-fund
       - name: Install browser
         run: npx playwright install --with-deps chromium
       - name: Test homepage in Chromium
         run: npm run quality:e2e
+
 

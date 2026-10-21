@@ -199,19 +199,29 @@ function DashboardView({me}:{me:Me}) {
         if(cancelled)return;
         cursor=changes.nextCursor??cursor;
         if(initialized&&changes.changes?.some(change=>change.employerId===employer.id)){
-          const refreshed=await api<Dashboard>("/api/employers/"+encodeURIComponent(employer.id)+"/dashboard?"+query);
-          if(!cancelled)setData(refreshed);
+          const [dashboardResult,periodsResult]=await Promise.allSettled([
+            api<Dashboard>("/api/employers/"+encodeURIComponent(employer.id)+"/dashboard?"+query),
+            api<string[]>("/api/employers/"+encodeURIComponent(employer.id)+"/periods"),
+          ]);
+          if(!cancelled){
+            if(dashboardResult.status==="fulfilled")setData(dashboardResult.value);
+            if(periodsResult.status==="fulfilled"&&Array.isArray(periodsResult.value))
+              setPeriodOptions(periodsResult.value);
+          }
         }
         initialized=true;
       }catch {
         // Keep the last good dashboard if a notification or refresh fails.
       }finally{polling=false;}
     };
-    api<{pollingEnabled:boolean}>("/api/dashboard/semantic-features")
+    api<{pollingEnabled:boolean;pollIntervalSeconds?:number}>("/api/dashboard/semantic-features")
       .then(features=>{
         if(cancelled||!features.pollingEnabled)return;
+        // Only a server-approved fast pilot may poll every 15 seconds;
+        // normal user sessions keep the existing low-cost 30-second rate.
+        const intervalMs=features.pollIntervalSeconds===15?15_000:30_000;
         void check();
-        timer=window.setInterval(()=>void check(),60_000);
+        timer=window.setInterval(()=>void check(),intervalMs);
       }).catch(()=>{});
     return ()=>{cancelled=true;if(timer!==undefined)window.clearInterval(timer);};
   },[employer?.id,query]);
@@ -550,4 +560,5 @@ class AppErrorBoundary extends Component<PropsWithChildren, {hasError:boolean}> 
 }
 
 export default function AppRoot(){ return <AppErrorBoundary><App /></AppErrorBoundary>; }
+
 

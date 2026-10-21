@@ -65,3 +65,24 @@ Even a successful cloud staging run does not complete Phase 4: transactional
 canonical publication, tenant/data reconciliation, semantic dashboard parity,
 recovery from a changing real source, monitoring and operator cutover approval
 must all pass independently.
+
+
+## Committed-only canonical row evidence (17 October)
+
+The Testing-only cloud import runner now returns a SHA-256 digest of the exact
+canonical rows acknowledged by the staged sink. A four-byte length prefix per
+JSON-encoded row makes the digest independent of source page boundaries.
+Failed PUT/GET/ledger transactions never contribute to this in-memory digest.
+Zero-row feeds produce a deterministic SHA-256 of the empty stream.
+
+**This is not an independent source-to-target reconciliation.** The evidence
+is scoped to the rows committed by the *current process run*. In a crash/restart
+scenario, prior immutable object receipts must be independently verified and
+reassembled in order. The approved source must also compute the **same**
+canonical-row digest, with identical field transformations, ordering and
+serialization, before parity can be claimed. No raw employee records, S3 URLs
+or credentials are emitted in the result.
+
+Phase 4 stays blocked until a real TLS read-only source and the Testing bucket
+have been exercised, including a real restart, ten-feed source digest parity,
+semantic publication and rollback with actual verified objects.

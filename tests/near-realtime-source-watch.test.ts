@@ -3,6 +3,10 @@ import {readFileSync} from "node:fs";
 import {sourceChangePollSeconds} from "../src/services/sourceChangePollConfig.js";
 assert.equal(sourceChangePollSeconds({}),60);
 assert.equal(sourceChangePollSeconds({SOURCE_CHANGE_POLL_SECONDS:"30"}),30);
+assert.equal(sourceChangePollSeconds({SOURCE_CHANGE_POLL_SECONDS:"15"}),30,"Fast source checks must not activate by accident");
+assert.equal(sourceChangePollSeconds({SOURCE_CHANGE_POLL_SECONDS:"15",ENABLE_SEMANTIC_FAST_SOURCE_WATCH:"true"}),15);
+assert.equal(sourceChangePollSeconds({SOURCE_CHANGE_POLL_SECONDS:"15",ENABLE_SEMANTIC_FAST_SOURCE_WATCH:"true",STANDBY_MODE:"true"}),30);
+
 assert.equal(sourceChangePollSeconds({SOURCE_CHANGE_POLL_SECONDS:"60"}),60);
 assert.equal(sourceChangePollSeconds({SOURCE_CHANGE_POLL_SECONDS:"12"}),30);
 assert.equal(sourceChangePollSeconds({SOURCE_CHANGE_POLL_SECONDS:"3601"}),3600);
@@ -26,3 +30,4 @@ assert(statusRefresh.includes("getBoundingClientRect"),"poll only visible integr
 assert(statusRefresh.includes("renderIntegSyncStatus(await reply.json())"),"refresh current sync status without resetting form fields");
 assert(!statusRefresh.includes("integrationDraft()"),"status refresh must not modify unsaved Admin settings");
 console.log("Near-real-time SQL watcher interval, non-overlap and Admin truthfulness passed");
+

@@ -18,15 +18,33 @@ const BUSINESS_DATES: Record<string,readonly string[]> = {
 };
 function dateString(raw: unknown):string|null {
   if(raw == null || raw === "")return null;
-  const date = raw instanceof Date ? raw : typeof raw === "string" ? new Date(raw) : null;
-  if(!date || !Number.isFinite(date.getTime()))throw new Error("Invalid business date in canonical source row");
-  return date.toISOString();
+  if(typeof raw==="string"){
+    // Reject rolled-over dates (e.g. February 31) and timezone-less timestamps.
+    if(/^\d{4}-\d{2}-\d{2}$/.test(raw)){
+      const parsed=new Date(raw+"T00:00:00Z");
+      if(!Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0,10)!==raw)
+        throw new Error("Invalid business date in canonical source row");
+      return parsed.toISOString();
+    }
+    if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z$/.test(raw))
+      throw new Error("Invalid business date in canonical source row");
+    const parsed=new Date(raw);
+    if(!Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0,10)!==raw.slice(0,10))
+      throw new Error("Invalid business date in canonical source row");
+    return parsed.toISOString();
+  }
+  if(!(raw instanceof Date) || !Number.isFinite(raw.getTime()))
+    throw new Error("Invalid business date in canonical source row");
+  return raw.toISOString();
 }
 export function partitionsFromCanonicalSourceRows(feed:string,rows:Record<string,unknown>[],maxPartitions=500):RefreshPartition[] {
   const fields=BUSINESS_DATES[feed];
   if(!fields)throw new Error("Unrecognized canonical feed");
   const changes=rows.map(row=>{
-    const employerId=String(row.employer_ref??"");
+    if(!row || typeof row!=="object" || Array.isArray(row)) throw new Error("Invalid canonical source row");
+    if(typeof row.employer_ref!=="string" || !row.employer_ref.trim() || row.employer_ref.length>200)
+      throw new Error("Invalid canonical employer key");
+    const employerId=row.employer_ref;
     const businessDates=fields.map(key=>dateString(row[key])).filter((x):x is string=>x!=null);
     const earliest=businessDates.length?businessDates.sort()[0]:dateString(row.source_updated_at);
     if(!earliest)throw new Error("Missing business and source change timestamp");
@@ -51,3 +69,4 @@ export function mergeAndExpandSemanticPartitions(partitions:RefreshPartition[],e
   }
   return expandHistoricalRefresh([...merged.values()].map(x=>({...x,feeds:[...x.feeds]})),endPeriod,maxPartitions);
 }
+

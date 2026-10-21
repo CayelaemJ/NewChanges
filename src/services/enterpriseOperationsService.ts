@@ -1,8 +1,7 @@
-import { PrismaClient } from "@prisma/client";
 import { getConfig, listAnalyticsRoutes } from "./syncService.js";
 import { checkMysqlReadReplica } from "./sourceAdapter.js";
 
-const prisma = new PrismaClient();
+import { prisma } from "./database.js";
 
 export async function enterpriseOperationsOverview() {
   const [config, routes, employers, employees, journeys, debtAccounts, advances, policies, ratings, users, openImports] = await Promise.all([
@@ -89,3 +88,4 @@ export async function dataQualityOverview() {
     },
   };
 }
+

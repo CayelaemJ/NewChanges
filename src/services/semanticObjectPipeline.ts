@@ -6,7 +6,7 @@ import { prisma } from "./snapshotBuilder.js";
 import { putAndVerifySemanticObject } from "./semanticObjectVerification.js";
 import { evaluatePublicationGates } from "./semanticPublicationGates.js";
 import { publishVerifiedSemanticManifest } from "./semanticPublisher.js";
-import { LOAD_ORDER } from "./reportFormats.js";
+import { requireSemanticObjectUrlBinding } from "./semanticObjectKeyBinding.js";
 
 export async function stageAndPublishSemanticObject(input: {
   generationId:string;employerId:string;period:string;partitionKey:string;version:string;
@@ -22,6 +22,7 @@ export async function stageAndPublishSemanticObject(input: {
   if (!input.objectKey.startsWith(`semantic/${input.generationId}/${input.employerId}/`)) {
     throw new Error("Storage object must be scoped to source generation and employer");
   }
+  requireSemanticObjectUrlBinding(input.objectKey,input.putUrl,input.getUrl);
   const generation=await prisma.sourceGeneration.findUnique({where:{id:input.generationId},include:{cursors:true}});
   if (!generation || !generation.validatedAt || !["VALIDATED","ACTIVE"].includes(generation.state)) {
     throw new Error("Source generation is not validated");
@@ -49,3 +50,4 @@ export async function stageAndPublishSemanticObject(input: {
     verifiedSha256:proof.sha256,verifiedBytes:proof.bytes,
     actor:input.actor,reason:input.reason});
 }
+

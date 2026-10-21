@@ -2,7 +2,7 @@
 // (never raw source records) as a compatibility bootstrap. This is NOT yet a
 // replacement for dependency-aware recalculation of retroactive corrections.
 import { randomUUID } from "node:crypto";
-import { getDashboardPayload, getPublishedDashboardPayload } from "./snapshotBuilder.js";
+import { getDashboardPayload, getPublishedDashboardPayload, snapshotEmployer } from "./snapshotBuilder.js";
 import { claimSemanticRefresh, finishSemanticRefresh } from "./semanticRefreshQueue.js";
 import { stageAndPublishSemanticObject } from "./semanticObjectPipeline.js";
 import { prisma } from "./snapshotBuilder.js";
@@ -19,6 +19,10 @@ export interface SemanticStorageBroker {
 export async function processOneShadowSemanticRefresh(workerId:string,storage:SemanticStorageBroker) {
   if(process.env.ENABLE_SEMANTIC_SHADOW_WORKER!=="true" || process.env.ENABLE_SEMANTIC_OBJECT_PUBLISH!=="true")
     return {processed:false,reason:"shadow semantic worker disabled"};
+  // Do not claim and burn durable retries until real source-specific score recomputation is enabled.
+  // A copied published payload cannot satisfy a live score-refresh obligation.
+  if(process.env.ENABLE_SEMANTIC_RECOMPUTE!=="true")
+    return {processed:false,reason:"source-specific semantic recomputation disabled"};
   const job=await claimSemanticRefresh(workerId,180);
   if(!job) return {processed:false,reason:"queue empty"};
   try {
@@ -36,13 +40,26 @@ export async function processOneShadowSemanticRefresh(workerId:string,storage:Se
     });
     if(!provenance.allowed) throw new Error("Semantic source provenance rejected: "+provenance.missing.join("; "));
 
-    const payload=recompute
-      ? await getDashboardPayload(job.employerId,{period:job.period})
-      : await getPublishedDashboardPayload(job.employerId,{period:job.period});
-    if(!payload) throw new Error("No previously published dashboard payload for shadow semantic snapshot");
+    // Rebuild from canonical tables first. An ordinary dashboard GET may return
+    // stale persisted read-model bytes and must never count as recomputation.
+    const refreshed=await snapshotEmployer(job.employerId,job.period);
+    if(!refreshed.persisted || !refreshed.scoreReady)
+      throw new Error("Semantic score recomputation did not persist a complete score snapshot");
+    const payload=await getDashboardPayload(job.employerId,{period:job.period});
+    if(!payload) throw new Error("No recalculated dashboard payload for semantic snapshot");
+    // Validate that the payload we are about to publish is the score just
+    // persisted to PostgreSQL, rather than a stale process-local/read-model hit.
+    const score=await prisma.scoreSnapshot.findUnique({
+      where:{employerId_period:{employerId:job.employerId,period:job.period}},
+      select:{optimiseScore:true,payloadVersion:true},
+    });
+    if(!score || score.payloadVersion<4 ||
+       !Number.isFinite(Number(payload?.wellness?.score)) ||
+       Math.abs(Number(score.optimiseScore)-Number(payload.wellness.score))>0.005)
+      throw new Error("Recalculated semantic payload does not match persisted score snapshot");
     const body=Buffer.from(JSON.stringify({
       schemaVersion:"semantic-shadow-v1",calculationMode:recompute?"RECOMPUTED":"PUBLISHED_COPY",generationId:job.generationId,employerId:job.employerId,
-      period:job.period,asAt:job.sourceWatermark.toISOString(),payload,
+      period:job.period,partitionKey:job.partitionKey,asAt:job.sourceWatermark.toISOString(),payload,
     }),"utf8");
     // Object keys are immutable; never replace bytes under an existing key.
     const version=randomUUID();
@@ -65,3 +82,4 @@ export async function processOneShadowSemanticRefresh(workerId:string,storage:Se
     return {processed:false,jobId:job.id,error:error?.message||String(error)};
   }
 }
+

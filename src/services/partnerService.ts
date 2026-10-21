@@ -3,9 +3,8 @@
 // and assign users + employers to them. A user's theme = their partner's theme.
 // ─────────────────────────────────────────────────────────────────────────
 
-import { PrismaClient } from "@prisma/client";
 import { destroyAllSessionsForUser } from "./authService.js";
-const prisma = new PrismaClient();
+import { prisma } from "./database.js";
 
 const slugify = (s: string) =>
   s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
@@ -167,4 +166,5 @@ export async function themeForSlug(slug: string) {
     branded: true as const,
   };
 }
+
 

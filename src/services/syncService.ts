@@ -5,7 +5,7 @@
 //  Supports MySQL, PostgreSQL, and MSSQL as sources.
 // ════════════════════════════════════════════════════════════════════
 
-import { PrismaClient, Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { syncStatusNeedsAlert } from "./syncAlertPolicy.js";
 import { sourceChangePollSeconds } from "./sourceChangePollConfig.js";
 import { classifySourceWatermark } from "./sourceWatermarkDrift.js";
@@ -20,7 +20,7 @@ import { assessIncomingRows } from "./dataQualityService.js";
 import { createSourceAdapter, configuredSourceMode, effectiveSourceConfig, sourceEnvironmentLocked, sourceIsConfigured } from "./sourceAdapter.js";
 import { runMLOpsAssessment } from "./mlopsService.js";
 
-const prisma = new PrismaClient();
+import { prisma } from "./database.js";
 type Json = Prisma.InputJsonValue;
 const CURSOR_OVERLAP_MS = 5 * 60 * 1000;
 const CLOCK_SKEW_TOLERANCE_MS = 5 * 60 * 1000;
@@ -168,7 +168,7 @@ export function publicConfig(config: Awaited<ReturnType<typeof getConfig>>) {
   // Never expose replica password (or primary/API credentials) in public configuration responses.
   const { authToken, sqlPassword, sourceAnalyticsReplicaPassword, ...safe } = config as any;
   const effective = effectiveSourceConfig(config);
-  let effectiveSourceMode = "API";
+  let effectiveSourceMode: string;
   let configured = false;
   try {
     effectiveSourceMode = configuredSourceMode(config);
@@ -253,7 +253,7 @@ export async function pendingDashboardRetryDue(config: { lastSyncStatus?: string
 export async function detectSourceChanges() {
   const config = await getConfig();
   if (!config.enabled) return { supported: false, changed: false, reports: [], reason: "integration disabled" };
-  let configured = false;
+  let configured: boolean;
   try { configured = sourceIsConfigured(config); }
   catch (error: any) { return { supported: false, changed: false, reports: [], reason: error?.message ?? String(error) }; }
   if (!configured) return { supported: false, changed: false, reports: [], reason: "source not configured" };
@@ -398,7 +398,7 @@ async function runSyncUnlocked(trigger: "manual" | "scheduled" | "full-refresh" 
   if (config.lastSyncStatus === "REBUILDING" && trigger !== "full-refresh") {
     return { ok: false, status: "REBUILDING", error: "A full source refresh is already rebuilding the dashboard. Try again after it completes." };
   }
-  let configured = false;
+  let configured: boolean;
   try { configured = sourceIsConfigured(config); }
   catch (error: any) { return { ok: false, error: error?.message ?? String(error) }; }
   if (!configured) {
@@ -1066,3 +1066,4 @@ export async function testConnection(patch: IntegrationConfigPatch = {}) {
 export async function recentSyncLogs(n = 10) {
   return prisma.syncLog.findMany({ orderBy: { startedAt: "desc" }, take: n });
 }
+
