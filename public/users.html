@@ -8,21 +8,21 @@
 <link rel="stylesheet" href="/static/enterprise.css?v=4">
 <script src="/static/safe.js?v=1"></script>
 <script src="/static/brand-engine.js?v=6"></script>
-<title>User Management | empower-fin</title>
+<title>User Management | The Fixer (Pty) Ltd</title>
 <meta name="description" content="Manage user access, roles and employer assignments.">
 <meta name="robots" content="noindex,nofollow">
 <link rel="canonical" href="{{BASE_URL}}/users">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="empower-fin Dashboard Portal">
-<meta property="og:title" content="User Management | empower-fin">
+<meta property="og:site_name" content="The Fixer (Pty) Ltd Dashboard Portal">
+<meta property="og:title" content="User Management | The Fixer (Pty) Ltd">
 <meta property="og:description" content="Manage user access, roles and employer assignments.">
 <meta property="og:url" content="{{BASE_URL}}/users">
 <meta property="og:image" content="{{BASE_URL}}/static/og-image.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="empower-fin Dashboard Portal: financial wellbeing, measured with rigour.">
+<meta property="og:image:alt" content="The Fixer (Pty) Ltd Dashboard Portal: financial wellbeing, measured with rigour.">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="User Management | empower-fin">
+<meta name="twitter:title" content="User Management | The Fixer (Pty) Ltd">
 <meta name="twitter:description" content="Manage user access, roles and employer assignments.">
 <meta name="twitter:image" content="{{BASE_URL}}/static/og-image.png">
 <meta name="theme-color" content="#32217c">
@@ -100,6 +100,7 @@
 <link rel="stylesheet" href="/static/dark-theme-v2.css?v=6">
 <link rel="stylesheet" href="/static/the-fixer-brand.css?v=13">
 <link rel="stylesheet" href="/static/console-ux.css?v=1">
+<link rel="stylesheet" href="/static/portal-polish.css?v=1">
 </head>
 <body class="console-page console-users" data-portal-build="0.10.0">
 <div class="topbar"><div class="topbar-inner">
@@ -238,7 +239,7 @@
       </div>
       <div style="margin-top:14px;">
         <label for="n-partner">Channel partner <span class="muted">(applies their branding — optional)</span></label>
-        <select id="n-partner"><option value="">None (standard empower-fin branding)</option></select>
+        <select id="n-partner"><option value="">None (standard The Fixer (Pty) Ltd branding)</option></select>
       </div>
       <button class="btn btn-primary" style="margin-top:18px;" id="create-user-btn" type="button" onclick="addUser()">Create user</button>
       <div class="msg" id="add-msg" role="status" aria-live="polite"></div>
@@ -394,7 +395,7 @@ async function loadPartnersDropdown(){
     PARTNERS_LIST=Array.isArray(partners)?partners:[];
     const sel=$('#n-partner');
     if(!sel) return;
-    sel.innerHTML='<option value="">None (standard empower-fin branding)</option>'+
+    sel.innerHTML='<option value="">None (standard The Fixer (Pty) Ltd branding)</option>'+
       PARTNERS_LIST.map(p=>`<option value="${escHtml(p.id)}">${escHtml(p.displayName||p.name)}</option>`).join('');
   }catch(error){
     console.error('[users] partners load failed',error);

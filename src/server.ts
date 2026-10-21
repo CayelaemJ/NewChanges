@@ -295,7 +295,7 @@ const siteVars = (req: FastifyRequest): Record<string, string> => ({
   PRIVACY_EMAIL: (process.env.PRIVACY_EMAIL || CONTACT_EMAIL || "the portal administrator").trim(),
   LEGAL_EMAIL: (process.env.LEGAL_EMAIL || CONTACT_EMAIL || "the portal administrator").trim(),
   INFORMATION_OFFICER: (process.env.INFORMATION_OFFICER || "our designated Information Officer").trim(),
-  CONTACT_ADDRESS: (process.env.CONTACT_ADDRESS || "Deloitte Building, 5 Magwa Crescent, Midrand, 2090, Gauteng, South Africa").trim(),
+  CONTACT_ADDRESS: (process.env.CONTACT_ADDRESS || "Business address available on request").trim(),
 });
 const serveHtml = async (reply: FastifyReply, file: string, status = 200) => {
   const vars = siteVars(reply.request);
@@ -481,7 +481,7 @@ app.get("/ready", async (_req, reply) => {
   }
 });
 // lets you confirm the NEW build is live: should report the live-dashboard version
-app.get("/version", async () => ({ product: "empower-fin Dashboard Portal", version: "0.10.0" }));
+app.get("/version", async () => ({ product: "The Fixer (Pty) Ltd Dashboard Portal", version: "0.10.0" }));
 
 // ════════════════════ AUTH ════════════════════
 const COOKIE_SECURE = !["0", "false", "no"].includes(String(process.env.COOKIE_SECURE ?? "true").toLowerCase());
@@ -1628,7 +1628,7 @@ app.post<{ Body: { kind: "stale" | "digest" | "test" } }>("/api/admin/automation
       return { ok: true, message: r.ran ? "Digest sent." : "Not sent: digest is disabled, or one was already sent in the last 7 days." };
     }
     if (kind === "test") {
-      const r = await notifyAdmins({ subject: "Test alert from empower-fin Dashboard Portal", html: `<p>This is a test alert triggered by ${admin.name} (${admin.email}).</p>`, slackText: `:wave: Test alert triggered by ${admin.name}.` });
+      const r = await notifyAdmins({ subject: "Test alert from The Fixer (Pty) Ltd Dashboard Portal", html: `<p>This is a test alert triggered by ${admin.name} (${admin.email}).</p>`, slackText: `:wave: Test alert triggered by ${admin.name}.` });
       return { ok: true, message: `Sent to ${r.emailed} email address(es)${r.slack ? " and Slack" : ""}. Set admin alert emails and/or a Slack webhook first if nothing arrived.` };
     }
     return reply.code(400).send({ error: "Unknown automation kind" });
@@ -2404,7 +2404,7 @@ setInterval(() => {
 
 // Register all routes before opening the listener.
   if (!CONTACT_EMAIL) app.log.warn("CONTACT_EMAIL is not set: the contact form is disabled and legal pages show a placeholder contact.");
-  app.log.info({ portalVersion: "0.10.0", publicDir: PUBLIC_DIR }, "starting empower-fin Dashboard Portal");
+  app.log.info({ portalVersion: "0.10.0", publicDir: PUBLIC_DIR }, "starting The Fixer (Pty) Ltd Dashboard Portal");
 // Importing the app for injection tests must never start ingestion or a listener.
 export { app };
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
@@ -2445,7 +2445,7 @@ app.listen({ port: PORT, host: "0.0.0.0" })
         .then(result => app.log.info({ result }, "Playground semantic S3 verification succeeded"))
         .catch(error => app.log.error({ message: error instanceof Error ? error.message : String(error) }, "Playground semantic S3 verification failed"));
     }
-    app.log.info(`empower-fin Dashboard Portal on :${PORT}`);
+    app.log.info(`The Fixer (Pty) Ltd Dashboard Portal on :${PORT}`);
   })
   .catch((err) => { app.log.error(err); process.exit(1); });
 }

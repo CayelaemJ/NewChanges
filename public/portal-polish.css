@@ -1,0 +1,42 @@
+/* Shared presentation refinements; partner palette variables remain authoritative. */
+body{margin:0;}
+.home-shell .home-hero{grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:40px;padding-block:48px 36px;align-items:center;}
+.home-shell .home-hero>div{min-width:0;}
+.home-shell .home-hero h1{font-size:clamp(32px,3.7vw,50px);line-height:1.12;letter-spacing:-.035em;max-width:19ch;margin-bottom:20px;text-wrap:balance;}
+.home-shell .home-hero .lede{font-size:17px;line-height:1.65;max-width:54ch;margin-top:0;margin-bottom:24px;}
+.home-shell .home-proof{margin-top:24px;max-width:none;}
+.home-shell .home-proof span{font-size:13px;line-height:1.5;display:block;}
+.home-shell .home-nav-links a{font-size:14px;}
+.home-shell .console-top{gap:12px;line-height:1.5;font-size:12px;}
+.home-shell .console-kpi{min-width:0;}
+.home-shell .console-kpi small{font-size:10px;line-height:1.5;}
+.home-shell .home-section{padding-top:12px;}
+.home-shell .home-feature p{font-size:14px;}
+.home-shell .pub-footer{gap:16px;flex-wrap:wrap;line-height:1.6;}
+.legal-shell .wrap{max-width:900px!important;padding:36px clamp(16px,4vw,32px) 64px!important;}
+.legal-shell .card{padding:clamp(20px,4vw,36px);}
+.legal-shell p,.legal-shell li{line-height:1.75;overflow-wrap:anywhere;}
+.legal-shell .logo{font-size:18px;line-height:1.5;}
+.legal-shell .meta{line-height:1.6;margin-bottom:24px;}
+.legal-shell h1{font-size:clamp(28px,4vw,36px);line-height:1.2;}
+.legal-shell h2{line-height:1.4;}
+@media(max-width:900px){
+ .home-shell .home-hero{grid-template-columns:1fr;gap:28px;padding-block:32px;}
+ .home-shell .home-console{width:100%;max-width:620px;box-sizing:border-box;}
+ .home-shell .home-hero h1{max-width:23ch;}
+ .home-shell .home-nav .in{flex-wrap:wrap;gap:12px;}
+ .home-shell .home-nav-links{flex-wrap:wrap;gap:4px;}
+ .home-shell .home-nav-links a:not(.nav-cta){display:inline-flex;}
+}
+@media(max-width:640px){
+ .home-shell .home-hero{padding:28px 18px;}
+ .home-shell .home-hero h1{font-size:clamp(30px,8vw,38px);}
+ .home-shell .home-proof{grid-template-columns:1fr;}
+ .home-shell .console-kpis{grid-template-columns:repeat(3,minmax(0,1fr));}
+ .home-shell .console-kpi{padding:8px;}
+ .home-shell .console-kpi strong{font-size:clamp(15px,4vw,20px);overflow-wrap:anywhere;}
+ .home-shell .console-dots{display:none;}
+ .home-shell .home-actions{display:flex;flex-wrap:wrap;gap:10px;}
+ .home-shell .home-actions .ent-cta{flex:1 1 190px;text-align:center;}
+ .home-shell .home-nav-links a{padding:8px;font-size:13px;}
+}

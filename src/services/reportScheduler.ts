@@ -143,7 +143,7 @@ export async function saveEmailConfig(input: EmailDraft) {
   if ("smtpRejectUnauthorized" in input) data.smtpRejectUnauthorized = Boolean(input.smtpRejectUnauthorized);
   if ("smtpUsername" in input) data.smtpUsername = clean(input.smtpUsername);
   if (clean(input.smtpPassword)) data.smtpPassword = clean(input.smtpPassword);
-  if ("fromName" in input) data.fromName = clean(input.fromName) || "empower-fin Dashboard Portal";
+  if ("fromName" in input) data.fromName = clean(input.fromName) || "The Fixer (Pty) Ltd Dashboard Portal";
   if ("fromEmail" in input) data.fromEmail = clean(input.fromEmail);
   if ("replyTo" in input) data.replyTo = clean(input.replyTo);
   if ("defaultTimezone" in input) {
@@ -200,7 +200,7 @@ async function sendEmail(opts: { to: string | string[]; subject: string; html: s
       method: "POST",
       headers: { "Authorization": `Bearer ${cfg.resendApiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        from: `${cfg.fromName || "empower-fin Dashboard Portal"} <${fromEmail}>`,
+        from: `${cfg.fromName || "The Fixer (Pty) Ltd Dashboard Portal"} <${fromEmail}>`,
         to: Array.isArray(opts.to) ? opts.to : [opts.to],
         reply_to: opts.replyTo || cfg.replyTo || undefined,
         subject: opts.subject,
@@ -215,7 +215,7 @@ async function sendEmail(opts: { to: string | string[]; subject: string; html: s
   }
   const { transporter } = await smtpTransport(draft);
   await transporter.sendMail({
-    from: { name: cfg.fromName || "empower-fin Dashboard Portal", address: cfg.fromEmail! },
+    from: { name: cfg.fromName || "The Fixer (Pty) Ltd Dashboard Portal", address: cfg.fromEmail! },
     to: opts.to,
     replyTo: opts.replyTo || cfg.replyTo || undefined,
     subject: opts.subject,
@@ -246,8 +246,8 @@ export async function testEmailConnection(draft: EmailDraft & { recipient?: stri
     if (cfg.emailProvider === "smtp") await (await smtpTransport(draft)).transporter.verify();
     await sendEmail({
       to: recipient,
-      subject: "empower-fin Dashboard Portal — email test",
-      html: `<div style="font-family:Arial,sans-serif;color:#241536;max-width:620px"><h2 style="color:#32217c">Email delivery is working</h2><p>This test was sent successfully by the <strong>empower-fin Dashboard Portal</strong>.</p><p style="color:#6b7280;font-size:13px">${escapeHtml(now.toISOString())}</p></div>`,
+      subject: "The Fixer (Pty) Ltd Dashboard Portal — email test",
+      html: `<div style="font-family:Arial,sans-serif;color:#241536;max-width:620px"><h2 style="color:#32217c">Email delivery is working</h2><p>This test was sent successfully by the <strong>The Fixer (Pty) Ltd Dashboard Portal</strong>.</p><p style="color:#6b7280;font-size:13px">${escapeHtml(now.toISOString())}</p></div>`,
     }, draft);
     await prisma.systemEmailConfig.update({ where: { id: "default" }, data: { lastTestAt: now, lastTestStatus: "SUCCESS", lastTestNote: `Test email sent to ${recipient}` } });
     return { ok: true, recipient };
@@ -406,7 +406,7 @@ function reportHtml(payload: any, schedule: any, theme: any) {
   const portalBase = clean((schedule as any).portalBaseUrl);
   const portal = portalBase ? `${portalBase.replace(/\/$/, "")}/dashboard?employer=${encodeURIComponent(schedule.employerId)}` : null;
   return `<!doctype html><html><body style="margin:0;background:#f5f4fa;font-family:Arial,Helvetica,sans-serif;color:#241536"><div style="max-width:760px;margin:0 auto;padding:28px 16px">
-    <div style="background:${primary};padding:22px 26px;border-radius:16px 16px 0 0;color:white"><div style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#e6dcff;font-weight:700">${escapeHtml(theme?.name || "empower-fin Dashboard Portal")}</div><h1 style="font-size:26px;margin:8px 0 4px">${escapeHtml(payload.employer)} — Financial Wellbeing Report</h1><div style="font-size:13px;color:#e6dcff">${escapeHtml(label)} · ${escapeHtml(site)} · ${escapeHtml(income)}</div></div>
+    <div style="background:${primary};padding:22px 26px;border-radius:16px 16px 0 0;color:white"><div style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#e6dcff;font-weight:700">${escapeHtml(theme?.name || "The Fixer (Pty) Ltd Dashboard Portal")}</div><h1 style="font-size:26px;margin:8px 0 4px">${escapeHtml(payload.employer)} — Financial Wellbeing Report</h1><div style="font-size:13px;color:#e6dcff">${escapeHtml(label)} · ${escapeHtml(site)} · ${escapeHtml(income)}</div></div>
     <div style="background:white;padding:24px 26px;border-radius:0 0 16px 16px;border:1px solid #e8e1f7;border-top:0">
       <table width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:22px"><tr>
         <td style="padding:12px;background:#f7f4ff;border-radius:10px"><div style="font-size:11px;color:#7c6c8c;text-transform:uppercase;font-weight:700">Wellness score</div><div style="font-size:26px;font-weight:800;color:${primary}">${payload.wellness?.complete && payload.wellness?.score != null ? escapeHtml(payload.wellness.score) + "/100" : "Data incomplete"}</div></td>
