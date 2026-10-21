@@ -41,22 +41,22 @@
 <main id="main" class="pub-main"><div class="panel">
   <p class="eyebrow">Contact</p>
   <h1>Request access or ask a question</h1>
-  <p class="lead">Tell us about your organisation and what you need. We reply within two business days. You can also write to <a href="mailto:{{CONTACT_EMAIL}}"><strong>{{CONTACT_EMAIL}}</strong></a>.</p>
+  <p class="lead">{{CONTACT_INTRO}} Contact information: <a href="/contact"><strong>{{CONTACT_EMAIL}}</strong></a>.</p>
   <div id="form-alert" class="form-alert" role="alert"></div>
-  <form id="contact-form" novalidate>
+  <form id="contact-form" data-availability="{{CONTACT_AVAILABILITY}}" novalidate>
     <div class="field"><label for="c-name">Full name</label><input id="c-name" name="name" autocomplete="name" required maxlength="120"><div class="field-error" id="e-name">Please enter your name.</div></div>
     <div class="field"><label for="c-email">Work email</label><input id="c-email" name="email" type="email" autocomplete="email" required maxlength="254"><div class="field-error" id="e-email">Please enter a valid email address.</div></div>
     <div class="field"><label for="c-org">Organisation <span style="text-transform:none;letter-spacing:0;font-weight:500">(optional)</span></label><input id="c-org" name="organisation" autocomplete="organization" maxlength="120"></div>
     <div class="field"><label for="c-msg">How can we help?</label><textarea id="c-msg" name="message" required minlength="10" maxlength="2000"></textarea><div class="hint"><span id="c-count">0</span> / 2000</div><div class="field-error" id="e-message">Please write at least 10 characters.</div></div>
     <div class="hp" aria-hidden="true"><label>Leave blank<input id="c-web" name="website" tabindex="-1" autocomplete="off"></label></div>
-    <button class="ent-cta primary" id="c-btn" type="submit" style="width:100%">Send message</button>
+    <button class="ent-cta primary" id="c-btn" disabled type="submit" style="width:100%">Send message</button>
   </form>
 </div></main>
 <footer class="pub-footer"><span>&copy; The Fixer (Pty) Ltd &middot; {{CONTACT_ADDRESS}}</span>
-<span><a href="/privacy">Privacy Policy</a> &middot; <a href="/terms">Terms</a> &middot; <a href="/cookies">Cookies</a> &middot; <a href="mailto:{{CONTACT_EMAIL}}">{{CONTACT_EMAIL}}</a></span></footer>
+<span><a href="/privacy">Privacy Policy</a> &middot; <a href="/terms">Terms</a> &middot; <a href="/cookies">Cookies</a> &middot; <a href="/contact">{{CONTACT_EMAIL}}</a></span></footer>
 <div class="sticky-cta"><a class="ent-cta" href="/contact">Request access</a></div>
 <script src="/static/shell.js?v=1"></script>
 <script src="/static/engagement-v1.js?v=1"></script>
-<script src="/static/contact.js?v=1"></script>
+<script src="/static/contact.js?v=3"></script>
 </body>
 </html>

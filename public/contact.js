@@ -2,6 +2,7 @@
   'use strict';
   var f = document.getElementById('contact-form'); if (!f) return;
   var btn = document.getElementById('c-btn'), alertBox = document.getElementById('form-alert');
+  btn.disabled = f.dataset.availability !== 'available';
   var msg = document.getElementById('c-msg'), count = document.getElementById('c-count');
   msg.addEventListener('input', function () { count.textContent = msg.value.length; });
   function setErr(id, field, on) { var box = document.getElementById(id); box.parentNode.classList.toggle('has-error', on); field.setAttribute('aria-invalid', on ? 'true' : 'false'); if (on) field.setAttribute('aria-describedby', id); }
@@ -15,6 +16,7 @@
   f.addEventListener('input', function (ev) { var p = ev.target.closest('.field'); if (p && p.classList.contains('has-error')) { validate(); } });
   f.addEventListener('submit', function (ev) {
     ev.preventDefault(); alertBox.classList.remove('show');
+    if(f.dataset.availability==='unavailable'){alertBox.textContent='Contact requests are temporarily unavailable.';alertBox.classList.add('show');return;}
     if (!validate()) return;
     btn.disabled = true; btn.setAttribute('aria-busy', 'true'); btn.innerHTML = '<span class="spin"></span>Sending…';
     fetch('/api/contact', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
