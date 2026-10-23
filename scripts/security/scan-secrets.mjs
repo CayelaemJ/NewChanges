@@ -15,12 +15,12 @@ const rules=[
 
 function containsCredentialedNonExampleDatabaseUrl(content) {
   // Reserved documentation and loopback hosts are synthetic fixtures, not deployed databases.
-  const candidates=content.match(/postgres(?:ql)?:\\/\\/[^:\\s/@'"]+:[^\\s/@'"]{8,}@[^\\s/'"]+/gi)||[];
+  const candidates=content.match(/postgres(?:ql)?:\/\/[^:\s/@'"]+:[^\s/@'"]{8,}@[^\s/'"]+/gi)||[];
   return candidates.some(candidate=>{
     const host=candidate.split('@').pop().split(':')[0].toLowerCase();
     return !(['localhost','127.0.0.1','::1'].includes(host) ||
       host.endsWith('.invalid') || host.endsWith('.example') ||
-      /^example\\.(?:com|net|org)$/.test(host));
+      /^example\.(?:com|net|org)$/.test(host));
   });
 }
 export function matchesSecret(content) {
