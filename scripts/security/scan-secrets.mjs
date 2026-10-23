@@ -13,8 +13,22 @@ const rules=[
   ['Private key material', /-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----/]
 ];
 
+function containsCredentialedNonExampleDatabaseUrl(content) {
+  // Reserved documentation and loopback hosts are synthetic fixtures, not deployed databases.
+  const candidates=content.match(/postgres(?:ql)?:\\/\\/[^:\\s/@'"]+:[^\\s/@'"]{8,}@[^\\s/'"]+/gi)||[];
+  return candidates.some(candidate=>{
+    const host=candidate.split('@').pop().split(':')[0].toLowerCase();
+    return !(['localhost','127.0.0.1','::1'].includes(host) ||
+      host.endsWith('.invalid') || host.endsWith('.example') ||
+      /^example\\.(?:com|net|org)$/.test(host));
+  });
+}
 export function matchesSecret(content) {
-  return rules.filter(([,pattern])=>pattern.test(content)).map(([name])=>name);
+  return rules.filter(([name,pattern])=>
+    name==='Database URL containing a password'
+      ? containsCredentialedNonExampleDatabaseUrl(content)
+      : pattern.test(content)
+  ).map(([name])=>name);
 }
 export function isDisallowedEnvFile(path) {
   const name=basename(path);
