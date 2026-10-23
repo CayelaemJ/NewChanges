@@ -353,6 +353,18 @@ jobs:
           name: Scan JavaScript, TypeScript and security rules
           command: semgrep scan --config p/javascript --config p/typescript --config p/security-audit --error --exclude node_modules --exclude dist --exclude build .
 
+
+  credential_exposure_scan:
+    docker:
+      - image: cimg/node:24.22
+    resource_class: small
+    working_directory: ~/newchanges
+    steps:
+      - checkout
+      - run:
+          name: Check secret scanner regression tests and tracked credential exposure
+          command: node --test scripts/security/scan-secrets.test.mjs && node scripts/security/scan-secrets.mjs
+
 workflows:
   semantic_context_readiness_check:
     when: << pipeline.parameters.semantic_context_readiness >>
@@ -376,5 +388,6 @@ workflows:
       - source_quality
       - browser_smoke
       - semgrep_security
+      - credential_exposure_scan
 
 
