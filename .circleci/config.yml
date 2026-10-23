@@ -430,7 +430,4 @@ workflows:
           filters:
             branches:
               only: main
-      - security_suite:
-          filters:
-            branches:
-              only: main
+      - security_suite
