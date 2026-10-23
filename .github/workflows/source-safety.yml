@@ -1,6 +1,7 @@
 name: Source security and quality
+# CircleCI runs automatic code-security checks for this repository.
+# Keep this GitHub Actions workflow available for optional manual execution only.
 on:
-  pull_request:
   workflow_dispatch:
 
 permissions:

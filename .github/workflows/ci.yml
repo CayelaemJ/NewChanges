@@ -1,8 +1,9 @@
 name: ci
 
+# This repo uses CircleCI for PR and main-branch verification.
+# Manual opt-in GitHub Actions is retained only for accounts with runner access.
 on:
-  push:
-  pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
