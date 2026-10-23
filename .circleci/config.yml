@@ -373,7 +373,6 @@ jobs:
       - store_artifacts:
           path: security-reports
           destination: security-reports
-          when: always
 workflows:
   semantic_context_readiness_check:
     when: << pipeline.parameters.semantic_context_readiness >>
