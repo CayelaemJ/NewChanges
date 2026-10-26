@@ -377,7 +377,11 @@ jobs:
           command: npm ci --no-audit --no-fund
       - run:
           name: Report high severity dependency vulnerabilities separately
-          command: npm audit --audit-level=high
+          command: node scripts/ci/audit-summary.mjs
+      - store_artifacts:
+          path: test-results/dependency-audit-summary.json
+          destination: dependency-audit-summary.json
+          when: always
 
 workflows:
   semantic_context_readiness_check:
