@@ -278,6 +278,7 @@
 <link rel="stylesheet" href="/static/portal-polish.css?v=1">
 </head>
 <body class="console-page console-admin" data-portal-build="0.10.0">
+  <form id="admin-credential-fields" onsubmit="event.preventDefault()" hidden></form>
 <div id="welcome-splash">
   <div class="welcome-splash-inner">
     <img id="welcome-splash-logo" class="welcome-splash-logo efs-brand-logo" src="/static/the-fixer-logo.svg?v=6" alt="The Fixer logo">
@@ -461,7 +462,7 @@
               <input id="integ-url" placeholder="https://your-provider.example.com" style="display:block;width:100%;margin-top:5px;font:inherit;font-weight:500;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">
             </label>
             <label style="grid-column:span 2;font-size:12.5px;font-weight:700;color:#5b6b7a;">Bearer token (kept private)
-              <input id="integ-token" type="password" placeholder="leave blank to keep existing" style="display:block;width:100%;margin-top:5px;font:inherit;font-weight:500;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">
+              <input id="integ-token" type="password" form="admin-credential-fields" placeholder="leave blank to keep existing" style="display:block;width:100%;margin-top:5px;font:inherit;font-weight:500;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">
             </label>
           </div>
 
@@ -494,7 +495,7 @@
               <input id="integ-sql-user" autocomplete="off" placeholder="fixer_reader" style="display:block;width:100%;margin-top:5px;font:inherit;font-weight:500;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">
             </label>
             <label style="font-size:12.5px;font-weight:700;color:#5b6b7a;">Password (kept private)
-              <input id="integ-sql-password" type="password" autocomplete="new-password" placeholder="leave blank to keep existing" style="display:block;width:100%;margin-top:5px;font:inherit;font-weight:500;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">
+              <input id="integ-sql-password" type="password" form="admin-credential-fields" autocomplete="new-password" placeholder="leave blank to keep existing" style="display:block;width:100%;margin-top:5px;font:inherit;font-weight:500;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">
             </label>
             <label style="font-size:12.5px;font-weight:700;color:#5b6b7a;">Query timeout (ms)
               <input id="integ-sql-timeout" type="number" min="1000" value="60000" style="display:block;width:100%;margin-top:5px;font:inherit;font-weight:500;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">
@@ -603,7 +604,7 @@
               <input id="mail-user" autocomplete="off" placeholder="reports@company.com" style="display:block;width:100%;margin-top:5px;font:inherit;font-weight:500;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">
             </label>
             <label style="font-size:12.5px;font-weight:700;color:#5b6b7a;">SMTP password
-              <input id="mail-password" type="password" autocomplete="new-password" placeholder="leave blank to keep existing" style="display:block;width:100%;margin-top:5px;font:inherit;font-weight:500;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">
+              <input id="mail-password" type="password" form="admin-credential-fields" autocomplete="new-password" placeholder="leave blank to keep existing" style="display:block;width:100%;margin-top:5px;font:inherit;font-weight:500;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">
             </label>
             <label style="font-size:12.5px;font-weight:700;color:#5b6b7a;">From name
               <input id="mail-from-name" value="The Fixer (Pty) Ltd Dashboard Portal" style="display:block;width:100%;margin-top:5px;font:inherit;font-weight:500;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">
@@ -622,7 +623,7 @@
             </label>
             <div class="integration-panel-title">Resend API <span class="muted" style="font-weight:500;">(optional managed delivery)</span></div>
             <label style="font-size:12.5px;font-weight:700;color:#5b6b7a;">Resend API key
-              <input id="mail-resend-key" type="password" autocomplete="new-password" placeholder="leave blank to keep existing" style="display:block;width:100%;margin-top:5px;font:inherit;font-weight:500;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">
+              <input id="mail-resend-key" type="password" form="admin-credential-fields" autocomplete="new-password" placeholder="leave blank to keep existing" style="display:block;width:100%;margin-top:5px;font:inherit;font-weight:500;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">
             </label>
             <label style="font-size:12.5px;font-weight:700;color:#5b6b7a;">Resend From email
               <input id="mail-resend-from" type="email" placeholder="reports@verified-domain.com" style="display:block;width:100%;margin-top:5px;font:inherit;font-weight:500;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">

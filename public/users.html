@@ -103,6 +103,7 @@
 <link rel="stylesheet" href="/static/portal-polish.css?v=1">
 </head>
 <body class="console-page console-users" data-portal-build="0.10.0">
+  <form id="user-credential-fields" onsubmit="event.preventDefault()" hidden></form>
 <div class="topbar"><div class="topbar-inner">
   <img src="/static/the-fixer-logo.svg?v=6" class="efs-brand-logo" alt="The Fixer" style="height:30px;width:auto;">
   <span class="pill">User Management</span>
@@ -229,7 +230,7 @@
             <label><input type="radio" name="access" value="link" onchange="onAccessChange()"> Send a set-password link</label>
           </div>
           <label for="n-pass" id="n-pass-label">Temporary password</label>
-          <input id="n-pass" type="password" autocomplete="new-password" aria-describedby="n-pass-help" placeholder="Temporary password" style="margin-top:8px;">
+          <input id="n-pass" type="password" form="user-credential-fields" autocomplete="new-password" aria-describedby="n-pass-help" placeholder="Temporary password" style="margin-top:8px;">
           <p id="n-pass-help" class="form-help">Use at least 12 characters, including uppercase, lowercase and a number.</p>
         </div>
       </div>
