@@ -20,5 +20,10 @@ for(const path of pages){
   checked++;
  }
 }
+const activation=readFileSync(join(root,"public/set-password.html"),"utf8");
+if(!activation.includes('onsubmit="event.preventDefault();setPassword()"') ||
+ !activation.includes("async function setPassword()")) {
+ throw Error("Password activation must use a non-shadowed form submit handler");
+}
 if(checked<8)throw Error("Expected at least eight password fields across pages; found "+checked);
 console.log("Password form associations verified across",pages.length,"pages and",checked,"fields.");
