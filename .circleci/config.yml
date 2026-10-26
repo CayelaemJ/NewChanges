@@ -365,6 +365,20 @@ jobs:
           name: Check secret scanner regression tests and tracked credential exposure
           command: node --test scripts/security/scan-secrets.test.mjs && node scripts/security/scan-secrets.mjs
 
+  dependency_advisory_audit:
+    docker:
+      - image: cimg/node:24.22
+    resource_class: small
+    working_directory: ~/newchanges
+    steps:
+      - checkout
+      - run:
+          name: Install locked dependencies
+          command: npm ci --no-audit --no-fund
+      - run:
+          name: Report high severity dependency vulnerabilities separately
+          command: npm audit --audit-level=high
+
 workflows:
   semantic_context_readiness_check:
     when: << pipeline.parameters.semantic_context_readiness >>
@@ -389,5 +403,6 @@ workflows:
       - browser_smoke
       - semgrep_security
       - credential_exposure_scan
+      - dependency_advisory_audit
 
 
