@@ -55,6 +55,7 @@ import { runMLOpsAssessment, getMLOpsPortfolioAssessment, recordMLOpsFeedback, l
 import { getBrandLearningProfile, learnFromBrandUpload, recordBrandCorrection } from "./services/brandLearningService.js";
 
 import { browserSafeFailure } from "./services/browserErrorSafety.js";
+import { InMemoryRateLimiter } from "./services/inMemoryRateLimiter.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = [join(__dirname, "public"), join(__dirname, "..", "public")]
@@ -115,21 +116,15 @@ function applySecurityHeaders(reply: FastifyReply) {
   if (COOKIE_SECURE) reply.header("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
 }
 
-const rateBuckets = new Map<string, { count: number; resetAt: number }>();
+const rateBuckets = new InMemoryRateLimiter(100_000);
 const RATE_WINDOW_MS = 60_000;
 const RATE_LIMIT = 240;
 const AUTH_RATE_LIMIT = 12;
 const AUTH_WINDOW_MS = 10 * 60_000;
 function rateLimit(reply: FastifyReply, key: string, limit: number, windowMs: number): boolean {
-  const now = Date.now();
-  const current = rateBuckets.get(key);
-  if (!current || current.resetAt <= now) {
-    rateBuckets.set(key, { count: 1, resetAt: now + windowMs });
-    return true;
-  }
-  current.count += 1;
-  if (current.count > limit) {
-    reply.header("Retry-After", Math.ceil((current.resetAt - now) / 1000));
+  const decision = rateBuckets.hit(key, limit, windowMs);
+  if (!decision.allowed) {
+    reply.header("Retry-After", decision.retryAfterSeconds);
     reply.code(429).send({ error: "too many requests; try again later" });
     return false;
   }
@@ -243,10 +238,7 @@ app.addHook("onResponse", async (req, reply) => {
 });
 // Periodically discard old rate-limit buckets so a long-lived process does not
 // retain one entry forever for every IP that ever touched it.
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, bucket] of rateBuckets) if (bucket.resetAt <= now) rateBuckets.delete(key);
-}, 5 * 60_000).unref();
+setInterval(() => rateBuckets.pruneExpired(), 5 * 60_000).unref();
 
 app.register(cookie);
 app.register(multipart, {
