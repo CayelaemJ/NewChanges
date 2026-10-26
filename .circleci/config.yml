@@ -311,7 +311,7 @@ jobs:
           command: npm ls eslint @typescript-eslint/parser vitest @playwright/test
       - run:
           name: ESLint
-          command: npm run quality:lint
+          command: npm run quality:lint && node scripts/password-form-contract-check.mjs
       - run:
           name: TypeScript
           command: npm run quality:types
