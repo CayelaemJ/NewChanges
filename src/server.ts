@@ -331,7 +331,7 @@ const serveHtml = async (reply: FastifyReply, file: string, status = 200) => {
     .header("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate")
     .header("Pragma", "no-cache")
     .header("Expires", "0")
-    .header("X-Fixer-Portal-Build", "0.10.0")
+    .header("X-Empower-Portal-Build", "0.10.0")
     .type("text/html; charset=utf-8")
     .send(html);
 };
