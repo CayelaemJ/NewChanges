@@ -405,7 +405,7 @@ jobs:
   trivy_vulnerability_scan:
     docker:
       - image: cimg/node:24.22
-    resource_class: medium
+    resource_class: small
     working_directory: ~/newchanges
     steps:
       - checkout
