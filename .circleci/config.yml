@@ -392,6 +392,7 @@ jobs:
       - checkout
       - run:
           name: Download pinned Gitleaks and scan full Git history with redaction
+          no_output_timeout: 20m
           command: |
             set -Eeuo pipefail
             mkdir -p "$HOME/.local/bin" security-reports
