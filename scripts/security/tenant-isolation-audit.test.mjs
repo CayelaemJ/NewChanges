@@ -13,20 +13,30 @@ test("flags a bypass-RLS runtime role and unprotected scoped tables", () => {
   assert.deepEqual(result.candidateScopedWithoutRls, ["Employee"]);
   assert.deepEqual(result.candidateScopedNotForced, ["Journey"]);
   assert.equal(result.runtimeRoleBypassesRls, true);
-  assert.equal(result.releaseGatePassed, false);
+  assert.equal(result.catalogPreflightPassed, false);
 });
 
 test("passes a scoped RLS-enabled schema accessed through a non-bypass runtime role", () => {
   const result = assessTenantIsolation([
-    { table_name: "Employee", rls_enabled: true, rls_forced: true, scope_columns: ["employerId"] },
-    { table_name: "Journey", rls_enabled: true, rls_forced: true, scope_columns: ["platformUserId"] },
+    { table_name: "Employee", rls_enabled: true, rls_forced: true, policy_count: 1, scope_columns: ["employerId"] },
+    { table_name: "Journey", rls_enabled: true, rls_forced: true, policy_count: 1, scope_columns: ["platformUserId"] },
     { table_name: "SystemEmailConfig", rls_enabled: false, rls_forced: false, scope_columns: [] },
   ], { rolbypassrls: false });
-  assert.equal(result.releaseGatePassed, true);
+  assert.equal(result.catalogPreflightPassed, true);
   assert.deepEqual(result.candidateScopedWithoutRls, []);
   assert.equal(result.rlsEnabled, 2);
+  assert.deepEqual(result.candidateScopedWithoutPolicies, []);
 });
 
 test("fails closed when execution role cannot be established", () => {
-  assert.equal(assessTenantIsolation([], null).releaseGatePassed, false);
+  assert.equal(assessTenantIsolation([], null).catalogPreflightPassed, false);
+});
+
+test("denies empty and policyless catalogs even if RLS flags are set", () => {
+  assert.equal(assessTenantIsolation([], { rolbypassrls: false }).catalogPreflightPassed, false);
+  const result = assessTenantIsolation([
+    { table_name: "ScoreSnapshot", rls_enabled: true, rls_forced: true, policy_count: 0, scope_columns: ["employerId"] },
+  ], { rolbypassrls: false });
+  assert.deepEqual(result.candidateScopedWithoutPolicies, ["ScoreSnapshot"]);
+  assert.equal(result.catalogPreflightPassed, false);
 });
