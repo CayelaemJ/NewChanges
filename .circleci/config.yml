@@ -201,6 +201,9 @@ jobs:
           name: Prisma 7 disposable database integration
           command: node scripts/prisma-upgrade-integration.mjs
       - run:
+          name: Disposable RLS cross-tenant negative-access probe
+          command: CI_RLS_PROBE_APPROVED=CI_DISPOSABLE_ONLY node scripts/security/rls-isolation-ci-probe.mjs
+      - run:
           name: Semantic integration and source safeguards
           command: |
             node scripts/production-boundary-check.mjs
