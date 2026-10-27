@@ -2,9 +2,10 @@
 set -Eeuo pipefail
 mkdir -p security-reports "$HOME/.local/bin"
 export PATH="$HOME/.local/bin:$PATH"
+trap 'code=$?; printf "setup-or-scan-command: FAIL (line %s, exit %s)\\n" "$LINENO" "$code" >> security-reports/summary.txt' ERR
 
 # Pinned scanner releases. Only passive repository scanning runs on CI.
-curl -fsSL https://raw.githubusercontent.com/aquasecurity/trivy/v0.67.2/contrib/install.sh | sh -s -- -b "$HOME/.local/bin" v0.67.2
+curl -fsSL https://raw.githubusercontent.com/aquasecurity/trivy/v0.76.1/contrib/install.sh | sh -s -- -b "$HOME/.local/bin" v0.76.1
 curl -fsSL https://github.com/gitleaks/gitleaks/releases/download/v8.24.3/gitleaks_8.24.3_linux_x64.tar.gz | tar -xz -C "$HOME/.local/bin" gitleaks
 gitleaks version
 trivy --version
