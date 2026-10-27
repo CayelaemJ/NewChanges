@@ -23,8 +23,8 @@ Security-sensitive changes require review of authentication/authorization, sessi
 
 ## Secrets
 
-Secrets belong in Railway environment variables or the approved secret store. Never commit `.env` files, production credentials, session tokens, API keys, or database passwords.
+Secrets belong in approved Render/Neon environment variables or managed secret storage or the approved secret store. Never commit `.env` files, production credentials, session tokens, API keys, or database passwords.
 
 ## Production rule
 
-A successful Railway deployment is not by itself evidence that the application is secure. CI, application-level regression checks, dependency scanning, and controlled review are release gates.
+A successful Render deployment is not by itself evidence that the application is secure. CI, application-level regression checks, dependency scanning, and controlled review are release gates.
