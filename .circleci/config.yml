@@ -383,6 +383,22 @@ jobs:
           destination: dependency-audit-summary.json
           when: always
 
+  security_suite:
+    docker:
+      - image: cimg/node:24.22
+    resource_class: medium
+    working_directory: ~/newchanges
+    steps:
+      - checkout
+      - run:
+          name: Historical Gitleaks and Trivy vulnerability/misconfiguration scan
+          command: bash .circleci/security.sh
+          no_output_timeout: 15m
+      - store_artifacts:
+          path: security-reports
+          destination: security-reports
+          when: always
+
 workflows:
   semantic_context_readiness_check:
     when: << pipeline.parameters.semantic_context_readiness >>
@@ -408,5 +424,6 @@ workflows:
       - semgrep_security
       - credential_exposure_scan
       - dependency_advisory_audit
+      - security_suite
 
 
