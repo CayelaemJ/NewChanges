@@ -20,7 +20,7 @@
     "check:scheduling": "node scripts/scheduling-regression-check.mjs",
     "db:rebuild-scores": "tsx scripts/rebuild-score-snapshots.ts",
     "security:audit": "npm audit --audit-level=high",
-    "check:security": "node scripts/security-regression-check.mjs && node --import tsx --test tests/in-memory-rate-limiter.test.ts",
+    "check:security": "node scripts/security-regression-check.mjs && node --import tsx --test tests/in-memory-rate-limiter.test.ts && node --test scripts/security/tenant-isolation-audit.test.mjs",
     "sync:configure": "node scripts/configure-mysql-sync.mjs",
     "check:production": "node scripts/production-readiness-check.mjs",
     "check:brand": "node tests/brand-engine.test.mjs",
@@ -70,7 +70,8 @@
     "quality:lint": "eslint .",
     "quality:types": "tsc --noEmit && npm run check:frontend:typecheck",
     "quality:unit": "vitest run",
-    "quality:e2e": "playwright test"
+    "quality:e2e": "playwright test",
+    "security:tenant-audit": "node scripts/security/tenant-isolation-audit.mjs"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.3",
