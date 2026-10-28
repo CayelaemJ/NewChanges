@@ -33,13 +33,13 @@ for(const name of files){
   if(name==='home.html'||name.endsWith('.html')){
     let html=bytes.toString('utf8')
       .replaceAll('{{BASE_URL}}',site)
-      .replace(/<meta\\s+name=["']robots["']\\s+content=["'][^"']*["']\\s*\\/?>/gi,'')
-      .replace(/<link\\s+rel=["']canonical["'][^>]*>/gi,'')
+      .replace(/<meta\s+name=["']robots["']\s+content=["'][^"']*["']\s*\/?>/gi,'')
+      .replace(/<link\s+rel=["']canonical["'][^>]*>/gi,'')
       .replace(/<body([^>]*)>/i,'<body$1>'+notice)
-      .replace(/<\\/head>/i,'<meta name="robots" content="noindex,nofollow,noarchive"></head>');
+      .replace(/<\/head>/i,'<meta name="robots" content="noindex,nofollow,noarchive"></head>');
     bytes=Buffer.from(html);
   }
-  const uri=name.endsWith('.html')? (name==='home.html'?'/':name==='404.html'?'/404': '/'+name.replace(/\\.html$/,'')) : ((name.startsWith('favicon')||name==='apple-touch-icon.png'||name==='site.webmanifest')?'/':'/static/')+name;
+  const uri=name.endsWith('.html')? (name==='home.html'?'/':name==='404.html'?'/404': '/'+name.replace(/\.html$/,'')) : ((name.startsWith('favicon')||name==='apple-touch-icon.png'||name==='site.webmanifest')?'/':'/static/')+name;
   const type=mime[path.extname(name)];
   assets[uri]={mime:type,bytes:bytes.length,sha256:crypto.createHash('sha256').update(bytes).digest('hex'),gzipBase64:zlib.gzipSync(bytes,{level:9}).toString('base64')};
 }
