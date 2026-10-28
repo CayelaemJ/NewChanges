@@ -58,3 +58,39 @@ or connection strings in issues, CI logs or the build.
 - Static marketing on Cloudflare without Render asset fetches.
 - **Render continues to run exactly as before**.
 - Authenticated product migration remains open and explicitly unverified.
+
+## Staging deployment and external verification — 28 October 2026
+
+The Cloudflare API deployed the **public-only staging Worker** as
+`newchanges-cloudflare-preview`. Its isolated preview address is
+`https://newchanges-cloudflare-preview.cabo-solutions-za.workers.dev/`.
+Cloudflare confirmed the workers.dev route was enabled and a version was
+receiving 100% of preview traffic. The exact deployed source snapshot
+is in `cloudflare/newchanges-public-preview.worker.mjs` (public assets
+only; no application secrets or client data).
+
+The NewChanges repository's isolated GitHub Action
+`NewChanges Cloudflare isolated preview readiness` failed **before
+any job steps executed** due to runner availability/permissions. Do
+not misreport that as a passed source build.
+
+For independent runtime evidence, CABO Solutions' working GitHub runner
+was used only to fetch the public preview URL (not the private repo):
+`https://github.com/CayelaemJ/CABOSOLUTIONS/actions/runs/40712023624`.
+That workflow passed real HTTPS brand/HTML and security-header checks,
+blocked live login/dashboard/React/API routes, and desktop/mobile
+Chromium page checks. It submitted no customer information or real logins.
+
+This proves the **public marketing preview** runs on Cloudflare without
+requesting Render's frontend assets. It does *not* demonstrate production
+Fastify/Prisma/Neon/MySQL/auth/ingestion compatibility. The currently
+running Render service remains untouched, with no DNS changes.
+
+### Production readiness gates still open
+- Fully isolated Cloudflare staging authentication and tenant data.
+- Read-only copy/fixtures for Postgres and MySQL integration; no production
+  credentials initially.
+- Port/test Node-only jobs, Prisma adapters, ingestion, mail, webhooks.
+- Pass all repository security, billing, runtime and browser regression
+  checks on a functional, authenticated Cloudflare environment.
+- Data protection, backup/restore and rollback verified before cutover.
