@@ -407,8 +407,12 @@ jobs:
           name: Auto-fix non-breaking security vulnerabilities
           command: node scripts/ci/daily-security-fix.mjs
       - run:
-          name: Install GitHub CLI
+          name: Install GitHub CLI only when PR publishing is configured
           command: |
+            if [ -z "${GITHUB_TOKEN:-${GH_TOKEN:-}}" ]; then
+              echo "[security-fix] No scoped GitHub token configured; advisory reporting remains enabled."
+              exit 0
+            fi
             if type gh >/dev/null 2>&1; then exit 0; fi
             curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
               | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
@@ -422,6 +426,11 @@ jobs:
               echo "[security-fix] No lockfile changes — nothing to commit."
               exit 0
             fi
+            if [ -z "${GITHUB_TOKEN:-${GH_TOKEN:-}}" ]; then
+              echo "[security-fix] No GitHub write token: report findings, but do not attempt a push."
+              exit 0
+            fi
+            export GH_TOKEN="${GH_TOKEN:-${GITHUB_TOKEN}}"
             BRANCH="chunk/auto-security-fix-$(date +%Y%m%d)"
             git config user.email "security-bot@circleci"
             git config user.name "Security Bot"
@@ -444,7 +453,7 @@ jobs:
             _Merge only after CI is green._" \
               --base main \
               --head "$BRANCH" \
-              || echo "[security-fix] PR already exists or could not be created — skipping."
+              || { gh pr view "$BRANCH" >/dev/null 2>&1 && echo "[security-fix] PR already exists."; }
       - run:
           name: Credential exposure scan
           command: node --test scripts/security/scan-secrets.test.mjs && node scripts/security/scan-secrets.mjs
@@ -483,7 +492,8 @@ workflows:
       - dependency_advisory_audit
 
   # Runs daily on main: auto-fixes CVEs and opens a PR, plus re-scans for new findings.
-  # Requires GITHUB_TOKEN in the newchanges-security CircleCI context.
+  # Optional: provide a repo-scoped GITHUB_TOKEN via CircleCI context/project env to open PRs.
+  # Without a token, the scheduled job still audits and reports but never pushes.
   daily_security:
     triggers:
       - schedule:
@@ -493,8 +503,7 @@ workflows:
               only:
                 - main
     jobs:
-      - daily_security_repair:
-          context: newchanges-security
+      - daily_security_repair
       - semgrep_security
 
 
