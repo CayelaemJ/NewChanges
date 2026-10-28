@@ -53,3 +53,23 @@ test('robots and HEAD are safe',async()=>{
   assert.equal(head.status,200);
   assert.equal(await head.text(),'');
 });
+
+test('legacy favicon routes and web manifest do not depend on Render',async()=>{
+ for(const p of ['/favicon.ico','/static/favicon-16.png','/static/favicon-32.png','/static/apple-touch-icon.png']){
+  const r=await worker.fetch(new Request(url(p)));
+  assert.equal(r.status,302,p);
+  assert.equal(r.headers.get('location'),'/static/the-fixer-icon.svg');
+ }
+ const r=await worker.fetch(new Request(url('/static/site.webmanifest')));
+ assert.equal(r.status,200);
+ assert.match(await r.text(),/The Fixer/);
+});
+test('HEAD or malformed API requests cannot bypass the private route boundary',async()=>{
+ for(const p of ['/api/auth/me','/api/admin','/api/source-sync','/auth/me']){
+  for(const method of ['GET','HEAD','POST']){
+   const r=await worker.fetch(new Request(url(p),{method,headers:{Authorization:'Bearer synthetic-should-not-pass'}}));
+   assert.equal(r.status,404,p+' '+method);
+   assert.equal(r.headers.get('set-cookie'),null);
+  }
+ }
+});
