@@ -94,3 +94,32 @@ running Render service remains untouched, with no DNS changes.
 - Pass all repository security, billing, runtime and browser regression
   checks on a functional, authenticated Cloudflare environment.
 - Data protection, backup/restore and rollback verified before cutover.
+
+## Independent staging builds (28 October 2026, later iteration)
+
+The repository's GitHub Actions runner could not execute a job. A dedicated
+`cloudflare_newchanges_staging_build` CircleCI job is now configured for
+**only** `chore/cloudflare-isolated-preview-20261028`. It performs two
+separate build operations with no database service or application secrets:
+
+1. Generate the restricted marketing Worker from the checked-in public
+   assets and execute its no-network, negative access tests.
+2. Compile the existing React frontend into `public/react`, saving the
+   output as an internal CircleCI artifact with the explicit label
+   `private-react-build-NOT-PUBLISHED`. This artifact is **not** a
+   production-capable app; its auth and data APIs still require the
+   Fastify/Prisma/backend migration.
+
+The public preview generator now excludes binary PNG/ICO assets from
+text-only Workers bundling; the isolated Worker serves the branded SVG icon
+as an explicit fallback. This avoids pushing binary data through an
+assumed UTF-8 content path. No Build → Deploy automation has been enabled.
+
+### Evidence and pending checks
+- The external public preview smoke passed previously.
+- A new external browser/HTTP test covers icon and web-manifest routes.
+- The new CircleCI job is configured, but a successful CircleCI run
+  has **not yet been independently confirmed**.
+- Worker public assets and private React build must not be confused.
+- Preserve Render `newchanges-standby` and its DNS/database exactly
+  until independent functional API migration passes.
