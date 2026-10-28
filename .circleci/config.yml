@@ -37,6 +37,36 @@ commands:
               --target-version="$CIRCLE_SHA1"
 
 jobs:
+  cloudflare_newchanges_staging_build:
+    # No database service or production variables. Build-only, no deployment.
+    docker:
+      - image: cimg/node:24.22
+    resource_class: small
+    working_directory: ~/newchanges
+    steps:
+      - checkout
+      - run:
+          name: Build restricted public Worker and run isolated negative-route tests
+          command: |
+            set -euo pipefail
+            node --check scripts/cloudflare/build-isolated-preview.mjs
+            node scripts/cloudflare/build-isolated-preview.mjs
+            node --check cloudflare-output/newchanges-isolated-preview.worker.mjs
+            node --test tests/cloudflare-isolated-preview.test.mjs
+      - run:
+          name: Build real React dashboard without bundling credentials or deploying
+          command: |
+            set -euo pipefail
+            npm ci --prefix frontend --no-audit --no-fund
+            npm run build --prefix frontend
+            test -s public/react/index.html
+      - store_artifacts:
+          path: cloudflare-output/newchanges-isolated-preview.worker.mjs
+          destination: cloudflare/newchanges-public-preview.worker.mjs
+      - store_artifacts:
+          path: public/react
+          destination: cloudflare/private-react-build-NOT-PUBLISHED
+
   semantic_testing_context_readiness:
     docker:
       - image: cimg/node:24.22
@@ -440,6 +470,13 @@ jobs:
           when: always
 
 workflows:
+  newchanges_cloudflare_staging_build:
+    jobs:
+      - cloudflare_newchanges_staging_build:
+          filters:
+            branches:
+              only:
+                - chore/cloudflare-isolated-preview-20261028
   semantic_context_readiness_check:
     when: << pipeline.parameters.semantic_context_readiness >>
     jobs:
