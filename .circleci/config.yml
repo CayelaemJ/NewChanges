@@ -386,6 +386,59 @@ jobs:
           destination: dependency-audit-summary.json
           when: always
 
+  gitleaks_history_scan:
+    docker:
+      - image: cimg/node:24.22
+    resource_class: small
+    working_directory: ~/newchanges
+    steps:
+      - checkout
+      - run:
+          name: Download pinned Gitleaks and scan full Git history with redaction
+          no_output_timeout: 20m
+          command: |
+            set -Eeuo pipefail
+            mkdir -p "$HOME/.local/bin" security-reports
+            curl -fsSL https://github.com/gitleaks/gitleaks/releases/download/v8.24.3/gitleaks_8.24.3_linux_x64.tar.gz | tar -xz -C "$HOME/.local/bin" gitleaks
+            node --test scripts/security/summarize-scanner-report.test.mjs
+            scan_status=0
+            "$HOME/.local/bin/gitleaks" git --redact --exit-code 1 --report-format json --report-path security-reports/gitleaks.json || scan_status=$?
+            node scripts/security/summarize-scanner-report.mjs gitleaks security-reports/gitleaks.json
+            exit "$scan_status"
+      - store_artifacts:
+          path: security-reports
+          destination: security-reports
+          when: always
+
+  trivy_vulnerability_scan:
+    docker:
+      - image: cimg/node:24.22
+    resource_class: small
+    working_directory: ~/newchanges
+    steps:
+      - checkout
+      - run:
+          name: Install patched pinned Trivy release
+          command: |
+            set -Eeuo pipefail
+            mkdir -p "$HOME/.local/bin"
+            curl -fsSL https://raw.githubusercontent.com/aquasecurity/trivy/v0.76.1/contrib/install.sh | sh -s -- -b "$HOME/.local/bin" v0.76.1
+            "$HOME/.local/bin/trivy" --version
+      - run:
+          name: Scan dependency and configuration vulnerabilities, high and critical
+          command: |
+            set -Eeuo pipefail
+            mkdir -p security-reports
+            scan_status=0
+            "$HOME/.local/bin/trivy" fs --scanners vuln,misconfig --severity HIGH,CRITICAL --exit-code 1 --format json --output security-reports/trivy.json . || scan_status=$?
+            node scripts/security/summarize-scanner-report.mjs trivy security-reports/trivy.json
+            exit "$scan_status"
+          no_output_timeout: 15m
+      - store_artifacts:
+          path: security-reports
+          destination: security-reports
+          when: always
+
 workflows:
   semantic_context_readiness_check:
     when: << pipeline.parameters.semantic_context_readiness >>
@@ -411,5 +464,7 @@ workflows:
       - semgrep_security
       - credential_exposure_scan
       - dependency_advisory_audit
+      - gitleaks_history_scan
+      - trivy_vulnerability_scan
 
 
