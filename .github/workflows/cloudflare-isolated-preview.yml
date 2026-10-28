@@ -1,0 +1,29 @@
+name: NewChanges Cloudflare isolated preview readiness
+# Does not deploy, mutate Render, contact databases, or require any API key.
+on:
+  push:
+    branches: [chore/cloudflare-isolated-preview-20261028]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  isolated-static:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify static build script and create safe preview Worker
+        run: |
+          node --check scripts/cloudflare/build-isolated-preview.mjs
+          node scripts/cloudflare/build-isolated-preview.mjs
+          node --check cloudflare-output/newchanges-isolated-preview.worker.mjs
+          node --test tests/cloudflare-isolated-preview.test.mjs
+      - name: Export reviewed preview Worker (no credentials or API data)
+        uses: actions/upload-artifact@v4
+        with:
+          name: newchanges-public-marketing-worker
+          path: cloudflare-output/newchanges-isolated-preview.worker.mjs
+          retention-days: 7
