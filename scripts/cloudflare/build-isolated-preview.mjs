@@ -72,7 +72,7 @@ export default {
     if(p==='/robots.txt')return new Response(request.method==='HEAD'?null:'User-agent: *\\nDisallow: /\\n',{headers:{...HEADERS,'Content-Type':'text/plain; charset=utf-8'}});
     if(p==='/login'||p==='/contact'||p==='/admin'||p==='/dashboard'||p==='/users'||p==='/react'||p.startsWith('/react/')||p==='/set-password')return denied(403,'Live application remains on Render. This public staging page does not accept logins or private data.');
     if(['/favicon.ico','/static/favicon-16.png','/static/favicon-32.png','/static/apple-touch-icon.png'].includes(p))return new Response(null,{status:302,headers:{...HEADERS,Location:'/static/the-fixer-icon.svg'}});
-    const asset=ASSETS[p];
+    const asset=ASSETS[p==='/static/site.webmanifest'?'/static/site.webmanifest':p];
     if(!asset)return denied(404,'Not found');
     const bytes=decode(asset.gzipBase64);
     const decompressed=new Response(bytes).body.pipeThrough(new DecompressionStream('gzip'));
