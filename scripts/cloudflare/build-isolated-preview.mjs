@@ -13,8 +13,7 @@ const files=[
   'enterprise.css','enterprise-v3.css','the-fixer-brand.css','portal-polish.css',
   'shell.js','engagement-v1.js',
   'the-fixer-logo.svg','the-fixer-logo-reversed.svg','the-fixer-icon.svg',
-  'favicon.ico','favicon-16.png','favicon-32.png','apple-touch-icon.png',
-  'site.webmanifest','og-image.png','logo.png'
+  'site.webmanifest'
 ];
 const mime={
   '.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8',
@@ -39,7 +38,7 @@ for(const name of files){
       .replace(/<\/head>/i,'<meta name="robots" content="noindex,nofollow,noarchive"></head>');
     bytes=Buffer.from(html);
   }
-  const uri=name.endsWith('.html')? (name==='home.html'?'/':name==='404.html'?'/404': '/'+name.replace(/\.html$/,'')) : (name==='favicon.ico'?'/':'/static/')+name;
+  const uri=name.endsWith('.html')? (name==='home.html'?'/':name==='404.html'?'/404': '/'+name.replace(/\.html$/,'')) : '/static/'+name;
   const type=mime[path.extname(name)];
   assets[uri]={mime:type,bytes:bytes.length,sha256:crypto.createHash('sha256').update(bytes).digest('hex'),gzipBase64:zlib.gzipSync(bytes,{level:9}).toString('base64')};
 }
@@ -72,6 +71,7 @@ export default {
     if(!['GET','HEAD'].includes(request.method))return denied(405,'Read-only preview');
     if(p==='/robots.txt')return new Response(request.method==='HEAD'?null:'User-agent: *\\nDisallow: /\\n',{headers:{...HEADERS,'Content-Type':'text/plain; charset=utf-8'}});
     if(p==='/login'||p==='/contact'||p==='/admin'||p==='/dashboard'||p==='/users'||p==='/react'||p.startsWith('/react/')||p==='/set-password')return denied(403,'Live application remains on Render. This public staging page does not accept logins or private data.');
+    if(['/favicon.ico','/static/favicon-16.png','/static/favicon-32.png','/static/apple-touch-icon.png'].includes(p))return new Response(null,{status:302,headers:{...HEADERS,Location:'/static/the-fixer-icon.svg'}});
     const asset=ASSETS[p];
     if(!asset)return denied(404,'Not found');
     const bytes=decode(asset.gzipBase64);
