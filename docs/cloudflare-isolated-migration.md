@@ -65,9 +65,7 @@ The Cloudflare API deployed the **public-only staging Worker** as
 `newchanges-cloudflare-preview`. Its isolated preview address is
 `https://newchanges-cloudflare-preview.cabo-solutions-za.workers.dev/`.
 Cloudflare confirmed the workers.dev route was enabled and a version was
-receiving 100% of preview traffic. The exact deployed source snapshot
-is in `cloudflare/newchanges-public-preview.worker.mjs` (public assets
-only; no application secrets or client data).
+receiving 100% of preview traffic. The published source must be generated with `node scripts/cloudflare/build-isolated-preview.mjs` from the reviewed branch. The previously attempted checked-in source snapshot was incomplete and has been removed; do not use it as an artifact.
 
 The NewChanges repository's isolated GitHub Action
 `NewChanges Cloudflare isolated preview readiness` failed **before
@@ -123,3 +121,12 @@ assumed UTF-8 content path. No Build → Deploy automation has been enabled.
 - Worker public assets and private React build must not be confused.
 - Preserve Render `newchanges-standby` and its DNS/database exactly
   until independent functional API migration passes.
+
+## Reproducibility safeguard
+The isolated Worker is generated from real tracked public assets in CI.
+Do **not** commit a truncated or manually copied Worker build artifact.
+The checked-in generation script is the deployable source of truth.
+Public preview deployment is verified by the external Chromium smoke workflow,
+but the NewChanges repository's own compilation job has not executed due to
+GitHub runner failure. Until a dedicated isolated build completes, do not
+promote the draft PR or infer that a newly generated Worker matches the live one.
