@@ -130,3 +130,23 @@ Public preview deployment is verified by the external Chromium smoke workflow,
 but the NewChanges repository's own compilation job has not executed due to
 GitHub runner failure. Until a dedicated isolated build completes, do not
 promote the draft PR or infer that a newly generated Worker matches the live one.
+
+## Isolated API canary — no data access
+
+A second independent Cloudflare Worker, `newchanges-api-canary`, runs
+the initial **edge API runtime**, not the real NewChanges data backend:
+
+- `GET /api/health` reports `environment: cloudflare-isolated-canary`
+  and `production: false`; GET/HEAD only.
+- `GET /api/migration/capabilities` clearly reports authentication,
+  dashboard, jobs, imports and notifications disabled; database disconnected.
+- Unknown API paths return 404. All writes return 405. No upstream fetch,
+  sessions, forwarded headers, database access or secrets.
+- Code and negative tests: `cloudflare/newchanges-isolated-api.worker.mjs`
+  and `tests/cloudflare-isolated-api.test.mjs`.
+
+Its public endpoint is
+`https://newchanges-api-canary.cabo-solutions-za.workers.dev/api/health`.
+This isolates deployment/runtime/HTTP checks from the security-sensitive
+Fastify/Prisma adapter work. **Do not interpret a green canary as proof that
+the full app was migrated.**
