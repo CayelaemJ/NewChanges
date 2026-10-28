@@ -5,7 +5,16 @@ function auditJson() {
   const r = spawnSync("npm", ["audit", "--json", "--audit-level=high"], {
     encoding: "utf8", maxBuffer: 20 * 1024 * 1024, timeout: 120000
   });
-  try { return JSON.parse(r.stdout || "{}"); } catch { return {}; }
+  let report;
+  try { report = JSON.parse(r.stdout || ""); } catch {
+    console.error("[daily-security-fix] npm audit returned invalid JSON; failing closed.");
+    process.exit(1);
+  }
+  if (report.error || !report.metadata?.vulnerabilities || (r.status !== 0 && r.status !== 1)) {
+    console.error("[daily-security-fix] npm audit unavailable or returned an unexpected error.");
+    process.exit(1);
+  }
+  return report;
 }
 
 function countSevere(report) {
@@ -30,9 +39,13 @@ if (beforeSevere === 0) {
 }
 
 console.log("[daily-security-fix] Running npm audit fix (non-breaking semver-compatible upgrades only)...");
-spawnSync("npm", ["audit", "fix", "--audit-level=high"], {
+const repair = spawnSync("npm", ["audit", "fix", "--audit-level=high"], {
   encoding: "utf8", stdio: "inherit", timeout: 120000
 });
+if (repair.error || repair.signal) {
+  console.error("[daily-security-fix] npm audit fix did not complete.");
+  process.exit(1);
+}
 
 console.log("[daily-security-fix] Post-fix audit...");
 const after = auditJson();
