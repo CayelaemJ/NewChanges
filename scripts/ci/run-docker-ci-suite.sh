@@ -15,7 +15,9 @@ run npm run quality:lint
 run node scripts/password-form-contract-check.mjs
 run npm run quality:types
 run npm run quality:unit
-run npm run build
+run npm run db:generate
+run ./node_modules/.bin/tsc
+run npm run build --prefix frontend
 run npm run check:production
 run npm run check:security
 run npm run check:security-identity
