@@ -43,8 +43,17 @@ for(const name of files){
   assets[uri]={mime:type,bytes:bytes.length,sha256:crypto.createHash('sha256').update(bytes).digest('hex'),gzipBase64:zlib.gzipSync(bytes,{level:9}).toString('base64')};
 }
 if(!assets['/']||!assets['/static/the-fixer-logo-reversed.svg'])throw new Error('Incomplete public landing preview');
+// Bundle the same authentication boundary used by our native Cloudflare
+// candidate so preview tests exercise real fail-closed logic. No Prisma module
+// or DB credentials are bundled into this public-only static preview.
+const bundledSessions=fs.readFileSync('cloudflare/session-compat.mjs','utf8')
+  .replace(/^export /gm,'');
+const bundledAuthRouter=fs.readFileSync('cloudflare/native-auth-router.mjs','utf8')
+  .replace(/^import .*$/gm,'').replace(/^export /gm,'');
+const nativeAuthSource=bundledSessions+'\\n'+bundledAuthRouter+'\\nconst isolatedAuthRouter=createNativeAuthRouter({});\\n';
 const worker=`// GENERATED: NewChanges isolated read-only Cloudflare public preview.
 // Source: public files only. Render main app and databases are unchanged.
+${nativeAuthSource}
 const ASSETS=${JSON.stringify(assets)};
 const HEADERS={
   'X-Robots-Tag':'noindex, nofollow, noarchive',
@@ -70,6 +79,7 @@ export default {
     if(p==='/api/health'&&['GET','HEAD'].includes(request.method))return new Response(request.method==='HEAD'?null:JSON.stringify({status:'ok',environment:'cloudflare-pages-preview',production:false}),{headers:{...HEADERS,'Content-Type':'application/json; charset=utf-8'}});
     if(p==='/api/migration/capabilities'&&['GET','HEAD'].includes(request.method))return new Response(request.method==='HEAD'?null:JSON.stringify({environment:'cloudflare-pages-preview',auth:'disabled',database:'disconnected',dashboard:'disabled',imports:'disabled',schedulers:'disabled',notifications:'disabled'}),{headers:{...HEADERS,'Content-Type':'application/json; charset=utf-8'}});
     if(p==='/api/migration/readiness'&&['GET','HEAD'].includes(request.method))return new Response(request.method==='HEAD'?null:JSON.stringify({primaryReady:false,status:'BLOCKED',reason:'Authenticated NewChanges API and database connectivity not migrated'}),{headers:{...HEADERS,'Content-Type':'application/json; charset=utf-8'}});
+    if(p==='/ready'||p==='/api/migration/auth-check')return isolatedAuthRouter.fetch(request,{});
     if(p.startsWith('/api/')||p.startsWith('/auth/')||p==='/api')return denied(404,'This isolated preview does not have live APIs');
     if(!['GET','HEAD'].includes(request.method))return denied(405,'Read-only preview');
     if(p==='/robots.txt')return new Response(request.method==='HEAD'?null:'User-agent: *\\nDisallow: /\\n',{headers:{...HEADERS,'Content-Type':'text/plain; charset=utf-8'}});
