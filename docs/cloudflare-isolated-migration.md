@@ -187,3 +187,36 @@ Node.js APIs, and Hyperdrive supports connecting PostgreSQL/MySQL on the Free
 plan with usage limits. These facts do NOT guarantee that Fastify + Prisma 7,
 native libraries, importing, email, and cron behave unchanged. Each subsystem
 requires actual deployment/testing before cutover.
+
+## Primary Cloudflare target and production feature parity (29 October 2026)
+
+**The product's desired canonical application is Cloudflare**, not the public-only
+preview, not a Cloudflare-hosted standby, and not a white-label marketing demo.
+Railway is the existing deployment source; Render must remain a temporary
+recovery target only, not the permanent backend architecture.
+
+Latest upstream code baseline verified on GitHub:
+`main@93cb643e69e2cc0f2676fe3933c8a9eaa0759f79` (28 Oct 2026).
+The Cloudflare migration PR was branched from precisely that baseline; the
+subsequent branch-only Cloudflare files **do not replace any recent main code**.
+
+The migration must preserve the production upgrades already included in main,
+especially:
+- Patched CI scanners and protected scanner finding summaries (PR #201/#209).
+- Disposable-Postgres cross-tenant RLS negative tests and documented limitations
+  of synthetic RLS versus production policy rollout (PR #206).
+- Node 24 production/security upgrades (PR #205).
+- Existing Fastify routes, Prisma database models, source ingestion/sync,
+  semantic publication, React UI, financial analytics, role permissions,
+  reports, mail, AI/MLOps, security logs, brand-engine styles and CI suite.
+
+**Do not silently strip authentication, live data, features or custom branding
+to claim Cloudflare production parity.** The current read-only Worker and API
+canary are technical stepping stones, not the desired production deployment.
+
+Before a Cloudflare primary cutover, generate an evidence-backed feature
+parity inventory by comparing current `main` API paths, browser routes and
+scheduled work. Then deploy/test the complete application, establish
+Cloudflare-native isolated secrets/database/session integration, and pass the
+security gates in `cloudflare/primary-readiness.mjs`. Keep production DNS
+unchanged until release criteria pass, and preserve Render for rollback.
