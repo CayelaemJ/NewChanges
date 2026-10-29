@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 
-const read = (path) => readFileSync(path, "utf8");
+// Normalize Windows CRLF to LF before exact multiline source contracts.\nconst read = (path) => readFileSync(path, "utf8").replace(/\r\n/g, "\n");
 const daily = read("src/services/dailyRefresh.ts");
 const sync = read("src/services/syncService.ts");
 const imports = read("src/services/importService.ts");
