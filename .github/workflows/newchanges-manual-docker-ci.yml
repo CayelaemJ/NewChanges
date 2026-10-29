@@ -31,7 +31,7 @@ jobs:
           set -Eeuo pipefail
           test -f docker-compose.local-tests.yml || { echo "Missing docker-compose.local-tests.yml. Commit the local Docker test setup to the selected branch first."; exit 1; }
           test -f Dockerfile.test || { echo "Missing Dockerfile.test. Commit the local Docker test setup to the selected branch first."; exit 1; }
-          test -f scripts/run-local-test-suite.sh || { echo "Missing scripts/run-local-test-suite.sh. Commit the local Docker test setup to the selected branch first."; exit 1; }
+          test -f scripts/ci/run-docker-ci-suite.sh || { echo "Missing shared CI suite"; exit 1; }
           docker compose -f docker-compose.local-tests.yml config --quiet
           docker info >/dev/null
           docker compose version
@@ -42,7 +42,7 @@ jobs:
           set -Eeuo pipefail
           docker compose -p "newchanges-ci-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
             -f docker-compose.local-tests.yml \
-            up --build --abort-on-container-exit --exit-code-from tests
+            run --build --rm tests sh scripts/ci/run-docker-ci-suite.sh
 
       - name: Clean up only this CI test project
         if: always()
