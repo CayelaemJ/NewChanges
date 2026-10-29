@@ -16,6 +16,8 @@ jobs:
           node-version: '24'
       - name: Verify static build script and create safe preview Worker
         run: |
+          npm ci --prefix frontend --no-audit --no-fund
+          npm run build --prefix frontend
           node --check scripts/cloudflare/build-isolated-preview.mjs
           node scripts/cloudflare/build-isolated-preview.mjs
           node --check cloudflare-output/newchanges-isolated-preview.worker.mjs
@@ -23,6 +25,6 @@ jobs:
       - name: Export reviewed preview Worker (no credentials or API data)
         uses: actions/upload-artifact@v4
         with:
-          name: newchanges-public-marketing-worker
+          name: newchanges-public-preview-with-compiled-react-assets
           path: cloudflare-output/newchanges-isolated-preview.worker.mjs
           retention-days: 7
