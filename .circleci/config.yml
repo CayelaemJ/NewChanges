@@ -46,6 +46,13 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Build real React dashboard without bundling credentials or deploying
+          command: |
+            set -euo pipefail
+            npm ci --prefix frontend --no-audit --no-fund
+            npm run build --prefix frontend
+            test -s public/react/index.html
+      - run:
           name: Build restricted public Worker and run isolated negative-route tests
           command: |
             set -euo pipefail
@@ -53,13 +60,6 @@ jobs:
             node scripts/cloudflare/build-isolated-preview.mjs
             node --check cloudflare-output/newchanges-isolated-preview.worker.mjs
             node --test tests/cloudflare-isolated-preview.test.mjs
-      - run:
-          name: Build real React dashboard without bundling credentials or deploying
-          command: |
-            set -euo pipefail
-            npm ci --prefix frontend --no-audit --no-fund
-            npm run build --prefix frontend
-            test -s public/react/index.html
       - store_artifacts:
           path: cloudflare-output/newchanges-isolated-preview.worker.mjs
           destination: cloudflare/newchanges-public-preview.worker.mjs
@@ -341,9 +341,7 @@ jobs:
           command: |
             set -euo pipefail
             node scripts/cloudflare/verify-route-inventory.mjs
-            node scripts/cloudflare/build-isolated-preview.mjs
-            test -s cloudflare-output/pages/_worker.js
-            node --test tests/cloudflare-isolated-preview.test.mjs tests/cloudflare-isolated-api.test.mjs tests/cloudflare-primary-readiness.test.mjs tests/cloudflare-brand-parity.test.mjs tests/cloudflare-session-compat.test.mjs tests/cloudflare-native-auth-router.test.mjs tests/cloudflare-neon-identity-privileges.test.mjs
+            node --test tests/cloudflare-isolated-api.test.mjs tests/cloudflare-primary-readiness.test.mjs tests/cloudflare-brand-parity.test.mjs tests/cloudflare-session-compat.test.mjs tests/cloudflare-native-auth-router.test.mjs tests/cloudflare-neon-identity-privileges.test.mjs
       - run:
           name: Build complete production-source backend and React UI without database changes
           command: |
@@ -357,6 +355,13 @@ jobs:
             test -s public/login.html
             test -s public/the-fixer-brand.css
           no_output_timeout: 10m
+      - run:
+          name: Package the compiled React and The Fixer branding assets for Pages
+          command: |
+            set -euo pipefail
+            node scripts/cloudflare/build-isolated-preview.mjs
+            test -s cloudflare-output/pages/_worker.js
+            node --test tests/cloudflare-isolated-preview.test.mjs
       - run:
           name: Bundle Prisma-backed Cloudflare native API without deploying or connecting to databases
           command: |
