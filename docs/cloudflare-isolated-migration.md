@@ -5,10 +5,10 @@ The current `newchanges-standby` Render deployment, its environment variables,
 PostgreSQL/Neon connection, MySQL reporting replicas, imports, jobs and DNS
 **must remain untouched**. The Cloudflare copy is a *separate testing environment*.
 
-Cloudflare Pages Direct Upload project provisioned:
-`newchanges-isolated-static` (no Pages deployment uploaded).
+Cloudflare Pages project provisioned and a public-only preview deployed:
+`newchanges-app` (preview alias `https://migration.newchanges-app.pages.dev/`).
 The repository branch `chore/cloudflare-isolated-preview-20261028` builds a separate public-only
-Workers preview in `cloudflare-output/newchanges-isolated-preview.worker.mjs`.
+Pages advanced-mode Worker build in `cloudflare-output/pages/_worker.js`.
 It requires no GitHub App integration and no Cloudflare token to build in CI.
 
 ## First preview is intentionally restricted
@@ -253,3 +253,17 @@ Full frontend, authentication, APIs, role/tenant security, PostgreSQL,
 MySQL and jobs must pass the preexisting gate before the Pages production
 branch is published. It is unacceptable to promote a public-only staging
 preview to main and call that a complete application.
+
+## Repeatable Pages build and CI configuration
+
+The draft branch now includes a dedicated `wrangler.jsonc` for project
+`newchanges-app`, production build output reserved for
+`cloudflare-output/pages`. The public-only generator writes its Pages
+advanced-mode `_worker.js` to that folder for isolated review. This
+is **not** the authenticated NewChanges production build.
+
+CircleCI includes a branch-scoped `cloudflare_full_source_candidate` job
+to compile the latest backend and React frontend, run security/brand/route
+contracts, and store artifacts for release engineering. It does not run
+database migrations or deploy automatically. A green CircleCI result has
+not yet been independently retrieved or verified.
