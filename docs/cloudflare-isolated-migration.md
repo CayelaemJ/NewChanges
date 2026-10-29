@@ -381,18 +381,17 @@ independently invented fixture database as the final destination.
 - Verified 59 tables in `public`, including the original `Session`,
   `User`, and `UserEmployer` tables. Separate `neon_auth` schema exists.
 - Disaster-recovery project: `newchanges-identity-dr`, **not the primary**.
-- A dedicated role `newchanges_cf_migration_reader` was created on the
-  existing primary branch. It has `CONNECT` to the `newchanges` database,
+- A role named `newchanges_cf_migration_reader` was created on the
+  existing primary branch. Explicit grants include `CONNECT` to the `newchanges` database,
   `USAGE` on `public`, and `SELECT` restricted to `public."Session"`,
-  `public."User"`, `public."UserEmployer"`. It must not be used for
+  `public."User"`, `public."UserEmployer"`. However Neon automatically made this role a member of `neon_superuser`, with effective wider access. **It is NOT a restricted reader and must not be used.** Attempts to revoke administrative membership or disable LOGIN were denied; connector deletion was blocked. No credential was sent to Cloudflare. Remove this unsafe role from the Neon console and provision a role with verifiably restricted effective permissions before connecting the application. It must not be used for
   migrations, imports, mutations or permanent full-app login processing.
 - Cloudflare's connected account had no Hyperdrive configs. The attempted
   credential-to-Hyperdrive connector handoff was blocked. **No Hyperdrive
   configuration or database binding has yet been created or verified.**
 - `cloudflare/wrangler-native.jsonc` declares a `HYPERDRIVE` binding with
   an intentionally invalid placeholder ID. Replace it only after the real
-  Cloudflare dashboard/API creates the Hyperdrive configuration, using the
-  dedicated reader role for the read-only authentication proof.
+  Cloudflare dashboard/API creates the Hyperdrive configuration, using a newly verified least-privilege role for the read-only authentication proof. The existing `newchanges_cf_migration_reader` is unsafe; never reuse its credentials.
 - Keep Hyperdrive query caching disabled for identity data.
 - The permanent main application will require a separately scoped
   least-privilege read/write role and the full existing Prisma schema.
@@ -408,3 +407,16 @@ caching, then set the returned Hyperdrive ID in the native Worker config.
 Never place database URLs or passwords in GitHub, Pages HTML, artifacts,
 issue comments or chat transcripts. Test `/ready` and a synthetic
 non-mutating session probe before exposing login-related endpoints.
+
+
+### Critical security finding: default Neon role privileges
+A post-creation SQL audit confirmed that `newchanges_cf_migration_reader` inherited
+`neon_superuser` and retained `CREATEDB`, `CREATEROLE`, INSERT on Session and
+SELECT on unrelated Employer tables despite narrowly scoped explicit grants.
+This means the role is **NOT read-only**. Neon SQL refused revoking the
+membership and ALTER ROLE NOLOGIN; the administrative connector blocked the
+attempt to delete this role. **The role must be removed or restricted in Neon's
+administration UI and its credentials invalidated.** No Cloudflare Hyperdrive
+configuration was created and no connection details were published. Treat any
+production role creation as incomplete until effective grants are checked.
+Do not let the release pipeline use this role.
