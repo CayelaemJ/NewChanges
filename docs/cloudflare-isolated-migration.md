@@ -150,3 +150,40 @@ Its public endpoint is
 This isolates deployment/runtime/HTTP checks from the security-sensitive
 Fastify/Prisma adapter work. **Do not interpret a green canary as proof that
 the full app was migrated.**
+
+## Railway source-of-truth inventory — 29 October 2026
+
+The user has designated Cloudflare as the desired **future primary NewChanges application**. Existing Render standby remains unchanged until verified production cutover.
+
+Connected Railway project `merry-cooperation`:
+- Production environment: `07f92af8-ac8b-4e1c-baa5-a865b19c6ab2`.
+- Application: `NewChanges`, service `b6e3c7a7-65b9-4c2a-ba7a-1db7a8592709`, repo `CayelaemJ/NewChanges`, branch `main`, port 8080.
+- Railway domains: `newchanges-production.up.railway.app` and `newchanges-production-597f.up.railway.app`.
+- Deployment config: `npm start`, `npm run db:deploy` as pre-deploy command, `/ready` health path. **Cloudflare must not copy this pre-deploy migration command or automatically run DB schema writes.**
+- Latest service deployment in Railway environment inventory shows FAILED (2026-10-13); listing deployment history filtered `SUCCESS` returned none at inspection. Do not assume Railway is a healthy fallback without a separate active response test.
+- Config variable *names* indicate Postgres `DATABASE_URL`, MySQL host/user/pass/port, SMTP replacement via `RESEND_API_KEY`, superadmin credentials, and semantic/sync background settings. Values were deliberately not read or copied.
+- Railway Testing environment includes `NewChanges-Testing-Rehearsal` and a persistent MySQL volume. Do not connect Cloudflare staging to that database without scoped, approved read-only credentials.
+- Render `newchanges-standby` is still unsuspended. Its DB, branch, hostname, secrets, routes and service remain untouched.
+
+### Cloudflare production architecture to implement
+1. Cloudflare Worker plus first-party static assets and HTTP routing. Existing public-only preview is not a substitute for the authenticated frontend.
+2. Isolate Fastify routes into Fetch-compatible domain handlers. Add a database access adapter for Prisma 7 driver/Workers/Hyperdrive, with explicit environment bindings and dedicated least-privileged SQL credentials; confirm MySQL replication read-only grants.
+3. Implement server-side session storage, password reset, MFA, tenancy permissions and CSRF protection before enabling any user-facing API.
+4. Move scheduled refresh/imports/report delivery to explicitly enabled scheduled/queue workloads with idempotency fences and bounded retries. Do not start cron timers on every Worker invocation.
+5. Add audit/telemetry/alerting without leaking people/financial data to logs.
+6. Deploy one isolated authenticated fixture tenancy, verify E2E with real browser and negative access tests, and rehearse rollback. Publish primary hostname only after this gate.
+
+A checkable, source-controlled release gate is implemented in
+`cloudflare/primary-readiness.mjs`, with negative tests in
+`tests/cloudflare-primary-readiness.test.mjs`. It explicitly refuses
+production readiness without authenticated E2E, tenant isolation, scoped
+production secrets, job idempotency, supported capability verification and
+rollback. **This release gate is code, not evidence that its conditions are
+already met.** The Cloudflare primary is **not yet production-ready**.
+
+### Platform feasibility
+Cloudflare documentation (Oct 2026) confirms Workers supports a subset of
+Node.js APIs, and Hyperdrive supports connecting PostgreSQL/MySQL on the Free
+plan with usage limits. These facts do NOT guarantee that Fastify + Prisma 7,
+native libraries, importing, email, and cron behave unchanged. Each subsystem
+requires actual deployment/testing before cutover.
