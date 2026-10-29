@@ -23,6 +23,14 @@ export function validatePrimaryMigrationConfig(input={}){
       throw new Error("not an exact HTTPS origin");
     origin=u.origin;
   }catch{errors.push("hostname must be an exact HTTPS origin")}
+  // A release must use NewChanges' independent namespace, never the
+  // host/subdomain of an unrelated Cloudflare account or another product.
+  const previewOrigin="https://migration.newchanges-app.pages.dev";
+  const publicOrigin="https://newchanges-app.pages.dev";
+  if(origin && ![previewOrigin,publicOrigin].includes(origin))
+    errors.push("hostname must use the dedicated NewChanges Pages project");
+  if(mode==="production"&&origin!==publicOrigin)
+    errors.push("production must use the dedicated NewChanges production hostname");
   if(source!=="cloudflare-workers")errors.push("source must be cloudflare-workers");
   if(productionTarget==="railway"||productionTarget==="render")
     errors.push("Cloudflare primary cannot be marked complete while routed to legacy origin");
