@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import canary from '../cloudflare/newchanges-isolated-api.worker.mjs';
-const origin='https://newchanges-api-canary.cabo-solutions-za.workers.dev';
+const origin='https://migration.newchanges-app.pages.dev';
 test('isolated health distinguishes Cloudflare from production',async()=>{
  const r=await canary.fetch(new Request(origin+'/api/health'));
  assert.equal(r.status,200);
