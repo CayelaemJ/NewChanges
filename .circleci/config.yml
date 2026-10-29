@@ -469,7 +469,69 @@ jobs:
           destination: security-reports
           when: always
 
+  cloudflare_primary_candidate:
+    # Build exactly the production app: React, Fastify and Prisma 7. This does
+    # not launch it, run migrations, access customer records or write to Render.
+    docker:
+      - image: cimg/node:24.22
+    resource_class: small
+    working_directory: ~/newchanges
+    environment:
+      NODE_ENV: test
+      STANDBY_MODE: "true"
+      ENABLE_DAILY_INCREMENTAL_RECONCILIATION: "false"
+      ENABLE_SEMANTIC_SHADOW_WORKER: "false"
+      ENABLE_SEMANTIC_SHADOW_ENQUEUE: "false"
+      ENABLE_SEMANTIC_OBJECT_PUBLISH: "false"
+    steps:
+      - checkout
+      - run:
+          name: Verify migration branch and production baseline
+          command: |
+            set -eu
+            test "$CIRCLE_BRANCH" = "chore/cloudflare-isolated-preview-20261028"
+            git merge-base --is-ancestor 93cb643e69e2cc0f2676fe3933c8a9eaa0759f79 HEAD
+            echo "Verified NewChanges production baseline ancestor"
+      - run:
+          name: Install deterministic locked dependencies
+          command: npm ci --no-audit --no-fund
+          no_output_timeout: 10m
+      - run:
+          name: Generate and build full application from current production source
+          command: npm run build
+          no_output_timeout: 10m
+      - run:
+          name: Cloudflare native canary security and readiness tests
+          command: |
+            set -eu
+            test -s dist/server.js
+            test -s public/react/index.html
+            test -s public/login.html
+            test -s public/admin.html
+            test -s public/dashboard.html
+            test -s public/the-fixer-brand.css
+            node --test tests/cloudflare-isolated-api.test.mjs tests/cloudflare-primary-readiness.test.mjs
+            node scripts/cloudflare/build-isolated-preview.mjs
+            node --test tests/cloudflare-isolated-preview.test.mjs
+      - run:
+          name: Report candidate build only, never mark Cloudflare production deployed
+          command: |
+            echo "Compiled full current NewChanges application; runtime migration still unverified."
+            echo "No production databases or Cloudflare credentials were used."
+      - store_artifacts:
+          path: public/react
+          destination: cloudflare/current-production-react-build
+      - store_artifacts:
+          path: cloudflare-output/newchanges-isolated-preview.worker.mjs
+          destination: cloudflare/isolation-preview-worker.mjs
+
 workflows:
+  cloudflare_primary_migration_candidate:
+    jobs:
+      - cloudflare_primary_candidate:
+          filters:
+            branches:
+              only: chore/cloudflare-isolated-preview-20261028
   newchanges_cloudflare_staging_build:
     jobs:
       - cloudflare_newchanges_staging_build:
