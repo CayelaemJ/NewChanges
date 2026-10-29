@@ -8,7 +8,7 @@ export function fullNewChangesGate(env={},hostname=""){
  for(const [key,expected] of [["NEWCHANGES_NEON_PRIMARY_PROJECT","wild-base-70222190"],["NEWCHANGES_NEON_DATABASE","newchanges"]]){
   if(env[key]!==expected)failed.push("Neon primary configuration mismatch");
  }
- for(const k of ["NEWCHANGES_NEON_GRANTS_VERIFIED","NEWCHANGES_TENANT_E2E_VERIFIED","NEWCHANGES_MFA_E2E_VERIFIED","NEWCHANGES_SYNC_IDEMPOTENCY_VERIFIED","NEWCHANGES_ROLLBACK_VERIFIED"]){
+ for(const k of ["NEWCHANGES_NEON_GRANTS_VERIFIED","NEWCHANGES_TENANT_E2E_VERIFIED","NEWCHANGES_MFA_E2E_VERIFIED","NEWCHANGES_SYNC_IDEMPOTENCY_VERIFIED","NEWCHANGES_ROLLBACK_VERIFIED","NEWCHANGES_PRIMARY_WRITE_LEADER_VERIFIED"]){
   if(env[k]!=="true")failed.push(k+" missing");
  }
  if(!env.DATABASE_URL||!env.SESSION_SECRET)failed.push("required server-side bindings missing");
