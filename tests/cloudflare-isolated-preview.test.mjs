@@ -85,3 +85,14 @@ test('Pages migration health and readiness do not claim production status',async
  const state=await ready.json();
  assert.equal(state.primaryReady,false);
 });
+
+test('public Pages preview exercises native session read boundary without a database',async()=>{
+ const empty=await worker.fetch(new Request(url('/api/migration/auth-check')));
+ assert.equal(empty.status,401);
+ assert.deepEqual(await empty.json(),{authenticated:false});
+ const present=await worker.fetch(new Request(url('/api/migration/auth-check'),{headers:{cookie:'session='+('a'.repeat(64))}}));
+ assert.equal(present.status,503);
+ const ready=await worker.fetch(new Request(url('/ready')));
+ assert.equal(ready.status,503);
+ assert.match(ready.headers.get('cache-control'),/no-store/);
+});
