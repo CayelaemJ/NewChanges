@@ -343,7 +343,7 @@ jobs:
             node scripts/cloudflare/verify-route-inventory.mjs
             node scripts/cloudflare/build-isolated-preview.mjs
             test -s cloudflare-output/pages/_worker.js
-            node --test tests/cloudflare-isolated-preview.test.mjs tests/cloudflare-isolated-api.test.mjs tests/cloudflare-primary-readiness.test.mjs tests/cloudflare-brand-parity.test.mjs tests/cloudflare-session-compat.test.mjs
+            node --test tests/cloudflare-isolated-preview.test.mjs tests/cloudflare-isolated-api.test.mjs tests/cloudflare-primary-readiness.test.mjs tests/cloudflare-brand-parity.test.mjs tests/cloudflare-session-compat.test.mjs tests/cloudflare-native-auth-router.test.mjs
       - run:
           name: Build complete production-source backend and React UI without database changes
           command: |
