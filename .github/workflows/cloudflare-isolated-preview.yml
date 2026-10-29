@@ -1,8 +1,7 @@
 name: NewChanges Cloudflare isolated preview readiness
 # Does not deploy, mutate Render, contact databases, or require any API key.
+# Runner minutes are unavailable on this private repo; CircleCI handles PR builds.
 on:
-  push:
-    branches: [chore/cloudflare-isolated-preview-20261028]
   workflow_dispatch:
 permissions:
   contents: read
