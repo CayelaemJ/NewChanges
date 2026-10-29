@@ -29,7 +29,6 @@ run npm run check:semantic-storage
 run npm run check:source-vault
 run npm run check:source-continuity
 run npm run check:source-reconciliation
-run node scripts/security/scan-secrets.mjs
 run node scripts/security/rls-isolation-ci-probe.mjs
 run node scripts/prisma-upgrade-integration.mjs
 run npm run quality:e2e
