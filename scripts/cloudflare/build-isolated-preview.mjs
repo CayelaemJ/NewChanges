@@ -50,7 +50,7 @@ const bundledSessions=fs.readFileSync('cloudflare/session-compat.mjs','utf8')
   .replace(/^export /gm,'');
 const bundledAuthRouter=fs.readFileSync('cloudflare/native-auth-router.mjs','utf8')
   .replace(/^import .*$/gm,'').replace(/^export /gm,'');
-const nativeAuthSource=bundledSessions+'\\n'+bundledAuthRouter+'\\nconst isolatedAuthRouter=createNativeAuthRouter({});\\n';
+const nativeAuthSource=bundledSessions+'\n'+bundledAuthRouter+'\nconst isolatedAuthRouter=createNativeAuthRouter({});\n';
 const worker=`// GENERATED: NewChanges isolated read-only Cloudflare public preview.
 // Source: public files only. Render main app and databases are unchanged.
 ${nativeAuthSource}
