@@ -1,0 +1,37 @@
+services:
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: ci_fixture
+      POSTGRES_PASSWORD: ci_fixture
+      POSTGRES_DB: newchanges_ci
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ci_fixture -d newchanges_ci"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    networks:
+      - isolated-tests
+
+  tests:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    environment:
+      DATABASE_URL: postgresql://ci_fixture:ci_fixture@127.0.0.1:5432/newchanges_ci
+      NODE_ENV: test
+      CI: "true"
+      CI_RLS_PROBE_APPROVED: CI_DISPOSABLE_ONLY
+      SEMANTIC_SYNTHETIC_E2E_APPROVED: ""
+      SEMANTIC_NOTIFY_PROBE_APPROVED: ""
+      ENABLE_SEMANTIC_SHADOW_WORKER: "false"
+      ENABLE_SEMANTIC_OBJECT_PUBLISH: "false"
+    depends_on:
+      db:
+        condition: service_healthy
+    network_mode: "service:db"
+    init: true
+
+networks:
+  isolated-tests:
+    internal: true
