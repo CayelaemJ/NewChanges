@@ -1,0 +1,7 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {fullNewChangesGate} from "../cloudflare/full-app/gate.mjs";
+const safe={NEWCHANGES_FULL_APP_ENABLED:"true",NEWCHANGES_CANONICAL_HOST:"migration.newchanges-app.pages.dev",NEWCHANGES_NEON_PRIMARY_PROJECT:"wild-base-70222190",NEWCHANGES_NEON_DATABASE:"newchanges",NEWCHANGES_NEON_GRANTS_VERIFIED:"true",NEWCHANGES_TENANT_E2E_VERIFIED:"true",NEWCHANGES_MFA_E2E_VERIFIED:"true",NEWCHANGES_SYNC_IDEMPOTENCY_VERIFIED:"true",NEWCHANGES_ROLLBACK_VERIFIED:"true",DATABASE_URL:"synthetic-only",SESSION_SECRET:"synthetic-only"};
+test("denied by default",()=>{assert.equal(fullNewChangesGate({}, "migration.newchanges-app.pages.dev").ready,false)});
+test("full original app requires all release proofs",()=>{assert.equal(fullNewChangesGate(safe,"migration.newchanges-app.pages.dev").ready,true);for(const key of Object.keys(safe)){const v={...safe};delete v[key];assert.equal(fullNewChangesGate(v,"migration.newchanges-app.pages.dev").ready,false,key)}});
+test("no CABO host, bad hostname, DR Neon or wrong database",()=>{for(const host of ["cabo-solutions-za.workers.dev","newchanges-app.pages.dev.evil.invalid","example.org"]){assert.equal(fullNewChangesGate(safe,host).ready,false)}assert.equal(fullNewChangesGate({...safe,NEWCHANGES_NEON_PRIMARY_PROJECT:"snowy-flower-31527242"},safe.NEWCHANGES_CANONICAL_HOST).ready,false)});
