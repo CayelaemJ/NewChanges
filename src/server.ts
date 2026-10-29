@@ -36,7 +36,7 @@ import { getConfig as getSyncConfig, saveConfig as saveSyncConfig, publicConfig 
 import { recordSourceWatch, sourceWatchPublicStatus } from "./services/sourceWatchHealth.js";
 import {reportOperationalFailure} from "./services/operationalFailureService.js";
 import { listPartners, createPartner, updatePartner, deletePartner, assignUserToPartner, assignEmployerToPartner, themeForUser, themeForEmployer, themeForSlug } from "./services/partnerService.js";
-import { login, resolveSession, destroySession, destroySessionById, destroyAllSessionsForUser, canViewEmployer, canAccessModule, allowedEmployerIds, AuthUser, isAdminRole } from "./services/authService.js";
+import { login, resolveSession, destroySession, destroySessionById, destroyAllSessionsForUser, canViewEmployer, canAccessModule, allowedEmployerIds, AuthUser, isAdminRole, verifyPassword } from "./services/authService.js";
 import { createTotpSecret, encryptMfaSecret, decryptMfaSecret, matchingTotpCounter, createRecoveryCodes, hashRecoveryCode } from "./services/adminMfaService.js";
 import { createUser, listUsers, updateUser, resetPassword, completeSetup, deactivateSelf, listRevokedUsers, deleteUserPermanently, requestPasswordReset } from "./services/userService.js";
 import { recordEvent, engagementSummary } from "./services/analyticsService.js";
@@ -561,12 +561,14 @@ app.get("/api/auth/admin-mfa/status", async (req, reply) => {
   return {
     enabled: Boolean(user.mfaEnabledAt),
     verified: Boolean(user.sessionMfaVerifiedAt && Date.now() - new Date(user.sessionMfaVerifiedAt).getTime() <= 12 * 60 * 60 * 1000),
+    recoveryUsed: Boolean(user.sessionMfaRecoveryUsedAt && Date.now() - new Date(user.sessionMfaRecoveryUsedAt).getTime() <= 12 * 60 * 60 * 1000),
   };
 });
-app.post("/api/auth/admin-mfa/enrollment", async (req, reply) => {
+app.post<{ Body: { password?: string } }>("/api/auth/admin-mfa/enrollment", async (req, reply) => {
   const user = await currentUser(req);
   if (!user) return reply.code(401).send({ error: "not signed in" });
   if (!isAdminRole(user)) return reply.code(403).send({ error: "admin only" });
+  if (typeof req.body?.password !== "string" || !verifyPassword(req.body.password, user.passwordHash || "")) return reply.code(401).send({ error: "confirm your password to set up or replace MFA" });
   if (user.mfaEnabledAt && (!user.sessionMfaVerifiedAt || Date.now() - new Date(user.sessionMfaVerifiedAt).getTime() > 12 * 60 * 60 * 1000))
     return reply.code(403).send({ error: "verify your current MFA factor before replacing it", code: "MFA_REQUIRED" });
   const secret = createTotpSecret();
@@ -588,7 +590,7 @@ app.post<{ Body: { code?: string } }>("/api/auth/admin-mfa/enrollment/confirm", 
     prisma.user.update({ where: { id: user.id }, data: { mfaSecretEncrypted: encryptMfaSecret(secret), mfaEnabledAt: now, mfaLastCounter: BigInt(matchedCounter), mfaPendingSecretEncrypted: null, mfaSetupExpiresAt: null } }),
     prisma.adminMfaRecoveryCode.deleteMany({ where: { userId: user.id } }),
     prisma.adminMfaRecoveryCode.createMany({ data: codes.map((code) => ({ userId: user.id, codeHash: hashRecoveryCode(code) })) }),
-    prisma.session.updateMany({ where: { id: user.sessionId, userId: user.id, endedAt: null }, data: { mfaVerifiedAt: now } }),
+    prisma.session.updateMany({ where: { id: user.sessionId, userId: user.id, endedAt: null }, data: { mfaVerifiedAt: now, mfaRecoveryUsedAt: null } }),
     prisma.session.updateMany({ where: { userId: user.id, id: { not: user.sessionId }, endedAt: null }, data: { endedAt: now, revokedAt: now, revokedBy: user.email } }),
   ]);
   logAdminAction(user, "admin.mfa.enroll", "Enrolled administrator MFA", { targetType: "User", targetId: user.id, context: requestSecurityContext(req) });
@@ -601,7 +603,7 @@ app.post<{ Body: { code?: string } }>("/api/auth/admin-mfa/verify", async (req, 
   if (!user.mfaEnabledAt || !user.mfaSecretEncrypted) return reply.code(409).send({ error: "set up MFA before verifying" });
   if (!rateLimit(reply, "admin-mfa:" + user.id, 5, AUTH_WINDOW_MS)) return;
   const code = typeof req.body?.code === "string" ? req.body.code.trim() : "";
-  let accepted = false;
+  let accepted = false, recoveryUsed = false;
   if (/^\d{6}$/.test(code)) {
     const counter = matchingTotpCounter(decryptMfaSecret(user.mfaSecretEncrypted), code);
     if (counter !== null) {
@@ -615,11 +617,13 @@ app.post<{ Body: { code?: string } }>("/api/auth/admin-mfa/verify", async (req, 
   if (!accepted && /^[0-9a-fA-F-]{20,24}$/.test(code)) {
     const consumed = await prisma.adminMfaRecoveryCode.deleteMany({ where: { userId: user.id, codeHash: hashRecoveryCode(code) } });
     accepted = consumed.count === 1;
+    recoveryUsed = accepted;
   }
   if (!accepted) return reply.code(401).send({ error: "invalid MFA code" });
-  await prisma.session.updateMany({ where: { id: user.sessionId, userId: user.id, endedAt: null }, data: { mfaVerifiedAt: new Date() } });
+  const verifiedAt = new Date();
+  await prisma.session.updateMany({ where: { id: user.sessionId, userId: user.id, endedAt: null }, data: { mfaVerifiedAt: verifiedAt, mfaRecoveryUsedAt: recoveryUsed ? verifiedAt : null } });
   logAdminAction(user, "admin.mfa.verify", "Completed administrator MFA verification", { targetType: "Session", targetId: user.sessionId, context: requestSecurityContext(req) });
-  return { ok: true };
+  return { ok: true, recoveryUsed };
 });
 
 // who am I + what can I see (drives the UI)

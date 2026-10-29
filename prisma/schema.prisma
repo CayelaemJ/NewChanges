@@ -905,6 +905,7 @@ model Session {
   createdAt   DateTime  @default(now())
   lastSeenAt  DateTime  @default(now())
   mfaVerifiedAt DateTime?
+  mfaRecoveryUsedAt DateTime?
   endedAt     DateTime?
   revokedAt   DateTime?
   revokedBy   String?
