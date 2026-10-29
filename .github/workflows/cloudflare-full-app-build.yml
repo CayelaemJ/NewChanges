@@ -1,8 +1,7 @@
 name: Cloudflare NewChanges complete production source build
 # Candidate build of the ACTUAL latest app. Never modifies production services.
+# Runner minutes are unavailable on this private repo; CircleCI handles PR builds.
 on:
-  push:
-    branches: [chore/cloudflare-isolated-preview-20261028]
   workflow_dispatch:
 permissions:
   contents: read
