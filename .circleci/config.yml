@@ -357,6 +357,13 @@ jobs:
             test -s public/login.html
             test -s public/the-fixer-brand.css
           no_output_timeout: 10m
+      - run:
+          name: Bundle Prisma-backed Cloudflare native API without deploying or connecting to databases
+          command: |
+            set -euo pipefail
+            npx --yes wrangler@4 deploy --dry-run --config cloudflare/wrangler-native.jsonc --outdir cloudflare-output/native
+            find cloudflare-output/native -type f -size +0c | grep -q .
+          no_output_timeout: 10m
       - store_artifacts:
           path: public/react
           destination: newchanges-cloudflare-react-candidate
