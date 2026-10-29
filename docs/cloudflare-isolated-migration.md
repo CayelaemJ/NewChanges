@@ -63,7 +63,7 @@ or connection strings in issues, CI logs or the build.
 
 The Cloudflare API deployed the **public-only staging Worker** as
 `newchanges-cloudflare-preview`. Its isolated preview address is
-`https://newchanges-cloudflare-preview.cabo-solutions-za.workers.dev/`.
+`https://migration.newchanges-app.pages.dev/`.
 Cloudflare confirmed the workers.dev route was enabled and a version was
 receiving 100% of preview traffic. The published source must be generated with `node scripts/cloudflare/build-isolated-preview.mjs` from the reviewed branch. The previously attempted checked-in source snapshot was incomplete and has been removed; do not use it as an artifact.
 
@@ -72,9 +72,9 @@ The NewChanges repository's isolated GitHub Action
 any job steps executed** due to runner availability/permissions. Do
 not misreport that as a passed source build.
 
-For independent runtime evidence, CABO Solutions' working GitHub runner
+For independent runtime evidence, an isolated external verification runner
 was used only to fetch the public preview URL (not the private repo):
-`https://github.com/CayelaemJ/CABOSOLUTIONS/actions/runs/40712023624`.
+`the independent verification run recorded on 28 October`.
 That workflow passed real HTTPS brand/HTML and security-header checks,
 blocked live login/dashboard/React/API routes, and desktop/mobile
 Chromium page checks. It submitted no customer information or real logins.
@@ -133,7 +133,7 @@ promote the draft PR or infer that a newly generated Worker matches the live one
 
 ## Isolated API canary — no data access
 
-A second independent Cloudflare Worker, `newchanges-api-canary`, runs
+A formerly separate Cloudflare Worker, `newchanges-api-canary`, ran
 the initial **edge API runtime**, not the real NewChanges data backend:
 
 - `GET /api/health` reports `environment: cloudflare-isolated-canary`
@@ -145,8 +145,8 @@ the initial **edge API runtime**, not the real NewChanges data backend:
 - Code and negative tests: `cloudflare/newchanges-isolated-api.worker.mjs`
   and `tests/cloudflare-isolated-api.test.mjs`.
 
-Its public endpoint is
-`https://newchanges-api-canary.cabo-solutions-za.workers.dev/api/health`.
+The consolidated Pages preview endpoint is
+`https://migration.newchanges-app.pages.dev/api/health`.
 This isolates deployment/runtime/HTTP checks from the security-sensitive
 Fastify/Prisma adapter work. **Do not interpret a green canary as proof that
 the full app was migrated.**
@@ -220,3 +220,36 @@ scheduled work. Then deploy/test the complete application, establish
 Cloudflare-native isolated secrets/database/session integration, and pass the
 security gates in `cloudflare/primary-readiness.mjs`. Keep production DNS
 unchanged until release criteria pass, and preserve Render for rollback.
+
+
+## Standalone NewChanges application namespace — 29 October 2026
+
+**Project identity:** NewChanges / The Fixer. Never use another company name
+or another application's Cloudflare account subdomain in NewChanges public
+hostnames, application canonical URLs, tests, manifests or operator guidance.
+
+- Cloudflare Pages project: `newchanges-app`.
+- Independent staging alias: `https://migration.newchanges-app.pages.dev/`.
+- Production Pages hostname reserved: `https://newchanges-app.pages.dev/`
+  (**no full production app has yet been deployed there**).
+- Isolated Pages deployment succeeded on 29 October 2026 with the existing
+  public-brand assets. Follow-up deployment added staging-only
+  `/api/health`, `/api/migration/capabilities` and
+  `/api/migration/readiness` routes, all explicitly not production-ready.
+- The two older NewChanges public Workers subdomains were disabled on
+  29 October; their source deployments are retained internally, with
+  no public Worker addresses for NewChanges under a shared account namespace.
+- Do not change the account-wide Workers subdomain: unrelated services use it.
+- No Cloudflare zone/custom hostname currently belongs to this connected
+  account. An independently owned custom domain can later be attached,
+  but must not be invented or assumed.
+- This connected integration can deploy Pages _worker.js via the Pages
+  deployment API; the JWT-based asset-upload endpoint cannot currently be
+  authorized. Keep direct deploys controlled and isolate branch previews.
+- No production DNS, database, Railway or Render settings changed.
+
+This namespace correction does **not** represent a production cutover.
+Full frontend, authentication, APIs, role/tenant security, PostgreSQL,
+MySQL and jobs must pass the preexisting gate before the Pages production
+branch is published. It is unacceptable to promote a public-only staging
+preview to main and call that a complete application.
