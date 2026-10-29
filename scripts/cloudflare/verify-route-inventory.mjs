@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 const source=fs.readFileSync('src/server.ts','utf8');
 const manifest=JSON.parse(fs.readFileSync('cloudflare/production-route-inventory.json','utf8'));
-const regex=/\\bapp\\.(get|post|put|patch|delete|options|head)\\(\\s*([`"'])(.*?)\\2/g;
+const regex=/\bapp\.(get|post|put|patch|delete|options|head)\(\s*([`"'])(.*?)\2/g;
 const found=[...source.matchAll(regex)].map(m=>({method:m[1].toUpperCase(),path:m[3]}))
   .sort((a,b)=>a.path.localeCompare(b.path)||a.method.localeCompare(b.method));
 const expected=manifest.routes.map(({method,path})=>({method,path}))
