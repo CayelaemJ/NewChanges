@@ -369,6 +369,16 @@ jobs:
             npx --yes wrangler@4 deploy --dry-run --config cloudflare/wrangler-native.jsonc --outdir cloudflare-output/native
             find cloudflare-output/native -type f -size +0c | grep -q .
           no_output_timeout: 10m
+      - run:
+          name: Validate complete original Fastify application Container gate and Worker bundle
+          command: |
+            set -euo pipefail
+            node --test tests/cloudflare-full-app.test.mjs
+            node --check cloudflare/full-app/worker.mjs
+            npm install --prefix cloudflare/full-app --no-audit --no-fund
+            cloudflare/full-app/node_modules/.bin/wrangler deploy --dry-run --containers-rollout=none --config wrangler.newchanges-full-app.jsonc --outdir cloudflare-output/newchanges-full
+            test -s cloudflare-output/newchanges-full/worker.js
+          no_output_timeout: 10m
       - store_artifacts:
           path: public/react
           destination: newchanges-cloudflare-react-candidate
