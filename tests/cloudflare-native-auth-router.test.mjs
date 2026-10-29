@@ -59,3 +59,16 @@ test('unknown and mutating private operations remain denied',async()=>{
  for(const method of ['POST','PUT','PATCH','DELETE'])
   assert.equal((await worker.fetch(req('/ready',{method}))).status,405,method);
 });
+
+test('an inherited privileged Neon role cannot read sessions through Cloudflare',async()=>{
+ let reads=0;
+ const elevated={...passAudit,role_name:'newchanges_cf_migration_reader',member_of_neon_superuser:true,can_create_roles:true,session_write:true};
+ const client={session:{findUnique:async()=>{reads++;return row}},$queryRaw:async()=>[elevated],$disconnect:async()=>{}};
+ const worker=createNativeAuthRouter({openDatabase:async()=>client});
+ const response=await worker.fetch(req('/api/migration/auth-check',{headers:{Cookie:cookie}}),{
+  HYPERDRIVE:{connectionString:'synthetic-test-only'},MIGRATION_AUTH_CHECK_ENABLED:'true'
+ });
+ assert.equal(response.status,503);
+ assert.equal(reads,0);
+ assert.doesNotMatch(await response.text(),/newchanges_cf_migration_reader|neon_superuser/);
+});
