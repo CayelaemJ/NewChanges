@@ -336,3 +336,32 @@ reset, MFA and CSRF, (5) tenant-scoped dashboard reads and cache
 invalidation, (6) ingestion/refresh and background queues. Never permit
 the application to act on real financial data merely because liveness
 responds 200.
+
+## Independent real React frontend build (29 October 2026)
+
+Using a temporary isolated Node 24.22.1 workspace, the complete
+`frontend/` tree from the current migration branch was reconstructed
+using the private connected GitHub source and the committed
+`frontend/package-lock.json`. No production database or API
+credentials were supplied. Commands completed successfully:
+
+```sh
+npm ci --prefix frontend --no-audit --no-fund
+npm run build --prefix frontend
+```
+
+Vite 8.3.5 compiled 365 modules. Generated artifacts:
+- `public/react/index.html` 581 bytes
+- `public/react/assets/index-COvQLIR_.css` 133825 bytes
+- `public/react/assets/index-CF1Fbx8y.js` 425171 bytes
+
+Warnings indicate that the existing standalone HTML expects additional
+`/static/brand-engine.js`, `/static/dark-theme-v2.css`, and
+`/static/the-fixer-logo*.svg` at runtime. These are real project
+assets and must be included in Cloudflare's published static asset tree.
+The React UI is not yet deployed as an authenticated Pages application.
+No CircleCI status is inferred from the isolated successful build.
+
+The native auth adapter and source-compatibility negative tests have
+also been added to CI. No working Hyperdrive configuration exists yet
+on the connected Cloudflare account. Release gate remains blocked.
