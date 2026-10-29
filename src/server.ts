@@ -37,7 +37,7 @@ import { recordSourceWatch, sourceWatchPublicStatus } from "./services/sourceWat
 import {reportOperationalFailure} from "./services/operationalFailureService.js";
 import { listPartners, createPartner, updatePartner, deletePartner, assignUserToPartner, assignEmployerToPartner, themeForUser, themeForEmployer, themeForSlug } from "./services/partnerService.js";
 import { login, resolveSession, destroySession, destroySessionById, destroyAllSessionsForUser, canViewEmployer, canAccessModule, allowedEmployerIds, AuthUser, isAdminRole } from "./services/authService.js";
-import { createTotpSecret, encryptMfaSecret, decryptMfaSecret, verifyTotp, createRecoveryCodes, hashRecoveryCode } from "./services/adminMfaService.js";
+import { createTotpSecret, encryptMfaSecret, decryptMfaSecret, verifyTotp, matchingTotpCounter, createRecoveryCodes, hashRecoveryCode } from "./services/adminMfaService.js";
 import { createUser, listUsers, updateUser, resetPassword, completeSetup, deactivateSelf, listRevokedUsers, deleteUserPermanently, requestPasswordReset } from "./services/userService.js";
 import { recordEvent, engagementSummary } from "./services/analyticsService.js";
 import { notifyAdmins, notifyScoreChangeIfCurrentPeriod, runStaleAccountCheck, runWeeklyDigestIfDue } from "./services/automationService.js";
@@ -581,10 +581,11 @@ app.post<{ Body: { code?: string } }>("/api/auth/admin-mfa/enrollment/confirm", 
   if (typeof req.body?.code !== "string" || !/^\d{6}$/.test(req.body.code)) return reply.code(400).send({ error: "enter the six-digit authenticator code" });
   if (!user.mfaPendingSecretEncrypted || !user.mfaSetupExpiresAt || user.mfaSetupExpiresAt < new Date()) return reply.code(400).send({ error: "start MFA setup again; the setup code expired" });
   const secret = decryptMfaSecret(user.mfaPendingSecretEncrypted);
-  if (!verifyTotp(secret, req.body.code)) return reply.code(401).send({ error: "invalid authenticator code" });
+  const matchedCounter = matchingTotpCounter(secret, req.body.code);
+  if (matchedCounter === null) return reply.code(401).send({ error: "invalid authenticator code" });
   const codes = createRecoveryCodes(), now = new Date();
   await prisma.$transaction([
-    prisma.user.update({ where: { id: user.id }, data: { mfaSecretEncrypted: encryptMfaSecret(secret), mfaEnabledAt: now, mfaPendingSecretEncrypted: null, mfaSetupExpiresAt: null } }),
+    prisma.user.update({ where: { id: user.id }, data: { mfaSecretEncrypted: encryptMfaSecret(secret), mfaEnabledAt: now, mfaLastCounter: BigInt(matchedCounter), mfaPendingSecretEncrypted: null, mfaSetupExpiresAt: null } }),
     prisma.adminMfaRecoveryCode.deleteMany({ where: { userId: user.id } }),
     prisma.adminMfaRecoveryCode.createMany({ data: codes.map((code) => ({ userId: user.id, codeHash: hashRecoveryCode(code) })) }),
     prisma.session.updateMany({ where: { id: user.sessionId, userId: user.id, endedAt: null }, data: { mfaVerifiedAt: now } }),
@@ -599,7 +600,17 @@ app.post<{ Body: { code?: string } }>("/api/auth/admin-mfa/verify", async (req, 
   if (!user.mfaEnabledAt || !user.mfaSecretEncrypted) return reply.code(409).send({ error: "set up MFA before verifying" });
   if (!rateLimit(reply, "admin-mfa:" + user.id, 5, AUTH_WINDOW_MS)) return;
   const code = typeof req.body?.code === "string" ? req.body.code.trim() : "";
-  let accepted = /^\d{6}$/.test(code) && verifyTotp(decryptMfaSecret(user.mfaSecretEncrypted), code);
+  let accepted = false;
+  if (/^\d{6}$/.test(code)) {
+    const counter = matchingTotpCounter(decryptMfaSecret(user.mfaSecretEncrypted), code);
+    if (counter !== null) {
+      const updated = await prisma.user.updateMany({
+        where: { id: user.id, OR: [{ mfaLastCounter: null }, { mfaLastCounter: { lt: BigInt(counter) } }] },
+        data: { mfaLastCounter: BigInt(counter) },
+      });
+      accepted = updated.count === 1;
+    }
+  }
   if (!accepted && /^[0-9a-fA-F-]{20,24}$/.test(code)) {
     const consumed = await prisma.adminMfaRecoveryCode.deleteMany({ where: { userId: user.id, codeHash: hashRecoveryCode(code) } });
     accepted = consumed.count === 1;

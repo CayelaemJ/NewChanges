@@ -789,6 +789,7 @@ model User {
   setupExpires  DateTime?
   mfaSecretEncrypted        String?
   mfaEnabledAt              DateTime?
+  mfaLastCounter            BigInt?
   mfaPendingSecretEncrypted String?
   mfaSetupExpiresAt         DateTime?
   createdAt     DateTime @default(now())
