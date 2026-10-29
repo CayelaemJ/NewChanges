@@ -31,6 +31,7 @@ run npm run check:source-continuity
 run npm run check:source-reconciliation
 run node scripts/security/rls-isolation-ci-probe.mjs
 run node scripts/prisma-upgrade-integration.mjs
+run sh scripts/ci/run-circleci-verify-parity.sh
 run npm run quality:e2e
 run node scripts/console-ux-browser-check.mjs
 run node scripts/header-responsive-check.mjs
