@@ -8,6 +8,9 @@ export class NewChangesContainer extends Container{
  sleepAfter="20m";
  envVars={
   NODE_ENV:"production",PORT:"8080",
+  PUBLIC_BASE_URL:"https://"+bindings.NEWCHANGES_CANONICAL_HOST,
+  COOKIE_SECURE:"true",TRUST_PROXY:"true",TRAFFIC_SAVER_MODE:"true",
+  NEWCHANGES_NEON_PRIMARY_PROJECT:bindings.NEWCHANGES_NEON_PRIMARY_PROJECT,
   DATABASE_URL:bindings.DATABASE_URL,
   SESSION_SECRET:bindings.SESSION_SECRET,
   MYSQL_HOST:bindings.MYSQL_HOST,
@@ -22,7 +25,9 @@ export class NewChangesContainer extends Container{
   ENABLE_SEMANTIC_SHADOW_WORKER:"false",
   ENABLE_SEMANTIC_SHADOW_ENQUEUE:"false",
   ENABLE_SEMANTIC_OBJECT_PUBLISH:"false",
-  STANDBY_MODE:"true"
+  // Primary application writes are enabled only after exclusive leader signoff.
+  STANDBY_MODE:bindings.NEWCHANGES_PRIMARY_WRITE_LEADER_VERIFIED==="true"?"false":"true",
+  ENABLE_AUTHORITATIVE_INCREMENTAL_SCHEDULER:"false"
  };
 }
 const JSON_HEADERS={"Cache-Control":"no-store","Content-Type":"application/json; charset=utf-8"};
