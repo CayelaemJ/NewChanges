@@ -420,3 +420,56 @@ administration UI and its credentials invalidated.** No Cloudflare Hyperdrive
 configuration was created and no connection details were published. Treat any
 production role creation as incomplete until effective grants are checked.
 Do not let the release pipeline use this role.
+
+## Permission audit and live Pages smoke: 29 October 2026
+
+A fresh SQL check of the actual Neon primary proved that
+`newchanges_cf_migration_reader` remains able to LOGIN with
+`neon_superuser` membership, CREATEDB, CREATEROLE and effective
+Session INSERT. This role is **forbidden** in Cloudflare. Manual
+administrative deletion and password invalidation is tracked in
+[NewChanges issue #216](https://github.com/CayelaemJ/NewChanges/issues/216).
+No Hyperdrive configuration has been created.
+
+A read-only catalog inspection found **RLS disabled and no policies**
+for `Employee`, `Employer`, `ImportBatch`, `ScoreSnapshot`,
+`Session`, `User`, and `UserEmployer`. This does **not** itself
+prove an application-level tenant bypass: the existing Fastify API has
+permissions; it means the additional database defense is not active.
+Test RLS on a disposable branch before touching live policies.
+
+The Cloudflare native identity route now **audits current connection
+privileges before ANY session lookup**, including a refusal if
+the role can write Sessions, has other employer data access,
+belongs to `neon_superuser`, has CREATEDB/CREATEROLE or points at a
+database other than `newchanges`. Tests cover the real detected
+privilege pattern. The production release gate requires the verified
+Neon primary project and database, Hyperdrive connectivity, an
+independently verified least-privileged role and a production
+tenant/RLS review.
+
+Independent isolated Node 24.22 tests: **24 passed, 0 failed** across
+session compatibility, native request boundary, effective privileges and
+release readiness. These are local synthetic tests, not production
+database integration tests.
+
+The branded public Pages preview was redeployed successfully as
+deployment `1c502bd2-cd19-450b-b74a-979c4596fd04`,
+available at `https://migration.newchanges-app.pages.dev/`.
+The old public Worker hostname is still disabled. Live remote HTTP checks
+from a separate sandbox returned:
+
+| Route | Status | Expected meaning |
+| --- | --- | --- |
+| `/` | 200 | Public landing page |
+| `/api/health` | 200 | Worker liveness only |
+| `/api/migration/capabilities` | 200 | Disabled backend capability report |
+| `/api/migration/readiness` | 200 | JSON explicitly says primaryReady=false |
+| `/ready` | 503 | Database readiness blocked |
+| `/api/migration/auth-check` | 401 | No session, no identity access |
+| `/api/admin/users` | 404 | Private API not migrated |
+| `/react/dashboard` | 403 | Authenticated UI blocked |
+
+**This is a safe staging/runtime test, not a production launch.**
+No live financial data, credentials, sync workers or auth sessions
+were exposed or migrated. Render standby remains unchanged.
