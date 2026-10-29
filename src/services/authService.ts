@@ -114,7 +114,7 @@ export async function resolveSession(token?: string) {
   if (now.getTime() - session.lastSeenAt.getTime() > 60_000) {
     await prisma.session.updateMany({ where: { id: session.id }, data: { lastSeenAt: now } }).catch(() => {});
   }
-  return { ...session.user, sessionId: session.id, sessionMfaVerifiedAt: session.mfaVerifiedAt };
+  return { ...session.user, sessionId: session.id, sessionMfaVerifiedAt: session.mfaVerifiedAt, sessionMfaRecoveryUsedAt: session.mfaRecoveryUsedAt };
 }
 
 export async function destroySession(token?: string) {
