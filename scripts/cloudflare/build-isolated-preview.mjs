@@ -1,6 +1,6 @@
-// NewChanges isolated Cloudflare staging: publish only public marketing files.
-// Do not bundle the authenticated admin, dashboard, login, or React app here.
-// This preview is read-only, no database or live API access.
+// NewChanges Cloudflare staging: serve public marketing and actual compiled React static assets.
+// Do not expose authenticated HTML routes, live logins, API data or database access.
+// The React bundles are inert without authenticated HTML/API access.
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
@@ -43,6 +43,34 @@ for(const name of files){
   assets[uri]={mime:type,bytes:bytes.length,sha256:crypto.createHash('sha256').update(bytes).digest('hex'),gzipBase64:zlib.gzipSync(bytes,{level:9}).toString('base64')};
 }
 if(!assets['/']||!assets['/static/the-fixer-logo-reversed.svg'])throw new Error('Incomplete public landing preview');
+
+// Bring the complete versioned React browser bundles into the dedicated Pages
+// project, but KEEP authenticated application HTML/route access disabled.
+const reactIndexPath=path.join(publicRoot,'react','index.html');
+if(!fs.existsSync(reactIndexPath))throw new Error('Build the real React frontend before bundling Cloudflare assets');
+const reactIndex=fs.readFileSync(reactIndexPath,'utf8');
+const referenced=[...reactIndex.matchAll(/(?:src|href)="(\/react\/assets\/[A-Za-z0-9_.-]+\.(?:js|css))"/g)].map(m=>m[1]);
+if(!referenced.some(p=>p.endsWith('.js'))||!referenced.some(p=>p.endsWith('.css')))
+  throw new Error('Missing compiled JS or CSS in React index');
+const frontendAssets={};
+const browserFiles=[
+  ...new Set(referenced),
+  '/static/brand-engine.js','/static/dark-theme-v2.css',
+  '/static/the-fixer-logo.svg','/static/the-fixer-logo-reversed.svg'
+];
+for(const uri of browserFiles){
+  if(!/^\/(?:react\/assets|static)\/[A-Za-z0-9_.-]+$/.test(uri))
+    throw new Error('Invalid compiled asset path');
+  const file=path.join(publicRoot,uri.startsWith('/react/')?uri.slice(1):uri.slice('/static/'.length));
+  if(!fs.existsSync(file)||!fs.statSync(file).isFile())
+    throw new Error('Missing required React runtime asset: '+uri);
+  const bytes=fs.readFileSync(file);
+  if(bytes.length>2_000_000)throw new Error('Unexpectedly large browser asset: '+uri);
+  frontendAssets[uri]={mime:mime[path.extname(file)],bytes:bytes.length,
+    sha256:crypto.createHash('sha256').update(bytes).digest('hex'),
+    gzipBase64:zlib.gzipSync(bytes,{level:9}).toString('base64')};
+}
+
 // Bundle the same authentication boundary used by our native Cloudflare
 // candidate so preview tests exercise real fail-closed logic. No Prisma module
 // or DB credentials are bundled into this public-only static preview.
@@ -57,6 +85,7 @@ const worker=`// GENERATED: NewChanges isolated read-only Cloudflare public prev
 // Source: public assets and fail-closed identity boundary. No live DB bindings.
 ${nativeAuthSource}
 const ASSETS=${JSON.stringify(assets)};
+const FRONTEND_ASSETS=${JSON.stringify(frontendAssets)};
 const HEADERS={
   'X-Robots-Tag':'noindex, nofollow, noarchive',
   'X-Content-Type-Options':'nosniff',
@@ -79,9 +108,17 @@ export default {
     const url=new URL(request.url);
     const p=url.pathname;
     if(p==='/api/health'&&['GET','HEAD'].includes(request.method))return new Response(request.method==='HEAD'?null:JSON.stringify({status:'ok',environment:'cloudflare-pages-preview',production:false}),{headers:{...HEADERS,'Content-Type':'application/json; charset=utf-8'}});
-    if(p==='/api/migration/capabilities'&&['GET','HEAD'].includes(request.method))return new Response(request.method==='HEAD'?null:JSON.stringify({environment:'cloudflare-pages-preview',auth:'disabled',database:'disconnected',dashboard:'disabled',imports:'disabled',schedulers:'disabled',notifications:'disabled'}),{headers:{...HEADERS,'Content-Type':'application/json; charset=utf-8'}});
+    if(p==='/api/migration/capabilities'&&['GET','HEAD'].includes(request.method))return new Response(request.method==='HEAD'?null:JSON.stringify({environment:'cloudflare-pages-preview',auth:'disabled',database:'disconnected',frontendAssets:'deployed',dashboard:'disabled',imports:'disabled',schedulers:'disabled',notifications:'disabled'}),{headers:{...HEADERS,'Content-Type':'application/json; charset=utf-8'}});
+    if(p==='/api/migration/frontend-build'&&['GET','HEAD'].includes(request.method))
+      return new Response(request.method==='HEAD'?null:JSON.stringify({product:'NewChanges / The Fixer',frontend:'compiled-real-react',js:${JSON.stringify(referenced.find(p=>p.endsWith(".js")))},css:${JSON.stringify(referenced.find(p=>p.endsWith(".css")))},authentication:'not_live',productionReady:false}),{headers:{...HEADERS,'Content-Type':'application/json; charset=utf-8'}});
     if(p==='/api/migration/readiness'&&['GET','HEAD'].includes(request.method))return new Response(request.method==='HEAD'?null:JSON.stringify({primaryReady:false,status:'BLOCKED',reason:'Authenticated NewChanges API and database connectivity not migrated'}),{headers:{...HEADERS,'Content-Type':'application/json; charset=utf-8'}});
     if(p==='/ready'||p==='/api/migration/auth-check')return isolatedAuthRouter.fetch(request,{});
+    // Public compiled assets only; /react/ and all protected HTML remain 403.
+    if(Object.prototype.hasOwnProperty.call(FRONTEND_ASSETS,p)&&['GET','HEAD'].includes(request.method)){
+      const file=FRONTEND_ASSETS[p];
+      const body=request.method==='HEAD'?null:new Response(decode(file.gzipBase64)).body.pipeThrough(new DecompressionStream('gzip'));
+      return new Response(body,{headers:{...HEADERS,'Content-Type':file.mime}});
+    }
     if(p.startsWith('/api/')||p.startsWith('/auth/')||p==='/api')return denied(404,'This isolated preview does not have live APIs');
     if(!['GET','HEAD'].includes(request.method))return denied(405,'Read-only preview');
     if(p==='/robots.txt')return new Response(request.method==='HEAD'?null:'User-agent: *\\nDisallow: /\\n',{headers:{...HEADERS,'Content-Type':'text/plain; charset=utf-8'}});
@@ -103,4 +140,4 @@ fs.mkdirSync(pagesRoot,{recursive:true});
 fs.writeFileSync(path.join(pagesRoot,'_worker.js'),worker);
 const size=fs.statSync(out).size;
 if(size>8*1024*1024)throw new Error('Preview would exceed chosen 8 MiB safety budget');
-console.log('Read-only public assets:',Object.keys(assets).length,'Worker bytes:',size,'No private JS or live API bundled');
+console.log('Read-only marketing assets:',Object.keys(assets).length,'Compiled React static assets:',Object.keys(frontendAssets).length,'Worker bytes:',size,'No protected HTML or live APIs exposed');
