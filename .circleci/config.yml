@@ -341,7 +341,7 @@ jobs:
           command: |
             set -euo pipefail
             node scripts/cloudflare/verify-route-inventory.mjs
-            node --test tests/cloudflare-isolated-api.test.mjs tests/cloudflare-primary-readiness.test.mjs
+            node --test tests/cloudflare-isolated-api.test.mjs tests/cloudflare-primary-readiness.test.mjs tests/cloudflare-brand-parity.test.mjs
       - run:
           name: Build complete production-source backend and React UI without database changes
           command: |
