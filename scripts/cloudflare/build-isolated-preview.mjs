@@ -86,6 +86,9 @@ export default {
 fs.mkdirSync(outDir,{recursive:true});
 const out=path.join(outDir,'newchanges-isolated-preview.worker.mjs');
 fs.writeFileSync(out,worker);
+const pagesRoot=path.join(outDir,'pages');
+fs.mkdirSync(pagesRoot,{recursive:true});
+fs.writeFileSync(path.join(pagesRoot,'_worker.js'),worker);
 const size=fs.statSync(out).size;
 if(size>8*1024*1024)throw new Error('Preview would exceed chosen 8 MiB safety budget');
 console.log('Read-only public assets:',Object.keys(assets).length,'Worker bytes:',size,'No private JS or live API bundled');
