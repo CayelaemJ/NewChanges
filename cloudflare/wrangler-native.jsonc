@@ -3,7 +3,17 @@
   "name": "newchanges-native-api-candidate",
   "main": "./native-newchanges-worker.mjs",
   "compatibility_date": "2026-10-29",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
   "workers_dev": false,
-  "observability": {"enabled": true}
+  "observability": {
+    "enabled": true
+  },
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "REPLACE_WITH_NEWCHANGES_NEON_PRIMARY_HYPERDRIVE_ID"
+    }
+  ]
 }
