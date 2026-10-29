@@ -9,11 +9,10 @@ Install Node 24 and dependencies, including frontend dependencies, then activate
 ```bash
 npm ci --no-audit --no-fund
 npm ci --prefix frontend --no-audit --no-fund
-git config --local core.hooksPath .githooks
-chmod +x .githooks/pre-push scripts/push-verified.sh
+bash scripts/install-local-hooks.sh
 ```
 
-On Windows, use Git Bash for the shell scripts. Git tracks executable bits separately; if a fresh clone reports the pre-push hook as non-executable, run `chmod +x .githooks/pre-push` on that machine.
+On Windows, use Git Bash for these shell scripts. The installer copies the hook to Git's local hooks directory and sets its executable bit. It refuses to overwrite an existing pre-push hook; if one exists, integrate these checks into it manually. If you previously set `core.hooksPath`, unset it only after confirming that it is safe to change your local hook configuration.
 
 ## Before push
 
