@@ -373,9 +373,13 @@ jobs:
           name: Validate complete original Fastify application Container gate and Worker bundle
           command: |
             set -euo pipefail
-            node --test tests/cloudflare-full-app.test.mjs
+            node --test tests/cloudflare-full-app.test.mjs tests/cloudflare-pages-gateway.test.mjs tests/cloudflare-full-app-neon.test.mjs
             node --check cloudflare/full-app/worker.mjs
-            npm install --prefix cloudflare/full-app --no-audit --no-fund
+            node --check scripts/cloudflare/verify-full-app-neon.mjs
+            node scripts/cloudflare/build-pages-full-gateway.mjs
+            test -s cloudflare-output/pages-full-gateway/_worker.js
+            test -s Dockerfile.cloudflare
+            npm ci --prefix cloudflare/full-app --no-audit --no-fund
             cloudflare/full-app/node_modules/.bin/wrangler deploy --dry-run --containers-rollout=none --config wrangler.newchanges-full-app.jsonc --outdir cloudflare-output/newchanges-full
             test -s cloudflare-output/newchanges-full/worker.js
           no_output_timeout: 10m
