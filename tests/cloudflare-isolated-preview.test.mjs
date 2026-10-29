@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import worker from '../cloudflare-output/newchanges-isolated-preview.worker.mjs';
 
-const url=p=>'https://newchanges-cloudflare-preview.cabo-solutions-za.workers.dev'+p;
+const url=p=>'https://migration.newchanges-app.pages.dev'+p;
 
 test('preview serves real public NewChanges homepage without Render or cookies', async()=>{
   const old=globalThis.fetch;
@@ -72,4 +72,16 @@ test('HEAD or malformed API requests cannot bypass the private route boundary',a
    assert.equal(r.headers.get('set-cookie'),null);
   }
  }
+});
+
+test('Pages migration health and readiness do not claim production status',async()=>{
+ const health=await worker.fetch(new Request(url('/api/health')));
+ assert.deepEqual(await health.json(),{status:'ok',environment:'cloudflare-pages-preview',production:false});
+ const capabilities=await worker.fetch(new Request(url('/api/migration/capabilities')));
+ const data=await capabilities.json();
+ assert.equal(data.database,'disconnected');
+ assert.equal(data.auth,'disabled');
+ const ready=await worker.fetch(new Request(url('/api/migration/readiness')));
+ const state=await ready.json();
+ assert.equal(state.primaryReady,false);
 });
