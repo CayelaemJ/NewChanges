@@ -40,6 +40,16 @@ export function validatePrimaryMigrationConfig(input={}){
   if(mode==="production"){
     for(const capability of BLOCKED_BEFORE_LAUNCH)
       if(!distinct.has(capability))errors.push("missing independently verified capability: "+capability);
+    if(input.neonPrimaryProjectId!=="wild-base-70222190"||input.neonDatabase!=="newchanges")
+      errors.push("Cloudflare must use the verified Neon PostgreSQL primary database");
+    if(input.hyperdriveConnectionVerified!==true)
+      errors.push("Cloudflare Hyperdrive-to-Neon primary connection not verified");
+    if(input.neonEffectivePrivilegesVerified!==true)
+      errors.push("Effective Neon role permissions not verified as least privilege");
+    if(input.neonRoleName==="newchanges_cf_migration_reader")
+      errors.push("Unsafe Neon role is explicitly banned");
+    if(input.productionRlsReviewPassed!==true)
+      errors.push("Production tenant-isolation and RLS review missing");
     if(input.authenticatedE2E!==true)errors.push("authenticated E2E verification required");
     if(input.tenantIsolationE2E!==true)errors.push("tenant isolation verification required");
     if(input.rollbackVerified!==true)errors.push("fallback rollback verification required");
