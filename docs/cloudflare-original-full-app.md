@@ -5,7 +5,7 @@
 ## Full-stack migration
 - `Dockerfile.cloudflare`: builds existing `src/server.ts` to `dist/server.js` and the actual frontend with `npm run build`, then runs original server with Node 24 and no deployment-time migrations.
 - `cloudflare/full-app/worker.mjs`: Worker/Container ingress for original Node backend. It is intentionally turned off until release criteria are independently proven.
-- `wrangler.newchanges-full-app.jsonc`: dedicated NewChanges Worker, no shared CABO host, no public Workers subdomain, disabled release flags.
+- `wrangler.newchanges-full-app.jsonc`: dedicated NewChanges Worker, no shared third-party hostname, no public Workers subdomain, disabled release flags.
 - `tests/cloudflare-full-app.test.mjs`: negative tests for hostnames, accidental activation, database identity and incomplete signoffs.
 - CircleCI full-source candidate attempts Wrangler dry-run for real Container entry point. This is NOT a Docker image deployment and is NOT evidence of full app parity.
 
@@ -17,10 +17,5 @@
 - All `src/server.ts` production routes, file uploads, MySQL replicas, scheduled refresh, reporting, notifications and admin controls must be preserved. A compile-only success cannot promote production.
 - Distinct role problem: the temporary Neon role `newchanges_cf_migration_reader` is overprivileged; its removal remains tracked in issue #216. Never use it for Hyperdrive or any Container secrets.
 - Scheduled jobs on a request-driven Container cannot start unconditionally or duplicate Render jobs. The candidate sets initial inactive flags, and must be redesigned to re-enable all operations safely after cutover.
-
-## Other workspaces are separate
-- CABO Learning Hub's actual app: `CayelaemJ/Training-and-Development-Hub` full-stack draft PR #141 (not the static-only #105).
-- CABO corporate website's original Node enquiry API + frontend: `CayelaemJ/CABOSOLUTIONS` draft PR #27.
-- HR platform's static-only PR #50 is not ready to become an authenticated primary.
 
 **Release status:** full NewChanges Container candidate committed but not deployed, database not connected, production app not migrated. The Pages preview only serves public/static assets.
