@@ -1,4 +1,5 @@
 import {readExistingSession,safeSessionResponse} from "./session-compat.mjs";
+import {requireNeonIdentityReader} from "./neon-identity-privileges.mjs";
 
 // Production-facing NewChanges identity migration boundary.
 // None of these handlers replace the app's /api/auth/* routes yet.
@@ -39,6 +40,7 @@ export function createNativeAuthRouter({openDatabase}={}){
    let client;
    try{
      client=await openDatabase(env);
+     await requireNeonIdentityReader(client);
      if(pathname==="/ready"){
        // Liveness must not be conflated with database/tenant readiness.
        await client.$queryRaw`SELECT 1`;
