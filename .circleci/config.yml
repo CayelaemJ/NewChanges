@@ -329,6 +329,39 @@ jobs:
           path: test-results
           when: always
 
+  cloudflare_full_source_candidate:
+    docker:
+      - image: cimg/node:24.22
+    resource_class: small
+    working_directory: ~/newchanges
+    steps:
+      - checkout
+      - run:
+          name: Verify complete NewChanges migration route and security contracts
+          command: |
+            set -euo pipefail
+            node scripts/cloudflare/verify-route-inventory.mjs
+            node --test tests/cloudflare-isolated-api.test.mjs tests/cloudflare-primary-readiness.test.mjs
+      - run:
+          name: Build complete production-source backend and React UI without database changes
+          command: |
+            set -euo pipefail
+            npm ci --no-audit --no-fund
+            npm run build
+            test -s dist/server.js
+            test -s public/react/index.html
+            test -s public/dashboard.html
+            test -s public/admin.html
+            test -s public/login.html
+            test -s public/the-fixer-brand.css
+          no_output_timeout: 10m
+      - store_artifacts:
+          path: public/react
+          destination: newchanges-cloudflare-react-candidate
+      - store_artifacts:
+          path: dist/server.js
+          destination: newchanges-cloudflare-backend-candidate/server.js
+
   source_quality:
     docker:
       - image: cimg/node:24.22
@@ -565,5 +598,9 @@ workflows:
       - dependency_advisory_audit
       - gitleaks_history_scan
       - trivy_vulnerability_scan
+      - cloudflare_full_source_candidate:
+          filters:
+            branches:
+              only: chore/cloudflare-isolated-preview-20261028
 
 
