@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {CAPABILITY_IDS,validatePrimaryMigrationConfig,safeReleaseStatement} from '../cloudflare/primary-readiness.mjs';
-const base={mode:"staging",hostname:"https://newchanges-api-canary.cabo-solutions-za.workers.dev",source:"cloudflare-workers",productionTarget:"cloudflare",verifiedCapabilities:["static_public"]};
+const base={mode:"staging",hostname:"https://migration.newchanges-app.pages.dev",source:"cloudflare-workers",productionTarget:"cloudflare",verifiedCapabilities:["static_public"]};
 test('staging releases are allowed without pretending the authenticated app is migrated',()=>{
  const r=validatePrimaryMigrationConfig(base);assert.equal(r.valid,true);
  assert.equal(r.mode,"staging");assert.equal(safeReleaseStatement(base),"NOT_READY");
