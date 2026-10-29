@@ -3,6 +3,12 @@ name: NewChanges manual Docker CI (self-hosted only)
 # Deliberately no push or pull_request triggers.
 on:
   workflow_dispatch:
+    inputs:
+      run_security_scanners:
+        description: 'Opt in to pre-cached security scanners (Semgrep, Gitleaks, Trivy, npm advisory)'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -35,6 +41,15 @@ jobs:
           docker compose -f docker-compose.local-tests.yml config --quiet
           docker info >/dev/null
           docker compose version
+
+      - name: Validate CI isolation contracts
+        shell: bash
+        run: node --test tests/ci-docker-isolation.test.mjs
+
+      - name: Optional security scanners (requires pre-cached images and advisory access)
+        if: ${{ inputs.run_security_scanners == true }}
+        shell: bash
+        run: bash scripts/ci/run-security-scanners.sh
 
       - name: Build and run synthetic Docker tests
         shell: bash
