@@ -1,0 +1,53 @@
+name: NewChanges manual Docker CI (self-hosted only)
+
+# Deliberately no push or pull_request triggers.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: newchanges-manual-docker-ci
+  cancel-in-progress: false
+
+jobs:
+  docker-tests:
+    # Dedicated personal runner. Execute only after reviewing the selected branch.
+    runs-on: [self-hosted, linux, x64, newchanges-ci]
+    timeout-minutes: 90
+    env:
+      CI: "true"
+      NODE_ENV: test
+    steps:
+      - name: Check out selected trusted ref without persisted credentials
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Confirm expected local test assets are present
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          test -f docker-compose.local-tests.yml || { echo "Missing docker-compose.local-tests.yml. Commit the local Docker test setup to the selected branch first."; exit 1; }
+          test -f Dockerfile.test || { echo "Missing Dockerfile.test. Commit the local Docker test setup to the selected branch first."; exit 1; }
+          test -f scripts/run-local-test-suite.sh || { echo "Missing scripts/run-local-test-suite.sh. Commit the local Docker test setup to the selected branch first."; exit 1; }
+          docker compose -f docker-compose.local-tests.yml config --quiet
+          docker info >/dev/null
+          docker compose version
+
+      - name: Build and run synthetic Docker tests
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          docker compose -p "newchanges-ci-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            -f docker-compose.local-tests.yml \
+            up --build --abort-on-container-exit --exit-code-from tests
+
+      - name: Clean up only this CI test project
+        if: always()
+        shell: bash
+        run: |
+          docker compose -p "newchanges-ci-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            -f docker-compose.local-tests.yml \
+            down --volumes --remove-orphans
