@@ -29,6 +29,8 @@ jobs:
           test -s public/login.html
           test -s public/the-fixer-brand.css
           node scripts/cloudflare/verify-route-inventory.mjs
+          node scripts/cloudflare/build-isolated-preview.mjs
+          node --test tests/cloudflare-isolated-preview.test.mjs
           node --test tests/cloudflare-isolated-api.test.mjs tests/cloudflare-primary-readiness.test.mjs tests/cloudflare-brand-parity.test.mjs tests/cloudflare-session-compat.test.mjs tests/cloudflare-native-auth-router.test.mjs
           node --check cloudflare/newchanges-isolated-api.worker.mjs
           node --check cloudflare/primary-readiness.mjs
