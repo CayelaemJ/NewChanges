@@ -37,7 +37,7 @@ import { recordSourceWatch, sourceWatchPublicStatus } from "./services/sourceWat
 import {reportOperationalFailure} from "./services/operationalFailureService.js";
 import { listPartners, createPartner, updatePartner, deletePartner, assignUserToPartner, assignEmployerToPartner, themeForUser, themeForEmployer, themeForSlug } from "./services/partnerService.js";
 import { login, resolveSession, destroySession, destroySessionById, destroyAllSessionsForUser, canViewEmployer, canAccessModule, allowedEmployerIds, AuthUser, isAdminRole } from "./services/authService.js";
-import { createTotpSecret, encryptMfaSecret, decryptMfaSecret, verifyTotp, matchingTotpCounter, createRecoveryCodes, hashRecoveryCode } from "./services/adminMfaService.js";
+import { createTotpSecret, encryptMfaSecret, decryptMfaSecret, matchingTotpCounter, createRecoveryCodes, hashRecoveryCode } from "./services/adminMfaService.js";
 import { createUser, listUsers, updateUser, resetPassword, completeSetup, deactivateSelf, listRevokedUsers, deleteUserPermanently, requestPasswordReset } from "./services/userService.js";
 import { recordEvent, engagementSummary } from "./services/analyticsService.js";
 import { notifyAdmins, notifyScoreChangeIfCurrentPeriod, runStaleAccountCheck, runWeeklyDigestIfDue } from "./services/automationService.js";
@@ -589,6 +589,7 @@ app.post<{ Body: { code?: string } }>("/api/auth/admin-mfa/enrollment/confirm", 
     prisma.adminMfaRecoveryCode.deleteMany({ where: { userId: user.id } }),
     prisma.adminMfaRecoveryCode.createMany({ data: codes.map((code) => ({ userId: user.id, codeHash: hashRecoveryCode(code) })) }),
     prisma.session.updateMany({ where: { id: user.sessionId, userId: user.id, endedAt: null }, data: { mfaVerifiedAt: now } }),
+    prisma.session.updateMany({ where: { userId: user.id, id: { not: user.sessionId }, endedAt: null }, data: { endedAt: now, revokedAt: now, revokedBy: user.email } }),
   ]);
   logAdminAction(user, "admin.mfa.enroll", "Enrolled administrator MFA", { targetType: "User", targetId: user.id, context: requestSecurityContext(req) });
   return { ok: true, recoveryCodes: codes };
