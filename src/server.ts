@@ -402,6 +402,7 @@ app.get("/react/admin", async (req, reply) => {
   const user = await currentUser(req);
   if (!user) return reply.redirect("/login");
   if (!canAccessModule(user, "admin")) return reply.code(403).send({ error: "admin only" });
+  if (!user.mfaEnabledAt || !user.sessionMfaVerifiedAt || Date.now() - new Date(user.sessionMfaVerifiedAt).getTime() > 12 * 60 * 60 * 1000) return reply.redirect("/admin-mfa");
   try {
     const html = await readFile(join(PUBLIC_DIR, "react", "index.html"), "utf-8");
     return reply.type("text/html; charset=utf-8").header("Cache-Control", "no-store").send(html);
