@@ -28,3 +28,11 @@ test('self-hosted jobs never persist checkout credentials',()=>{
  const y=read('.github/workflows/newchanges-manual-docker-ci.yml');
  assert.match(y,/persist-credentials:\s*false/);
 });
+
+test('Docker test image drops root privileges after installation',()=>{
+ const dockerfile=read('Dockerfile.test');
+ const directives=dockerfile.split(/\r?\n/).map(line=>line.trim()).filter(line=>/^USER\s+/i.test(line));
+ assert.ok(directives.length>0,'Test Dockerfile must declare a non-root user');
+ assert.match(directives.at(-1),/^USER\s+node\s*$/i);
+ assert.match(dockerfile,/PLAYWRIGHT_BROWSERS_PATH=\/ms-playwright/);
+});
