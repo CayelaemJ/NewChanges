@@ -1,0 +1,43 @@
+name: Cloudflare NewChanges complete production source build
+# Candidate build of the ACTUAL latest app. Never modifies production services.
+on:
+  push:
+    branches: [chore/cloudflare-isolated-preview-20261028]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  feature-parity-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install main application without production credentials
+        run: npm ci --no-audit --no-fund
+      - name: Build complete NewChanges backend and React frontend
+        run: npm run build
+      - name: Assert real production assets and compiled routes exist
+        run: |
+          set -euo pipefail
+          test -s dist/server.js
+          test -s public/react/index.html
+          test -s public/dashboard.html
+          test -s public/admin.html
+          test -s public/login.html
+          test -s public/the-fixer-brand.css
+          node --test tests/cloudflare-isolated-api.test.mjs tests/cloudflare-primary-readiness.test.mjs
+          node --check cloudflare/newchanges-isolated-api.worker.mjs
+          node --check cloudflare/primary-readiness.mjs
+      - name: Save full candidate build and public frontend separately
+        uses: actions/upload-artifact@v4
+        with:
+          name: newchanges-full-app-build-for-migration-review
+          path: |
+            dist/
+            public/react/
+          retention-days: 5
+          if-no-files-found: error
