@@ -16,7 +16,7 @@ docker image inspect zricethezav/gitleaks:v8.24.3 >/dev/null
 # No network for scanners; updates to rule feeds require a separately approved preparation stage.
 docker run --rm --network none --read-only --security-opt no-new-privileges --cap-drop ALL \
   -v "$PWD:/src:ro" -w /src semgrep/semgrep:1.147.0 \
-  semgrep scan --config auto --error --metrics off --exclude node_modules --exclude dist .
+  semgrep scan --config p/javascript --config p/typescript --config p/security-audit --error --metrics off --exclude node_modules --exclude dist .
 docker run --rm --network none --read-only --security-opt no-new-privileges --cap-drop ALL \
   -v "$PWD:/src:ro" -w /src zricethezav/gitleaks:v8.24.3 \
   git --redact --exit-code 1
