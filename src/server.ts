@@ -37,6 +37,7 @@ import { recordSourceWatch, sourceWatchPublicStatus } from "./services/sourceWat
 import {reportOperationalFailure} from "./services/operationalFailureService.js";
 import { listPartners, createPartner, updatePartner, deletePartner, assignUserToPartner, assignEmployerToPartner, themeForUser, themeForEmployer, themeForSlug } from "./services/partnerService.js";
 import { login, resolveSession, destroySession, destroySessionById, destroyAllSessionsForUser, canViewEmployer, canAccessModule, allowedEmployerIds, AuthUser, isAdminRole } from "./services/authService.js";
+import { createTotpSecret, encryptMfaSecret, decryptMfaSecret, verifyTotp, createRecoveryCodes, hashRecoveryCode } from "./services/adminMfaService.js";
 import { createUser, listUsers, updateUser, resetPassword, completeSetup, deactivateSelf, listRevokedUsers, deleteUserPermanently, requestPasswordReset } from "./services/userService.js";
 import { recordEvent, engagementSummary } from "./services/analyticsService.js";
 import { notifyAdmins, notifyScoreChangeIfCurrentPeriod, runStaleAccountCheck, runWeeklyDigestIfDue } from "./services/automationService.js";
@@ -169,7 +170,7 @@ app.addHook("onRequest", async (req, reply) => {
   const ip = req.ip || "unknown";
   // Apply a general budget first; sensitive APIs have independent, tighter limits.
   if (!rateLimit(reply, `api:${ip}`, RATE_LIMIT, RATE_WINDOW_MS)) return;
-  const authPath = /^\/api\/auth\/(?:login|forgot-password|set-password)(?:\/|$)/.test(path);
+  const authPath = /^\/api\/auth\/(?:login|forgot-password|set-password|admin-mfa)(?:\/|$)/.test(path);
   if (authPath && !rateLimit(reply, `auth:${ip}`, AUTH_RATE_LIMIT, AUTH_WINDOW_MS)) return;
   if (path === "/api/contact" && !rateLimit(reply, `contact:${ip}`, 6, 10 * 60_000)) return;
   if (/\/(?:upload|import|batch|sync|staging|dataset)(?:s|\/|-|$)/.test(path) &&
@@ -350,9 +351,18 @@ async function requireUser(req: FastifyRequest, reply: FastifyReply): Promise<Au
 async function requireAdmin(req: FastifyRequest, reply: FastifyReply): Promise<AuthUser | null> {
   const user = await requireUser(req, reply);
   if (!user) return null;
-  if (user.role !== "ADMIN" && user.role !== "SUPERADMIN") { reply.code(403).send({ error: "admin only" }); return null; }
+  if (!isAdminRole(user)) { reply.code(403).send({ error: "admin only" }); return null; }
+  if (!user.mfaEnabledAt) { reply.code(403).send({ error: "administrator MFA enrollment required", code: "MFA_ENROLLMENT_REQUIRED" }); return null; }
+  const verifiedAt = user.sessionMfaVerifiedAt;
+  if (!verifiedAt || Date.now() - new Date(verifiedAt).getTime() > 12 * 60 * 60 * 1000) {
+    reply.code(403).send({ error: "MFA verification required", code: "MFA_REQUIRED" }); return null;
+  }
   return user;
 }
+app.addHook("preHandler", async (req, reply) => {
+  if (req.url.split("?", 1)[0].startsWith("/api/admin/")) await requireAdmin(req, reply);
+});
+
 function redactAuditDetail(value: unknown): unknown {
   if (!value || typeof value !== "object") return value;
   if (Array.isArray(value)) return value.map(redactAuditDetail);
@@ -477,12 +487,21 @@ app.get("/admin", async (req, reply) => {
   const user = await currentUser(req);
   if (!user) return reply.redirect("/login");
   if (!canAccessModule(user, "admin")) return reply.code(403).type("text/html").send("<h2 style='font-family:sans-serif;padding:40px'>Admins only. <a href='/dashboard'>Go to dashboard</a></h2>");
+  if (!user.mfaEnabledAt || !user.sessionMfaVerifiedAt || Date.now() - new Date(user.sessionMfaVerifiedAt).getTime() > 12 * 60 * 60 * 1000) return reply.redirect("/admin-mfa");
   return serveHtml(reply, "admin.html");
 });
 app.get("/users", async (req, reply) => {
   const user = await currentUser(req);
-  if (!user || (user.role !== "ADMIN" && user.role !== "SUPERADMIN")) return reply.redirect("/login");
+  if (!user || !isAdminRole(user)) return reply.redirect("/login");
+  if (!user.mfaEnabledAt || !user.sessionMfaVerifiedAt || Date.now() - new Date(user.sessionMfaVerifiedAt).getTime() > 12 * 60 * 60 * 1000) return reply.redirect("/admin-mfa");
   return serveHtml(reply, "users.html");
+});
+
+app.get("/admin-mfa", async (req, reply) => {
+  const user = await currentUser(req);
+  if (!user) return reply.redirect("/login");
+  if (!isAdminRole(user)) return reply.code(403).type("text/html").send("<h2 style='font-family:sans-serif;padding:40px'>Admins only.</h2>");
+  return serveHtml(reply, "admin-mfa.html");
 });
 
 // Keep lightweight liveness independent of upstream outages.
@@ -523,12 +542,71 @@ app.post<{ Body: { email: string; password: string; remember?: boolean } }>("/ap
   });
   if (!result) return reply.code(401).send({ error: "invalid email or password" });
   reply.setCookie("session", result.token, remember ? { ...REMEMBER_COOKIE, expires: result.expiresAt } : COOKIE);
-  return { ok: true, user: { name: result.user.name, role: result.user.role } };
+  const admin = isAdminRole(result.user);
+  return { ok: true, user: { name: result.user.name, role: result.user.role }, ...(admin ? { mfaRequired: true, mfaSetupRequired: !result.user.mfaEnabledAt } : {}) };
 });
 
 app.post("/api/auth/logout", async (req, reply) => {
   await destroySession(req.cookies?.session);
   reply.clearCookie("session", { path: "/", httpOnly: true, sameSite: "lax", secure: COOKIE_SECURE });
+  return { ok: true };
+});
+
+// Administrator MFA lifecycle. Secrets are encrypted at rest; recovery codes are
+// one-time, hashed in storage, and shown only at enrollment.
+app.get("/api/auth/admin-mfa/status", async (req, reply) => {
+  const user = await currentUser(req);
+  if (!user) return reply.code(401).send({ error: "not signed in" });
+  if (!isAdminRole(user)) return reply.code(403).send({ error: "admin only" });
+  return {
+    enabled: Boolean(user.mfaEnabledAt),
+    verified: Boolean(user.sessionMfaVerifiedAt && Date.now() - new Date(user.sessionMfaVerifiedAt).getTime() <= 12 * 60 * 60 * 1000),
+  };
+});
+app.post("/api/auth/admin-mfa/enrollment", async (req, reply) => {
+  const user = await currentUser(req);
+  if (!user) return reply.code(401).send({ error: "not signed in" });
+  if (!isAdminRole(user)) return reply.code(403).send({ error: "admin only" });
+  if (user.mfaEnabledAt && (!user.sessionMfaVerifiedAt || Date.now() - new Date(user.sessionMfaVerifiedAt).getTime() > 12 * 60 * 60 * 1000))
+    return reply.code(403).send({ error: "verify your current MFA factor before replacing it", code: "MFA_REQUIRED" });
+  const secret = createTotpSecret();
+  await prisma.user.update({ where: { id: user.id }, data: { mfaPendingSecretEncrypted: encryptMfaSecret(secret), mfaSetupExpiresAt: new Date(Date.now() + 10 * 60_000) } });
+  const label = encodeURIComponent("The Fixer:" + user.email);
+  return { secret, otpauthUrl: "otpauth://totp/" + label + "?secret=" + secret + "&issuer=The%20Fixer&algorithm=SHA1&digits=6&period=30" };
+});
+app.post<{ Body: { code?: string } }>("/api/auth/admin-mfa/enrollment/confirm", async (req, reply) => {
+  const user = await currentUser(req);
+  if (!user) return reply.code(401).send({ error: "not signed in" });
+  if (!isAdminRole(user)) return reply.code(403).send({ error: "admin only" });
+  if (typeof req.body?.code !== "string" || !/^\d{6}$/.test(req.body.code)) return reply.code(400).send({ error: "enter the six-digit authenticator code" });
+  if (!user.mfaPendingSecretEncrypted || !user.mfaSetupExpiresAt || user.mfaSetupExpiresAt < new Date()) return reply.code(400).send({ error: "start MFA setup again; the setup code expired" });
+  const secret = decryptMfaSecret(user.mfaPendingSecretEncrypted);
+  if (!verifyTotp(secret, req.body.code)) return reply.code(401).send({ error: "invalid authenticator code" });
+  const codes = createRecoveryCodes(), now = new Date();
+  await prisma.$transaction([
+    prisma.user.update({ where: { id: user.id }, data: { mfaSecretEncrypted: encryptMfaSecret(secret), mfaEnabledAt: now, mfaPendingSecretEncrypted: null, mfaSetupExpiresAt: null } }),
+    prisma.adminMfaRecoveryCode.deleteMany({ where: { userId: user.id } }),
+    prisma.adminMfaRecoveryCode.createMany({ data: codes.map((code) => ({ userId: user.id, codeHash: hashRecoveryCode(code) })) }),
+    prisma.session.updateMany({ where: { id: user.sessionId, userId: user.id, endedAt: null }, data: { mfaVerifiedAt: now } }),
+  ]);
+  logAdminAction(user, "admin.mfa.enroll", "Enrolled administrator MFA", { targetType: "User", targetId: user.id, context: requestSecurityContext(req) });
+  return { ok: true, recoveryCodes: codes };
+});
+app.post<{ Body: { code?: string } }>("/api/auth/admin-mfa/verify", async (req, reply) => {
+  const user = await currentUser(req);
+  if (!user) return reply.code(401).send({ error: "not signed in" });
+  if (!isAdminRole(user)) return reply.code(403).send({ error: "admin only" });
+  if (!user.mfaEnabledAt || !user.mfaSecretEncrypted) return reply.code(409).send({ error: "set up MFA before verifying" });
+  if (!rateLimit(reply, "admin-mfa:" + user.id, 5, AUTH_WINDOW_MS)) return;
+  const code = typeof req.body?.code === "string" ? req.body.code.trim() : "";
+  let accepted = /^\d{6}$/.test(code) && verifyTotp(decryptMfaSecret(user.mfaSecretEncrypted), code);
+  if (!accepted && /^[0-9a-fA-F-]{20,24}$/.test(code)) {
+    const consumed = await prisma.adminMfaRecoveryCode.deleteMany({ where: { userId: user.id, codeHash: hashRecoveryCode(code) } });
+    accepted = consumed.count === 1;
+  }
+  if (!accepted) return reply.code(401).send({ error: "invalid MFA code" });
+  await prisma.session.updateMany({ where: { id: user.sessionId, userId: user.id, endedAt: null }, data: { mfaVerifiedAt: new Date() } });
+  logAdminAction(user, "admin.mfa.verify", "Completed administrator MFA verification", { targetType: "Session", targetId: user.sessionId, context: requestSecurityContext(req) });
   return { ok: true };
 });
 

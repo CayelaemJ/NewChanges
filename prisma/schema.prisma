@@ -787,6 +787,10 @@ model User {
   // one-time token for "send link to set password"
   setupToken    String?  @unique
   setupExpires  DateTime?
+  mfaSecretEncrypted        String?
+  mfaEnabledAt              DateTime?
+  mfaPendingSecretEncrypted String?
+  mfaSetupExpiresAt         DateTime?
   createdAt     DateTime @default(now())
   createdBy     String?
   partnerId     String?
@@ -804,6 +808,7 @@ model User {
   partner  Partner?       @relation(fields: [partnerId], references: [id])
   links    UserEmployer[]
   sessions        Session[]
+  mfaRecoveryCodes AdminMfaRecoveryCode[]
   loginEvents     LoginEvent[]
   securityAlerts  SecurityAlert[]
   reportSchedules ReportSchedule[]
@@ -898,6 +903,7 @@ model Session {
   expiresAt   DateTime
   createdAt   DateTime  @default(now())
   lastSeenAt  DateTime  @default(now())
+  mfaVerifiedAt DateTime?
   endedAt     DateTime?
   revokedAt   DateTime?
   revokedBy   String?
@@ -1518,3 +1524,16 @@ model SourceActivationAudit {
   @@index([nextGenerationId, createdAt])
 }
 
+
+
+model AdminMfaRecoveryCode {
+  id        String   @id @default(cuid())
+  userId    String
+  codeHash  String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, codeHash])
+  @@index([userId, createdAt])
+}
