@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import crypto from 'node:crypto';
 import worker from '../cloudflare-output/newchanges-isolated-preview.worker.mjs';
 
 const url=p=>'https://migration.newchanges-app.pages.dev'+p;
@@ -95,4 +97,38 @@ test('public Pages preview exercises native session read boundary without a data
  const ready=await worker.fetch(new Request(url('/ready')));
  assert.equal(ready.status,503);
  assert.match(ready.headers.get('cache-control'),/no-store/);
+});
+
+test('real React frontend bundles and The Fixer runtime assets exactly match the compiled source',async()=>{
+ const html=fs.readFileSync('public/react/index.html','utf8');
+ const paths=[
+   ...[...html.matchAll(/(?:src|href)="(\/react\/assets\/[A-Za-z0-9_.-]+\.(?:js|css))"/g)].map(m=>m[1]),
+   '/static/brand-engine.js','/static/dark-theme-v2.css',
+   '/static/the-fixer-logo.svg','/static/the-fixer-logo-reversed.svg'
+ ];
+ assert.ok(paths.length>=6,'A production React bundle and its branding must be built first');
+ for(const p of paths){
+   const response=await worker.fetch(new Request(url(p)));
+   assert.equal(response.status,200,p);
+   const actual=Buffer.from(await response.arrayBuffer());
+   const expected=fs.readFileSync(p.startsWith('/react/')?'public'+p:'public/'+p.slice('/static/'.length));
+   assert.equal(actual.byteLength,expected.byteLength,p);
+   const digest=b=>crypto.createHash('sha256').update(b).digest('hex');
+   assert.equal(digest(actual),digest(expected),'Bundled asset differs from the real React build: '+p);
+   assert.equal(response.headers.get('set-cookie'),null);
+ }
+ const metadata=await worker.fetch(new Request(url('/api/migration/frontend-build')));
+ const build=await metadata.json();
+ assert.equal(build.frontend,'compiled-real-react');
+ assert.equal(build.productionReady,false);
+ assert.ok(paths.includes(build.js));
+ assert.ok(paths.includes(build.css));
+});
+
+test('publishing JS and CSS does not unlock private React HTML or API endpoints',async()=>{
+ for(const route of ['/react/','/react/dashboard','/react/admin','/login','/api/auth/me','/api/admin/users']){
+   const r=await worker.fetch(new Request(url(route),{headers:{Cookie:'session='+('f'.repeat(64))}}));
+   assert.ok([403,404].includes(r.status),route);
+   assert.equal(r.headers.get('set-cookie'),null);
+ }
 });
