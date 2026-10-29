@@ -131,6 +131,16 @@ function rateLimit(reply: FastifyReply, key: string, limit: number, windowMs: nu
   }
   return true;
 }
+async function adminMfaAttemptAllowed(userId: string, reply: FastifyReply): Promise<boolean> {
+  const since = new Date(Date.now() - AUTH_WINDOW_MS);
+  const failures = await prisma.loginEvent.count({
+    where: { userId, success: false, failureReason: { startsWith: "ADMIN_MFA_" }, createdAt: { gte: since } },
+  });
+  if (failures < 5) return true;
+  reply.header("Retry-After", Math.ceil(AUTH_WINDOW_MS / 1000));
+  reply.code(429).send({ error: "too many MFA attempts; try again later" });
+  return false;
+}
 
 app.setErrorHandler((error, req, reply) => {
   const cause = error as { statusCode?: number; message?: string };
@@ -580,11 +590,18 @@ app.post<{ Body: { code?: string } }>("/api/auth/admin-mfa/enrollment/confirm", 
   const user = await currentUser(req);
   if (!user) return reply.code(401).send({ error: "not signed in" });
   if (!isAdminRole(user)) return reply.code(403).send({ error: "admin only" });
-  if (typeof req.body?.code !== "string" || !/^\d{6}$/.test(req.body.code)) return reply.code(400).send({ error: "enter the six-digit authenticator code" });
+  if (!await adminMfaAttemptAllowed(user.id, reply)) return;
+  if (typeof req.body?.code !== "string" || !/^\d{6}$/.test(req.body.code)) {
+    await recordLoginEvent({ userId: user.id, email: user.email, success: false, failureReason: "ADMIN_MFA_ENROLLMENT_INVALID", context: requestSecurityContext(req) });
+    return reply.code(400).send({ error: "enter the six-digit authenticator code" });
+  }
   if (!user.mfaPendingSecretEncrypted || !user.mfaSetupExpiresAt || user.mfaSetupExpiresAt < new Date()) return reply.code(400).send({ error: "start MFA setup again; the setup code expired" });
   const secret = decryptMfaSecret(user.mfaPendingSecretEncrypted);
   const matchedCounter = matchingTotpCounter(secret, req.body.code);
-  if (matchedCounter === null) return reply.code(401).send({ error: "invalid authenticator code" });
+  if (matchedCounter === null) {
+    await recordLoginEvent({ userId: user.id, email: user.email, success: false, failureReason: "ADMIN_MFA_ENROLLMENT_INVALID", context: requestSecurityContext(req) });
+    return reply.code(401).send({ error: "invalid authenticator code" });
+  }
   const codes = createRecoveryCodes(), now = new Date();
   await prisma.$transaction([
     prisma.user.update({ where: { id: user.id }, data: { mfaSecretEncrypted: encryptMfaSecret(secret), mfaEnabledAt: now, mfaLastCounter: BigInt(matchedCounter), mfaPendingSecretEncrypted: null, mfaSetupExpiresAt: null } }),
@@ -593,6 +610,7 @@ app.post<{ Body: { code?: string } }>("/api/auth/admin-mfa/enrollment/confirm", 
     prisma.session.updateMany({ where: { id: user.sessionId, userId: user.id, endedAt: null }, data: { mfaVerifiedAt: now, mfaRecoveryUsedAt: null } }),
     prisma.session.updateMany({ where: { userId: user.id, id: { not: user.sessionId }, endedAt: null }, data: { endedAt: now, revokedAt: now, revokedBy: user.email } }),
   ]);
+  await recordLoginEvent({ userId: user.id, email: user.email, success: true, context: requestSecurityContext(req) });
   logAdminAction(user, "admin.mfa.enroll", "Enrolled administrator MFA", { targetType: "User", targetId: user.id, context: requestSecurityContext(req) });
   return { ok: true, recoveryCodes: codes };
 });
@@ -601,7 +619,7 @@ app.post<{ Body: { code?: string } }>("/api/auth/admin-mfa/verify", async (req, 
   if (!user) return reply.code(401).send({ error: "not signed in" });
   if (!isAdminRole(user)) return reply.code(403).send({ error: "admin only" });
   if (!user.mfaEnabledAt || !user.mfaSecretEncrypted) return reply.code(409).send({ error: "set up MFA before verifying" });
-  if (!rateLimit(reply, "admin-mfa:" + user.id, 5, AUTH_WINDOW_MS)) return;
+  if (!await adminMfaAttemptAllowed(user.id, reply)) return;
   const code = typeof req.body?.code === "string" ? req.body.code.trim() : "";
   let accepted = false, recoveryUsed = false;
   if (/^\d{6}$/.test(code)) {
@@ -619,9 +637,13 @@ app.post<{ Body: { code?: string } }>("/api/auth/admin-mfa/verify", async (req, 
     accepted = consumed.count === 1;
     recoveryUsed = accepted;
   }
-  if (!accepted) return reply.code(401).send({ error: "invalid MFA code" });
+  if (!accepted) {
+    await recordLoginEvent({ userId: user.id, email: user.email, success: false, failureReason: "ADMIN_MFA_INVALID", context: requestSecurityContext(req) });
+    return reply.code(401).send({ error: "invalid MFA code" });
+  }
   const verifiedAt = new Date();
   await prisma.session.updateMany({ where: { id: user.sessionId, userId: user.id, endedAt: null }, data: { mfaVerifiedAt: verifiedAt, mfaRecoveryUsedAt: recoveryUsed ? verifiedAt : null } });
+  await recordLoginEvent({ userId: user.id, email: user.email, success: true, context: requestSecurityContext(req) });
   logAdminAction(user, "admin.mfa.verify", "Completed administrator MFA verification", { targetType: "Session", targetId: user.sessionId, context: requestSecurityContext(req) });
   return { ok: true, recoveryUsed };
 });

@@ -23,6 +23,7 @@ If all authenticators and recovery codes for every administrator are lost, use t
 - Unenrolled ADMIN and SUPERADMIN accounts cannot access any `/api/admin/*` route.
 - Password-only sessions cannot access any `/api/admin/*` route.
 - Correct TOTP works; wrong, expired, and replayed codes fail.
+- Failed MFA attempts are counted in the database so the limit applies across app instances.
 - Recovery codes work once and fail on reuse.
 - The 12-hour session re-verification deadline is enforced at both API and page routes.
 - MFA enrollment and factor replacement revoke other sessions.
