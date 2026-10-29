@@ -24,8 +24,20 @@ test('credential-bearing URLs and deceptive hosts cannot become the allowed orig
  }
 });
 test('complete signoff can be represented only with all explicitly passed gates',()=>{
- const config={...base,mode:"production",verifiedCapabilities:[...CAPABILITY_IDS],authenticatedE2E:true,tenantIsolationE2E:true,rollbackVerified:true,databaseSecretScope:"cloudflare-production",backgroundWorkersIdempotent:true};
+ const config={...base,mode:"production",hostname:"https://newchanges-app.pages.dev",verifiedCapabilities:[...CAPABILITY_IDS],authenticatedE2E:true,tenantIsolationE2E:true,rollbackVerified:true,databaseSecretScope:"cloudflare-production",backgroundWorkersIdempotent:true};
  assert.equal(validatePrimaryMigrationConfig(config).valid,true);
  assert.equal(safeReleaseStatement(config),"PRIMARY_READY");
  assert.equal(validatePrimaryMigrationConfig({...config,rollbackVerified:false}).valid,false);
+});
+
+test('dedicated brand hostname must not regress to shared account subdomains',()=>{
+ for(const hostname of [
+  'https://random-product.workers.dev',
+  'https://another-company.pages.dev',
+  'https://newchanges-app.pages.dev.attacker.invalid'
+ ]){
+  assert.equal(validatePrimaryMigrationConfig({...base,hostname}).valid,false,hostname);
+ }
+ assert.equal(validatePrimaryMigrationConfig({...base,hostname:'https://migration.newchanges-app.pages.dev'}).valid,true);
+ assert.equal(validatePrimaryMigrationConfig({...base,mode:'production',hostname:'https://migration.newchanges-app.pages.dev'}).valid,false);
 });
