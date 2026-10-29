@@ -267,3 +267,23 @@ to compile the latest backend and React frontend, run security/brand/route
 contracts, and store artifacts for release engineering. It does not run
 database migrations or deploy automatically. A green CircleCI result has
 not yet been independently retrieved or verified.
+
+## CI runner and brand follow-up
+
+GitHub-hosted workflows in the private repository repeatedly failed before
+starting any job steps. The two optional Cloudflare validation workflows
+have therefore been changed to **manual-only** to stop noisy, misleading
+failures. CircleCI is the branch-scoped verification path for compiling
+the actual backend/React app and testing the independent Pages Worker
+bundle, route parity and branding. Do not claim CircleCI passed without
+retrieving the corresponding job result.
+
+Visible React product copy and the browser title have been updated from
+the former internal name to **The Fixer**. Internal CSS class names
+were left unchanged to preserve visual compatibility.
+
+The migration PR includes exactly one deployed Pages preview project;
+the obsolete synthetic-only Pages probe project was deleted after verifying
+its sole deployment was a preview. The old preview Workers' public URLs
+are disabled. No app user accounts, sessions or live API data have been
+moved.
