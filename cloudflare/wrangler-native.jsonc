@@ -1,0 +1,9 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "newchanges-native-api-candidate",
+  "main": "./native-newchanges-worker.mjs",
+  "compatibility_date": "2026-10-29",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "observability": {"enabled": true}
+}
