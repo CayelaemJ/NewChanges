@@ -1,22 +1,45 @@
 {
-  "$schema":"node_modules/wrangler/config-schema.json",
-  "name":"newchanges-full-app",
-  "main":"cloudflare/full-app/worker.mjs",
-  "compatibility_date":"2026-10-29",
-  "compatibility_flags":["nodejs_compat"],
-  "workers_dev":false,
-  "vars":{
-    "NEWCHANGES_FULL_APP_ENABLED":"false",
-    "NEWCHANGES_CANONICAL_HOST":"",
-    "NEWCHANGES_NEON_PRIMARY_PROJECT":"wild-base-70222190",
-    "NEWCHANGES_NEON_DATABASE":"newchanges",
-    "NEWCHANGES_NEON_GRANTS_VERIFIED":"false",
-    "NEWCHANGES_TENANT_E2E_VERIFIED":"false",
-    "NEWCHANGES_MFA_E2E_VERIFIED":"false",
-    "NEWCHANGES_SYNC_IDEMPOTENCY_VERIFIED":"false",
-    "NEWCHANGES_ROLLBACK_VERIFIED":"false"
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "newchanges-full-app",
+  "main": "cloudflare/full-app/worker.mjs",
+  "compatibility_date": "2026-10-29",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "workers_dev": false,
+  "vars": {
+    "NEWCHANGES_FULL_APP_ENABLED": "false",
+    "NEWCHANGES_CANONICAL_HOST": "",
+    "NEWCHANGES_NEON_PRIMARY_PROJECT": "wild-base-70222190",
+    "NEWCHANGES_NEON_DATABASE": "newchanges",
+    "NEWCHANGES_NEON_GRANTS_VERIFIED": "false",
+    "NEWCHANGES_TENANT_E2E_VERIFIED": "false",
+    "NEWCHANGES_MFA_E2E_VERIFIED": "false",
+    "NEWCHANGES_SYNC_IDEMPOTENCY_VERIFIED": "false",
+    "NEWCHANGES_ROLLBACK_VERIFIED": "false",
+    "NEWCHANGES_PRIMARY_WRITE_LEADER_VERIFIED": "false"
   },
-  "containers":[{"class_name":"NewChangesContainer","image":"./Dockerfile.cloudflare","max_instances":1}],
-  "durable_objects":{"bindings":[{"name":"NEWCHANGES_APP","class_name":"NewChangesContainer"}]},
-  "migrations":[{"tag":"newchanges-full-v1","new_sqlite_classes":["NewChangesContainer"]}]
+  "containers": [
+    {
+      "class_name": "NewChangesContainer",
+      "image": "./Dockerfile.cloudflare",
+      "max_instances": 1
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "NEWCHANGES_APP",
+        "class_name": "NewChangesContainer"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "newchanges-full-v1",
+      "new_sqlite_classes": [
+        "NewChangesContainer"
+      ]
+    }
+  ]
 }
