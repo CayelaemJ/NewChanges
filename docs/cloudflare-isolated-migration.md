@@ -287,3 +287,52 @@ the obsolete synthetic-only Pages probe project was deleted after verifying
 its sole deployment was a preview. The old preview Workers' public URLs
 are disabled. No app user accounts, sessions or live API data have been
 moved.
+
+## Existing-session compatibility and native database-backed stage (29 October)
+
+A Cloudflare-compatible session reader has been implemented as
+`cloudflare/session-compat.mjs`, preserving the existing Prisma
+`Session` model's SHA-256 token digest, expiration, revocation, disabled-user,
+deleted-user, role and user-to-employer link handling. No plaintext passwords,
+session tokens, password hashes or employer details are sent in its
+`safeSessionResponse` output. Negative tests cover duplicate/malformed
+cookies, session expiry, revocation, disabled accounts and cross-tenant
+role limitations.
+
+The actual native Cloudflare-compatible request boundary is
+`cloudflare/native-auth-router.mjs`, composed with
+`cloudflare/native-newchanges-worker.mjs`, which uses Prisma 7's
+`@prisma/adapter-pg` with the Cloudflare
+`HYPERDRIVE.connectionString`. This is **a migration-only auth check**:
+it does not replace the full `/api/auth/me` response or enable login,
+MFA, reset flows, dashboard API access, employer queries, ingest or jobs.
+The adapter refuses missing/misconfigured DB bindings and destroys
+request-scoped connections after use.
+
+The isolated Pages preview has been updated to serve the same auth-denial
+boundary at `/api/migration/auth-check` and an explicit `/ready` route.
+With no staging Hyperdrive connection configured, `/ready` returns 503,
+requests without a session cookie return 401, and cookie-present requests
+return 503 without querying live data. **These are intentionally
+nonfunctional for real user sessions until an isolated database exists.**
+
+A separate `cloudflare/wrangler-native.jsonc` and CircleCI dry-run bundle
+test now checks whether the current Prisma/pg implementation can compile
+under the Cloudflare Workers runtime. The CI outcome must be verified;
+a configured test is not proof of compatibility.
+
+Cloudflare Hyperdrive currently has **zero** configs on the connected
+Cloudflare account. Two existing Neon projects match NewChanges naming:
+`newchanges-primary-pg18` and `newchanges-identity-dr`; their
+credentials and data were **not** read or copied. Do not attach production
+Neon databases to an unverified Pages preview. Use a dedicated empty test
+database with synthetic accounts first, then the least-privileged production
+connection when identity and audit gates have passed.
+
+Port remaining identity flows in this order: (1) staging DB binding,
+(2) test account/session compatibility with fixture users, (3) direct
+auth/me payload parity including theme/sections/employers, (4) login,
+reset, MFA and CSRF, (5) tenant-scoped dashboard reads and cache
+invalidation, (6) ingestion/refresh and background queues. Never permit
+the application to act on real financial data merely because liveness
+responds 200.
