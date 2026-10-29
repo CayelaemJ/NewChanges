@@ -365,3 +365,5 @@ No CircleCI status is inferred from the isolated successful build.
 The native auth adapter and source-compatibility negative tests have
 also been added to CI. No working Hyperdrive configuration exists yet
 on the connected Cloudflare account. Release gate remains blocked.
+
+The same isolated Node workspace executed `node --test tests/cloudflare-session-compat.test.mjs tests/cloudflare-native-auth-router.test.mjs`: **12 tests passed, 0 failed**. These are synthetic, local unit tests, not a live database integration or verified tenant-isolation E2E release test.
