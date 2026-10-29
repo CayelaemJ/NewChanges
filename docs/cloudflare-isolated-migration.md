@@ -473,3 +473,53 @@ from a separate sandbox returned:
 **This is a safe staging/runtime test, not a production launch.**
 No live financial data, credentials, sync workers or auth sessions
 were exposed or migrated. Render standby remains unchanged.
+
+
+## Complete compiled React assets on independent Cloudflare Pages — 29 October 2026
+
+The NewChanges `frontend/` React/Vite source on this migration branch was
+independently built with its pinned lockfile and Node 24.22.1. The build
+completed successfully (365 transformed modules). It generates:
+
+- `/react/assets/index-CF1Fbx8y.js` — 425,171 bytes.
+- `/react/assets/index-COvQLIR_.css` — 133,825 bytes.
+- The Fixer runtime branding: `/static/brand-engine.js`,
+  `/static/dark-theme-v2.css`, and both logo SVGs.
+
+The versioned `scripts/cloudflare/build-isolated-preview.mjs` now packages
+these **real compiled browser assets** alongside the public pages, with gzip,
+without exposing private HTML, session cookies, APIs or live data. It requires
+the current React build and dynamically finds the Vite content-hashed JS/CSS
+references from `public/react/index.html`. GitHub manual workflows and
+CircleCI steps were re-ordered to compile the frontend BEFORE packaging;
+reproducing this deployment does not require manually copying build products
+or using the old shared-account Cloudflare hostname.
+
+Isolated Node generator smoke: 10 tests passed, 0 failed. This includes
+cryptographic SHA-256 parity for compiled frontend browser files and branding,
+and negative testing for protected routes, authentication and API access.
+
+Deployed the **exact generated source** (307,610 UTF-8 bytes) to the isolated
+Cloudflare Pages **preview** alias
+`https://migration.newchanges-app.pages.dev/` as deployment
+`24206ead-c99f-4a8a-aa3a-f82ea8b17256`. A separate external network
+smoke test verified all six CDN assets match their build inputs bit-for-bit.
+HTTP results were:
+
+| Endpoint | HTTP | Interpretation |
+| --- | --- | --- |
+| `/` | 200 | Actual public landing |
+| `/api/health` | 200 | Staging runtime alive |
+| `/api/migration/frontend-build` | 200 | Actual compiled asset manifest |
+| `/api/migration/readiness` | 200 | JSON still reports not production-ready |
+| `/ready` | 503 | Live Neon/Hyperdrive not connected |
+| `/api/migration/auth-check` | 401 | No active session |
+| `/react/dashboard` | 403 | Authenticated app route protected |
+| `/api/auth/me` | 404 | Full login API not yet migrated |
+
+**This is frontend infrastructure progress, not a live authenticated app.**
+Publishing compiled static JS/CSS does not grant access to private dashboards,
+financial records, login submissions or tenant data. The production
+database role security blocker is still tracked in
+[issue #216](https://github.com/CayelaemJ/NewChanges/issues/216).
+Render standby and Neon data remain untouched by this deployment.
