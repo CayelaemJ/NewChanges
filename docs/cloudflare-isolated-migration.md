@@ -367,3 +367,44 @@ also been added to CI. No working Hyperdrive configuration exists yet
 on the connected Cloudflare account. Release gate remains blocked.
 
 The same isolated Node workspace executed `node --test tests/cloudflare-session-compat.test.mjs tests/cloudflare-native-auth-router.test.mjs`: **12 tests passed, 0 failed**. These are synthetic, local unit tests, not a live database integration or verified tenant-isolation E2E release test.
+
+## Corrected database selection — 29 October 2026
+
+**Cloudflare is intended to be the primary NewChanges application, using the
+already existing Neon primary project. Render is standby.** Do not create a
+replacement database, treat a disaster-recovery project as primary, or use an
+independently invented fixture database as the final destination.
+
+- Primary Neon project: `newchanges-primary-pg18` (`wild-base-70222190`).
+- Neon default `main` branch: `br-late-bonus-b97yav24`.
+- Existing PostgreSQL 18 database: `newchanges`.
+- Verified 59 tables in `public`, including the original `Session`,
+  `User`, and `UserEmployer` tables. Separate `neon_auth` schema exists.
+- Disaster-recovery project: `newchanges-identity-dr`, **not the primary**.
+- A dedicated role `newchanges_cf_migration_reader` was created on the
+  existing primary branch. It has `CONNECT` to the `newchanges` database,
+  `USAGE` on `public`, and `SELECT` restricted to `public."Session"`,
+  `public."User"`, `public."UserEmployer"`. It must not be used for
+  migrations, imports, mutations or permanent full-app login processing.
+- Cloudflare's connected account had no Hyperdrive configs. The attempted
+  credential-to-Hyperdrive connector handoff was blocked. **No Hyperdrive
+  configuration or database binding has yet been created or verified.**
+- `cloudflare/wrangler-native.jsonc` declares a `HYPERDRIVE` binding with
+  an intentionally invalid placeholder ID. Replace it only after the real
+  Cloudflare dashboard/API creates the Hyperdrive configuration, using the
+  dedicated reader role for the read-only authentication proof.
+- Keep Hyperdrive query caching disabled for identity data.
+- The permanent main application will require a separately scoped
+  least-privilege read/write role and the full existing Prisma schema.
+  Do not promote a three-table reader role as a complete production backend.
+- The Render standby service and the original Neon database remain unchanged
+  apart from creating and granting access to the new, narrow reader role.
+
+Safely configure the binding without committing credentials:
+in the Cloudflare dashboard create Hyperdrive for an **existing PostgreSQL**
+database, select the NewChanges primary Neon host/database, enter the dedicated
+reader role credentials in Cloudflare's protected configuration, disable
+caching, then set the returned Hyperdrive ID in the native Worker config.
+Never place database URLs or passwords in GitHub, Pages HTML, artifacts,
+issue comments or chat transcripts. Test `/ready` and a synthetic
+non-mutating session probe before exposing login-related endpoints.
