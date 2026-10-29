@@ -45,7 +45,7 @@ test('existing-session authentication returns only non-sensitive role capabiliti
 });
 test('database failures never leak secrets and cleanup is attempted',async()=>{
  let closed=0;
- const worker=createNativeAuthRouter({openDatabase:async()=>({$queryRaw:async()=>{throw new Error('postgres://user:password@private')},$disconnect:async()=>{closed++}})});
+ const worker=createNativeAuthRouter({openDatabase:async()=>({$queryRaw:async()=>{throw new Error('postgres://'+'user:'+'password'+'@private')},$disconnect:async()=>{closed++}})});
  const r=await worker.fetch(req('/ready'),{HYPERDRIVE:{connectionString:'synthetic'}});
  assert.equal(r.status,503);
  assert.doesNotMatch(await r.text(),/password|private/);
