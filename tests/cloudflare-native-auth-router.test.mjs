@@ -6,7 +6,8 @@ const root='https://migration.newchanges-app.pages.dev';
 const cookie='session='+('c'.repeat(64));
 const row={expiresAt:new Date('2040-01-01'),endedAt:null,revokedAt:null,
  user:{id:'test-person',active:true,deletedAt:null,role:'VIEWER',links:[{employerId:'tenant-a'}]}};
-const db={session:{findUnique:async()=>row},$queryRaw:async()=>[{"?column?":1}],$disconnect:async()=>{}};
+const passAudit={database_name:'newchanges',role_name:'verified_reader',is_superuser:false,can_create_database:false,can_create_roles:false,member_of_neon_superuser:false,session_read:true,user_read:true,user_employer_read:true,session_write:false,employer_read:false};
+const db={session:{findUnique:async()=>row},$queryRaw:async()=>[passAudit],$disconnect:async()=>{}};
 const req=(p,opts={})=>new Request(root+p,opts);
 test('liveness and version genuinely run without SQL or session dependency',async()=>{
  const worker=createNativeAuthRouter({openDatabase:async()=>{throw new Error('unexpected SQL')}});
