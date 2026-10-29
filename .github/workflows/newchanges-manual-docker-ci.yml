@@ -50,7 +50,10 @@ jobs:
 
       - name: Validate CI isolation contracts
         shell: bash
-        run: node --test tests/ci-docker-isolation.test.mjs
+        run: |
+          docker run --rm --network none --read-only \
+            -v "$PWD:/workspace:ro" -w /workspace node:24-slim \
+            node --test tests/ci-docker-isolation.test.mjs
 
       - name: Optional security scanners (requires pre-cached images and advisory access)
         if: ${{ inputs.run_security_scanners == true }}
