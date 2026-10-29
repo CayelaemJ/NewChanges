@@ -30,6 +30,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           persist-credentials: false
+          fetch-depth: 0
 
       - name: Confirm expected local test assets are present
         shell: bash
@@ -41,6 +42,11 @@ jobs:
           docker compose -f docker-compose.local-tests.yml config --quiet
           docker info >/dev/null
           docker compose version
+
+      - name: Ensure complete history for credential scans
+        shell: bash
+        run: |
+          test "$(git rev-parse --is-shallow-repository)" = false || { echo 'Shallow checkout: refusing incomplete history scan'; exit 1; }
 
       - name: Validate CI isolation contracts
         shell: bash
