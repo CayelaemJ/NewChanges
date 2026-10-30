@@ -9,6 +9,11 @@ on:
         required: false
         type: boolean
         default: false
+      prepare_mfa_lock:
+        description: 'Resolve SimpleWebAuthn 14.0.3 lockfile (uploads files; no push or deployment)'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
