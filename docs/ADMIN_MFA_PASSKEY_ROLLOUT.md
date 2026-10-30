@@ -1,7 +1,7 @@
 # Administrator MFA — integration and staged rollout
 
 ## Implementation status
-The application now contains passkey registration/authentication routes, a branded /mfa page, a session-rotating cryptographic verification path and an environment-controlled administrator authorization guard. **Do not enable enforcement until the dependency is committed and a real browser and recovery rehearsal has passed.** This is not yet a production rollout.
+The application now contains passkey registration/authentication routes, a branded /mfa page, a session-rotating cryptographic verification path and an environment-controlled administrator authorization guard. **Do not enable enforcement until the committed dependency passes a clean-checkout run, and real-browser and recovery rehearsals pass.** This is not yet a production rollout.
 
 ## Required runtime settings
 - `MFA_RP_ID`: exact relying-party domain, such as `staging.example.com`; never derive from a user-supplied Host header.
@@ -29,12 +29,12 @@ Under separately approved, independently checked two-person recovery: use `MFA_O
 - Workflow run [41050588341](https://github.com/CayelaemJ/NewChanges/actions/runs/41050588341) completed successfully with the opt-in lock preparation and security scanners.
 - The synthetic signed WebAuthn registration/authentication round-trip passed, with **39/39 MFA tests** in that run.
 - The genuine npm-generated lockfile artifact is **12974152364** (`newchanges-mfa-locked-dependency-41050588341`), holding `package.json` and `package-lock.json` with `@simplewebauthn/server@14.0.3`.
-- The generated dependency was installed **temporarily in the CI checkout** and has **not yet been committed to the branch**. A passing run with `prepare_mfa_lock=true` is not yet evidence that an ordinary `npm ci` from a clean checkout will pass.
-- Subsequent edits add Safari/iOS compatibility handling, matching Fixer purple styling and MFA-specific rate limits. These changes require a fresh green Docker run.
+- Both registry-generated dependency files have now been committed to draft PR #219 (commit `979d5884`). The previous successful run used `prepare_mfa_lock=true`; a new run with that option **unchecked** is still needed to prove that a clean-checkout `npm ci` passes.
+- Subsequent edits add Safari/iOS compatibility handling, matching Fixer purple styling and MFA-specific rate limits. These changes require a fresh green Docker run against the committed files.
 - Admin enforcement remains disabled by default, and production recovery is not ready.
 
 ## Before staging acceptance
-1. Resolve `@simplewebauthn/server@14.0.3` through the npm registry, commit generated `package.json` and `package-lock.json` **together**; never hand-edit integrity hashes.
+1. **Completed:** `@simplewebauthn/server@14.0.3` is pinned in both committed npm-generated dependency files. Validate clean-checkout reproducibility with **Prepare MFA lock unchecked**.
 2. Run the signed synthetic registration/authentication test and the full isolated Docker CI.
 3. Confirm the database migrations apply to disposable PostgreSQL.
 4. Test real browser hardware/passkey enrollment, verification, session rotation, expired challenge, multiple admins, revoked credentials, password reset, lost device, and recovery.
