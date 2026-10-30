@@ -34,7 +34,7 @@ Under separately approved, independently checked two-person recovery: use `MFA_O
 - Admin enforcement remains disabled by default, and production recovery is not ready.
 
 ## Two-verified-superadmin recovery (staged, not yet production approved)
-Two different active SUPERADMIN users must independently verify passkeys within the freshness window. The target administrator cannot be either approver. Never accept a password-only approval or browser-provided verification flag.
+The protected `/mfa` page now shows the recovery request and approval controls only to a recently passkey-verified SUPERADMIN. These are a UI for the same two-step recovery endpoints, not a public or password-only reset route.\n\nTwo different active SUPERADMIN users must independently verify passkeys within the freshness window. The target administrator cannot be either approver. Never accept a password-only approval or browser-provided verification flag.
 
 1. First approver calls `POST /api/admin/mfa/recovery/request` with `{"targetUserId":"<existing-user-id>"}`. This returns a request ID valid for 15 minutes and records an auditable request.
 2. After independently confirming the target administrator's identity **out of band**, a different passkey-verified SUPERADMIN calls `POST /api/admin/mfa/recovery/<request-id>/approve`.
