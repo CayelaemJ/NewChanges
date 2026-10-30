@@ -1,3 +1,4 @@
+import { registerAdminMfaRoutes, hasFreshAdminMfa } from "./services/adminMfaRoutes.js";
 import { createDashboardPublicationStream } from "./services/dashboardPublicationStream.js";
 import { inspectReplacementDependencies } from "./services/datasetReplacementDependencies.js";
 import { previewDatasetReplacement } from "./services/datasetReplacementPreview.js";
@@ -353,6 +354,17 @@ async function requireAdmin(req: FastifyRequest, reply: FastifyReply): Promise<A
   if (user.role !== "ADMIN" && user.role !== "SUPERADMIN") { reply.code(403).send({ error: "admin only" }); return null; }
   return user;
 }
+// Rollout switch is OFF by default. Set only after locked dependency, migration,
+// enrollment and recovery have all passed staging acceptance.
+const MFA_ENFORCE = process.env.ADMIN_MFA_ENFORCE === "true";
+app.addHook("preHandler", async (req, reply) => {
+  if (!MFA_ENFORCE || !req.url.split("?",1)[0].startsWith("/api/admin/")) return;
+  const user = await currentUser(req);
+  if (!user || !isAdminRole(user)) return reply.code(403).send({error:"Administrator session required"});
+  if (!await hasFreshAdminMfa(req, user.id))
+    return reply.code(403).send({error:"Fresh administrator passkey verification required", code:"MFA_REQUIRED"});
+});
+registerAdminMfaRoutes(app);
 function redactAuditDetail(value: unknown): unknown {
   if (!value || typeof value !== "object") return value;
   if (Array.isArray(value)) return value.map(redactAuditDetail);
@@ -458,6 +470,11 @@ app.get("/", async (req, reply) => {
   return serveHtml(reply, "home.html");
 });
 app.get("/login", async (_req, reply) => serveHtml(reply, "login.html"));
+app.get("/mfa", async (req, reply) => {
+  const user = await currentUser(req);
+  if (!user || !isAdminRole(user)) return reply.redirect("/login");
+  return serveHtml(reply, "admin-mfa.html");
+});
 app.get("/set-password", async (_req, reply) => serveHtml(reply, "set-password.html"));
 app.get("/privacy", async (_req, reply) => serveHtml(reply, "privacy.html"));
 app.get("/terms", async (_req, reply) => serveHtml(reply, "terms.html"));
@@ -477,11 +494,13 @@ app.get("/admin", async (req, reply) => {
   const user = await currentUser(req);
   if (!user) return reply.redirect("/login");
   if (!canAccessModule(user, "admin")) return reply.code(403).type("text/html").send("<h2 style='font-family:sans-serif;padding:40px'>Admins only. <a href='/dashboard'>Go to dashboard</a></h2>");
+  if (MFA_ENFORCE && !await hasFreshAdminMfa(req, user.id)) return reply.redirect("/mfa");
   return serveHtml(reply, "admin.html");
 });
 app.get("/users", async (req, reply) => {
   const user = await currentUser(req);
   if (!user || (user.role !== "ADMIN" && user.role !== "SUPERADMIN")) return reply.redirect("/login");
+  if (MFA_ENFORCE && !await hasFreshAdminMfa(req, user.id)) return reply.redirect("/mfa");
   return serveHtml(reply, "users.html");
 });
 
