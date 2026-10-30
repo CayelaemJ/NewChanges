@@ -40,3 +40,14 @@ test('atomic successful recovery revokes existing credentials, sessions, challen
  assert.match(section,/codeHash:digest\(grantCode\)/);
  assert.doesNotMatch(section,/detail:\{[^}]*grantCode/);
 });
+
+test('recovery controls are restricted to an MFA-verified superadmin and never store grants',()=>{
+ const page=readFileSync('public/admin-mfa.html','utf8');
+ const client=readFileSync('public/admin-mfa.js','utf8');
+ assert.match(page,/id="recovery" hidden/);
+ assert.match(client,/\.hidden=!state\.canManageRecovery/);
+ assert.match(routes,/canManageRecovery:verified && session\.user\.role==='SUPERADMIN'/);
+ assert.match(client,/output\.textContent=/);
+ assert.doesNotMatch(client,/localStorage\.[\s\S]*grantCode/);
+ assert.doesNotMatch(client,/sessionStorage\.[\s\S]*grantCode/);
+});
