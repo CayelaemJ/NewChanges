@@ -23,7 +23,7 @@ test('MFA staging uses unique Docker entrypoint and exact synthetic-only databas
  assert.match(boot,/newchanges_mfa_synthetic_staging_db/);
  assert.match(boot,/MFA_STAGING_SYNTHETIC_ONLY/);
  assert.match(boot,/MFA_STAGING_ENFORCEMENT_APPROVED/);
- assert.match(boot,/ADMIN_MFA_ENFORCE === 'true'/);
+ assert.match(boot,/ADMIN_MFA_ENFORCE\s*===\s*'true'/);
  assert.match(boot,/DATABASE_URL/);
  assert.match(boot,/run\('node',\['node_modules\/prisma\/build\/index\.js','db','push'\]\)/);
  assert.match(boot,/MFA_STAGING_LOCAL_EPHEMERAL_DB/);
