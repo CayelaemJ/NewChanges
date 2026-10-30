@@ -1,0 +1,353 @@
+{
+  "generatedFrom": "src/server.ts",
+  "baseCommit": "93cb643e69e2cc0f2676fe3933c8a9eaa0759f79",
+  "coverage": "Only explicit app.METHOD routes declared in src/server.ts. Does not include hook/inferred/static routes.",
+  "routeCount": 69,
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/admin",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/audit-log.csv",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/batches",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/brand-learning/profile",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/brand-recognition/overview",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/compliance/incidents",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/compliance/overview",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/compliance/processing-activities",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/compliance/requests",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/compliance/retention",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/compliance/vendors",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/database-status",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/email-settings",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/enterprise/data-quality",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/enterprise/overview",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/events",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/integration",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/integration/changes",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/integration/dataset-replacement/dependencies",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/integration/dataset-replacement/preview",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/integration/generations",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/integration/logs",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/integration/refresh",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/integration/replica-health",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/integration/routes",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/integration/sync",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/integration/sync-now",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/mlops/models",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/mlops/semantic-publications",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/mlops/semantic-queue-health",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/mlops/semantic-storage-health",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/partners",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/report-deliveries",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/report-schedules",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/reports",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/sections",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/security/audit-log.csv",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/security/database",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/security/devices",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/security/overview",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/users/revoked",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/logout",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/me",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/api/dashboard/events",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/api/dashboard/semantic-features",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/api/dashboard/version",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/api/report-schedules",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/api/report-schedules/config",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/api/users",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/contact",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/cookies",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/dashboard",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/favicon.ico",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/health",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/login",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/privacy",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/react",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/react/",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/react/admin",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/react/dashboard",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/ready",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/robots.txt",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/set-password",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/sitemap.xml",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/terms",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/thank-you",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/users",
+      "cloudflareStatus": "not_ported"
+    },
+    {
+      "method": "GET",
+      "path": "/version",
+      "cloudflareStatus": "not_ported"
+    }
+  ]
+}
