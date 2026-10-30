@@ -363,6 +363,18 @@ async function requireAdmin(req: FastifyRequest, reply: FastifyReply): Promise<A
 // Rollout switch is OFF by default. Set only after locked dependency, migration,
 // enrollment and recovery have all passed staging acceptance.
 const MFA_ENFORCE = process.env.ADMIN_MFA_ENFORCE === "true";
+if (MFA_ENFORCE) {
+  const rpID = String(process.env.MFA_RP_ID || "").trim();
+  const expectedOrigin = String(process.env.MFA_EXPECTED_ORIGIN || "").trim();
+  let validConfig = false;
+  try {
+    const parsed = new URL(expectedOrigin);
+    validConfig = Boolean(rpID) && parsed.origin === expectedOrigin &&
+      (parsed.protocol === "https:" || parsed.hostname === "localhost") &&
+      (parsed.hostname === rpID || parsed.hostname.endsWith("." + rpID));
+  } catch { /* invalid configuration */ }
+  if (!validConfig) throw new Error("Administrator MFA enforcement requires a valid MFA_RP_ID and MFA_EXPECTED_ORIGIN");
+}
 app.addHook("preHandler", async (req, reply) => {
   if (!MFA_ENFORCE || !req.url.split("?",1)[0].startsWith("/api/admin/")) return;
   const user = await currentUser(req);
