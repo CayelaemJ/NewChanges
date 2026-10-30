@@ -804,6 +804,7 @@ model User {
   partner  Partner?       @relation(fields: [partnerId], references: [id])
   links    UserEmployer[]
   sessions        Session[]
+  mfaCredentials  AdminMfaCredential[]
   loginEvents     LoginEvent[]
   securityAlerts  SecurityAlert[]
   reportSchedules ReportSchedule[]
@@ -912,6 +913,7 @@ model Session {
   // Stable, privacy-conscious grouping key derived from the user-agent/device context.
   // It does not use the raw IP, so a device can be recognised when its network changes.
   deviceKey   String?
+  mfaVerifiedAt DateTime?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -1518,3 +1520,20 @@ model SourceActivationAudit {
   @@index([nextGenerationId, createdAt])
 }
 
+
+// Administrator MFA credentials. Store only public WebAuthn material and counters.
+// Creation/verification flows must be implemented and validated before enforcement.
+model AdminMfaCredential {
+  id               String   @id @default(cuid())
+  userId           String
+  credentialId     String   @unique
+  publicKey        String
+  signCount        BigInt   @default(0)
+  transports       String[]
+  createdAt        DateTime @default(now())
+  lastUsedAt       DateTime?
+  revokedAt        DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, revokedAt])
+}
