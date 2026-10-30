@@ -61,9 +61,21 @@ if (!syntheticConfigIsSafe()) {
     locked();
   } else {
     process.stdout.write('Synthetic MFA staging schema ready; launching application.\n');
-    const server = spawn('node',['dist/server.js'],{stdio:'inherit',env:process.env});
+    let fixtureOk = true;
+    if (process.env.MFA_STAGING_BOOTSTRAP_FIXTURES === 'true') {
+      const fixture = spawnSync('node',['scripts/mfa-staging-seed.mjs'],{
+        env:process.env,encoding:'utf8',timeout:120000,maxBuffer:1024*1024,
+      });
+      fixtureOk = fixture.status === 0;
+    }
+    if (!fixtureOk) {
+      process.stderr.write('Synthetic staging fixture creation refused. Keeping preview locked.\\n');
+      locked();
+    } else {
+          const server = spawn('node',['dist/server.js'],{stdio:'inherit',env:process.env});
     for (const signal of ['SIGTERM','SIGINT'])
       process.on(signal,()=>server.kill(signal));
     server.on('exit',(code)=>process.exit(code ?? 1));
+    }
   }
 }
