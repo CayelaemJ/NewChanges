@@ -1,7 +1,17 @@
 # The Fixer MFA — isolated Render staging
 
-Status: **isolated staging app provisioned with a disposable, loopback-only PostgreSQL fallback**. The first container startup and browser checks must still be confirmed.
+Status: **staging runtime verified on Render (2026-10-30)** using disposable loopback-only PostgreSQL. Render logs confirm the application booted and unauthenticated requests were rejected with HTTP 401. A physical passkey device test remains outstanding.
 This environment is not production and must never use production data, tokens, accounts or credentials.
+
+## Verified runtime evidence (2026-10-30)
+
+- Isolated deployment `dep-dbibdjm7bikc73amlmq0` built the staging Dockerfile and started the application with its local PostgreSQL service.
+- Render emitted `Synthetic MFA staging started with restricted access.`, then Fastify reported listening on its web port.
+- Unauthenticated `HEAD /` and `GET /` requests returned `401`, demonstrating that the independent staging access gate rejects uncredentialed traffic.
+- No production database address, existing user records, or production credentials were used.
+- The two synthetic SUPERADMIN credentials and separate access password are stored only in the new Render staging service environment; retrieve them via authorized Render environment access, not chat.
+- This is an **automated deployment/bootstrap and authentication-gate check**, not confirmation of passkey registration on a physical authenticator.
+- Free Render instances may idle, replacing their ephemeral filesystem and restarting an empty database. Re-enroll passkeys after any such replacement.
 
 ## Provisioned resources
 - Render workspace: `My Workspace`.
