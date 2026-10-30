@@ -242,4 +242,106 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
       return {ok:true};
     }catch{return reply.code(409).send({error:'Passkey assertion already consumed'});}
   });
+
+  // Password recovery alone NEVER bypasses passkey MFA. This two-person
+  // recovery flow works only if two distinct superadmins already have
+  // independently verified passkey sessions. No public or password-only bypass.
+  app.post<{Body:{targetUserId?:string}}>('/api/admin/mfa/recovery/request',async(req,reply)=>{
+    const session=await adminSession(req,reply);if(!session)return;
+    if(session.user.role!=='SUPERADMIN' || !await hasFreshAdminMfa(req,session.userId))
+      return reply.code(403).send({error:'Verified superadministrator required'});
+    const targetUserId=req.body?.targetUserId;
+    if(typeof targetUserId!=='string' || !targetUserId ||
+        targetUserId.length>128 || targetUserId===session.userId)
+      return reply.code(400).send({error:'An eligible different administrator is required'});
+    const target=await prisma.user.findUnique({where:{id:targetUserId},select:{id:true,role:true,active:true}});
+    if(!target || !target.active || !['ADMIN','SUPERADMIN'].includes(target.role))
+      return reply.code(404).send({error:'Eligible administrator not found'});
+    const now=new Date();
+    const pending=await prisma.adminMfaRecoveryRequest.count({
+      where:{targetUserId,expiresAt:{gt:now},fulfilledAt:null},
+    });
+    if(pending) return reply.code(409).send({error:'A recovery approval is already pending'});
+    const expiresAt=new Date(now.getTime()+15*60_000);
+    const id=await prisma.$transaction(async tx=>{
+      const request=await tx.adminMfaRecoveryRequest.create({
+        data:{targetUserId,requestedById:session.userId,expiresAt},
+      });
+      await tx.adminAuditLog.create({data:{
+        actorEmail:session.user.email,actorName:session.user.name,
+        action:'security.mfa.recovery.requested',targetType:'User',targetId:targetUserId,
+        summary:'MFA recovery requested; a distinct passkey-verified superadministrator must approve',
+        detail:{requestId:request.id,expiresAt:expiresAt.toISOString()},
+        riskLevel:'HIGH',flagged:true,
+      }});
+      return request.id;
+    });
+    return {ok:true,requestId:id,expiresAt:expiresAt.toISOString(),
+      next:'A different passkey-verified superadministrator must approve this request'};
+  });
+
+  app.post<{Params:{id:string}}>('/api/admin/mfa/recovery/:id/approve',async(req,reply)=>{
+    const session=await adminSession(req,reply);if(!session)return;
+    if(session.user.role!=='SUPERADMIN' || !await hasFreshAdminMfa(req,session.userId))
+      return reply.code(403).send({error:'Verified superadministrator required'});
+    const id=req.params.id;
+    if(!id || id.length>128) return reply.code(400).send({error:'Invalid recovery request'});
+    const request=await prisma.adminMfaRecoveryRequest.findUnique({where:{id}});
+    const now=new Date();
+    if(!request || request.fulfilledAt || request.approvedById || request.expiresAt<=now ||
+        request.requestedById===session.userId || request.targetUserId===session.userId)
+      return reply.code(409).send({error:'Recovery request unavailable or independent approval required'});
+    const [requester,target]=await Promise.all([
+      prisma.user.findUnique({where:{id:request.requestedById},select:{id:true,active:true,role:true}}),
+      prisma.user.findUnique({where:{id:request.targetUserId},select:{id:true,active:true,role:true}}),
+    ]);
+    if(!requester?.active || requester.role!=='SUPERADMIN' ||
+        !target?.active || !['ADMIN','SUPERADMIN'].includes(target.role) ||
+        target.id===requester.id)
+      return reply.code(403).send({error:'Recovery identities no longer eligible'});
+
+    // The raw code is returned ONCE to the second approver, never recorded or
+    // emailed automatically. Out-of-band, independently verified delivery
+    // to the target administrator is required.
+    const grantCode=randomBytes(32).toString('base64url');
+    const grantExpiresAt=new Date(now.getTime()+10*60_000);
+    try{
+      await prisma.$transaction(async tx=>{
+        const claimed=await tx.adminMfaRecoveryRequest.updateMany({
+          where:{id,requestedById:request.requestedById,
+            targetUserId:request.targetUserId,approvedById:null,fulfilledAt:null,
+            expiresAt:{gt:now}},
+          data:{approvedById:session.userId,fulfilledAt:now},
+        });
+        if(claimed.count!==1)throw new Error('Already approved');
+        await tx.adminMfaEnrollmentGrant.updateMany({
+          where:{userId:target.id,consumedAt:null},data:{consumedAt:now},
+        });
+        await tx.adminMfaCredential.updateMany({
+          where:{userId:target.id,revokedAt:null},data:{revokedAt:now},
+        });
+        await tx.session.updateMany({
+          where:{userId:target.id,endedAt:null},data:{endedAt:now,revokedAt:now},
+        });
+        await tx.adminMfaChallenge.deleteMany({where:{userId:target.id}});
+        await tx.adminMfaEnrollmentGrant.create({data:{
+          userId:target.id,codeHash:digest(grantCode),expiresAt:grantExpiresAt,
+          approvedByOne:request.requestedById,approvedByTwo:session.userId,
+        }});
+        await tx.adminAuditLog.create({data:{
+          actorEmail:session.user.email,actorName:session.user.name,
+          action:'security.mfa.recovery.approved',targetType:'User',targetId:target.id,
+          summary:'Two verified superadministrators authorised MFA recovery; existing sessions and passkeys revoked',
+          detail:{requestId:id,firstApproverId:request.requestedById,
+            secondApproverId:session.userId,grantExpiry:grantExpiresAt.toISOString()},
+          riskLevel:'HIGH',flagged:true,
+        }});
+      });
+    }catch{
+      return reply.code(409).send({error:'Recovery approval expired or was already completed'});
+    }
+    reply.header('Cache-Control','no-store');
+    return {ok:true,grantCode,expiresAt:grantExpiresAt.toISOString(),
+      instruction:'Deliver this one-time code to the verified target using a separate secure channel; never publish it'};
+  });
 }
