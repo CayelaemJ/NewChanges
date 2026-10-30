@@ -162,6 +162,12 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
           signCount:BigInt(info.credential.counter),
           transports:Array.isArray(body.response?.response?.transports)?body.response.response.transports:[],
         }});
+        await tx.adminAuditLog.create({data:{
+          actorEmail:session.user.email,actorName:session.user.name,
+          action:'security.mfa.passkey.enrolled',targetType:'User',targetId:session.userId,
+          summary:'Administrator passkey enrollment cryptographically verified',
+          riskLevel:'HIGH',flagged:false,
+        }});
         return rotateElevatedSession(tx,session,now);
       });
       newSessionCookie(reply,token,session.expiresAt);
@@ -224,6 +230,12 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
           data:{signCount:BigInt(newCounter),lastUsedAt:now},
         });
         if(bumped.count!==1)throw new Error('Credential rotated');
+        await tx.adminAuditLog.create({data:{
+          actorEmail:session.user.email,actorName:session.user.name,
+          action:'security.mfa.passkey.verified',targetType:'User',targetId:session.userId,
+          summary:'Administrator passkey verification succeeded',
+          riskLevel:'NORMAL',flagged:false,
+        }});
         return rotateElevatedSession(tx,session,now);
       });
       newSessionCookie(reply,token,session.expiresAt);
