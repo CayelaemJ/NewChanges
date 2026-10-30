@@ -60,10 +60,19 @@ function locked(message){
      'Synthetic MFA staging is locked; database or access configuration is incomplete.');
  }).listen(port,'0.0.0.0');
 }
-function run(exe,args,env=process.env){
+function run(exe,args,env=process.env,diagnostic=false){
  const result=spawnSync(exe,args,{
    env,encoding:'utf8',timeout:120000,maxBuffer:1024*1024
  });
+ if(diagnostic && result.status!==0){
+   const name=exe.split('/').at(-1);
+   // These PostgreSQL setup commands do not include application credentials.
+   // Never log environment variables, DATABASE_URL or user-supplied arguments.
+   const details=String(result.stderr||result.error?.message||'No stderr')
+     .replace(/postgres(?:ql)?:\/\/[^\s]+/gi,'[REDACTED_DB_URI]')
+     .slice(0,700);
+   process.stderr.write('Synthetic database '+name+' failed: '+details+'\n');
+ }
  return result.status===0;
 }
 function startDisposablePostgres(){
@@ -77,17 +86,17 @@ function startDisposablePostgres(){
  // PostgreSQL runs as the existing non-root "node" container user.
  // Host-based authentication is trust ONLY on an unexposed loopback port.
  // It is not a durable DB, and its credentials are NEVER used by production.
- if(!run(bin+'initdb',['-D',dataDir,'-U','node','-A','trust','--no-instructions']))
+ if(!run(bin+'initdb',['-D',dataDir,'-U','node','-A','trust','--no-instructions'],process.env,true))
    return false;
  const options='-h 127.0.0.1 -p '+localPort+
    ' -c listen_addresses=127.0.0.1 -c shared_buffers=16MB'+
    ' -c max_connections=20 -c fsync=off -c synchronous_commit=off';
  if(!run(bin+'pg_ctl',['-D',dataDir,'-l',join(dataDir,'server.log'),
-   '-o',options,'-w','start']))return false;
+   '-o',options,'-w','start'],process.env,true))return false;
  const pgEnv={...process.env,PGHOST:'127.0.0.1',
     PGPORT:localPort,PGUSER:'node',PGPASSWORD:''};
  if(!run(bin+'createdb',['-h','127.0.0.1','-p',localPort,
-    '-U','node',localDatabase],pgEnv))return false;
+    '-U','node',localDatabase],pgEnv,true))return false;
  process.env.DATABASE_URL='postgresql://node@127.0.0.1:'+
     localPort+'/'+localDatabase;
  return true;
