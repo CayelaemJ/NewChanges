@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { prisma } from './database.js';
 
 const MAX_MFA_AGE = 10 * 60 * 1000;
@@ -151,7 +151,7 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
           if(!hash)throw new Error('Missing grant');
           const grant=await tx.adminMfaEnrollmentGrant.updateMany({
             where:{userId:session.userId,codeHash:hash,consumedAt:null,
-              expiresAt:{gt:now},NOT:{approvedByOne:{equals: ' '}}},
+              expiresAt:{gt:now}},
             data:{consumedAt:now},
           });
           if(grant.count!==1)throw new Error('Grant already used');
