@@ -8,7 +8,9 @@ import { hashPassword } from '../dist/services/authService.js';
 const guard = process.env.MFA_STAGING_ONLY==='true' &&
   process.env.MFA_STAGING_SYNTHETIC_ONLY==='true' &&
   process.env.STANDBY_MODE==='true' &&
-  process.env.ADMIN_MFA_ENFORCE==='false';
+  process.env.ADMIN_MFA_ENFORCE==='false' &&
+  process.env.MFA_STAGING_LOCAL_EPHEMERAL_DB==='true' &&
+  process.env.DATABASE_URL==='postgresql://node@127.0.0.1:55432/newchanges_mfa_ephemeral';
 
 if (!guard) throw new Error('Synthetic-only staging fixture provisioning refused');
 const fields=['MFA_STAGING_ADMIN_A_PASSWORD','MFA_STAGING_ADMIN_B_PASSWORD',
