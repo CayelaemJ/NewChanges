@@ -1,81 +1,122 @@
-// Dedicated synthetic-only Render MFA staging entrypoint. Never connect this
-// entrypoint to an existing application database or enable automatic workers.
-import { spawnSync, spawn } from 'node:child_process';
-import { createServer } from 'node:http';
+// Synthetic-only MFA preview. Never connect this entrypoint to production.
+// Supports an ephemeral loopback Postgres when private Render database credentials
+// cannot be accessed via the connector. Its data disappears on container restart.
+import {spawnSync,spawn} from 'node:child_process';
+import {createServer} from 'node:http';
+import {readdirSync,mkdtempSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
 
-const expectedHost = 'dpg-dbib30142hec73cus92g-a';
-const expectedDatabase = 'newchanges_mfa_synthetic_staging_db';
-const expectedOrigin = 'https://newchanges-mfa-isolated-staging.onrender.com';
-const expectedRpId = 'newchanges-mfa-isolated-staging.onrender.com';
-const port = Number(process.env.PORT || 3000);
+const expectedHost='dpg-dbib30142hec73cus92g-a';
+const expectedDatabase='newchanges_mfa_synthetic_staging_db';
+const expectedOrigin='https://newchanges-mfa-isolated-staging.onrender.com';
+const expectedRpId='newchanges-mfa-isolated-staging.onrender.com';
+const port=Number(process.env.PORT||3000);
+const localMode=process.env.MFA_STAGING_LOCAL_EPHEMERAL_DB==='true';
+const localDatabase='newchanges_mfa_ephemeral';
+const localPort='55432';
 
-function syntheticConfigIsSafe() {
-  if (process.env.MFA_STAGING_ONLY !== 'true' ||
-      process.env.MFA_STAGING_SYNTHETIC_ONLY !== 'true' ||
-      process.env.STANDBY_MODE !== 'true' ||
-      process.env.TRAFFIC_SAVER_MODE !== 'true' ||
-      !['false','true'].includes(process.env.ADMIN_MFA_ENFORCE) ||
-      (process.env.ADMIN_MFA_ENFORCE === 'true' &&
-        process.env.MFA_STAGING_ENFORCEMENT_APPROVED !== 'true') ||
-      process.env.COOKIE_SECURE !== 'true' ||
-      process.env.MFA_RP_ID !== expectedRpId ||
-      process.env.MFA_EXPECTED_ORIGIN !== expectedOrigin) return false;
-  const password = process.env.MFA_STAGING_GATE_PASSWORD;
-  const raw = process.env.DATABASE_URL;
-  if (!raw || !password || Buffer.byteLength(password, 'utf8') < 24 ||
-      Buffer.byteLength(password, 'utf8') > 256) return false;
-  try {
-    const u = new URL(raw);
-    const hostname = u.hostname.toLowerCase();
-    return ['postgresql:','postgres:'].includes(u.protocol) &&
-      decodeURIComponent(u.pathname) === '/' + expectedDatabase &&
-      (hostname === expectedHost ||
-        (hostname.startsWith(expectedHost + '.') && hostname.endsWith('.render.com')));
-  } catch { return false; }
+function safeConfig(){
+ if(process.env.MFA_STAGING_ONLY!=='true' ||
+    process.env.MFA_STAGING_SYNTHETIC_ONLY!=='true' ||
+    process.env.STANDBY_MODE!=='true' ||
+    process.env.TRAFFIC_SAVER_MODE!=='true' ||
+    !['false','true'].includes(process.env.ADMIN_MFA_ENFORCE) ||
+    (process.env.ADMIN_MFA_ENFORCE==='true' &&
+       process.env.MFA_STAGING_ENFORCEMENT_APPROVED!=='true') ||
+    process.env.COOKIE_SECURE!=='true' ||
+    process.env.MFA_RP_ID!==expectedRpId ||
+    process.env.MFA_EXPECTED_ORIGIN!==expectedOrigin) return false;
+ const gate=process.env.MFA_STAGING_GATE_PASSWORD;
+ if(!gate || Buffer.byteLength(gate,'utf8')<24 ||
+    Buffer.byteLength(gate,'utf8')>256) return false;
+ if(localMode){
+   // A staging container must not inherit ANY external database connection.
+   // The only connection is generated below after starting loopback Postgres.
+   return !process.env.DATABASE_URL && process.env.NODE_ENV==='production';
+ }
+ const raw=process.env.DATABASE_URL;
+ if(!raw)return false;
+ try{
+  const u=new URL(raw),hostname=u.hostname.toLowerCase();
+  return ['postgresql:','postgres:'].includes(u.protocol) &&
+    decodeURIComponent(u.pathname)==='/'+expectedDatabase &&
+    (hostname===expectedHost ||
+     (hostname.startsWith(expectedHost+'.') && hostname.endsWith('.render.com')));
+ }catch{return false}
 }
 
-function locked() {
-  createServer((req, res) => {
-    res.writeHead(req.url === '/health' ? 200 : 503, {
-      'Content-Type':'text/plain; charset=utf-8',
-      'Cache-Control':'no-store',
-      'X-Robots-Tag':'noindex, nofollow',
-      'X-Content-Type-Options':'nosniff',
-    });
-    res.end(req.url === '/health' ? 'Staging startup gate active' :
-      'Synthetic MFA staging is locked until isolated database and access credentials are configured.');
-  }).listen(port,'0.0.0.0');
+function locked(message){
+ process.stderr.write(message+'\n');
+ createServer((req,res)=>{
+   const healthy=req.url==='/health';
+   res.writeHead(healthy?200:503,{
+     'Content-Type':'text/plain; charset=utf-8',
+     'Cache-Control':'no-store',
+     'X-Robots-Tag':'noindex, nofollow',
+     'X-Content-Type-Options':'nosniff'
+   });
+   res.end(healthy?'MFA staging startup gate active':
+     'Synthetic MFA staging is locked; database or access configuration is incomplete.');
+ }).listen(port,'0.0.0.0');
+}
+function run(exe,args,env=process.env){
+ const result=spawnSync(exe,args,{
+   env,encoding:'utf8',timeout:120000,maxBuffer:1024*1024
+ });
+ return result.status===0;
+}
+function startDisposablePostgres(){
+ let versions;
+ try{versions=readdirSync('/usr/lib/postgresql').sort((a,b)=>Number(b)-Number(a))}
+ catch{return false}
+ const version=versions?.find(v=>/^\d+$/.test(v));
+ if(!version)return false;
+ const bin='/usr/lib/postgresql/'+version+'/bin/';
+ const dataDir=mkdtempSync(join(tmpdir(),'newchanges-mfa-pg-'));
+ // PostgreSQL runs as the existing non-root "node" container user.
+ // Host-based authentication is trust ONLY on an unexposed loopback port.
+ // It is not a durable DB, and its credentials are NEVER used by production.
+ if(!run(bin+'initdb',['-D',dataDir,'-U','node','-A','trust','--no-instructions']))
+   return false;
+ const options='-h 127.0.0.1 -p '+localPort+
+   ' -c listen_addresses=127.0.0.1 -c shared_buffers=16MB'+
+   ' -c max_connections=20 -c fsync=off -c synchronous_commit=off';
+ if(!run(bin+'pg_ctl',['-D',dataDir,'-l',join(dataDir,'server.log'),
+   '-o',options,'-w','start']))return false;
+ const pgEnv={...process.env,PGHOST:'127.0.0.1',
+    PGPORT:localPort,PGUSER:'node',PGPASSWORD:''};
+ if(!run(bin+'createdb',['-h','127.0.0.1','-p',localPort,
+    '-U','node',localDatabase],pgEnv))return false;
+ process.env.DATABASE_URL='postgresql://node@127.0.0.1:'+
+    localPort+'/'+localDatabase;
+ return true;
 }
 
-if (!syntheticConfigIsSafe()) {
-  process.stderr.write('Synthetic MFA staging locked: credentials or isolated configuration missing.\n');
-  locked();
-} else {
-  // Only the exact disposable database above is eligible for schema setup.
-  // Do not pass --accept-data-loss or --force-reset.
-  const migration = spawnSync('node',['node_modules/prisma/build/index.js','db','push'],{
-    env:process.env,encoding:'utf8',timeout:120000,maxBuffer:2*1024*1024,
-  });
-  if (migration.status !== 0) {
-    process.stderr.write('Synthetic MFA staging schema setup did not succeed. Refusing to start.\n');
-    locked();
-  } else {
-    process.stdout.write('Synthetic MFA staging schema ready; launching application.\n');
-    let fixtureOk = true;
-    if (process.env.MFA_STAGING_BOOTSTRAP_FIXTURES === 'true') {
-      const fixture = spawnSync('node',['scripts/mfa-staging-seed.mjs'],{
-        env:process.env,encoding:'utf8',timeout:120000,maxBuffer:1024*1024,
-      });
-      fixtureOk = fixture.status === 0;
-    }
-    if (!fixtureOk) {
-      process.stderr.write('Synthetic staging fixture creation refused. Keeping preview locked.\\n');
-      locked();
-    } else {
-          const server = spawn('node',['dist/server.js'],{stdio:'inherit',env:process.env});
-    for (const signal of ['SIGTERM','SIGINT'])
-      process.on(signal,()=>server.kill(signal));
-    server.on('exit',(code)=>process.exit(code ?? 1));
-    }
-  }
+if(!safeConfig()){
+ locked('Staging refused: synthetic-only settings or access credential missing.');
+}else{
+ const databaseReady=!localMode || startDisposablePostgres();
+ if(!databaseReady){
+   locked('Staging refused: disposable loopback PostgreSQL failed to start.');
+ }else{
+   // Staging schema setup is allowed only after the exact database guard.
+   // No production URLs or destructive reset flags are accepted.
+   const migrated=run('node',['node_modules/prisma/build/index.js','db','push']);
+   if(!migrated){
+     locked('Staging refused: synthetic PostgreSQL schema setup failed.');
+   }else{
+     const seed=process.env.MFA_STAGING_BOOTSTRAP_FIXTURES==='true';
+     const seeded=!seed || run('node',['scripts/mfa-staging-seed.mjs']);
+     if(!seeded){
+       locked('Staging refused: synthetic administrator fixture setup failed.');
+     }else{
+       process.stdout.write('Synthetic MFA staging started with restricted access.\n');
+       const server=spawn('node',['dist/server.js'],{stdio:'inherit',env:process.env});
+       for(const signal of ['SIGTERM','SIGINT'])
+         process.on(signal,()=>server.kill(signal));
+       server.on('exit',code=>process.exit(code??1));
+     }
+   }
+ }
 }
