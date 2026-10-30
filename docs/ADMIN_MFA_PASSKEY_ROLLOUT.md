@@ -33,12 +33,23 @@ Under separately approved, independently checked two-person recovery: use `MFA_O
 - Subsequent edits add Safari/iOS compatibility handling, matching Fixer purple styling and MFA-specific rate limits. These changes require a fresh green Docker run against the committed files.
 - Admin enforcement remains disabled by default, and production recovery is not ready.
 
+## Two-verified-superadmin recovery (staged, not yet production approved)
+Two different active SUPERADMIN users must independently verify passkeys within the freshness window. The target administrator cannot be either approver. Never accept a password-only approval or browser-provided verification flag.
+
+1. First approver calls `POST /api/admin/mfa/recovery/request` with `{"targetUserId":"<existing-user-id>"}`. This returns a request ID valid for 15 minutes and records an auditable request.
+2. After independently confirming the target administrator's identity **out of band**, a different passkey-verified SUPERADMIN calls `POST /api/admin/mfa/recovery/<request-id>/approve`.
+3. In a single database transaction, the application consumes the request, revokes the target's existing passkeys and sessions, deletes pending challenges, invalidates unspent enrollment grants, creates a fresh 10-minute hashed grant, and writes the audit event.
+4. The approving superadmin receives the raw grant **once** in the response. It is not persisted, emailed automatically, or written to application logs. They must securely deliver it to the identity-verified target outside the app.
+5. The target signs in again with their own password and enrolls a replacement passkey at `/mfa`. A password reset alone cannot remove MFA.
+
+This route provides no self-service bypass. If fewer than two passkey-verified superadmins remain available, this workflow cannot recover the account. A separate out-of-band emergency recovery procedure, authorised and tested by the business, is required before production MFA enforcement. Identity checks and secure code delivery are human operational controls, not automatically verified by the API. Rollout remains opt-in and disabled by default.
+
 ## Before staging acceptance
 1. **Completed:** `@simplewebauthn/server@14.0.3` is pinned in both committed npm-generated dependency files. Validate clean-checkout reproducibility with **Prepare MFA lock unchecked**.
 2. Run the signed synthetic registration/authentication test and the full isolated Docker CI.
 3. Confirm the database migrations apply to disposable PostgreSQL.
-4. Test real browser hardware/passkey enrollment, verification, session rotation, expired challenge, multiple admins, revoked credentials, password reset, lost device, and recovery.
-5. Audit all non-`/api/admin/` state-mutating administrator routes and the separate frontends; enforce MFA consistently.
+4. Test real browser hardware/passkey enrollment, verification, session rotation, expired challenge, multiple admins, revoked credentials, password reset, lost device, two-verified-superadmin recovery and independent target identity verification.
+5. Confirm all non-`/api/admin/` state-mutating administrator routes and the separate frontends enforce MFA consistently; the route-scope tests now cover administrator API mutations.
 6. Confirm database backup/restore, rollback, session expiration, logging redaction and production migration plan.
 7. Only then consider enabling the opt-in staging enforcement flag; production cutover requires explicit approval.
 
