@@ -22,7 +22,8 @@ test('MFA staging uses unique Docker entrypoint and exact synthetic-only databas
  assert.match(boot,/dpg-dbib30142hec73cus92g-a/);
  assert.match(boot,/newchanges_mfa_synthetic_staging_db/);
  assert.match(boot,/MFA_STAGING_SYNTHETIC_ONLY/);
- assert.match(boot,/ADMIN_MFA_ENFORCE !== 'false'/);
+ assert.match(boot,/MFA_STAGING_ENFORCEMENT_APPROVED/);
+ assert.match(boot,/ADMIN_MFA_ENFORCE === 'true'/);
  assert.match(boot,/DATABASE_URL/);
  assert.doesNotMatch(boot,/accept-data-loss|force-reset.*spawnSync/);
  assert.match(server,/isMfaStagingAccessValid\(req\.headers\.authorization/);
