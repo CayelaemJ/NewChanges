@@ -3,9 +3,11 @@
 set -Eeuo pipefail
 cd "$(dirname "$0")/../.."
 mkdir -p test-results/security
+# Keep a minimal report of completed checks without exporting secret matches.
 # Scan repository-tracked files (redacts values from output).
 docker run --rm --network none -v "$PWD:/src:ro" -w /src node:24-slim node --test scripts/security/scan-secrets.test.mjs
-# Secret scanner uses git ls-files: run with git available on the runner, not in a Git-excluded build context.
+# The host supplies tracked paths; Node runs inside an offline, read-only container.
+git ls-files -z | docker run --rm -i --network none -v "$PWD:/src:ro" -w /src node:24-slim node scripts/security/scan-secrets.mjs --tracked-stdin
 node_cmd() { docker run --rm --network none -v "$PWD:/src:ro" -w /src node:24-slim node "$@"; }
 node_cmd --test scripts/security/summarize-scanner-report.test.mjs
 # Dependency advisory lookup requires access to npm registry. Fail closed when unavailable.
@@ -25,3 +27,5 @@ docker run --rm \
 docker run --rm \
   -v "$PWD:/src:ro" -v newchanges-trivy-cache:/root/.cache/ --workdir /src \
   aquasec/trivy:0.76.1 fs --scanners vuln,misconfig --severity HIGH,CRITICAL --exit-code 1 .
+
+printf "Tracked-file secret checks, npm audits, Semgrep, Gitleaks, and Trivy: PASS\n" > test-results/security/scanner-status.txt
