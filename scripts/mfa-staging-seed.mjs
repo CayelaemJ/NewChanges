@@ -35,7 +35,8 @@ try {
  if(count!==0){
   const existing=await prisma.user.findMany({where:{email:{in:fixtures.map(x=>x.email)}},
    select:{email:true,role:true,active:true}});
-  if(existing.length===2 && existing.every(x=>x.role==='SUPERADMIN'&&x.active)){
+  if(count===2 && existing.length===2 &&
+     existing.every(x=>x.role==='SUPERADMIN'&&x.active)){
    process.stdout.write('Synthetic MFA fixtures already exist; no changes made.\n');
    process.exit(0);
   }
