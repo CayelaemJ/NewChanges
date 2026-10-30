@@ -95,8 +95,9 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
   app.get('/api/auth/mfa/status',async(req,reply)=>{
     const session=await adminSession(req,reply);if(!session)return;
     const count=await prisma.adminMfaCredential.count({where:{userId:session.userId,revokedAt:null}});
+    const verified=await hasFreshAdminMfa(req,session.userId);
     return {configured:Boolean(mfaConfig()),enrolled:count>0,credentialCount:count,
-      verified:await hasFreshAdminMfa(req,session.userId)};
+      verified,canManageRecovery:verified && session.user.role==='SUPERADMIN'};
   });
   app.post<{Body:MfaBody}>('/api/auth/mfa/register/options',async(req,reply)=>{
     const session=await adminSession(req,reply);if(!session)return;
