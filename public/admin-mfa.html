@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Administrator Security · The Fixer</title>
+<style>
+:root{font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#102922;background:#f5f8f6}
+*{box-sizing:border-box}body{margin:0}header{background:#103f32;color:white;padding:21px max(5vw,24px);display:flex;justify-content:space-between;align-items:center;gap:20px}
+header a{color:white;text-decoration:none;font-size:14px}main{max-width:820px;margin:52px auto;padding:0 20px}
+article{background:white;border:1px solid #d5e5dc;border-radius:18px;padding:clamp(24px,5vw,38px);box-shadow:0 14px 40px #153c2714}
+h1{font-size:clamp(25px,4vw,36px);margin:0 0 9px}h2{font-size:19px;margin:0 0 8px}p{color:#52685c;line-height:1.6}
+.state{border-left:4px solid #2d9068;padding:13px 16px;background:#eef7f2;border-radius:5px;margin:22px 0;color:#174d35}
+.actions{display:grid;gap:15px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.panel{border:1px solid #dae6df;padding:20px;border-radius:13px}
+label{display:block;margin-top:14px;font-size:14px;font-weight:600}
+input{width:100%;padding:13px;border:1px solid #8ea99a;border-radius:8px;margin:8px 0 14px;font:inherit}
+button{width:100%;border:0;border-radius:9px;padding:13px;background:#176f4b;color:white;font:inherit;font-weight:650;cursor:pointer}
+button:disabled{opacity:.55;cursor:wait}button:focus-visible,input:focus-visible{outline:3px solid #60bb92;outline-offset:2px}
+small{line-height:1.5;color:#61766b;display:block;margin-top:12px}
+footer{font-size:13px;margin:20px 3px;color:#587065}
+</style></head>
+<body><header><strong>THE FIXER · ADMIN SECURITY</strong><a href="/dashboard">Back to dashboard</a></header>
+<main><article><h1>Protect your administrator account</h1>
+<p>Use a passkey on this device or a hardware security key. Your passkey requires your device's biometric verification, PIN, or security-key confirmation.</p>
+<div role="status" aria-live="polite" class="state" id="status">Checking your account security…</div>
+<div class="actions"><section class="panel"><h2>Verify your passkey</h2>
+<p>Verify again when accessing sensitive administrative controls.</p>
+<button id="verify" type="button">Verify passkey</button></section>
+<section class="panel"><h2>Enroll a passkey</h2><p>First-time enrollment requires a one-time grant issued by your security administrators.</p>
+<label for="grant">One-time enrollment grant (if required)</label><input id="grant" type="password" autocomplete="off" spellcheck="false" placeholder="43-character grant">
+<button id="enroll" type="button">Enroll passkey</button><small>Adding a second passkey requires recent verification or another approved grant.</small>
+</section></div>
+<footer>Lost access? Contact your designated security administrators. Password resets do not bypass passkey verification.</footer>
+</article></main>
+<script src="/static/admin-mfa.js" defer></script></body></html>
