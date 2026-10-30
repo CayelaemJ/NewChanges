@@ -36,7 +36,10 @@ export function isDisallowedEnvFile(path) {
 }
 
 export function scanRepository() {
-  const tracked=execFileSync('git',['ls-files','-z'],{encoding:'utf8'}).split('\0').filter(Boolean);
+  const tracked=(process.argv.includes('--tracked-stdin')
+    ? readFileSync(0,'utf8')
+    : execFileSync('git',['ls-files','-z'],{encoding:'utf8'}))
+    .split('\0').filter(Boolean);
   let hits=0;
   for(const path of tracked) {
     if(isDisallowedEnvFile(path)){console.error('[secret-scan] Tracked environment file:',path);hits++;continue;}
