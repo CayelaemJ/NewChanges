@@ -38,6 +38,24 @@ footer{font-size:13px;margin:20px 3px;color:#625773}
 <label for="grant">One-time enrollment grant (if required)</label><input id="grant" type="password" autocomplete="off" spellcheck="false" placeholder="43-character grant">
 <button id="enroll" type="button">Enroll passkey</button><small>Adding a second passkey requires recent verification or another approved grant.</small>
 </section></div>
+<section id="recovery" hidden aria-labelledby="recovery-heading" style="margin-top:30px;border-top:1px solid #e2d9ef;padding-top:26px">
+<h2 id="recovery-heading">Superadministrator account recovery</h2>
+<p>Requires two distinct, recently passkey-verified superadministrators. Before approving, verify the affected administrator's identity through a separate trusted channel.</p>
+<div class="actions">
+<div class="panel"><h2>1 · Request recovery</h2>
+<label for="recovery-target">Target administrator user ID</label>
+<input id="recovery-target" autocomplete="off" maxlength="128" spellcheck="false" placeholder="User ID from the admin console">
+<button type="button" id="recovery-request">Create recovery request</button>
+<small>Requests expire after 15 minutes. You cannot recover your own account.</small>
+</div>
+<div class="panel"><h2>2 · Independently approve</h2>
+<label for="recovery-request-id">Recovery request ID</label>
+<input id="recovery-request-id" autocomplete="off" maxlength="128" spellcheck="false" placeholder="ID from the first superadministrator">
+<button type="button" id="recovery-approve">Approve verified recovery</button>
+<small>The second approver must be a different superadministrator. Deliver the one-time grant through an identity-verified secure channel.</small>
+</div></div>
+<div class="state" role="status" aria-live="polite" id="recovery-result" style="white-space:pre-wrap">No recovery action has been submitted.</div>
+</section>
 <footer>Lost access? Contact your designated security administrators. Password resets do not bypass passkey verification.</footer>
 </article></main>
 <script src="/static/admin-mfa.js" defer></script></body></html>
