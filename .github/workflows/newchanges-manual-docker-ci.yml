@@ -9,6 +9,11 @@ on:
         required: false
         type: boolean
         default: false
+      prepare_mfa_lock:
+        description: 'Resolve SimpleWebAuthn 14.0.3 lockfile (uploads files; no push or deployment)'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -31,6 +36,26 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
+
+      - name: Prepare real WebAuthn package and lockfile (opt in only)
+        if: ${{ inputs.prepare_mfa_lock == true }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          docker run --rm -v "$PWD:/workspace" -w /workspace node:24-slim \\
+            npm install --save-exact --package-lock-only --ignore-scripts --no-audit --no-fund @simplewebauthn/server@14.0.3
+          git diff --check
+
+      - name: Upload lockfile for reviewed commit
+        if: ${{ inputs.prepare_mfa_lock == true }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: newchanges-mfa-locked-dependency-${{ github.run_id }}
+          path: |
+            package.json
+            package-lock.json
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Confirm expected local test assets are present
         shell: bash
