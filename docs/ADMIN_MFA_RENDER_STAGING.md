@@ -1,6 +1,6 @@
 # The Fixer MFA — isolated Render staging
 
-Status: **provisioned, access-locked, not yet connected to its synthetic database**.
+Status: **isolated staging app provisioned with a disposable, loopback-only PostgreSQL fallback**. The first container startup and browser checks must still be confirmed.
 This environment is not production and must never use production data, tokens, accounts or credentials.
 
 ## Provisioned resources
@@ -29,15 +29,21 @@ The script refuses to run the application until ALL controls pass:
 
 When requirements are missing, the public app responds with an inert 503 waiting page (except liveness). When ready, the script runs Prisma `db push` **only on this synthetic DB**, without destructive reset flags. Normal web requests then require HTTP Basic username `mfa-staging` and the separate gate password, in addition to The Fixer's ordinary login and passkey requirements.
 
-## Two remaining secrets — configure in Render only
-Render's current connector does not expose the new database's internal connection string or password, so these values were **not added to the repository, tool logs, or chat**.
+## Configured without production secrets
 
-1. Open the newly created Render Postgres database in **My Workspace → Connect**, and copy its **Internal Database URL** (not the external URL).
-2. Open **newchanges-mfa-isolated-staging → Environment** and set `DATABASE_URL` to that internal connection URL.
-3. Generate a **new, unique, random password** of at least 24 characters. Add it to the same staging service as `MFA_STAGING_GATE_PASSWORD`. Never use an existing app password or a production secret.
-4. Save/redeploy **only the isolated staging service**, never `newchanges-standby`.
-5. Open the preview URL over HTTPS. The browser should request HTTP Basic authentication with username `mfa-staging`. Keep the staging password private and do not send it in chat.
-6. Confirm `/health`, `/ready`, schema boot, staging access denial on missing/wrong credentials, and that ordinary application login still requires an account.
+Render's current connector cannot reveal the private URL for the separately created Render PostgreSQL service. To avoid copying a production credential or requiring the owner to paste database secrets, **this staging deployment instead runs an ephemeral PostgreSQL instance inside its own Docker container**.
+
+- `MFA_STAGING_LOCAL_EPHEMERAL_DB=true` is enabled only on `newchanges-mfa-isolated-staging`.
+- The process accepts **no inherited `DATABASE_URL`** in this mode. It creates `postgresql://node@127.0.0.1:55432/newchanges_mfa_ephemeral` at startup.
+- PostgreSQL binds exclusively to loopback; the only published application port is Render's web port.
+- `MFA_STAGING_GATE_PASSWORD`, two independently generated synthetic superadmin passwords and two independent fixture enrollment grants have been set **directly in the staging service's Render environment**. Their values must never be committed or pasted into public messages.
+- `MFA_STAGING_BOOTSTRAP_FIXTURES=true` provisions two fabricated superadmin accounts on each new, empty container database.
+- `ADMIN_MFA_ENFORCE=false` remains the default and only an explicit staging approval may enable it.
+- **This is intentionally non-durable.** An instance replacement, idle spin-down or redeploy may destroy the database, registered passkeys, and user sessions. This environment is for brief interactive device testing only, not a persistent customer-facing service.
+- The separately created free Render PostgreSQL resource remains unused and can be reclaimed once a durable staging configuration is agreed. Do not create additional resources without need.
+- Run a new Docker CI after each staging-only code change; a successful Render build alone is not a substitute for the full suite.
+
+To inspect the synthetic login credentials, an authorized owner can review the staging service's Render environment directly. There are no shared or production accounts, and the application is protected by its own independent HTTP Basic access gate.
 
 ## Controlled first-run synthetic superadministrators
 The initial isolated database is empty. The optional `scripts/mfa-staging-seed.mjs` can create two clearly synthetic SUPERADMIN users with email addresses `mfa-superadmin-a@example.invalid` and `mfa-superadmin-b@example.invalid`, each with a different password and one-time enrollment grant. **No live user account or dataset is copied.**
@@ -46,7 +52,7 @@ To use it, set `MFA_STAGING_BOOTSTRAP_FIXTURES=true` on **only** the staging ser
 - `MFA_STAGING_ADMIN_A_PASSWORD` and `MFA_STAGING_ADMIN_B_PASSWORD`: independent, random 24+ character passwords, different from the staging access password
 - `MFA_STAGING_ADMIN_A_GRANT` and `MFA_STAGING_ADMIN_B_GRANT`: independent, random 32-byte base64url strings (43 characters each); generate locally using a cryptographically secure generator
 
-The script is allowed to run only behind the synthetic-staging guard with MFA enforcement still off. It refuses a partly populated unrelated database, doesn't reissue grants on restarts, hashes passwords with the application's standard scrypt implementation, and stores only SHA-256 digests of the grants. Secret values are not printed or committed. Initial synthetic grants last 24 hours and each can only be consumed once. Set `MFA_STAGING_BOOTSTRAP_FIXTURES=false` after the first successful setup and remove the bootstrap secrets from Render when no longer required.
+The script is allowed to run only with the exact loopback-only ephemeral database URL, behind the synthetic-staging guard with MFA enforcement still off. It refuses a partly populated unrelated database, doesn't reissue grants on restarts, hashes passwords with the application's standard scrypt implementation, and stores only SHA-256 digests of the grants. Secret values are not printed or committed. Initial synthetic grants last 24 hours and each can only be consumed once. Keep `MFA_STAGING_BOOTSTRAP_FIXTURES=true` only while using the ephemeral mode, because the DB is recreated on container replacement. Remove the bootstrap credentials and delete the disposable deployment when the test is finished.
 
 Do not conflate these synthetic bootstrap grants with production recovery approvals: this is a fixture mechanism solely for device testing. Two separate testers should each enroll a passkey, and neither should use a real production login.
 
