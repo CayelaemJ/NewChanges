@@ -806,6 +806,7 @@ model User {
   sessions        Session[]
   mfaCredentials  AdminMfaCredential[]
   mfaEnrollmentGrants AdminMfaEnrollmentGrant[]
+  mfaRecoveryRequests AdminMfaRecoveryRequest[]
   mfaChallenges   AdminMfaChallenge[]
   loginEvents     LoginEvent[]
   securityAlerts  SecurityAlert[]
@@ -1568,4 +1569,19 @@ model AdminMfaEnrollmentGrant {
   createdAt     DateTime @default(now())
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@index([userId, expiresAt, consumedAt])
+}
+
+// Recovery requires two distinct, passkey-verified SUPERADMIN approvals.
+// The one-time resulting grant code is never stored in plaintext.
+model AdminMfaRecoveryRequest {
+  id             String   @id @default(cuid())
+  targetUserId   String
+  requestedById  String
+  approvedById   String?
+  expiresAt      DateTime
+  fulfilledAt    DateTime?
+  createdAt      DateTime @default(now())
+  targetUser     User     @relation(fields: [targetUserId], references: [id], onDelete: Cascade)
+  @@index([targetUserId, expiresAt, fulfilledAt])
+  @@index([requestedById, expiresAt])
 }
