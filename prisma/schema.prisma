@@ -805,6 +805,7 @@ model User {
   links    UserEmployer[]
   sessions        Session[]
   mfaCredentials  AdminMfaCredential[]
+  mfaEnrollmentGrants AdminMfaEnrollmentGrant[]
   mfaChallenges   AdminMfaChallenge[]
   loginEvents     LoginEvent[]
   securityAlerts  SecurityAlert[]
@@ -1553,4 +1554,18 @@ model AdminMfaChallenge {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   session     Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   @@index([userId, sessionId, purpose, expiresAt])
+}
+
+// Independently authorised one-time grant; never put raw grant value in database.
+model AdminMfaEnrollmentGrant {
+  id            String   @id @default(cuid())
+  userId        String
+  codeHash      String   @unique
+  expiresAt     DateTime
+  consumedAt    DateTime?
+  approvedByOne String
+  approvedByTwo String
+  createdAt     DateTime @default(now())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, expiresAt, consumedAt])
 }
