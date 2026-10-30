@@ -39,11 +39,22 @@ Render's current connector does not expose the new database's internal connectio
 5. Open the preview URL over HTTPS. The browser should request HTTP Basic authentication with username `mfa-staging`. Keep the staging password private and do not send it in chat.
 6. Confirm `/health`, `/ready`, schema boot, staging access denial on missing/wrong credentials, and that ordinary application login still requires an account.
 
-The initial database is empty: it contains no administrator accounts. Provision **synthetic, separately approved test admins** before trying hardware enrollment. Do not copy the real Users or Sessions tables.
+## Controlled first-run synthetic superadministrators
+The initial isolated database is empty. The optional `scripts/mfa-staging-seed.mjs` can create two clearly synthetic SUPERADMIN users with email addresses `mfa-superadmin-a@example.invalid` and `mfa-superadmin-b@example.invalid`, each with a different password and one-time enrollment grant. **No live user account or dataset is copied.**
+
+To use it, set `MFA_STAGING_BOOTSTRAP_FIXTURES=true` on **only** the staging service, and configure these additional secret Render environment variables:
+- `MFA_STAGING_ADMIN_A_PASSWORD` and `MFA_STAGING_ADMIN_B_PASSWORD`: independent, random 24+ character passwords, different from the staging access password
+- `MFA_STAGING_ADMIN_A_GRANT` and `MFA_STAGING_ADMIN_B_GRANT`: independent, random 32-byte base64url strings (43 characters each); generate locally using a cryptographically secure generator
+
+The script is allowed to run only behind the synthetic-staging guard with MFA enforcement still off. It refuses a partly populated unrelated database, doesn't reissue grants on restarts, hashes passwords with the application's standard scrypt implementation, and stores only SHA-256 digests of the grants. Secret values are not printed or committed. Initial synthetic grants last 24 hours and each can only be consumed once. Set `MFA_STAGING_BOOTSTRAP_FIXTURES=false` after the first successful setup and remove the bootstrap secrets from Render when no longer required.
+
+Do not conflate these synthetic bootstrap grants with production recovery approvals: this is a fixture mechanism solely for device testing. Two separate testers should each enroll a passkey, and neither should use a real production login.
+
+
 
 ## Staged MFA enforcement rehearsal
 Enforcement remains off initially to avoid lockout.
-After independently creating synthetic test admins, enrolling passkeys, and verifying two-superadmin recovery,
+After provisioning separate synthetic test admins, enrolling passkeys, and verifying two-superadmin recovery,
 set `ADMIN_MFA_ENFORCE=true` AND `MFA_STAGING_ENFORCEMENT_APPROVED=true` on this staging service only.
 Never set these flags on production without separate approval. A staged test should prove:
 - Invalid/no passkey -> 403 `MFA_REQUIRED` for admin operations
