@@ -22,6 +22,7 @@ run npm run check:production
 run npm run check:security
 run node --test tests/security/admin-mfa-policy.test.mjs tests/security/admin-mfa-schema.test.mjs tests/security/admin-mfa-challenge.test.mjs tests/security/admin-mfa-consume.test.mjs tests/security/admin-mfa-completion.test.mjs tests/security/admin-mfa-webauthn-verifier.test.mjs tests/security/admin-mfa-rollout.test.mjs tests/security/admin-mfa-authenticate.test.mjs tests/security/admin-mfa-readiness.test.mjs tests/security/admin-mfa-signed-roundtrip.test.mjs tests/security/admin-mfa-browser-compat.test.mjs
 run node --import tsx --test tests/security/admin-mfa-route-scope.test.ts
+run node --test tests/security/admin-mfa-recovery-contract.test.mjs
 run npm run check:security-identity
 run npm run check:security-operations
 run npm run check:security-governance
