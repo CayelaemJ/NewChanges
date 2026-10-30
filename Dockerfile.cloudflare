@@ -1,0 +1,27 @@
+# Build and run the *entire* NewChanges Fastify + Prisma application.
+# Never run npm run db:deploy, db:push or migrations during image build/start.
+FROM node:24-slim AS build
+RUN apt-get update -y && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit --no-fund
+COPY . .
+RUN npm run build && npm prune --omit=dev
+
+FROM node:24-slim
+RUN apt-get update -y && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/*
+ENV NODE_ENV=production PORT=3000 STANDBY_MODE=true TRAFFIC_SAVER_MODE=true
+WORKDIR /app
+COPY --from=build --chown=node:node /app/node_modules ./node_modules
+COPY --from=build --chown=node:node /app/dist ./dist
+COPY --from=build --chown=node:node /app/public ./public
+COPY --from=build --chown=node:node /app/prisma ./prisma
+COPY --from=build --chown=node:node /app/prisma.config.ts ./prisma.config.ts
+COPY --from=build --chown=node:node /app/scripts ./scripts
+COPY --from=build --chown=node:node /app/src/Migrations ./src/Migrations
+COPY --from=build --chown=node:node /app/cloudflare/main-app/preflight.mjs ./cloudflare/main-app/preflight.mjs
+COPY --from=build --chown=node:node /app/package.json ./package.json
+USER node
+EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s CMD node -e "fetch('http://127.0.0.1:3000/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+CMD ["node","cloudflare/main-app/preflight.mjs"]

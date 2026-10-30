@@ -1,0 +1,32 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "newchanges-main-application",
+  "main": "cloudflare/main-app/worker.mjs",
+  "compatibility_date": "2026-10-29",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "vars": {
+    "NEWCHANGES_BACKEND_ENABLED": "false",
+    "NEWCHANGES_CANONICAL_HOST": "",
+    "NEWCHANGES_WRITE_LEADER_ENABLED": "false",
+    "NEWCHANGES_CUTOVER_APPROVED": "false",
+    "NEWCHANGES_DATABASE_PERMISSIONS_VERIFIED": "false",
+    "NEWCHANGES_TENANT_E2E_VERIFIED": "false"
+  },
+  "containers": [{
+    "class_name": "NewChangesMainContainer",
+    "image": "./Dockerfile.cloudflare",
+    "max_instances": 1
+  }],
+  "durable_objects": {
+    "bindings": [{
+      "name": "NEWCHANGES_MAIN",
+      "class_name": "NewChangesMainContainer"
+    }]
+  },
+  "migrations": [{
+    "tag": "newchanges-container-v1",
+    "new_sqlite_classes": ["NewChangesMainContainer"]
+  }],
+  "observability": {"enabled": true}
+}
