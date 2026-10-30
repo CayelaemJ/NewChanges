@@ -1,4 +1,5 @@
 import { registerAdminMfaRoutes, hasFreshAdminMfa } from "./services/adminMfaRoutes.js";
+import { requiresAdminMfaStepUp } from "./services/adminMfaRouteScope.js";
 import { createDashboardPublicationStream } from "./services/dashboardPublicationStream.js";
 import { inspectReplacementDependencies } from "./services/datasetReplacementDependencies.js";
 import { previewDatasetReplacement } from "./services/datasetReplacementPreview.js";
@@ -376,9 +377,17 @@ if (MFA_ENFORCE) {
   if (!validConfig) throw new Error("Administrator MFA enforcement requires a valid MFA_RP_ID and MFA_EXPECTED_ORIGIN");
 }
 app.addHook("preHandler", async (req, reply) => {
-  if (!MFA_ENFORCE || !req.url.split("?",1)[0].startsWith("/api/admin/")) return;
+  if (!MFA_ENFORCE) return;
+  const scope = requiresAdminMfaStepUp(req.method, req.url);
+  if (!scope.adminOnly && !scope.adminMutation) return;
   const user = await currentUser(req);
-  if (!user || !isAdminRole(user)) return reply.code(403).send({error:"Administrator session required"});
+  // Normal signed-in users can still use their own account features. Admins
+  // must prove a fresh passkey before ANY non-auth API mutation, even when the
+  // route is not under /api/admin/ (for example, /api/users and reports).
+  if (!user || !isAdminRole(user)) {
+    if (scope.adminOnly) return reply.code(403).send({error:"Administrator session required"});
+    return;
+  }
   if (!await hasFreshAdminMfa(req, user.id))
     return reply.code(403).send({error:"Fresh administrator passkey verification required", code:"MFA_REQUIRED"});
 });
