@@ -11,6 +11,7 @@ import { previewDatasetReplacement } from "./services/datasetReplacementPreview.
 // ════════════════════════════════════════════════════════════════════
 
 import Fastify, { FastifyRequest, FastifyReply } from "fastify";
+import { isMfaStagingAccessValid } from "./services/mfaStagingGate.js";
 import { Prisma } from "@prisma/client";
 import multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
@@ -79,6 +80,22 @@ const app = Fastify({
   keepAliveTimeout: 75_000,
   maxRequestsPerSocket: 1000,
 });
+
+// This isolated staging gate is never active on the normal Render service.
+// Require a distinct 24+ character staging password before even presenting
+// application login. Keep /health public for Render's liveness checks.
+if (process.env.MFA_STAGING_ONLY === "true") {
+  app.addHook("onRequest", async (req, reply) => {
+    reply.header("Cache-Control", "no-store");
+    reply.header("X-Robots-Tag", "noindex, nofollow");
+    if (req.url.split("?", 1)[0] === "/health" && req.method === "GET") return;
+    if (!isMfaStagingAccessValid(req.headers.authorization, process.env.MFA_STAGING_GATE_PASSWORD)) {
+      return reply.code(401)
+        .header("WWW-Authenticate", 'Basic realm="The Fixer MFA Synthetic Staging", charset="UTF-8"')
+        .send({error:"Staging access required"});
+    }
+  });
+}
 
 // Node 20 defaults are too aggressive for slow uploads behind proxies.
 app.server.headersTimeout = 180_000;
