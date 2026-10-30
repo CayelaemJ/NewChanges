@@ -352,6 +352,7 @@ async function requireAdmin(req: FastifyRequest, reply: FastifyReply): Promise<A
   const user = await requireUser(req, reply);
   if (!user) return null;
   if (user.role !== "ADMIN" && user.role !== "SUPERADMIN") { reply.code(403).send({ error: "admin only" }); return null; }
+  if (MFA_ENFORCE && !await hasFreshAdminMfa(req, user.id)) { reply.code(403).send({error:"Fresh passkey verification required",code:"MFA_REQUIRED"}); return null; }
   return user;
 }
 // Rollout switch is OFF by default. Set only after locked dependency, migration,
