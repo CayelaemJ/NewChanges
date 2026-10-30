@@ -12,14 +12,54 @@ async function api(path,data){
  return body;
 }
 function browserSupported(){
- return typeof PublicKeyCredential!=='undefined' &&
-  typeof PublicKeyCredential.parseCreationOptionsFromJSON==='function' &&
-  typeof PublicKeyCredential.parseRequestOptionsFromJSON==='function' &&
-  !!navigator.credentials;
+ return window.isSecureContext && typeof PublicKeyCredential!=='undefined' && !!navigator.credentials;
+}
+function fromBase64Url(value){
+ if(typeof value!=='string' || !/^[A-Za-z0-9_-]+$/.test(value))throw Error('Invalid passkey options');
+ const normalized=value.replace(/-/g,'+').replace(/_/g,'/');
+ const bytes=atob(normalized+'='.repeat((4-normalized.length%4)%4));
+ return Uint8Array.from(bytes,chr=>chr.charCodeAt(0));
+}
+function toBase64Url(data){
+ const bytes=new Uint8Array(data);
+ let str='';
+ for(let i=0;i<bytes.length;i++)str+=String.fromCharCode(bytes[i]);
+ return btoa(str).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+function creationOptions(options){
+ if(typeof PublicKeyCredential.parseCreationOptionsFromJSON==='function')
+  return PublicKeyCredential.parseCreationOptionsFromJSON(options);
+ return {
+  ...options,challenge:fromBase64Url(options.challenge),
+  user:{...options.user,id:fromBase64Url(options.user.id)},
+  excludeCredentials:(options.excludeCredentials||[]).map(c=>({...c,id:fromBase64Url(c.id)})),
+ };
+}
+function requestOptions(options){
+ if(typeof PublicKeyCredential.parseRequestOptionsFromJSON==='function')
+  return PublicKeyCredential.parseRequestOptionsFromJSON(options);
+ return {...options,challenge:fromBase64Url(options.challenge),
+  allowCredentials:(options.allowCredentials||[]).map(c=>({...c,id:fromBase64Url(c.id)}))};
 }
 function serialize(credential){
  if(typeof credential?.toJSON==='function')return credential.toJSON();
- throw Error('Your browser needs an update to support passkeys safely');
+ if(!credential?.response || credential.type!=='public-key')throw Error('Invalid passkey response');
+ const base={id:credential.id,rawId:toBase64Url(credential.rawId),type:'public-key',
+  authenticatorAttachment:credential.authenticatorAttachment||undefined,
+  clientExtensionResults:credential.getClientExtensionResults?.()||{}};
+ const response={clientDataJSON:toBase64Url(credential.response.clientDataJSON)};
+ if(credential.response.attestationObject){
+  response.attestationObject=toBase64Url(credential.response.attestationObject);
+  response.transports=credential.response.getTransports?.()||[];
+ }else{
+  if(!credential.response.authenticatorData || !credential.response.signature)
+   throw Error('Incomplete passkey authentication response');
+  response.authenticatorData=toBase64Url(credential.response.authenticatorData);
+  response.signature=toBase64Url(credential.response.signature);
+  response.userHandle=credential.response.userHandle
+   ?toBase64Url(credential.response.userHandle):null;
+ }
+ return {...base,response};
 }
 async function refresh(){
  try{
