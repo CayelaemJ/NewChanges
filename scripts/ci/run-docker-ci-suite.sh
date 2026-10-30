@@ -41,4 +41,5 @@ run npm run quality:e2e
 run node scripts/console-ux-browser-check.mjs
 run node scripts/header-responsive-check.mjs
 run node scripts/admin-browser-smoke.mjs
+run node scripts/admin-mfa-browser-smoke.mjs
 echo "All configured Docker CI groups passed."
