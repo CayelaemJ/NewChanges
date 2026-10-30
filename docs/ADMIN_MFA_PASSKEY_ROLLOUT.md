@@ -1,7 +1,7 @@
 # Administrator MFA — integration and staged rollout
 
 ## Implementation status
-The application now contains passkey registration/authentication routes, a branded /mfa page, a session-rotating cryptographic verification path and an environment-controlled administrator authorization guard. **Do not enable enforcement until the locked dependency and successful signed registration and authentication tests pass.** This is not yet a production rollout.
+The application now contains passkey registration/authentication routes, a branded /mfa page, a session-rotating cryptographic verification path and an environment-controlled administrator authorization guard. **Do not enable enforcement until the dependency is committed and a real browser and recovery rehearsal has passed.** This is not yet a production rollout.
 
 ## Required runtime settings
 - `MFA_RP_ID`: exact relying-party domain, such as `staging.example.com`; never derive from a user-supplied Host header.
@@ -24,6 +24,14 @@ Script: `scripts/mfa-local-operator.ts`. This script **refuses all database URLs
 
 ## Recovery (synthetic disposable local DB only)
 Under separately approved, independently checked two-person recovery: use `MFA_OPERATOR_ACTION=recover` with the same controlled fixture script. It revokes all user passkeys and sessions, clears pending challenges, issues a one-time replacement grant and writes an admin audit record. The user signs in again with their original account password, then enrolls a new passkey with the grant. This utility cannot access production. Production recovery requires a separately reviewed and implemented privileged operator workflow, secure approval evidence, and incident response.
+
+## Verified CI evidence (2026-10-30)
+- Workflow run [41050588341](https://github.com/CayelaemJ/NewChanges/actions/runs/41050588341) completed successfully with the opt-in lock preparation and security scanners.
+- The synthetic signed WebAuthn registration/authentication round-trip passed, with **39/39 MFA tests** in that run.
+- The genuine npm-generated lockfile artifact is **12974152364** (`newchanges-mfa-locked-dependency-41050588341`), holding `package.json` and `package-lock.json` with `@simplewebauthn/server@14.0.3`.
+- The generated dependency was installed **temporarily in the CI checkout** and has **not yet been committed to the branch**. A passing run with `prepare_mfa_lock=true` is not yet evidence that an ordinary `npm ci` from a clean checkout will pass.
+- Subsequent edits add Safari/iOS compatibility handling, matching Fixer purple styling and MFA-specific rate limits. These changes require a fresh green Docker run.
+- Admin enforcement remains disabled by default, and production recovery is not ready.
 
 ## Before staging acceptance
 1. Resolve `@simplewebauthn/server@14.0.3` through the npm registry, commit generated `package.json` and `package-lock.json` **together**; never hand-edit integrity hashes.
