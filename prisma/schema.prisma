@@ -805,6 +805,7 @@ model User {
   links    UserEmployer[]
   sessions        Session[]
   mfaCredentials  AdminMfaCredential[]
+  mfaChallenges   AdminMfaChallenge[]
   loginEvents     LoginEvent[]
   securityAlerts  SecurityAlert[]
   reportSchedules ReportSchedule[]
@@ -914,6 +915,7 @@ model Session {
   // It does not use the raw IP, so a device can be recognised when its network changes.
   deviceKey   String?
   mfaVerifiedAt DateTime?
+  mfaChallenges  AdminMfaChallenge[]
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -1536,4 +1538,19 @@ model AdminMfaCredential {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@index([userId, revokedAt])
+}
+
+// One-time WebAuthn challenges, scoped to the logged-in user and session.
+model AdminMfaChallenge {
+  id          String   @id @default(cuid())
+  userId      String
+  sessionId   String
+  challengeHash String @unique
+  purpose     String
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session     Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  @@index([userId, sessionId, purpose, expiresAt])
 }
