@@ -20,6 +20,7 @@ run ./node_modules/.bin/tsc
 run npm run build --prefix frontend
 run npm run check:production
 run npm run check:security
+run node --test tests/security/admin-mfa-policy.test.mjs
 run npm run check:security-identity
 run npm run check:security-operations
 run npm run check:security-governance
