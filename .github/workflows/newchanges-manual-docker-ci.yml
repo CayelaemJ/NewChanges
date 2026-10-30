@@ -42,7 +42,7 @@ jobs:
         shell: bash
         run: |
           set -Eeuo pipefail
-          docker run --rm -v "$PWD:/workspace" -w /workspace node:24-slim npm install --save-exact --package-lock-only --ignore-scripts --no-audit --no-fund @simplewebauthn/server@14.0.3
+          docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -v "$PWD:/workspace" -w /workspace node:24-slim npm install --save-exact --package-lock-only --ignore-scripts --no-audit --no-fund @simplewebauthn/server@14.0.3
           git diff --check
 
       - name: Upload lockfile for reviewed commit
