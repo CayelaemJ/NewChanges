@@ -14,7 +14,9 @@ function syntheticConfigIsSafe() {
       process.env.MFA_STAGING_SYNTHETIC_ONLY !== 'true' ||
       process.env.STANDBY_MODE !== 'true' ||
       process.env.TRAFFIC_SAVER_MODE !== 'true' ||
-      process.env.ADMIN_MFA_ENFORCE !== 'false' ||
+      !['false','true'].includes(process.env.ADMIN_MFA_ENFORCE) ||
+      (process.env.ADMIN_MFA_ENFORCE === 'true' &&
+        process.env.MFA_STAGING_ENFORCEMENT_APPROVED !== 'true') ||
       process.env.COOKIE_SECURE !== 'true' ||
       process.env.MFA_RP_ID !== expectedRpId ||
       process.env.MFA_EXPECTED_ORIGIN !== expectedOrigin) return false;
