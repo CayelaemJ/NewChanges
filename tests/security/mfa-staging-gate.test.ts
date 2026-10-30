@@ -25,8 +25,15 @@ test('MFA staging uses unique Docker entrypoint and exact synthetic-only databas
  assert.match(boot,/MFA_STAGING_ENFORCEMENT_APPROVED/);
  assert.match(boot,/ADMIN_MFA_ENFORCE === 'true'/);
  assert.match(boot,/DATABASE_URL/);
- assert.match(boot,/spawnSync\('node',\['node_modules\/prisma\/build\/index\.js','db','push'\]/);
+ assert.match(boot,/run\('node',\['node_modules\/prisma\/build\/index\.js','db','push'\]\)/);
+ assert.match(boot,/MFA_STAGING_LOCAL_EPHEMERAL_DB/);
+ assert.match(boot,/!process\.env\.DATABASE_URL/);
+ assert.match(boot,/127\.0\.0\.1/);
+ assert.match(boot,/newchanges_mfa_ephemeral/);
+ assert.match(boot,/listen_addresses=127\.0\.0\.1/);
  assert.doesNotMatch(boot,/spawnSync\([^\n]+--(?:accept-data-loss|force-reset)/);
  assert.match(boot,/MFA_STAGING_BOOTSTRAP_FIXTURES/);
  assert.match(server,/isMfaStagingAccessValid\(req\.headers\.authorization/);
+ const seed=readFileSync('scripts/mfa-staging-seed.mjs','utf8');
+ assert.match(seed,/DATABASE_URL==='postgresql:\/\/node@127\.0\.0\.1:55432\/newchanges_mfa_ephemeral'/);
 });
