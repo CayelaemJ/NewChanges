@@ -3,7 +3,7 @@
 // cannot be accessed via the connector. Its data disappears on container restart.
 import {spawnSync,spawn} from 'node:child_process';
 import {createServer} from 'node:http';
-import {readdirSync,mkdtempSync} from 'node:fs';
+import {readdirSync,mkdtempSync,readFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 
@@ -89,10 +89,19 @@ function startDisposablePostgres(){
  if(!run(bin+'initdb',['-D',dataDir,'-U','node','-A','trust','--no-instructions'],process.env,true))
    return false;
  const options='-h 127.0.0.1 -p '+localPort+
-   ' -c listen_addresses=127.0.0.1 -c shared_buffers=16MB'+
+   ' -c listen_addresses=127.0.0.1 -c unix_socket_directories=/tmp'+
+   ' -c dynamic_shared_memory_type=mmap -c shared_buffers=16MB'+
    ' -c max_connections=20 -c fsync=off -c synchronous_commit=off';
  if(!run(bin+'pg_ctl',['-D',dataDir,'-l',join(dataDir,'server.log'),
-   '-o',options,'-w','start'],process.env,true))return false;
+   '-o',options,'-w','start'],process.env,true)){
+    try {
+      const detail=readFileSync(join(dataDir,'server.log'),'utf8')
+        .replace(/postgres(?:ql)?:\/\/[^\s]+/gi,'[REDACTED_DB_URI]')
+        .slice(-700);
+      process.stderr.write('Disposable PostgreSQL startup log: '+detail+'\n');
+    }catch{/* no diagnostics available */}
+    return false;
+ }
  const pgEnv={...process.env,PGHOST:'127.0.0.1',
     PGPORT:localPort,PGUSER:'node',PGPASSWORD:''};
  if(!run(bin+'createdb',['-h','127.0.0.1','-p',localPort,
