@@ -66,11 +66,15 @@ async function refresh(){
   const res=await fetch('/api/auth/mfa/status',{credentials:'same-origin'});
   if(!res.ok)throw Error('Please sign in as an administrator');
   const state=await res.json();
+  document.getElementById('recovery').hidden=!state.canManageRecovery;
   show(!state.configured?'Passkey verification is not configured on this environment.':
    state.verified?'Passkey verified for this session. Administrative changes are available.':
    state.enrolled?'A passkey is enrolled. Verify it to unlock administrator actions.':
    'No passkey is enrolled yet. Request a one-time enrollment grant.');
- }catch(e){show(e.message)}
+ }catch(e){
+  document.getElementById('recovery').hidden=true;
+  show(e.message);
+ }
 }
 async function run(kind){
  const button=kind==='enroll'?enrollBtn:verifyBtn;
@@ -96,8 +100,44 @@ async function run(kind){
     show('Passkey verified. You can return to the admin console.');
   }
  }catch(error){show(error?.message||'Passkey verification failed.');}
- finally{button.disabled=false;verifyBtn.disabled=false;enrollBtn.disabled=false;}
+ finally{button.disabled=false;verifyBtn.disabled=false;enrollBtn.disabled=false;await refresh();}
 }
 verifyBtn.addEventListener('click',()=>run('verify'));
 enrollBtn.addEventListener('click',()=>run('enroll'));
 refresh();
+
+async function recoveryApi(path,data){
+ const response=await fetch('/api/admin/mfa/recovery/'+path,{
+  method:'POST',credentials:'same-origin',
+  headers:{'Content-Type':'application/json'},body:JSON.stringify(data),
+ });
+ const body=await response.json().catch(()=>({}));
+ if(!response.ok)throw Error(body.error||'Recovery approval rejected');
+ return body;
+}
+async function withRecoveryBusy(button,operation){
+ const output=document.getElementById('recovery-result');
+ button.disabled=true;output.textContent='Verifying recovery approval…';
+ try{await operation(output);}catch(error){output.textContent=error?.message||'Recovery operation rejected';}
+ finally{button.disabled=false;}
+}
+const recoveryRequestButton=document.getElementById('recovery-request');
+const recoveryApproveButton=document.getElementById('recovery-approve');
+recoveryRequestButton.addEventListener('click',()=>withRecoveryBusy(recoveryRequestButton,async output=>{
+ const targetUserId=document.getElementById('recovery-target').value.trim();
+ if(!targetUserId || targetUserId.length>128)throw Error('Enter the affected administrator user ID');
+ const result=await recoveryApi('request',{targetUserId});
+ document.getElementById('recovery-request-id').value=result.requestId;
+ output.textContent='Recovery request created.\nRequest ID: '+result.requestId+
+  '\nExpires: '+result.expiresAt+
+  '\nA different, passkey-verified superadministrator must independently approve it.';
+}));
+recoveryApproveButton.addEventListener('click',()=>withRecoveryBusy(recoveryApproveButton,async output=>{
+ const id=document.getElementById('recovery-request-id').value.trim();
+ if(!id || id.length>128)throw Error('Enter the pending recovery request ID');
+ const result=await recoveryApi(encodeURIComponent(id)+'/approve',{});
+ output.textContent='Recovery approved; existing credentials and sessions revoked.\n'+
+  'One-time replacement grant (shown only in this response):\n'+result.grantCode+
+  '\nExpires: '+result.expiresAt+
+  '\nDeliver privately to the identity-verified administrator. Do not paste into tickets or chat.';
+}));
