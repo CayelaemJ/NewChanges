@@ -253,6 +253,129 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
     }catch{return reply.code(409).send({error:'Passkey assertion already consumed'});}
   });
 
+  // RFC 6238: authenticator apps (Google / Microsoft / others) use the same
+  // standard otpauth URI and 30-second, six-digit TOTP flow. The QR is generated
+  // server-side; no code or secret is sent to an image service.
+  app.post<{Body:{grantCode?:string}}>('/api/auth/mfa/totp/setup',async(req,reply)=>{
+    const session=await adminSession(req,reply);if(!session)return;
+    if(!totpIsEnabled())return reply.code(404).send({error:'Authenticator app setup is unavailable'});
+    const key=requireTotpEncryptionKey();
+    const existing=await prisma.adminMfaTotp.findUnique({where:{userId:session.userId}});
+    if(existing?.enabledAt) return reply.code(409).send({error:'Authenticator already enrolled; verified factor recovery required to replace it'});
+    if(!await isAuthorizedToEnroll(session,req.body?.grantCode))
+      return reply.code(403).send({error:'A one-time enrollment grant or recently verified factor is required'});
+    const secret=generateTotpSecret();
+    const encrypted=encryptTotpSecret(secret,key);
+    const expiresAt=new Date(Date.now()+10*60_000);
+    await prisma.adminMfaTotp.upsert({
+      where:{userId:session.userId},
+      create:{userId:session.userId,pendingCiphertext:encrypted,pendingExpiresAt:expiresAt},
+      update:{pendingCiphertext:encrypted,pendingExpiresAt:expiresAt},
+    });
+    const uri=makeTotpUri(session.user.email,secret);
+    const qr=await makeTotpQrSvgDataUri(uri);
+    reply.header('Cache-Control','no-store').header('Pragma','no-cache');
+    return {ok:true,qrDataUri:qr,manualKey:secret,expiresAt:expiresAt.toISOString(),
+      message:'Scan this QR with your authenticator app, then enter the displayed six-digit code'};
+  });
+  app.post<{Body:{grantCode?:string;code?:string}}>('/api/auth/mfa/totp/confirm',async(req,reply)=>{
+    const session=await adminSession(req,reply);if(!session)return;
+    if(!totpIsEnabled())return reply.code(404).send({error:'Authenticator app setup is unavailable'});
+    const row=await prisma.adminMfaTotp.findUnique({where:{userId:session.userId}});
+    const now=new Date();
+    if(!row?.pendingCiphertext || !row.pendingExpiresAt || row.pendingExpiresAt<=now || row.enabledAt)
+      return reply.code(409).send({error:'Authenticator setup expired; start again'});
+    if(!await isAuthorizedToEnroll(session,req.body?.grantCode))
+      return reply.code(403).send({error:'Approved enrollment grant or verified factor required'});
+    let step:bigint|null=null;
+    try{
+      step=findTotpStep(decryptTotpSecret(row.pendingCiphertext,requireTotpEncryptionKey()),
+        req.body?.code,now.getTime());
+    }catch{return reply.code(503).send({error:'Authenticator setup cannot be verified'});}
+    if(step===null)return reply.code(400).send({error:'Invalid or expired authenticator code'});
+    try{
+      const token=await prisma.$transaction(async tx=>{
+        const claimed=await tx.adminMfaTotp.updateMany({
+          where:{userId:session.userId,pendingCiphertext:row.pendingCiphertext,
+            pendingExpiresAt:{gt:now},enabledAt:null},
+          data:{secretCiphertext:row.pendingCiphertext,pendingCiphertext:null,
+            pendingExpiresAt:null,enabledAt:now,lastUsedStep:step,
+            failedAttempts:0,lastFailedAt:null,lockedUntil:null},
+        });
+        if(claimed.count!==1)throw new Error('TOTP setup already consumed');
+        const alreadyVerified=session.mfaVerifiedAt &&
+          now.getTime()-session.mfaVerifiedAt.getTime()>=0 &&
+          now.getTime()-session.mfaVerifiedAt.getTime()<=MAX_MFA_AGE;
+        if(!alreadyVerified){
+          const hash=grantHash(req.body?.grantCode);
+          if(!hash)throw new Error('Enrollment grant missing');
+          const consumed=await tx.adminMfaEnrollmentGrant.updateMany({
+            where:{userId:session.userId,codeHash:hash,consumedAt:null,
+              expiresAt:{gt:now}},data:{consumedAt:now},
+          });
+          if(consumed.count!==1)throw new Error('Enrollment grant already used');
+        }
+        await tx.adminAuditLog.create({data:{
+          actorEmail:session.user.email,actorName:session.user.name,
+          action:'security.mfa.totp.enrolled',targetType:'User',targetId:session.userId,
+          summary:'Administrator authenticator app enrolled with verified TOTP code',
+          riskLevel:'HIGH',flagged:false,
+        }});
+        return rotateElevatedSession(tx,session,now,'TOTP');
+      });
+      newSessionCookie(reply,token,session.expiresAt);
+      reply.header('Cache-Control','no-store');
+      return {ok:true};
+    }catch{return reply.code(409).send({error:'Authenticator setup or enrollment grant already used'});}
+  });
+  app.post<{Body:{code?:string}}>('/api/auth/mfa/totp/verify',async(req,reply)=>{
+    const session=await adminSession(req,reply);if(!session)return;
+    if(!totpIsEnabled())return reply.code(404).send({error:'Authenticator app verification unavailable'});
+    const row=await prisma.adminMfaTotp.findUnique({where:{userId:session.userId}});
+    const now=new Date();
+    if(!row?.enabledAt || !row.secretCiphertext)
+      return reply.code(409).send({error:'No authenticator app enrolled'});
+    if(row.lockedUntil && row.lockedUntil>now)
+      return reply.code(429).header('Retry-After',Math.ceil((row.lockedUntil.getTime()-now.getTime())/1000))
+        .send({error:'Too many attempts; authenticator verification temporarily locked'});
+    let step:bigint|null=null;
+    try{
+      step=findTotpStep(decryptTotpSecret(row.secretCiphertext,requireTotpEncryptionKey()),
+        req.body?.code,now.getTime(),row.lastUsedStep);
+    }catch{return reply.code(503).send({error:'Authenticator verification unavailable'});}
+    if(step===null){
+      const recent=row.lastFailedAt && now.getTime()-row.lastFailedAt.getTime()<10*60_000;
+      const attempts=recent?row.failedAttempts+1:1;
+      await prisma.adminMfaTotp.updateMany({
+        where:{id:row.id,lastUsedStep:row.lastUsedStep,
+          failedAttempts:row.failedAttempts},
+        data:{failedAttempts:attempts,lastFailedAt:now,
+          lockedUntil:attempts>=5?new Date(now.getTime()+10*60_000):null},
+      });
+      return reply.code(403).send({error:'Incorrect, expired or already-used authenticator code'});
+    }
+    try{
+      const token=await prisma.$transaction(async tx=>{
+        const updated=await tx.adminMfaTotp.updateMany({
+          where:{id:row.id,userId:session.userId,enabledAt:{not:null},
+            OR:[{lastUsedStep:null},{lastUsedStep:{lt:step}}],
+            OR_UNUSED_PLACEHOLDER:null},
+          data:{lastUsedStep:step,failedAttempts:0,lastFailedAt:null,lockedUntil:null},
+        });
+        if(updated.count!==1)throw new Error('TOTP time step replay');
+        await tx.adminAuditLog.create({data:{
+          actorEmail:session.user.email,actorName:session.user.name,
+          action:'security.mfa.totp.verified',targetType:'User',targetId:session.userId,
+          summary:'Administrator authenticator code verified without replay',
+          riskLevel:'NORMAL',flagged:false,
+        }});
+        return rotateElevatedSession(tx,session,now,'TOTP');
+      });
+      newSessionCookie(reply,token,session.expiresAt);
+      return {ok:true};
+    }catch{return reply.code(409).send({error:'Authenticator code was already used'});}
+  });
+
   // Password recovery alone NEVER bypasses passkey MFA. This two-person
   // recovery flow works only if two distinct superadmins already have
   // independently verified passkey sessions. No public or password-only bypass.
