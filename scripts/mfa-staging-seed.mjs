@@ -13,32 +13,35 @@ const guard = process.env.MFA_STAGING_ONLY==='true' &&
   process.env.DATABASE_URL==='postgresql://node@127.0.0.1:55432/newchanges_mfa_ephemeral';
 
 if (!guard) throw new Error('Synthetic-only staging fixture provisioning refused');
-const fields=['MFA_STAGING_ADMIN_A_PASSWORD','MFA_STAGING_ADMIN_B_PASSWORD',
- 'MFA_STAGING_ADMIN_A_GRANT','MFA_STAGING_ADMIN_B_GRANT'];
-const passwords=fields.slice(0,2).map(x=>process.env[x]);
-const grants=fields.slice(2).map(x=>process.env[x]);
+const passwordNames=['MFA_STAGING_ADMIN_A_PASSWORD','MFA_STAGING_ADMIN_B_PASSWORD',
+ 'MFA_STAGING_TARGET_PASSWORD'];
+const grantNames=['MFA_STAGING_ADMIN_A_GRANT','MFA_STAGING_ADMIN_B_GRANT',
+ 'MFA_STAGING_TARGET_GRANT'];
+const passwords=passwordNames.map(x=>process.env[x]);
+const grants=grantNames.map(x=>process.env[x]);
 for(const p of passwords){
  if(typeof p!=='string'||Buffer.byteLength(p,'utf8')<24||
   Buffer.byteLength(p,'utf8')>256||p===process.env.MFA_STAGING_GATE_PASSWORD)
   throw new Error('Synthetic staging passwords must be unique and sufficiently strong');
 }
-if(passwords[0]===passwords[1] || grants[0]===grants[1])
+if(new Set(passwords).size!==3 || new Set(grants).size!==3)
  throw new Error('Each synthetic administrator needs distinct credentials and grants');
 for(const code of grants)
  if(typeof code!=='string'|| !/^[A-Za-z0-9_-]{43}$/.test(code))
   throw new Error('Synthetic grants must be independent 32-byte base64url values');
 
 const fixtures=[
- {email:'mfa-superadmin-a@example.invalid',password:passwords[0],grant:grants[0]},
- {email:'mfa-superadmin-b@example.invalid',password:passwords[1],grant:grants[1]},
+ {email:'mfa-superadmin-a@example.invalid',role:'SUPERADMIN',label:'Synthetic Superadmin A',password:passwords[0],grant:grants[0]},
+ {email:'mfa-superadmin-b@example.invalid',role:'SUPERADMIN',label:'Synthetic Superadmin B',password:passwords[1],grant:grants[1]},
+ {email:'mfa-recovery-target@example.invalid',role:'ADMIN',label:'Synthetic Recovery Target',password:passwords[2],grant:grants[2]},
 ];
 try {
  const count=await prisma.user.count();
  if(count!==0){
   const existing=await prisma.user.findMany({where:{email:{in:fixtures.map(x=>x.email)}},
    select:{email:true,role:true,active:true}});
-  if(count===2 && existing.length===2 &&
-     existing.every(x=>x.role==='SUPERADMIN'&&x.active)){
+  if(count===fixtures.length && existing.length===fixtures.length &&
+     existing.every(x=>x.active && x.role===fixtures.find(y=>y.email===x.email)?.role)){
    process.stdout.write('Synthetic MFA fixtures already exist; no changes made.\n');
    process.exit(0);
   }
@@ -47,9 +50,8 @@ try {
  await prisma.$transaction(async tx=>{
   for(const user of fixtures){
    const added=await tx.user.create({data:{
-    email:user.email,name:user.email.startsWith('mfa-superadmin-a')?
-      'Synthetic Superadmin A':'Synthetic Superadmin B',
-    role:'SUPERADMIN',passwordHash:hashPassword(user.password),active:true,
+    email:user.email,name:user.label,
+    role:user.role,passwordHash:hashPassword(user.password),active:true,
     createdBy:'synthetic-staging-bootstrap',
    }});
    await tx.adminMfaEnrollmentGrant.create({data:{
