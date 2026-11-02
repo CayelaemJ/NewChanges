@@ -80,6 +80,16 @@ test('TOTP and passkey rate limits have separate tight buckets and status is rea
  assert.match(server,/bucket === "mfa-status" \? 60 : 16/);
  assert.match(server,/!rateLimit\(reply, `\$\{bucket\}:\$\{ip\}`, limit, 5 \* 60_000\)/);
 });
+test('the live TOTP verification query only uses valid Prisma fields and never mislabels database failures',()=>{
+ const source=readFileSync('src/services/adminMfaRoutes.ts','utf8');
+ const verification=source.slice(source.indexOf("app.post<{Body:{code?:string}}>('/api/auth/mfa/totp/verify'"),
+  source.indexOf('// Password recovery'));
+ assert.ok(verification.length>1000,'TOTP verify route exists');
+ assert.doesNotMatch(verification,/OR_UNUSED_PLACEHOLDER|UNKNOWN_FILTER|PLACEHOLDER/i);
+ assert.match(verification,/OR:\[\{lastUsedStep:null\},\{lastUsedStep:\{lt:step\}\}\]/);
+ assert.match(verification,/err\.message==='TOTP time step replay'/);
+ assert.match(verification,/reply\.code\(503\)\.send\(\{error:'Authenticator verification temporarily unavailable/);
+});
 test('all protected MFA routes and two-superadmin recovery treat TOTP separately',()=>{
  const s=readFileSync('src/services/adminMfaRoutes.ts','utf8');
  assert.match(s,/\/api\/auth\/mfa\/totp\/setup/);
