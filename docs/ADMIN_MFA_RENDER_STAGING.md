@@ -27,6 +27,21 @@ The Blueprint changes the existing staging application's modes **together**:
 
 **Current live staging remains on the older, disposable local PostgreSQL mode until this manual Blueprint review and sync completes.** The dedicated, safety-checked managed-DB startup and fixture seeder are committed but not yet validated on the hosted environment.
 
+## Troubleshooting: staging website only returns HTTP 401 (2026-11-02)
+
+The Render deploy can be **Live** and `/health` can return 200, while a normal visitor cannot reach the app. In the previous version, the separate HTTP Basic gate returned 401 for every page and relied on Chrome to display its built-in password prompt. Logs showed repeated `GET /` responses of 401, which are NOT evidence of a slow or broken Render cold start.
+
+The updated staging build includes a dedicated **`/staging-access`** page:
+1. Browse to `https://newchanges-mfa-isolated-staging.onrender.com/staging-access`. A normal `GET /` HTML navigation should also redirect here.
+2. Enter the existing `MFA_STAGING_GATE_PASSWORD` from the **staging** service Render Environment page. Do not type or paste it into GitHub, chat, a query string, or a public URL.
+3. On success, the page issues a `POST /staging-access` only to the same origin, sets a host-only 4-hour `Secure; HttpOnly; SameSite=Strict` signed cookie, then opens `/login`.
+4. Log into one of the synthetic test administrators; then open `/mfa` and register/verify a real passkey. The ordinary user login, administrator MFA enforcement and two-approver recovery remain required.
+5. If the app restarts, the short-lived staging access cookie may need to be reissued. Managed PostgreSQL should preserve WebAuthn credentials, unlike the former per-container database.
+
+The original HTTP Basic gate is retained for CLI tests, but is no longer required for browser access. Incorrect passwords return 401 in the unlock form with an explanation, and repeated attempts are throttled. Browser navigation to an unknown protected page should redirect to the unlock page, while API calls continue to return an explicit 401 JSON response.
+
+This fix is deliberately restricted to `MFA_STAGING_ONLY=true`; it does **not** modify production authentication. Verify the latest code in the isolated Render staging build and the full Docker CI before promoting any changes. Render's free-tier web-service cold start can still occur.
+
 ## Render free service caveat and one-time wake-up
 
 Official Render free-tier behavior: after 15 minutes idle, a free web service spins down; the next incoming HTTP request can take around a minute to wake it. The container filesystem is not persistent across spin-downs. This staging service's **embedded PostgreSQL is on that filesystem**, so wake-up may recreate all three synthetic users and invalidate previous passkey enrollment.
