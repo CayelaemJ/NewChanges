@@ -7,6 +7,8 @@ const script = readFileSync(new URL('../scripts/aiven-stream-snapshot.sh', impor
 test('snapshot copy never starts without the execute flag and separate approvals', () => {
   assert.match(script, /--execute/);
   for (const approval of [
+    'AIVEN_SOURCE_CONFIRMED',
+    'AIVEN_FREE_PLAN_VERIFIED',
     'AIVEN_BACKUP_VERIFIED',
     'AIVEN_EXTENSION_REVIEWED',
     'AIVEN_CROSS_BORDER_APPROVED',
