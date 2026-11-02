@@ -53,6 +53,19 @@ test('QR is an actual locally generated scannable SVG and never invokes remote i
  const implementation=readFileSync('src/services/adminTotp.ts','utf8');
  assert.doesNotMatch(implementation,/fetch\(|https:\/\//);
 });
+test('authenticator app has a dedicated grant and private QR user flow',()=>{
+ const html=readFileSync('public/admin-mfa.html','utf8');
+ const js=readFileSync('public/admin-mfa.js','utf8');
+ assert.match(html,/id="totp-grant"/);
+ assert.match(html,/id="totp-qr"/);
+ assert.match(html,/id="totp-confirm-code"/);
+ assert.match(html,/id="totp-code"/);
+ assert.match(js,/getElementById\('totp-grant'\)\.value\.trim\(\)/);
+ assert.match(js,/api\('totp\/setup'/);
+ assert.match(js,/api\('totp\/confirm'/);
+ assert.match(js,/api\('totp\/verify'/);
+ assert.doesNotMatch(js,/localStorage\.setItem\([^)]*totp/i);
+});
 test('all protected MFA routes and two-superadmin recovery treat TOTP separately',()=>{
  const s=readFileSync('src/services/adminMfaRoutes.ts','utf8');
  assert.match(s,/\/api\/auth\/mfa\/totp\/setup/);
