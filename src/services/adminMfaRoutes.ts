@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { createHash, randomBytes } from 'node:crypto';
 import { prisma } from './database.js';
+import {decodeTotpSecret,decryptTotpSecret,encryptTotpSecret,findTotpStep,generateTotpSecret,makeTotpQrSvgDataUri,makeTotpUri,requireTotpEncryptionKey,totpIsEnabled} from './adminTotp.js';
 
 const MAX_MFA_AGE = 10 * 60 * 1000;
 const MAX_CHALLENGE_AGE = 5 * 60 * 1000;
@@ -36,12 +37,13 @@ async function adminSession(req: FastifyRequest, reply: FastifyReply) {
   }
   return session;
 }
-export async function hasFreshAdminMfa(req: FastifyRequest, userId: string) {
+export async function hasFreshAdminMfa(req: FastifyRequest, userId: string, method?: 'PASSKEY') {
   const token = req.cookies?.session;
   if (typeof token !== 'string') return false;
   const session = await prisma.session.findUnique({where:{token:digest(token)}});
   if (!session || session.userId !== userId || session.endedAt || session.revokedAt ||
-      session.expiresAt <= new Date() || !session.mfaVerifiedAt) return false;
+      session.expiresAt <= new Date() || !session.mfaVerifiedAt ||
+      (method==='PASSKEY' && session.mfaMethod!=='PASSKEY')) return false;
   const age = Date.now() - session.mfaVerifiedAt.getTime();
   return age >= 0 && age <= MAX_MFA_AGE;
 }
@@ -74,7 +76,7 @@ function newSessionCookie(reply:FastifyReply, token:string, expiresAt:Date) {
     httpOnly:true,sameSite:'lax',secure:secureCookies,path:'/',expires:expiresAt,
   });
 }
-async function rotateElevatedSession(tx:any,session:any,now:Date) {
+async function rotateElevatedSession(tx:any,session:any,now:Date,method:'PASSKEY'|'TOTP'='PASSKEY') {
   const closed=await tx.session.updateMany({
     where:{id:session.id,userId:session.userId,endedAt:null,revokedAt:null,expiresAt:{gt:now}},
     data:{endedAt:now,revokedAt:now},
@@ -83,7 +85,7 @@ async function rotateElevatedSession(tx:any,session:any,now:Date) {
   const token=randomBytes(32).toString('hex');
   await tx.session.create({data:{
     userId:session.userId,token:digest(token),expiresAt:session.expiresAt,
-    mfaVerifiedAt:now,lastSeenAt:now,ipAddress:session.ipAddress,
+    mfaVerifiedAt:now,mfaMethod:method,lastSeenAt:now,ipAddress:session.ipAddress,
     userAgent:session.userAgent,deviceType:session.deviceType,browser:session.browser,
     operatingSystem:session.operatingSystem,country:session.country,region:session.region,
     city:session.city,deviceKey:session.deviceKey,
@@ -96,8 +98,15 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
     const session=await adminSession(req,reply);if(!session)return;
     const count=await prisma.adminMfaCredential.count({where:{userId:session.userId,revokedAt:null}});
     const verified=await hasFreshAdminMfa(req,session.userId);
-    return {configured:Boolean(mfaConfig()),enrolled:count>0,credentialCount:count,
-      verified,canManageRecovery:verified && session.user.role==='SUPERADMIN'};
+    const totp=totpIsEnabled() ? await prisma.adminMfaTotp.findUnique({
+      where:{userId:session.userId},select:{enabledAt:true}
+    }) : null;
+    const passkeyVerified=await hasFreshAdminMfa(req,session.userId,'PASSKEY');
+    return {configured:Boolean(mfaConfig()),enrolled:count>0 || Boolean(totp?.enabledAt),
+      credentialCount:count,passkeyEnrolled:count>0,totpAvailable:totpIsEnabled(),
+      totpEnrolled:Boolean(totp?.enabledAt),verified,
+      verificationMethod:session.mfaVerifiedAt && verified ? session.mfaMethod:null,
+      canManageRecovery:passkeyVerified && session.user.role==='SUPERADMIN'};
   });
   app.post<{Body:MfaBody}>('/api/auth/mfa/register/options',async(req,reply)=>{
     const session=await adminSession(req,reply);if(!session)return;
@@ -249,7 +258,7 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
   // independently verified passkey sessions. No public or password-only bypass.
   app.post<{Body:{targetUserId?:string}}>('/api/admin/mfa/recovery/request',async(req,reply)=>{
     const session=await adminSession(req,reply);if(!session)return;
-    if(session.user.role!=='SUPERADMIN' || !await hasFreshAdminMfa(req,session.userId))
+    if(session.user.role!=='SUPERADMIN' || !await hasFreshAdminMfa(req,session.userId,'PASSKEY'))
       return reply.code(403).send({error:'Verified superadministrator required'});
     const targetUserId=req.body?.targetUserId;
     if(typeof targetUserId!=='string' || !targetUserId ||
@@ -321,6 +330,7 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
         await tx.adminMfaCredential.updateMany({
           where:{userId:target.id,revokedAt:null},data:{revokedAt:now},
         });
+        await tx.adminMfaTotp.deleteMany({where:{userId:target.id}});
         await tx.session.updateMany({
           where:{userId:target.id,endedAt:null},data:{endedAt:now,revokedAt:now},
         });
