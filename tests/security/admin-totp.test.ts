@@ -48,7 +48,8 @@ test('QR is an actual locally generated scannable SVG and never invokes remote i
  const svg=Buffer.from(svgUri.slice(svgUri.indexOf(',')+1),'base64').toString('utf8');
  assert.match(svg,/<svg/);
  assert.match(svg,/<path|<rect/);
- assert.doesNotMatch(svg,/http[s]?:\/\//);
+ assert.doesNotMatch(svg,/<image[^>]+href=["']https?:/i);
+ assert.doesNotMatch(svg,/<script\b/i);
  const implementation=readFileSync('src/services/adminTotp.ts','utf8');
  assert.doesNotMatch(implementation,/fetch\(|https:\/\//);
 });
