@@ -41,3 +41,37 @@ test('malformed base64url and incomplete passkey assertions are rejected',()=>{
  assert.throws(()=>runInContext("fromBase64Url('not valid!')",ctx));
  assert.throws(()=>runInContext("serialize({type:'public-key',response:{clientDataJSON:new Uint8Array([1])}})",ctx));
 });
+
+test('real enroll and verify button handlers use Safari-compatible options when static JSON APIs are absent',async()=>{
+ const handlers=new Map();
+ const calls=[];
+ const elements=new Map();
+ const getElementById=id=>{
+  if(!elements.has(id))elements.set(id,{textContent:'',disabled:false,hidden:true,value:'',
+   addEventListener(type,fn){handlers.set(id+':'+type,fn)}});
+  return elements.get(id);
+ };
+ getElementById('grant').value='local-demo-grant';
+ const context=createContext({
+  document:{getElementById},window:{isSecureContext:true},
+  navigator:{credentials:{
+   async create({publicKey}){calls.push('create');assert.deepEqual(Array.from(publicKey.challenge),[1,2,3]);return {id:'credential',toJSON:()=>({id:'credential',type:'public-key'})}},
+   async get({publicKey}){calls.push('get');assert.deepEqual(Array.from(publicKey.challenge),[4,5,6]);return {id:'credential',toJSON:()=>({id:'credential',type:'public-key'})}},
+  }},
+  PublicKeyCredential:function(){},Uint8Array,atob,btoa,Error,JSON,
+  async fetch(url,options){
+   calls.push(url);
+   const value=url.endsWith('/status')?{configured:true,enrolled:true,verified:false,canManageRecovery:false}:
+    url.endsWith('/register/options')?{challenge:'AQID',user:{id:'BAUG',name:'Test',displayName:'Test'},excludeCredentials:[]}:
+    url.endsWith('/authenticate/options')?{challenge:'BAUG',allowCredentials:[{id:'AQID',type:'public-key'}]}:
+    {ok:true};
+   return {ok:true,json:async()=>value};
+  },
+ });
+ runInContext(readFileSync('public/admin-mfa.js','utf8'),context);
+ await handlers.get('enroll:click')();
+ await handlers.get('verify:click')();
+ assert.deepEqual(calls.filter(x=>x==='create'||x==='get'),['create','get']);
+ assert.equal(calls.filter(x=>x.endsWith('/register/verify')).length,1);
+ assert.equal(calls.filter(x=>x.endsWith('/authenticate/verify')).length,1);
+});
