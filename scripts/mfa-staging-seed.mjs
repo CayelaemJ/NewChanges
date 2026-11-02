@@ -4,15 +4,12 @@
 import { createHash } from 'node:crypto';
 import { prisma } from '../dist/services/database.js';
 import { hashPassword } from '../dist/services/authService.js';
+import {approvedStagingDatabaseEnvironment} from './mfa-staging-db-target.mjs';
 
-const guard = process.env.MFA_STAGING_ONLY==='true' &&
-  process.env.MFA_STAGING_SYNTHETIC_ONLY==='true' &&
-  process.env.STANDBY_MODE==='true' &&
+const guard = approvedStagingDatabaseEnvironment(process.env) &&
   (process.env.ADMIN_MFA_ENFORCE==='false' ||
-    (process.env.ADMIN_MFA_ENFORCE==='true' &&
-     process.env.MFA_STAGING_ENFORCEMENT_APPROVED==='true')) &&
-  process.env.MFA_STAGING_LOCAL_EPHEMERAL_DB==='true' &&
-  process.env.DATABASE_URL==='postgresql://node@127.0.0.1:55432/newchanges_mfa_ephemeral';
+   (process.env.ADMIN_MFA_ENFORCE==='true' &&
+    process.env.MFA_STAGING_ENFORCEMENT_APPROVED==='true'));
 
 if (!guard) throw new Error('Synthetic-only staging fixture provisioning refused');
 const passwordNames=['MFA_STAGING_ADMIN_A_PASSWORD','MFA_STAGING_ADMIN_B_PASSWORD',
@@ -64,5 +61,5 @@ try {
    }});
   }
  });
- process.stdout.write('Two isolated synthetic MFA superadmin fixtures created without logging credentials.\n');
+ process.stdout.write('Three synthetic MFA accounts (two superadmins and one target) created without logging credentials.\n');
 } finally {await prisma.$disconnect();}
