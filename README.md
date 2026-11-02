@@ -1,3 +1,7 @@
+> 📐 **[Explore the project architecture, diagrams and technical deep dive](docs/PORTFOLIO_SHOWCASE.md)** · [Engineering profile](https://github.com/CayelaemJ)
+
+---
+
 # empower-fin Dashboard Portal
 
 > Multi-tenant financial-wellness dashboard with employer, portfolio, administration, channel-partner and governed MLOps capabilities.
