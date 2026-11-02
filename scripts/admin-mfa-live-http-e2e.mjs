@@ -48,10 +48,13 @@ async function authenticatorContext(){
  }});
  return {ctx,page};
 }
+async function postFrom(context,path,data){
+ return context.request.post(path,{data,headers:{Origin:origin}});
+}
 async function loginAndLoad(user){
  const item=await authenticatorContext();
- const response=await item.ctx.request.post('/api/auth/login',{
-  data:{email:user.email,password:user.password}
+ const response=await postFrom(item.ctx,'/api/auth/login',{
+  email:user.email,password:user.password
  });
  assert.equal(response.status(),200,'Synthetic account must log in with its own password');
  await item.page.goto(origin+'/mfa',{waitUntil:'domcontentloaded'});
@@ -63,7 +66,7 @@ async function enroll(item,grant){
  await item.page.locator('#enroll').click();
  await item.page.waitForFunction(()=>
   (document.querySelector('#status')?.textContent||'').includes('Passkey verified for this session.'),
-  {timeout:20000});
+  null,{timeout:20000});
 }
 async function assertMfaStatus(item){
  const response=await item.ctx.request.get('/api/auth/mfa/status');
@@ -95,9 +98,10 @@ try{
  listening=true;
  browser=await chromium.launch({headless:true,args:['--no-sandbox']});
  const A=await loginAndLoad(users[0]);
- const pre=await A.ctx.request.post('/api/admin/mfa/recovery/request',{
-  data:{targetUserId:users[2].id}});
+ const pre=await postFrom(A.ctx,'/api/admin/mfa/recovery/request',{
+  targetUserId:users[2].id});
  assert.equal(pre.status(),403,'Privileged recovery must fail before passkey');
+ assert.equal((await pre.json()).code,'MFA_REQUIRED','Refusal must be MFA step-up, not CSRF');
  await enroll(A,users[0].grant);
  const B=await loginAndLoad(users[1]);
  await enroll(B,users[1].grant);
@@ -108,22 +112,22 @@ try{
  await B.page.waitForFunction(()=>
   (document.querySelector('#status')?.textContent||'').includes('Passkey verified for this session.'),
   {timeout:20000});
- const first=await A.ctx.request.post('/api/admin/mfa/recovery/request',{
-   data:{targetUserId:users[2].id}});
+ const first=await postFrom(A.ctx,'/api/admin/mfa/recovery/request',{
+   targetUserId:users[2].id});
  assert.equal(first.status(),200,'Verified superadmin A may request recovery');
  const requested=await first.json();
- const self=await A.ctx.request.post(
-   '/api/admin/mfa/recovery/'+requested.requestId+'/approve',{data:{}});
+ const self=await postFrom(A.ctx,
+   '/api/admin/mfa/recovery/'+requested.requestId+'/approve',{});
  assert.equal(self.status(),409,'First approver cannot approve their own request');
- const approved=await B.ctx.request.post(
-   '/api/admin/mfa/recovery/'+requested.requestId+'/approve',{data:{}});
+ const approved=await postFrom(B.ctx,
+   '/api/admin/mfa/recovery/'+requested.requestId+'/approve',{});
  assert.equal(approved.status(),200,'Different verified superadmin B can approve');
  const recovery=await approved.json();
  assert.match(recovery.grantCode,/^[A-Za-z0-9_-]{43}$/);
  const revoked=await prisma.adminMfaCredential.findUnique({where:{id:toRevoke.id}});
  assert.ok(revoked.revokedAt,'Prior target passkey must be revoked');
- const used=await B.ctx.request.post(
-   '/api/admin/mfa/recovery/'+requested.requestId+'/approve',{data:{}});
+ const used=await postFrom(B.ctx,
+   '/api/admin/mfa/recovery/'+requested.requestId+'/approve',{});
  assert.equal(used.status(),409,'Recovery request can be used only once');
  const T=await loginAndLoad(users[2]);
  await enroll(T,recovery.grantCode);
