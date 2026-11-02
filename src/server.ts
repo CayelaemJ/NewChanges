@@ -442,7 +442,17 @@ if (MFA_ENFORCE) {
 app.addHook("preHandler", async (req, reply) => {
   if (!MFA_ENFORCE) return;
   const scope = requiresAdminMfaStepUp(req.method, req.url);
-  if (!scope.adminOnly && !scope.adminMutation) return;
+  // Password-only admin sessions must not read protected business records
+  // through GET APIs while the dashboard page redirects them to enrollment.
+  // Public contact, authentication/MFA ceremonies and public theme metadata
+  // remain accessible before enrollment; non-admin roles are unchanged.
+  const path = req.url.split("?", 1)[0];
+  const protectedAdminRead = path.startsWith("/api/") &&
+    !path.startsWith("/api/auth/") &&
+    path !== "/api/contact" &&
+    !path.startsWith("/api/public/") &&
+    !path.startsWith("/api/partner-theme/");
+  if (!scope.adminOnly && !scope.adminMutation && !protectedAdminRead) return;
   const user = await currentUser(req);
   // Normal signed-in users can still use their own account features. Admins
   // must prove a fresh passkey before ANY non-auth API mutation, even when the
@@ -660,6 +670,14 @@ app.post("/api/auth/logout", async (req, reply) => {
 app.get("/api/auth/me", async (req, reply) => {
   const user = await currentUser(req);
   if (!user) return reply.code(401).send({ error: "not signed in" });
+  if (MFA_ENFORCE && isAdminRole(user) && !await hasFreshAdminMfa(req,user.id)) {
+    // Allow the login screen to learn that enrollment is mandatory without
+    // leaking employer names, report sections or accessible datasets.
+    reply.header("Cache-Control","no-store");
+    return {name:user.name,role:user.role,mfaRequired:true,
+      modules:{admin:false,dashboard:false,portfolio:false,users:false},
+      sections:[],employers:[]};
+  }
   const ids = allowedEmployerIds(user);
   const syncStatus = await dashboardSyncState(req);
   const publishedFallback = dashboardUsesPublishedSnapshot(syncStatus);
