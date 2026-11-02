@@ -25,3 +25,17 @@ Destination: Aiven PostgreSQL 17, free-1-1gb, do-blr. Source candidate: Neon new
 - Test source schema against PG17, including extension exclusions.
 - Create a non-destructive, opt-in copy script with restore failure abort, no forced reset and audit-friendly summaries.
 - Do not run any production write or cutover through this PR.
+
+
+## 2026-11-02 implementation findings
+- Verified source database: 427,761,664 bytes, 57 public tables, 2 public views, 13 public functions.
+- No public RLS policies or RLS-enabled tables; application-layer authorization must be separately checked during isolated tests.
+- Aiven destination is still RUNNING, empty of application tables, on free-1-1gb in do-blr; no resource expansion or cutover occurred.
+- Aiven currently offers PostgreSQL 18. Its default new-service major is 18; destination was created earlier on 17.
+- Attempted in-place Aiven update to PostgreSQL 18 was **rejected** by the API: required `upgrade_check` task absent. Service remains on PostgreSQL 17. No paid plan was selected.
+- Preferred path: run Aiven's compatibility check and upgrade **the existing empty free service** to PostgreSQL 18, keeping the exact free plan and do-blr region. Aiven Console: Service settings -> Service management -> Actions -> Upgrade version -> 18; review the compatibility result before applying. Do not click Upgrade plan.
+- Fallback path: `scripts/aiven-pg17-local-schema-test.sh` performs a **schema-only** local Docker trial against disposable PG17, with no Aiven or Neon writes. It requires locally installed PostgreSQL 18 dump tools and an existing postgres:17-alpine image. This is not a data migration.
+- The app's PostgreSQL auth session/tenant checks must be tested explicitly after migration; no database RLS policies were present in the inspected source.
+- Aiven free provides one node, 1 GiB storage and a max of 20 connections; it is for small-scale testing and not guaranteed high-availability production.
+- Source database bytes are not the same as historical network egress; do not equate the 408 MiB source with a reported 500 GB of usage. Migration must be one-shot and never retry in an unbounded loop.
+- The target credential was exposed in chat and must be rotated before deployment; do not embed it in PR files.
