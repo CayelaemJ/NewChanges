@@ -1,7 +1,7 @@
 -- Aiven free migration verification (read-only)
 -- Run with psql using a secure session; never paste credentials into this file.
 -- Source: Neon PostgreSQL 18; target: Aiven PostgreSQL 17.
-#
+--
 -- Source/target: run each query independently and compare the results.
 SELECT current_database() AS database_name,
        current_setting('server_version') AS version,
