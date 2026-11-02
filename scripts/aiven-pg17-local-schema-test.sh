@@ -18,6 +18,11 @@ cleanup() {
 trap cleanup EXIT
 PGCONNECT_TIMEOUT=12 pg_dump --dbname="$DR_SOURCE_DATABASE_URL" --schema-only --format=custom --no-owner --no-acl --file="$workdir/schema.dump"
 pg_restore --list "$workdir/schema.dump" > "$workdir/schema.toc"
+expected_tables="$(grep -Ec '^[0-9]+; [0-9]+ [0-9]+ TABLE public ' "$workdir/schema.toc" || true)"
+if [[ ! "$expected_tables" =~ ^[0-9]+$ ]] || (( expected_tables == 0 )); then
+  echo 'BLOCKED: no public application tables found in the schema archive.' >&2
+  exit 2
+fi
 # Exclude vendor extensions only in disposable trial. Real dependencies must fail.
 awk '
   /^[0-9]+; [0-9]+ [0-9]+ EXTENSION - (pg_session_jwt|pg_stat_statements) / {print ";" $0; next}
@@ -40,5 +45,9 @@ if ! docker exec -i "$cid" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres < 
   exit 3
 fi
 tables="$(docker exec "$cid" psql -XAtqc "SELECT count(*) FROM pg_tables WHERE schemaname='public'" -U postgres -d postgres)"
+if [[ "$tables" != "$expected_tables" ]]; then
+  echo "FAIL: public table count mismatch; expected=$expected_tables restored=$tables" >&2
+  exit 3
+fi
 echo "PASS: disposable PostgreSQL 17 schema restore; public tables=$tables."
 echo 'No data copied; compatibility does not authorize production cutover.'
