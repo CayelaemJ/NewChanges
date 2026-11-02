@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#2b1b68">
+<title>Secure Staging Access · The Fixer</title>
+<style>
+:root{color-scheme:light;font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif;color:#201536;background:#f6f3fb}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:grid;grid-template-rows:auto 1fr auto}
+header{background:#2b1b68;color:white;padding:22px max(24px,5vw);font-size:16px;letter-spacing:.025em}
+main{width:100%;max-width:500px;margin:auto;padding:38px 20px}
+article{background:#fff;padding:clamp(25px,6vw,42px);border-radius:20px;border:1px solid #dfd6ec;box-shadow:0 14px 40px #21103a18}
+.kicker{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#6a329e}
+h1{font-size:clamp(26px,5vw,34px);line-height:1.2;margin:12px 0}
+p{line-height:1.6;color:#514766;margin:0 0 23px}
+label{display:block;font-weight:650;margin-bottom:8px}
+input{display:block;width:100%;font:inherit;padding:13px 14px;border:1px solid #a795bc;border-radius:9px;min-height:48px}
+input:focus-visible,button:focus-visible{outline:3px solid #ba8de5;outline-offset:3px}
+button{display:block;width:100%;margin-top:17px;padding:13px;font:inherit;font-weight:700;color:white;background:#69359f;border:0;border-radius:9px;min-height:48px;cursor:pointer}
+button:disabled{opacity:.6;cursor:wait}
+#message{min-height:22px;font-size:14px;margin:15px 0 0;line-height:1.5}
+#message[data-error="true"]{color:#a02832}
+.note{background:#f3edf9;border-left:4px solid #7941aa;padding:15px 17px;margin-top:25px;border-radius:6px;color:#403051;font-size:14px;line-height:1.6}
+footer{text-align:center;padding:18px;font-size:13px;color:#635574}
+</style></head><body>
+<header><strong>THE FIXER</strong> · Isolated MFA staging</header>
+<main><article>
+<div class="kicker">Private synthetic test environment</div>
+<h1>Access the staging application</h1>
+<p>This preview requires a separate staging access password before you can sign in to The Fixer and test administrator passkeys.</p>
+<form id="access-form" autocomplete="off">
+<label for="staging-password">Staging access password</label>
+<input id="staging-password" type="password" required minlength="24" maxlength="256" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Password saved in Render Environment">
+<button id="submit" type="submit">Unlock staging</button>
+<p id="message" role="status" aria-live="polite"></p>
+</form>
+<div class="note">Use the value of <strong>MFA_STAGING_GATE_PASSWORD</strong> in the <strong>newchanges-mfa-isolated-staging</strong> Render environment. This is not your administrator's account password.<br><br>After unlocking this preview, you must still sign in as a synthetic administrator and verify a real passkey.</div>
+</article></main><footer>Non-production testing only · No customer information</footer>
+<script src="/staging-access.js" defer></script>
+</body></html>
