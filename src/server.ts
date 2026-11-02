@@ -231,11 +231,16 @@ app.addHook("onRequest", async (req, reply) => {
   if (!rateLimit(reply, `api:${ip}`, RATE_LIMIT, RATE_WINDOW_MS)) return;
   const authPath = /^\/api\/auth\/(?:login|forgot-password|set-password)(?:\/|$)/.test(path);
   if (authPath && !rateLimit(reply, `auth:${ip}`, AUTH_RATE_LIMIT, AUTH_WINDOW_MS)) return;
-  // Separate small budget for passkey ceremony creation and verification.
-  // Prevent excessive challenge records and repeated browser prompts without
-  // throttling ordinary dashboard requests.
-  if (path.startsWith("/api/auth/mfa/") &&
-      !rateLimit(reply, `mfa:${ip}`, 16, 5 * 60_000)) return;
+  // Keep restrictive per-IP budgets for proof/verification calls, but do
+  // not let routine status refresh or authenticator app onboarding consume
+  // the WebAuthn ceremony budget for colleagues behind the same NAT.
+  // TOTP also has a persistent per-account failed-attempt lockout.
+  if (path.startsWith("/api/auth/mfa/")) {
+    const bucket = path === "/api/auth/mfa/status" ? "mfa-status" :
+      path.startsWith("/api/auth/mfa/totp/") ? "mfa-totp" : "mfa-passkey";
+    const limit = bucket === "mfa-status" ? 60 : 16;
+    if (!rateLimit(reply, `${bucket}:${ip}`, limit, 5 * 60_000)) return;
+  }
   if (path === "/api/contact" && !rateLimit(reply, `contact:${ip}`, 6, 10 * 60_000)) return;
   if (/\/(?:upload|import|batch|sync|staging|dataset)(?:s|\/|-|$)/.test(path) &&
       !rateLimit(reply, `bulk:${ip}`, 20, 10 * 60_000)) return;
