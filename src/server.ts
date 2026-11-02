@@ -468,6 +468,8 @@ app.get("/react/", async (req, reply) => {
   const user = await currentUser(req);
   if (!user) return reply.redirect("/login");
   if (!canAccessModule(user, "dashboard")) return reply.code(403).send({ error: "no dashboard access" });
+  if (MFA_ENFORCE && isAdminRole(user) && !await hasFreshAdminMfa(req, user.id))
+    return reply.redirect("/mfa");
   try {
     const html = await readFile(join(PUBLIC_DIR, "react", "index.html"), "utf-8");
     return reply.type("text/html; charset=utf-8").header("Cache-Control", "no-store").send(html);
@@ -479,6 +481,7 @@ app.get("/react/admin", async (req, reply) => {
   const user = await currentUser(req);
   if (!user) return reply.redirect("/login");
   if (!canAccessModule(user, "admin")) return reply.code(403).send({ error: "admin only" });
+  if (MFA_ENFORCE && !await hasFreshAdminMfa(req, user.id)) return reply.redirect("/mfa");
   try {
     const html = await readFile(join(PUBLIC_DIR, "react", "index.html"), "utf-8");
     return reply.type("text/html; charset=utf-8").header("Cache-Control", "no-store").send(html);
@@ -490,6 +493,8 @@ app.get("/react/dashboard", async (req, reply) => {
   const user = await currentUser(req);
   if (!user) return reply.redirect("/login");
   if (!canAccessModule(user, "dashboard")) return reply.code(403).send({ error: "no dashboard access" });
+  if (MFA_ENFORCE && isAdminRole(user) && !await hasFreshAdminMfa(req, user.id))
+    return reply.redirect("/mfa");
   try {
     const html = await readFile(join(PUBLIC_DIR, "react", "index.html"), "utf-8");
     return reply.type("text/html; charset=utf-8").header("Cache-Control", "no-store").send(html);
@@ -551,7 +556,11 @@ app.post<{ Body: { name?: unknown; email?: unknown; organisation?: unknown; mess
 });
 app.get("/", async (req, reply) => {
   const user = await currentUser(req);
-  if (user && canAccessModule(user, "dashboard")) return reply.redirect("/dashboard");
+  if (user && canAccessModule(user, "dashboard")) {
+    if (MFA_ENFORCE && isAdminRole(user) && !await hasFreshAdminMfa(req, user.id))
+      return reply.redirect("/mfa");
+    return reply.redirect("/dashboard");
+  }
   return serveHtml(reply, "home.html");
 });
 app.get("/login", async (_req, reply) => serveHtml(reply, "login.html"));
@@ -570,6 +579,8 @@ app.get("/dashboard", async (req, reply) => {
   const user = await currentUser(req);
   if (!user) return reply.redirect("/login");
   if (!canAccessModule(user, "dashboard")) return reply.redirect("/login");
+  if (MFA_ENFORCE && isAdminRole(user) && !await hasFreshAdminMfa(req, user.id))
+    return reply.redirect("/mfa");
   // Keep the canonical dashboard route on the original production dashboard.
   // The React frontend remains available separately at /react/dashboard while
   // the original dashboard remains the visual source of truth for /dashboard.
@@ -627,7 +638,11 @@ app.post<{ Body: { email: string; password: string; remember?: boolean } }>("/ap
   });
   if (!result) return reply.code(401).send({ error: "invalid email or password" });
   reply.setCookie("session", result.token, remember ? { ...REMEMBER_COOKIE, expires: result.expiresAt } : COOKIE);
-  return { ok: true, user: { name: result.user.name, role: result.user.role } };
+  // A password login has no passkey freshness. The client should guide
+  // administrator accounts to enrollment/verification before their dashboard.
+  // The server also protects direct page navigation and privileged APIs.
+  return { ok: true, user: { name: result.user.name, role: result.user.role },
+    mfaRequired: MFA_ENFORCE && isAdminRole(result.user), next: MFA_ENFORCE && isAdminRole(result.user) ? "/mfa" : undefined };
 });
 
 app.post("/api/auth/logout", async (req, reply) => {
