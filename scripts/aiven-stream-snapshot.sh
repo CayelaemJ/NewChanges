@@ -63,12 +63,14 @@ target_version="$(sql DR_TARGET_DATABASE_URL 'SHOW server_version_num')"
   { echo 'BLOCKED: both databases must run PostgreSQL 18; downgrade is not allowed.' >&2; exit 2; }
 
 source_bytes="$(sql DR_SOURCE_DATABASE_URL 'SELECT pg_database_size(current_database())')"
-target_tables="$(sql DR_TARGET_DATABASE_URL "SELECT count(*) FROM pg_tables WHERE schemaname='public'")"
+target_tables="$(sql DR_TARGET_DATABASE_URL "SELECT count(*) FROM pg_tables WHERE schemaname NOT IN ('pg_catalog','information_schema')")"
+target_views="$(sql DR_TARGET_DATABASE_URL "SELECT count(*) FROM pg_views WHERE schemaname NOT IN ('pg_catalog','information_schema')")"
+target_bytes="$(sql DR_TARGET_DATABASE_URL 'SELECT pg_database_size(current_database())')"
 source_tables="$(sql DR_SOURCE_DATABASE_URL "SELECT count(*) FROM pg_tables WHERE schemaname='public'")"
-[[ "$source_bytes" =~ ^[0-9]+$ && "$target_tables" =~ ^[0-9]+$ && "$source_tables" =~ ^[0-9]+$ ]] ||
+[[ "$source_bytes" =~ ^[0-9]+$ && "$target_tables" =~ ^[0-9]+$ && "$target_views" =~ ^[0-9]+$ && "$target_bytes" =~ ^[0-9]+$ && "$source_tables" =~ ^[0-9]+$ ]] ||
   { echo 'BLOCKED: invalid database metadata.' >&2; exit 2; }
-[[ "$target_tables" == 0 && "$source_tables" -gt 0 ]] ||
-  { echo 'BLOCKED: Aiven must be empty and Neon must contain application tables.' >&2; exit 2; }
+[[ "$target_tables" == 0 && "$target_views" == 0 && "$target_bytes" -lt 50000000 && "$source_tables" -gt 0 ]] ||
+  { echo 'BLOCKED: Aiven must contain no user tables/views and use less than 50 MB, while Neon must contain application tables.' >&2; exit 2; }
 # 700 million bytes reserves >=~35% of 1 GiB for storage growth and restore overhead.
 [[ "$source_bytes" -le 700000000 ]] ||
   { echo 'BLOCKED: source size exceeds conservative free-tier migration limit.' >&2; exit 2; }
