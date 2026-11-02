@@ -5,7 +5,13 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
-RUN npm run build && npm prune --omit=dev
+RUN npm run build \
+    && node --check scripts/admin-mfa-live-http-e2e.mjs \
+    && node --check scripts/render-mfa-staging-boot.mjs \
+    && node --check scripts/mfa-staging-seed.mjs \
+    && node --check public/admin-mfa.js \
+    && node --test tests/security/admin-mfa-browser-compat.test.mjs \
+    && npm prune --omit=dev
 
 # ---- runtime ----
 FROM node:24-slim
