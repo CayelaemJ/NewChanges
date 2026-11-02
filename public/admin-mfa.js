@@ -69,7 +69,17 @@ async function refresh(){
   document.getElementById('recovery').hidden=!state.canManageRecovery;
   document.getElementById('totp-panel').hidden=!state.totpAvailable;
   document.getElementById('totp-start').hidden=!!state.totpEnrolled;
-  document.getElementById('totp-verify-panel').hidden=!state.totpEnrolled;
+  // The setup code was already consumed by confirmation. Never prompt the
+  // user to verify it again on the same freshly elevated session.
+  document.getElementById('totp-verify-panel').hidden=!state.totpEnrolled || !!state.verified;
+  const success=document.getElementById('mfa-success');
+  success.hidden=!state.verified;
+  if(state.verified){
+    document.getElementById('mfa-success-title').textContent=
+      state.verificationMethod==='TOTP'?'Authenticator app connected and verified.':'Passkey verified successfully.';
+    document.getElementById('mfa-success-note').textContent=
+      'Your administrator MFA is active for this session. Continue to the dashboard. On your next sign-in, enter a NEW six-digit code from your authenticator app or use your enrolled passkey.';
+  }
   if(state.totpEnrolled){
     document.getElementById('totp-setup').hidden=true;
     document.getElementById('totp-manual-key').textContent='';
