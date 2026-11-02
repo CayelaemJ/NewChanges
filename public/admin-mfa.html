@@ -26,6 +26,32 @@ button{width:100%;border:0;border-radius:9px;padding:13px;background:#65349e;col
 button:disabled{opacity:.55;cursor:wait}button:focus-visible,input:focus-visible{outline:3px solid #b48ae6;outline-offset:2px}
 small{line-height:1.5;color:#625773;display:block;margin-top:12px}
 footer{font-size:13px;margin:20px 3px;color:#625773}
+
+/* Focused, responsive MFA journey. No authentication state is stored in the browser. */
+:root{color-scheme:light}
+body{background:radial-gradient(circle at 88% 6%,#e8ddf9 0,transparent 32%),#f7f5fb}
+main{max-width:900px;margin:clamp(20px,5vw,52px) auto}
+article{box-shadow:0 18px 56px rgba(41,18,83,.10)}
+.panel{background:#fdfcff;transition:border-color .2s,box-shadow .2s}
+.panel:focus-within{border-color:#7742ae;box-shadow:0 0 0 3px rgba(119,66,174,.10)}
+.panel p{font-size:14px}
+.actions{margin-top:16px}
+h1{letter-spacing:-.025em}
+button{min-height:46px;transition:background .2s,transform .2s}
+button:hover:not(:disabled){background:#49227c}
+button:active:not(:disabled){transform:translateY(1px)}
+input{min-height:46px;background:#fff}
+input:focus{border-color:#65349e}
+#totp-code,#totp-confirm-code{font-size:23px;letter-spacing:.28em;text-align:center;font-variant-numeric:tabular-nums}
+.state{line-height:1.55;overflow-wrap:anywhere}
+[hidden]{display:none!important}
+#totp-panel{background:#fff}
+#recovery{margin-top:26px}
+#recovery .panel{background:#fffaf5}
+#mfa-success{border-left-color:#187a4d;background:#e7f5ee;color:#155c3e}
+#mfa-success p{color:#155c3e}
+@media(max-width:600px){header{padding:16px 20px}header a{font-size:12px}main{padding:0 12px}article{padding:20px;border-radius:14px}.actions{grid-template-columns:1fr}.panel{padding:16px}h1{font-size:27px}}
+@media(prefers-reduced-motion:reduce){button,.panel{transition:none}}
 </style></head>
 <body><header><strong>THE FIXER · ADMIN SECURITY</strong><a href="/dashboard">Back to dashboard</a></header>
 <main><article><h1>Protect your administrator account</h1>
