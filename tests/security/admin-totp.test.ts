@@ -66,6 +66,12 @@ test('authenticator app has a dedicated grant and private QR user flow',()=>{
  assert.match(js,/api\('totp\/verify'/);
  assert.doesNotMatch(js,/localStorage\.setItem\([^)]*totp/i);
 });
+test('TOTP and passkey rate limits have separate tight buckets and status is read-only',()=>{
+ const server=readFileSync('src/server.ts','utf8');
+ assert.match(server,/path\.startsWith\("\/api\/auth\/mfa\/totp\/"\) \? "mfa-totp"/);
+ assert.match(server,/bucket === "mfa-status" \? 60 : 16/);
+ assert.match(server,/!rateLimit\(reply, `\$\{bucket\}:\$\{ip\}`, limit, 5 \* 60_000\)/);
+});
 test('all protected MFA routes and two-superadmin recovery treat TOTP separately',()=>{
  const s=readFileSync('src/services/adminMfaRoutes.ts','utf8');
  assert.match(s,/\/api\/auth\/mfa\/totp\/setup/);
