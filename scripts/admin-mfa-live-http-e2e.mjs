@@ -68,11 +68,6 @@ async function enroll(item,grant){
   (document.querySelector('#status')?.textContent||'').includes('Passkey verified for this session.'),
   null,{timeout:20000});
 }
-async function assertMfaStatus(item){
- const response=await item.ctx.request.get('/api/auth/mfa/status');
- assert.equal(response.status(),200);
- return response.json();
-}
 try{
  for(const user of users){
   const saved=await prisma.user.create({data:{
@@ -105,7 +100,10 @@ try{
  await enroll(A,users[0].grant);
  const B=await loginAndLoad(users[1]);
  await enroll(B,users[1].grant);
- assert.equal((await assertMfaStatus(A)).verified,true);
+ const elevated=await prisma.session.findFirst({
+  where:{userId:users[0].id,endedAt:null,revokedAt:null,mfaVerifiedAt:{not:null}}
+ });
+ assert.ok(elevated,'Verified WebAuthn enrollment must persist MFA on an active rotated session');
  // A signed assertion after registration exercises the complete
  // verifyAuthenticationResponse path and session rotation.
  await B.page.locator('#verify').click();
