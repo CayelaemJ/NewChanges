@@ -38,5 +38,8 @@ test('snapshot streams exactly once without destructive operations or dumps on d
 test('copy validates table and row counts and never switches application traffic', () => {
   assert.match(script, /restored_tables/);
   assert.match(script, /ROW COUNT MISMATCH/);
+  assert.match(script, /tables_to_check="\$\(sql DR_SOURCE_DATABASE_URL/);
+  assert.match(script, /checked.*source_tables/);
+  assert.doesNotMatch(script, /done < <\(sql DR_SOURCE_DATABASE_URL/);
   assert.doesNotMatch(script, /render deploy|trigger_deploy|update_environment_variables/);
 });
