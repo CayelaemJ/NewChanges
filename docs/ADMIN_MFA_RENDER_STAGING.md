@@ -1,7 +1,23 @@
 # The Fixer MFA — isolated Render staging
 
-Status: **staging runtime verified on Render (2026-10-30)** using disposable loopback-only PostgreSQL. Render logs confirm the application booted and unauthenticated requests were rejected with HTTP 401. A physical passkey device test remains outstanding.
+Status: **temporary synthetic staging, not suitable for persistent passkey acceptance**. Render free services may sleep after 15 minutes without inbound traffic and take around one minute to wake. The loopback PostgreSQL database is stored on the service's ephemeral filesystem and is LOST on every spin-down/restart/redeploy, including previously enrolled passkeys. Automated CI is green, but multi-session hardware acceptance requires durable staging storage.
 This environment is not production and must never use production data, tokens, accounts or credentials.
+
+## Render free service caveat and one-time wake-up
+
+Official Render free-tier behavior: after 15 minutes idle, a free web service spins down; the next incoming HTTP request can take around a minute to wake it. The container filesystem is not persistent across spin-downs. This staging service's **embedded PostgreSQL is on that filesystem**, so wake-up may recreate all three synthetic users and invalidate previous passkey enrollment.
+
+Do not confuse the platform's cold-start loading screen with an authentication failure. Once warm, HTTP 401 at `/` is the staging HTTP Basic access gate working as intended. The one-time readiness utility does not log in and does not send or retrieve credentials.
+
+From a local Windows PowerShell checkout, run:
+
+```powershell
+.\\scripts\\wake-mfa-staging.ps1
+```
+
+It makes bounded, unauthenticated requests **only** to `https://newchanges-mfa-isolated-staging.onrender.com/health` and stops when the actual JSON `{"ok":true}` is returned. It does not run a continuous keepalive and cannot defeat Render's free-tier spin-down policy.
+
+**Release blocker:** use a genuine, separate, durable staging PostgreSQL database before claiming that a saved passkey survives sleep/restart. A free Render PostgreSQL database has already been provisioned, but its internal connection URL cannot be read through the available Render connector. No production credentials or datasets should be reused. Do not turn on production MFA from this temporary test deployment.
 
 ## Verified runtime evidence (2026-10-30)
 
