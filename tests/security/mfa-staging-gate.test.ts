@@ -49,6 +49,7 @@ test('managed staging DB is exact, private-network only and mutually exclusive w
  const managed='postgresql://synthetic_user:dummy-not-a-secret@'+RENDER_STAGING_DB_ID+
   '.frankfurt-postgres.render.com:5432/'+RENDER_STAGING_DB_NAME;
  assert.equal(isApprovedManagedStagingUrl(managed),true);
+ assert.equal(isApprovedManagedStagingUrl(managed.replace('postgresql://','postgres://')),true);
  for(const bad of [
   managed.replace(RENDER_STAGING_DB_ID,'another-db'),
   managed.replace(RENDER_STAGING_DB_NAME,'production'),
