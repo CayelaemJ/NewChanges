@@ -358,8 +358,7 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
       const token=await prisma.$transaction(async tx=>{
         const updated=await tx.adminMfaTotp.updateMany({
           where:{id:row.id,userId:session.userId,enabledAt:{not:null},
-            OR:[{lastUsedStep:null},{lastUsedStep:{lt:step}}],
-            OR_UNUSED_PLACEHOLDER:null},
+            OR:[{lastUsedStep:null},{lastUsedStep:{lt:step}}]},
           data:{lastUsedStep:step,failedAttempts:0,lastFailedAt:null,lockedUntil:null},
         });
         if(updated.count!==1)throw new Error('TOTP time step replay');
@@ -373,7 +372,15 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
       });
       newSessionCookie(reply,token,session.expiresAt);
       return {ok:true};
-    }catch{return reply.code(409).send({error:'Authenticator code was already used'});}
+    }catch(err){
+      // Never log the TOTP code, secret, body or raw Prisma error. A validation
+      // or database failure must not masquerade as a reused authenticator code.
+      if(err instanceof Error && err.message==='TOTP time step replay')
+        return reply.code(409).send({error:'Authenticator code was already used; wait for a new code'});
+      req.log.error({code:typeof (err as {code?:unknown})?.code==='string'?
+        (err as {code:string}).code:'TOTP_TRANSACTION_FAILED'},'TOTP verification transaction failed');
+      return reply.code(503).send({error:'Authenticator verification temporarily unavailable; try again'});
+    }
   });
 
   // Password recovery alone NEVER bypasses passkey MFA. This two-person
