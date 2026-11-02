@@ -47,7 +47,7 @@ export function decryptTotpSecret(encrypted:string,key:Buffer):string {
  if(parts.length!==4||parts[0]!=='v1')throw new Error('Unsupported authenticator secret format');
  const iv=Buffer.from(parts[1],'base64url'),tag=Buffer.from(parts[2],'base64url');
  if(iv.length!==12||tag.length!==16)throw new Error('Invalid secret authentication tag');
- const decipher=createDecipheriv('aes-256-gcm',key,iv);
+ const decipher=createDecipheriv('aes-256-gcm',key,iv,{authTagLength:16});
  decipher.setAuthTag(tag);
  const secret=Buffer.concat([decipher.update(Buffer.from(parts[3],'base64url')),decipher.final()]).toString('utf8');
  decodeTotpSecret(secret);
