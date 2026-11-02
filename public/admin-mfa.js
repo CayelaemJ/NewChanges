@@ -126,7 +126,8 @@ async function withTotpBusy(button,action){
  finally{button.disabled=false;}
 }
 totpStart.addEventListener('click',()=>withTotpBusy(totpStart,async()=>{
- const grantCode=grantEl.value.trim();
+ const grantCode=document.getElementById('totp-grant').value.trim();
+ if(!grantCode)throw Error('Enter your approved one-time MFA setup grant first.');
  show('Generating your private authenticator QR code…');
  const data=await api('totp/setup',{grantCode});
  if(typeof data.qrDataUri!=='string'||!data.qrDataUri.startsWith('data:image/svg+xml;base64,'))
@@ -139,12 +140,12 @@ totpStart.addEventListener('click',()=>withTotpBusy(totpStart,async()=>{
 totpConfirm.addEventListener('click',()=>withTotpBusy(totpConfirm,async()=>{
  const code=document.getElementById('totp-confirm-code').value.trim();
  if(!/^[0-9]{6}$/.test(code))throw Error('Enter the six-digit code shown in your authenticator app.');
- await api('totp/confirm',{grantCode:grantEl.value.trim(),code});
+ await api('totp/confirm',{grantCode:document.getElementById('totp-grant').value.trim(),code});
  document.getElementById('totp-confirm-code').value='';
  document.getElementById('totp-manual-key').textContent='';
  document.getElementById('totp-qr').removeAttribute('src');
  document.getElementById('totp-setup').hidden=true;
- grantEl.value='';
+ document.getElementById('totp-grant').value='';
  show('Authenticator app enrolled and verified. Your account is protected.');
  await refresh();
 }));
