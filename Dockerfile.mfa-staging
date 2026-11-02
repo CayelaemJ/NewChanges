@@ -15,6 +15,7 @@ RUN npm run build \
     && node --test tests/security/mfa-login-navigation.test.mjs \
     && node --import tsx --test tests/security/admin-totp.test.ts \
     && node --test tests/security/admin-mfa-browser-compat.test.mjs \
+    && npm run check:production \
     && npm prune --omit=dev
 
 # ---- runtime ----
