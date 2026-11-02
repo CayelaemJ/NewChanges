@@ -205,7 +205,15 @@ async function signIn(){
       sessionStorage.removeItem('ef_splash_shown');
       sessionStorage.setItem('ef_fresh_login','1');
     }catch(_){}
-    // route by role
+    // The server explicitly requires passkey step-up for administrator
+    // accounts when MFA enforcement is active. Do not require users to discover
+    // /mfa manually, and do not guess policy from client-only role checks.
+    if(d.mfaRequired===true && d.next==='/mfa'){
+      location.assign('/mfa');
+      return;
+    }
+    // Non-admin accounts and environments with enforcement off retain the
+    // established dashboard routing behavior.
     const me=await fetch('/api/auth/me').then(x=>x.json());
     if(me.modules.dashboard) location.href='/dashboard';
     else if(me.modules.admin) location.href='/admin';
