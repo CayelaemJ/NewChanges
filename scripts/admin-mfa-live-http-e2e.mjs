@@ -57,6 +57,15 @@ async function loginAndLoad(user){
   email:user.email,password:user.password
  });
  assert.equal(response.status(),200,'Synthetic account must log in with its own password');
+ const signIn=await response.json();
+ assert.equal(signIn.mfaRequired,true,'Administrator password login must require passkey enrollment/verification');
+ assert.equal(signIn.next,'/mfa','Login must direct administrators to the passkey setup page');
+ const unverified=await item.ctx.request.get('/dashboard',{maxRedirects:0});
+ assert.equal(unverified.status(),302,'Direct dashboard access must require passkey step-up');
+ assert.equal(unverified.headers().location,'/mfa');
+ const react=await item.ctx.request.get('/react/dashboard',{maxRedirects:0});
+ assert.equal(react.status(),302,'React dashboard must not bypass the passkey redirect');
+ assert.equal(react.headers().location,'/mfa');
  await item.page.goto(origin+'/mfa',{waitUntil:'domcontentloaded'});
  await item.page.locator('#enroll').waitFor();
  return item;
@@ -98,6 +107,9 @@ try{
  assert.equal(pre.status(),403,'Privileged recovery must fail before passkey');
  assert.equal((await pre.json()).code,'MFA_REQUIRED','Refusal must be MFA step-up, not CSRF');
  await enroll(A,users[0].grant);
+ const elevatedDashboard=await A.ctx.request.get('/dashboard',{maxRedirects:0});
+ assert.equal(elevatedDashboard.status(),200,
+   'After verified passkey, the signed-in admin can open the dashboard');
  const B=await loginAndLoad(users[1]);
  await enroll(B,users[1].grant);
  const elevated=await prisma.session.findFirst({
