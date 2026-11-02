@@ -66,6 +66,14 @@ test('authenticator app has a dedicated grant and private QR user flow',()=>{
  assert.match(js,/api\('totp\/verify'/);
  assert.doesNotMatch(js,/localStorage\.setItem\([^)]*totp/i);
 });
+test('existing administrator MFA is required on read-only business APIs as well as dashboard pages',()=>{
+ const server=readFileSync('src/server.ts','utf8');
+ assert.match(server,/protectedAdminRead = path\.startsWith\("\/api\/"\)/);
+ assert.match(server,/!scope\.adminOnly && !scope\.adminMutation && !protectedAdminRead/);
+ assert.match(server,/if \(MFA_ENFORCE && isAdminRole\(user\) && !await hasFreshAdminMfa\(req,user\.id\)\)/);
+ assert.match(server,/mfaRequired:true/);
+ assert.match(server,/sections:\[\],employers:\[\]/);
+});
 test('TOTP and passkey rate limits have separate tight buckets and status is read-only',()=>{
  const server=readFileSync('src/server.ts','utf8');
  assert.match(server,/path\.startsWith\("\/api\/auth\/mfa\/totp\/"\) \? "mfa-totp"/);
