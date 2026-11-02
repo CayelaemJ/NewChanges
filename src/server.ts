@@ -104,7 +104,7 @@ if (process.env.MFA_STAGING_ONLY === "true") {
     if ((req.method === "GET" || req.method === "HEAD") &&
       !path.startsWith("/api/") &&
       String(req.headers.accept || "").includes("text/html")) {
-      return reply.redirect("/staging-access", 303);
+      return reply.code(303).header("Location", "/staging-access").send();
     }
     return reply.code(401).send({error:"Staging access required",entry:"/staging-access"});
   });
