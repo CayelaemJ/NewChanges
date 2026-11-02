@@ -27,6 +27,7 @@ run node --import tsx --test tests/security/mfa-staging-gate.test.ts
 run node --import tsx --test tests/security/mfa-staging-access.test.ts
 run node --test tests/security/mfa-staging-blueprint.test.mjs
 run node --test tests/security/mfa-login-navigation.test.mjs
+run node --import tsx --test tests/security/admin-totp.test.ts
 run npm run check:security-identity
 run npm run check:security-operations
 run npm run check:security-governance
