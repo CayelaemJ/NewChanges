@@ -422,7 +422,7 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
 
   app.post<{Params:{id:string}}>('/api/admin/mfa/recovery/:id/approve',async(req,reply)=>{
     const session=await adminSession(req,reply);if(!session)return;
-    if(session.user.role!=='SUPERADMIN' || !await hasFreshAdminMfa(req,session.userId))
+    if(session.user.role!=='SUPERADMIN' || !await hasFreshAdminMfa(req,session.userId,'PASSKEY'))
       return reply.code(403).send({error:'Verified superadministrator required'});
     const id=req.params.id;
     if(!id || id.length>128) return reply.code(400).send({error:'Invalid recovery request'});
