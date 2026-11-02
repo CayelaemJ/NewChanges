@@ -15,12 +15,15 @@ process.env.COOKIE_SECURE='false';
 process.env.STANDBY_MODE='true';
 process.env.TRAFFIC_SAVER_MODE='true';
 process.env.ADMIN_MFA_ENFORCE='true';
+process.env.ADMIN_MFA_TOTP_ENABLED='true';
+process.env.ADMIN_MFA_TOTP_ENCRYPTION_KEY=randomBytes(32).toString('base64url');
 process.env.MFA_RP_ID='localhost';
 const port=39731;
 const origin='http://localhost:'+port;
 process.env.MFA_EXPECTED_ORIGIN=origin;
 // No MFA_STAGING_ONLY flags: this test binds to localhost and is not a Render service.
-const [{app},{prisma},{hashPassword}] = await Promise.all([
+const [{totpCode},{app},{prisma},{hashPassword}] = await Promise.all([
+ import('../dist/services/adminTotp.js'),
  import('../dist/server.js'),import('../dist/services/database.js'),
  import('../dist/services/authService.js')
 ]);
@@ -85,13 +88,16 @@ try{
   }});
   user.id=saved.id;records.push(saved.id);
  }
- for(const u of users.slice(0,2)){
+ for(const u of users){
   await prisma.adminMfaEnrollmentGrant.create({data:{
    userId:u.id,codeHash:hash(u.grant),
    expiresAt:new Date(Date.now()+15*60_000),
    approvedByOne:'ci-synthetic-first',approvedByTwo:'ci-synthetic-second',
   }});
  }
+ // A separate ADMIN must enrol an authenticator app from an approved grant,
+ // scan an actual locally rendered QR, confirm the first six-digit code,
+ // reject a replay, and verify a fresh time step before recovery.
  // Simulate a credential held by the recovery target. It must be revoked by
  // the atomic recovery transaction even though it is not used to authenticate.
  const toRevoke=await prisma.adminMfaCredential.create({data:{
@@ -101,6 +107,30 @@ try{
  await app.listen({host:'127.0.0.1',port});
  listening=true;
  browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+ const totpAdmin=await loginAndLoad(users[2]);
+ const qr=await postFrom(totpAdmin.ctx,'/api/auth/mfa/totp/setup',
+   {grantCode:users[2].grant});
+ assert.equal(qr.status(),200,'Synthetic ADMIN must receive a QR-code setup');
+ const provisioning=await qr.json();
+ assert.match(provisioning.qrDataUri,/^data:image\\/svg\\+xml;base64,/);
+ assert.match(provisioning.manualKey,/^[A-Z2-7]{32}$/);
+ const now=Date.now();
+ const firstCode=totpCode(provisioning.manualKey,Math.floor(now/30000));
+ const confirmed=await postFrom(totpAdmin.ctx,'/api/auth/mfa/totp/confirm',
+   {grantCode:users[2].grant,code:firstCode});
+ assert.equal(confirmed.status(),200,'QR-scanned TOTP setup must activate after real code');
+ const replay=await postFrom(totpAdmin.ctx,'/api/auth/mfa/totp/verify',
+   {code:firstCode});
+ assert.equal(replay.status(),403,'First TOTP time step cannot be replayed');
+ const nextCode=totpCode(provisioning.manualKey,Math.floor(Date.now()/30000)+1);
+ const elevatedTotp=await postFrom(totpAdmin.ctx,'/api/auth/mfa/totp/verify',
+   {code:nextCode});
+ assert.equal(elevatedTotp.status(),200,'New TOTP time step verifies administrator');
+ const pending=await prisma.adminMfaTotp.findUnique({where:{userId:users[2].id}});
+ assert.ok(pending.enabledAt && pending.lastUsedStep!==null,
+  'Secret is stored in encrypted durable database and replay counter is set');
+ assert.ok(!pending.secretCiphertext.includes(provisioning.manualKey));
+
  const A=await loginAndLoad(users[0]);
  const pre=await postFrom(A.ctx,'/api/admin/mfa/recovery/request',{
   targetUserId:users[2].id});
@@ -142,6 +172,8 @@ try{
  assert.equal(approved.status(),200,'Different verified superadmin B can approve');
  const recovery=await approved.json();
  assert.match(recovery.grantCode,/^[A-Za-z0-9_-]{43}$/);
+ const removedTotp=await prisma.adminMfaTotp.findUnique({where:{userId:users[2].id}});
+ assert.equal(removedTotp,null,'Two-person recovery revokes the previously enrolled TOTP factor');
  const revoked=await prisma.adminMfaCredential.findUnique({where:{id:toRevoke.id}});
  assert.ok(revoked.revokedAt,'Prior target passkey must be revoked');
  const used=await postFrom(B.ctx,
