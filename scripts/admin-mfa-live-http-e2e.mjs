@@ -82,9 +82,16 @@ async function loginAndLoad(user){
 async function enroll(item,grant){
  await item.page.locator('#grant').fill(grant);
  await item.page.locator('#enroll').click();
- await item.page.waitForFunction(()=>
-  (document.querySelector('#status')?.textContent||'').includes('Passkey verified for this session.'),
-  null,{timeout:20000});
+ // Registration rotates the server-side session and refreshes MFA status.
+ // Assert the authoritative verified completion state, not stale status copy.
+ await item.page.locator('#mfa-success').waitFor({state:'visible',timeout:20000});
+ await assert.doesNotReject(async()=>{
+   const response=await item.ctx.request.get('/api/auth/mfa/status');
+   assert.equal(response.status(),200);
+   const state=await response.json();
+   assert.equal(state.verified,true,'Passkey enrollment must elevate the active session');
+   assert.equal(state.passkeyEnrolled,true,'Server must persist enrolled passkey');
+ });
 }
 try{
  for(const user of users){
