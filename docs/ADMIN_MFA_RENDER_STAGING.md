@@ -9,7 +9,7 @@ This environment is not production and must never use production data, tokens, a
 - Render emitted `Synthetic MFA staging started with restricted access.`, then Fastify reported listening on its web port.
 - Unauthenticated `HEAD /` and `GET /` requests returned `401`, demonstrating that the independent staging access gate rejects uncredentialed traffic.
 - No production database address, existing user records, or production credentials were used.
-- The two synthetic SUPERADMIN credentials and separate access password are stored only in the new Render staging service environment; retrieve them via authorized Render environment access, not chat.
+- The two synthetic SUPERADMIN credentials, separate recovery-target ADMIN credentials and staging access password are stored only in the new Render staging service environment; retrieve them via authorized Render environment access, not chat.
 - This is an **automated deployment/bootstrap and authentication-gate check**, not confirmation of passkey registration on a physical authenticator.
 - Free Render instances may idle, replacing their ephemeral filesystem and restarting an empty database. Re-enroll passkeys after any such replacement.
 
@@ -46,8 +46,8 @@ Render's current connector cannot reveal the private URL for the separately crea
 - `MFA_STAGING_LOCAL_EPHEMERAL_DB=true` is enabled only on `newchanges-mfa-isolated-staging`.
 - The process accepts **no inherited `DATABASE_URL`** in this mode. It creates `postgresql://node@127.0.0.1:55432/newchanges_mfa_ephemeral` at startup.
 - PostgreSQL binds exclusively to loopback; the only published application port is Render's web port.
-- `MFA_STAGING_GATE_PASSWORD`, two independently generated synthetic superadmin passwords and two independent fixture enrollment grants have been set **directly in the staging service's Render environment**. Their values must never be committed or pasted into public messages.
-- `MFA_STAGING_BOOTSTRAP_FIXTURES=true` provisions two fabricated superadmin accounts on each new, empty container database.
+- `MFA_STAGING_GATE_PASSWORD`, three independently generated synthetic account passwords and three independent fixture enrollment grants have been set **directly in the staging service's Render environment**. Their values must never be committed or pasted into public messages.
+- `MFA_STAGING_BOOTSTRAP_FIXTURES=true` provisions two fabricated superadmin accounts and a separate synthetic ADMIN recovery target on each new, empty container database.
 - `ADMIN_MFA_ENFORCE=false` remains the default and only an explicit staging approval may enable it.
 - **This is intentionally non-durable.** An instance replacement, idle spin-down or redeploy may destroy the database, registered passkeys, and user sessions. This environment is for brief interactive device testing only, not a persistent customer-facing service.
 - The separately created free Render PostgreSQL resource remains unused and can be reclaimed once a durable staging configuration is agreed. Do not create additional resources without need.
@@ -55,23 +55,23 @@ Render's current connector cannot reveal the private URL for the separately crea
 
 To inspect the synthetic login credentials, an authorized owner can review the staging service's Render environment directly. There are no shared or production accounts, and the application is protected by its own independent HTTP Basic access gate.
 
-## Controlled first-run synthetic superadministrators
-The initial isolated database is empty. The optional `scripts/mfa-staging-seed.mjs` can create two clearly synthetic SUPERADMIN users with email addresses `mfa-superadmin-a@example.invalid` and `mfa-superadmin-b@example.invalid`, each with a different password and one-time enrollment grant. **No live user account or dataset is copied.**
+## Controlled first-run synthetic administrator fixtures
+The initial isolated database is empty. The optional `scripts/mfa-staging-seed.mjs` provisions two synthetic SUPERADMIN users, `mfa-superadmin-a@example.invalid` and `mfa-superadmin-b@example.invalid`, plus a distinct ADMIN recovery target, `mfa-recovery-target@example.invalid`. Each receives a separate password and one-time enrollment grant. **No live user account or dataset is copied.**
 
 To use it, set `MFA_STAGING_BOOTSTRAP_FIXTURES=true` on **only** the staging service, and configure these additional secret Render environment variables:
 - `MFA_STAGING_ADMIN_A_PASSWORD` and `MFA_STAGING_ADMIN_B_PASSWORD`: independent, random 24+ character passwords, different from the staging access password
 - `MFA_STAGING_ADMIN_A_GRANT` and `MFA_STAGING_ADMIN_B_GRANT`: independent, random 32-byte base64url strings (43 characters each); generate locally using a cryptographically secure generator
+- `MFA_STAGING_TARGET_PASSWORD` and `MFA_STAGING_TARGET_GRANT`: independently generated password and 32-byte base64url grant for the third ADMIN account
 
-The script is allowed to run only with the exact loopback-only ephemeral database URL, behind the synthetic-staging guard with MFA enforcement still off. It refuses a partly populated unrelated database, doesn't reissue grants on restarts, hashes passwords with the application's standard scrypt implementation, and stores only SHA-256 digests of the grants. Secret values are not printed or committed. Initial synthetic grants last 24 hours and each can only be consumed once. Keep `MFA_STAGING_BOOTSTRAP_FIXTURES=true` only while using the ephemeral mode, because the DB is recreated on container replacement. Remove the bootstrap credentials and delete the disposable deployment when the test is finished.
+The script is allowed to run only with the exact loopback-only ephemeral database URL, behind the synthetic-staging guard, with MFA enforcement off OR explicitly approved in this isolated staging service. It refuses a partly populated unrelated database, doesn't reissue grants on restarts, hashes passwords with the application's standard scrypt implementation, and stores only SHA-256 digests of the grants. Secret values are not printed or committed. Initial synthetic grants last 24 hours and each can only be consumed once. Keep `MFA_STAGING_BOOTSTRAP_FIXTURES=true` only while using the ephemeral mode, because the DB is recreated on container replacement. Remove the bootstrap credentials and delete the disposable deployment when the test is finished.
 
-Do not conflate these synthetic bootstrap grants with production recovery approvals: this is a fixture mechanism solely for device testing. Two separate testers should each enroll a passkey, and neither should use a real production login.
+Do not conflate these synthetic bootstrap grants with production recovery approvals: this is a fixture mechanism solely for device testing. Two separate testers should enroll separate superadministrator passkeys and use the third synthetic ADMIN as the recovery target. Neither tester should use a production login.
 
 
 
 ## Staged MFA enforcement rehearsal
 Enforcement remains off initially to avoid lockout.
-After provisioning separate synthetic test admins, enrolling passkeys, and verifying two-superadmin recovery,
-set `ADMIN_MFA_ENFORCE=true` AND `MFA_STAGING_ENFORCEMENT_APPROVED=true` on this staging service only.
+A change to Render environment variables restarts the ephemeral container and **destroys all previously enrolled passkeys**. Therefore test enforcement from a fresh synthetic boot: set `ADMIN_MFA_ENFORCE=true` AND `MFA_STAGING_ENFORCEMENT_APPROVED=true` on this staging service only, retaining `MFA_STAGING_BOOTSTRAP_FIXTURES=true` and all three synthetic fixture credentials. Its startup grants permit initial enrollment even while the administrator action gate is enforced. Enroll the two approver passkeys on this new instance and use the third ADMIN for recovery testing. Do not assume prior enrolled passkeys survive a restart.
 Never set these flags on production without separate approval. A staged test should prove:
 - Invalid/no passkey -> 403 `MFA_REQUIRED` for admin operations
 - Valid signed passkey -> rotated session + privileged operation permitted
@@ -82,6 +82,6 @@ Never set these flags on production without separate approval. A staged test sho
 
 ## Validation and cleanup
 - Run the dedicated self-hosted Docker CI with offline disposable Postgres before manual staging deployments.
-- The initial Render preview deploy may finish before these latest staging-specific commits; autoDeploy is deliberately **off**. Manually redeploy after CI is green.
+- Automatic deployments remain **off**. The latest staging code and new HTTP/WebAuthn integration tests must pass the self-hosted Docker CI before treating them as release-ready. Manually redeploy only the isolated staging service.
 - This free preview is public-network reachable **behind the Basic access gate**, not a Render private service. Never put real customer or personal data inside it.
 - Because the free DB expires on 2026-11-29, plan to delete the staging resources when the rehearsal is finished. Do not upgrade or incur paid charges without explicit approval.
