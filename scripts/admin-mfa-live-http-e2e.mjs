@@ -76,7 +76,7 @@ async function loginAndLoad(user){
  assert.equal(react.status(),302,'React dashboard must not bypass the passkey redirect');
  assert.equal(react.headers().location,'/mfa');
  await item.page.goto(origin+'/mfa',{waitUntil:'domcontentloaded'});
- await item.page.locator('#enroll').waitFor();
+ await item.page.waitForFunction(()=>!(document.querySelector('#status')?.textContent||'').includes('Checking your account security'),null,{timeout:20000});
  return item;
 }
 async function enroll(item,grant){
@@ -152,8 +152,17 @@ try{
   where:{userId:users[0].id,endedAt:null,revokedAt:null,mfaVerifiedAt:{not:null}}
  });
  assert.ok(elevated,'Verified WebAuthn enrollment must persist MFA on an active rotated session');
- // A signed assertion after registration exercises the complete
- // verifyAuthenticationResponse path and session rotation.
+ // A signed assertion must be exercised from a fresh, password-only session.
+ // After enrollment the redesigned UI shows the completion state instead of
+ // asking for an unnecessary second verification. Reauthenticate in the SAME
+ // browser context so the virtual authenticator retains the enrolled passkey.
+ const reauth=await postFrom(B.ctx,'/api/auth/login',{
+   email:users[1].email,password:users[1].password
+ });
+ assert.equal(reauth.status(),200,'Returning superadmin must reauthenticate');
+ assert.equal((await reauth.json()).mfaRequired,true);
+ await B.page.reload({waitUntil:'domcontentloaded'});
+ await B.page.locator('#verify').waitFor({state:'visible'});
  const signedAssertion=B.page.waitForResponse(response=>
    response.url().endsWith('/api/auth/mfa/authenticate/verify'),{timeout:20000});
  await B.page.locator('#verify').click();
