@@ -62,10 +62,10 @@ input:focus{border-color:#65349e}
  <p id="mfa-success-note">Your MFA setup is complete. You can continue to the dashboard now. When you next sign in, use a fresh six-digit code.</p>
  <a href="/dashboard" id="mfa-continue" style="display:inline-block;background:#65349e;color:white;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:9px">Continue to dashboard</a>
 </div>
-<div class="actions"><section class="panel"><h2>Verify your passkey</h2>
+<div class="actions" id="mfa-passkey-actions"><section class="panel" id="mfa-passkey-verify-panel"><h2>Verify your passkey</h2>
 <p>Verify again when accessing sensitive administrative controls.</p>
 <button id="verify" type="button">Verify passkey</button></section>
-<section class="panel"><h2>Enroll a passkey</h2><p>First-time enrollment requires a one-time grant issued by your security administrators.</p>
+<section class="panel" id="mfa-passkey-enroll-panel"><h2>Enroll a passkey</h2><p>First-time enrollment requires a one-time grant issued by your security administrators.</p>
 <label for="grant">One-time enrollment grant (if required)</label><input id="grant" type="password" autocomplete="off" spellcheck="false" placeholder="43-character grant">
 <button id="enroll" type="button">Enroll passkey</button><small>Adding a second passkey requires recent verification or another approved grant.</small>
 </section></div>
