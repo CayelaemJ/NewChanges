@@ -106,10 +106,18 @@ try{
  assert.ok(elevated,'Verified WebAuthn enrollment must persist MFA on an active rotated session');
  // A signed assertion after registration exercises the complete
  // verifyAuthenticationResponse path and session rotation.
+ const signedAssertion=B.page.waitForResponse(response=>
+   response.url().endsWith('/api/auth/mfa/authenticate/verify'),{timeout:20000});
  await B.page.locator('#verify').click();
- await B.page.waitForFunction(()=>
-  (document.querySelector('#status')?.textContent||'').includes('Passkey verified for this session.'),
-  {timeout:20000});
+ const assertionResponse=await signedAssertion;
+ assert.equal(assertionResponse.status(),200,
+   'Signed WebAuthn assertion must be verified by Fastify before recovery');
+ const asserted=await assertionResponse.json();
+ assert.equal(asserted.ok,true);
+ const signedSession=await prisma.session.findFirst({
+  where:{userId:users[1].id,endedAt:null,revokedAt:null,mfaVerifiedAt:{not:null}},
+ });
+ assert.ok(signedSession,'Signed assertion must establish a fresh active session');
  const first=await postFrom(A.ctx,'/api/admin/mfa/recovery/request',{
    targetUserId:users[2].id});
  assert.equal(first.status(),200,'Verified superadmin A may request recovery');
