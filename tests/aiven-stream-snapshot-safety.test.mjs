@@ -23,6 +23,8 @@ test('source and destination identity, major version and capacity are gated', ()
   assert.match(script, /source_version.*target_version|target_version.*source_version/);
   assert.match(script, /700000000/);
   assert.match(script, /target_tables.*0/);
+  assert.match(script, /target_views.*0/);
+  assert.match(script, /target_bytes.*50000000/);
 });
 
 test('snapshot streams exactly once without destructive operations or dumps on disk', () => {
