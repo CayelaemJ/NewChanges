@@ -66,6 +66,16 @@ test('authenticator app has a dedicated grant and private QR user flow',()=>{
  assert.match(js,/api\('totp\/verify'/);
  assert.doesNotMatch(js,/localStorage\.setItem\([^)]*totp/i);
 });
+test('successful authenticator QR confirmation shows completion, not another verification prompt',()=>{
+ const html=readFileSync('public/admin-mfa.html','utf8');
+ const js=readFileSync('public/admin-mfa.js','utf8');
+ assert.match(html,/id="mfa-success"/);
+ assert.match(html,/id="mfa-continue"/);
+ assert.match(html,/href="\/dashboard" id="mfa-continue"/);
+ assert.match(js,/success\.hidden=!state\.verified/);
+ assert.match(js,/totp-verify-panel'\)\.hidden=!state\.totpEnrolled \|\| !!state\.verified/);
+ assert.match(js,/new six-digit code/i);
+});
 test('existing administrator MFA is required on read-only business APIs as well as dashboard pages',()=>{
  const server=readFileSync('src/server.ts','utf8');
  assert.match(server,/protectedAdminRead = path\.startsWith\("\/api\/"\)/);
