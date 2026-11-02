@@ -63,6 +63,12 @@ async function loginAndLoad(user){
  const signIn=await response.json();
  assert.equal(signIn.mfaRequired,true,'Administrator password login must require passkey enrollment/verification');
  assert.equal(signIn.next,'/mfa','Login must direct administrators to the passkey setup page');
+ const limitedProfile=await item.ctx.request.get('/api/auth/me');
+ assert.equal(limitedProfile.status(),200);
+ const preMfaProfile=await limitedProfile.json();
+ assert.equal(preMfaProfile.mfaRequired,true,'Existing admin must be forced to enroll MFA');
+ assert.deepEqual(preMfaProfile.employers,[],'Unverified admin must not receive employer records');
+ assert.equal(preMfaProfile.modules.admin,false,'Unverified admin cannot reach admin modules');
  const unverified=await item.ctx.request.get('/dashboard',{maxRedirects:0});
  assert.equal(unverified.status(),302,'Direct dashboard access must require passkey step-up');
  assert.equal(unverified.headers().location,'/mfa');
