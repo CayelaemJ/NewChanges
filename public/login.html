@@ -220,7 +220,8 @@ async function signIn(){
     else location.href='/dashboard';
   }catch(e){ err.textContent=e.message; err.style.display='block'; btn.disabled=false; btn.removeAttribute('aria-busy'); btn.textContent='Sign in'; $('#password').setAttribute('aria-invalid','true'); }
 }
-$('#password').addEventListener('keydown',e=>{ if(e.key==='Enter') signIn(); });
+// The form's submit handler handles Enter; a second keydown login call would
+// race two password sessions and could invalidate subsequent MFA enrollment.
 
 function showForgot(ev){
   if(ev) ev.preventDefault();
