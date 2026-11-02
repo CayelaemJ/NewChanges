@@ -11,7 +11,7 @@ import { previewDatasetReplacement } from "./services/datasetReplacementPreview.
 // ════════════════════════════════════════════════════════════════════
 
 import Fastify, { FastifyRequest, FastifyReply } from "fastify";
-import { isMfaStagingAccessValid } from "./services/mfaStagingGate.js";
+import { COOKIE_NAME, createMfaStagingCookie, isMfaStagingAccessValid, isMfaStagingCookieValid, isMfaStagingPasswordValid } from "./services/mfaStagingGate.js";
 import { Prisma } from "@prisma/client";
 import multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
@@ -81,19 +81,60 @@ const app = Fastify({
   maxRequestsPerSocket: 1000,
 });
 
-// This isolated staging gate is never active on the normal Render service.
-// Require a distinct 24+ character staging password before even presenting
-// application login. Keep /health public for Render's liveness checks.
+// Staging-only gate. Show a branded entry screen instead of depending on
+// the browser's HTTP Basic popup (which can be suppressed or confusing).
+// MFA + application login remain mandatory after this independent gate.
 if (process.env.MFA_STAGING_ONLY === "true") {
+  const stagingAccessFailures = new InMemoryRateLimiter(1024);
+  const stagingOrigin = "https://newchanges-mfa-isolated-staging.onrender.com";
   app.addHook("onRequest", async (req, reply) => {
     reply.header("Cache-Control", "no-store");
     reply.header("X-Robots-Tag", "noindex, nofollow");
-    if (req.url.split("?", 1)[0] === "/health" && req.method === "GET") return;
-    if (!isMfaStagingAccessValid(req.headers.authorization, process.env.MFA_STAGING_GATE_PASSWORD)) {
-      return reply.code(401)
-        .header("WWW-Authenticate", 'Basic realm="The Fixer MFA Synthetic Staging", charset="UTF-8"')
-        .send({error:"Staging access required"});
+    reply.header("X-Content-Type-Options", "nosniff");
+    const path = req.url.split("?", 1)[0];
+    if (path === "/health" && req.method === "GET") return;
+    if (path === "/staging-access" &&
+        (req.method === "GET" || req.method === "POST")) return;
+    if (path === "/staging-access.js" && req.method === "GET") return;
+    const allowed = isMfaStagingAccessValid(req.headers.authorization, process.env.MFA_STAGING_GATE_PASSWORD) ||
+      isMfaStagingCookieValid(req.headers.cookie, process.env.MFA_STAGING_GATE_PASSWORD);
+    if (allowed) return;
+    // Never redirect APIs or non-HTML requests to a login page.
+    // Staging credentials must never be passed in query strings.
+    if ((req.method === "GET" || req.method === "HEAD") &&
+      !path.startsWith("/api/") &&
+      String(req.headers.accept || "").includes("text/html")) {
+      return reply.redirect("/staging-access", 303);
     }
+    return reply.code(401).send({error:"Staging access required",entry:"/staging-access"});
+  });
+  app.get("/staging-access", async (_req, reply) => {
+    reply.header("Content-Security-Policy",
+      "default-src 'none'; style-src 'unsafe-inline'; script-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
+    return reply.type("text/html; charset=utf-8")
+      .send(await readFile(join(process.cwd(),"public","staging-access.html"),"utf8"));
+  });
+  app.get("/staging-access.js", async (_req, reply) => {
+    return reply.type("application/javascript; charset=utf-8")
+      .send(await readFile(join(process.cwd(),"public","staging-access.js"),"utf8"));
+  });
+  app.post<{Body:{password?:string}}>("/staging-access", async (req, reply) => {
+    // Same-site browser POST only: do not accept cross-origin or token-only
+    // login attempts. The password is never logged, cached or persisted.
+    if (req.headers.origin !== stagingOrigin ||
+      String(req.headers["content-type"]||"").split(";",1)[0]!=="application/json") {
+      return reply.code(403).send({error:"Staging sign-in must originate from this site"});
+    }
+    const ip=String(req.ip||"unknown");
+    if (!stagingAccessFailures.hit("staging:"+ip,10,15*60*1000).allowed)
+      return reply.code(429).send({error:"Too many attempts; retry later"});
+    if (!isMfaStagingPasswordValid(req.body?.password,process.env.MFA_STAGING_GATE_PASSWORD))
+      return reply.code(401).send({error:"Incorrect staging access password"});
+    const cookie=createMfaStagingCookie(process.env.MFA_STAGING_GATE_PASSWORD);
+    if(!cookie)return reply.code(503).send({error:"Staging access unavailable"});
+    reply.header("Set-Cookie",
+      COOKIE_NAME+"="+cookie+"; Path=/; Max-Age=14400; Secure; HttpOnly; SameSite=Strict");
+    return {ok:true,redirect:"/login"};
   });
 }
 
