@@ -2,7 +2,7 @@
 # Isolated PostgreSQL 17 schema compatibility trial. Does not modify Neon or Aiven.
 set -Eeuo pipefail
 : "${DR_SOURCE_DATABASE_URL:?Set source URL in a secret environment}"
-for tool in pg_dump pg_restore docker awk sed; do
+for tool in pg_dump pg_restore docker sed grep; do
   command -v "$tool" >/dev/null || { echo "Missing: $tool" >&2; exit 2; }
 done
 pg_dump --version | grep -Eq 'PostgreSQL\) 18\.' || { echo 'Use PostgreSQL 18 pg_dump.' >&2; exit 2; }
@@ -16,22 +16,18 @@ cleanup() {
   rm -rf "$workdir"
 }
 trap cleanup EXIT
-PGCONNECT_TIMEOUT=12 pg_dump --dbname="$DR_SOURCE_DATABASE_URL" --schema-only --format=custom --no-owner --no-acl --file="$workdir/schema.dump"
+PGCONNECT_TIMEOUT=12 pg_dump --dbname="$DR_SOURCE_DATABASE_URL" --schema-only --format=custom --exclude-extension=pg_session_jwt --exclude-extension=pg_stat_statements --no-owner --no-acl --file="$workdir/schema.dump"
 pg_restore --list "$workdir/schema.dump" > "$workdir/schema.toc"
 expected_tables="$(grep -Ec '^[0-9]+; [0-9]+ [0-9]+ TABLE public ' "$workdir/schema.toc" || true)"
 if [[ ! "$expected_tables" =~ ^[0-9]+$ ]] || (( expected_tables == 0 )); then
   echo 'BLOCKED: no public application tables found in the schema archive.' >&2
   exit 2
 fi
-# Exclude vendor extensions only in disposable trial. Real dependencies must fail.
-awk '
-  /^[0-9]+; [0-9]+ [0-9]+ EXTENSION - (pg_session_jwt|pg_stat_statements) / {print ";" $0; next}
-  /^[0-9]+; [0-9]+ [0-9]+ COMMENT - EXTENSION (pg_session_jwt|pg_stat_statements) / {print ";" $0; next}
-  {print}
-' "$workdir/schema.toc" > "$workdir/filtered.toc"
-pg_restore --schema-only --use-list="$workdir/filtered.toc" --no-owner --no-acl --file="$workdir/schema.sql" "$workdir/schema.dump"
-# PostgreSQL 18 client-only meta commands are not understood by PG17 psql.
-sed -i '/^\\restrict /d; /^\\unrestrict /d' "$workdir/schema.sql"
+# PostgreSQL 18 pg_dump supports --exclude-extension; the archive was made
+# without vendor extensions. PostgreSQL 17 does not recognize PG18 client
+# session guard commands; remove only those known compatibility wrappers.
+pg_restore --schema-only --no-owner --no-acl --file="$workdir/schema.sql" "$workdir/schema.dump"
+sed -i '/^\\restrict /d; /^\\unrestrict /d; /^SET transaction_timeout = 0;/d' "$workdir/schema.sql"
 # Test container cannot reach external networks, and has no published port.
 cid="$(docker run --detach --rm --network none --env POSTGRES_HOST_AUTH_METHOD=trust postgres:17-alpine)"
 ready=0
