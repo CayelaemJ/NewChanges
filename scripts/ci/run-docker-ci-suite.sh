@@ -24,6 +24,7 @@ run node --test tests/security/admin-mfa-policy.test.mjs tests/security/admin-mf
 run node --import tsx --test tests/security/admin-mfa-route-scope.test.ts
 run node --test tests/security/admin-mfa-recovery-contract.test.mjs
 run node --import tsx --test tests/security/mfa-staging-gate.test.ts
+run node --test tests/security/mfa-staging-blueprint.test.mjs
 run npm run check:security-identity
 run npm run check:security-operations
 run npm run check:security-governance
