@@ -36,4 +36,8 @@ test('MFA staging uses unique Docker entrypoint and exact synthetic-only databas
  assert.match(server,/isMfaStagingAccessValid\(req\.headers\.authorization/);
  const seed=readFileSync('scripts/mfa-staging-seed.mjs','utf8');
  assert.match(seed,/DATABASE_URL==='postgresql:\/\/node@127\.0\.0\.1:55432\/newchanges_mfa_ephemeral'/);
+ assert.match(seed,/mfa-recovery-target@example\.invalid/);
+ assert.match(seed,/role:'ADMIN'/);
+ assert.match(seed,/new Set\(passwords\)\.size!==3/);
+ assert.match(seed,/MFA_STAGING_ENFORCEMENT_APPROVED/);
 });
