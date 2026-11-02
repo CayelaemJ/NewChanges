@@ -80,13 +80,13 @@ echo 'Streaming a single compressed snapshot, without local dump files or automa
 
 # A PostgreSQL 18 custom-format archive is streamed once. Vendor extensions are
 # excluded; application objects are not excluded. No data is deliberately dropped.
-# EXIT-ON-ERROR stops on the first failure. A failed restore may leave partial
-# objects in the isolated target: do not retry until the target is reviewed.
+# EXIT-ON-ERROR stops on the first failure. A failed restore aborts the transaction; review target state and quota
+# before any retry. Do not repeat the network transfer automatically.
 PGCONNECT_TIMEOUT=12 pg_dump --dbname="$DR_SOURCE_DATABASE_URL" \
   --format=custom --compress=6 --no-owner --no-acl \
   --exclude-extension=pg_session_jwt --exclude-extension=pg_stat_statements |
   PGCONNECT_TIMEOUT=12 pg_restore --dbname="$DR_TARGET_DATABASE_URL" \
-    --no-owner --no-acl --exit-on-error
+    --no-owner --no-acl --exit-on-error --single-transaction
 
 restored_tables="$(sql DR_TARGET_DATABASE_URL "SELECT count(*) FROM pg_tables WHERE schemaname='public'")"
 [[ "$restored_tables" == "$source_tables" ]] ||
