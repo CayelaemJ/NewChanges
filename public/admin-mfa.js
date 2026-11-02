@@ -85,7 +85,7 @@ async function run(kind){
     const grantCode=grantEl.value.trim();
     show('Waiting for passkey registration on your device…');
     const options=await api('register/options',{grantCode});
-    const publicKey=PublicKeyCredential.parseCreationOptionsFromJSON(options);
+    const publicKey=creationOptions(options);
     const credential=await navigator.credentials.create({publicKey});
     if(!credential)throw Error('Enrollment cancelled');
     await api('register/verify',{challenge:options.challenge,response:serialize(credential),grantCode});
@@ -93,7 +93,7 @@ async function run(kind){
   }else{
     show('Waiting for passkey confirmation…');
     const options=await api('authenticate/options');
-    const publicKey=PublicKeyCredential.parseRequestOptionsFromJSON(options);
+    const publicKey=requestOptions(options);
     const credential=await navigator.credentials.get({publicKey});
     if(!credential)throw Error('Verification cancelled');
     await api('authenticate/verify',{challenge:options.challenge,response:serialize(credential)});
