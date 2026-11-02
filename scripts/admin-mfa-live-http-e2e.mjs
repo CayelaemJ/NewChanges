@@ -112,7 +112,7 @@ try{
    {grantCode:users[2].grant});
  assert.equal(qr.status(),200,'Synthetic ADMIN must receive a QR-code setup');
  const provisioning=await qr.json();
- assert.match(provisioning.qrDataUri,/^data:image\\/svg\\+xml;base64,/);
+ assert.ok(provisioning.qrDataUri.startsWith('data:image/svg+xml;base64,'),'TOTP QR must be a local encoded SVG');
  assert.match(provisioning.manualKey,/^[A-Z2-7]{32}$/);
  const now=Date.now();
  const firstCode=totpCode(provisioning.manualKey,Math.floor(now/30000));
