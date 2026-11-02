@@ -10,6 +10,8 @@ RUN npm run build \
     && node --check scripts/render-mfa-staging-boot.mjs \
     && node --check scripts/mfa-staging-seed.mjs \
     && node --check public/admin-mfa.js \
+    && node --check public/staging-access.js \
+    && node --import tsx --test tests/security/mfa-staging-access.test.ts \
     && node --test tests/security/admin-mfa-browser-compat.test.mjs \
     && npm prune --omit=dev
 
