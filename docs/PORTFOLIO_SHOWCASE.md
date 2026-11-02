@@ -1,69 +1,49 @@
-# Financial Wellness Dashboard & Data Integration
+# Financial Wellness Dashboard — Engineering Case Study
 
-> **Status:** Active engineering; see original README for release-specific status  
-> **Technology focus:** TypeScript · Fastify · React · Prisma · PostgreSQL  
-> **Maintainer:** Cayelaem Jantjies
+**Repository identity:** `empower-fin-dashboard-portal`, version 0.10.0 in the inspected `package.json`. **Hosting documentation contains legacy Railway references**; deployment cutover is not verified here.
 
-## At a glance
+## Problem
 
-**The challenge:** Unify multiple external finance and workforce data feeds into dependable tenant-aware dashboards.
-
-This is a project-specific technical showcase, not a claim that every proposed capability is live. The repository's README and implementation remain the source of truth for release status.
-
-## System journey (conceptual)
+Multiple API, SQL and file sources must become trustworthy and historically meaningful employer and portfolio metrics, without violating access boundaries.
 
 ```mermaid
-flowchart LR
-  N0["HTTPS APIs / SQL views / files"]
-  N1["Ingestion + contract validation"]
-  N2["PostgreSQL + Prisma"]
-  N3["Analytics + MLOps governance"]
-  N4["Employer / portfolio dashboards"]
-  N0 --> N1
-  N1 --> N2
-  N2 --> N3
-  N3 --> N4
+flowchart TB
+ API["HTTPS sources"] --> Ingest["Ingestion + validation"]
+ SQL["Read-only SQL views"] --> Ingest
+ Files["CSV / XLSX / JSON"] --> Ingest
+ Ingest --> Gate{"Quality gate"}
+ Gate -->|Accepted| DB[("PostgreSQL / Prisma")]
+ Gate -->|Review| Quarantine["Quality review"]
+ DB --> Server["Fastify / TypeScript"]
+ Server --> Analytics["Scoring + cohort reporting"]
+ Server --> MLOps["Model lifecycle + telemetry"]
+ Analytics --> Dashboard["Employer / portfolio views"]
+ MLOps --> Admin["Governance / admin"]
 ```
 
-*Diagram describes the documented workflow at a high level, not a verified live infrastructure topology.*
+*Logical diagram grounded in the repository README, not a verified live topology.*
 
-## Engineering deep dive
+## Deep dive
 
-### 1. Ten-dataset canonical ingestion contract and data-quality guardrails
+**Contract-driven ingestion:** The README specifies 10 canonical datasets: employers, workforce_snapshots, employees, platform_users, journeys, debt_accounts, policies, ratings, referrals and salary_advances. It separates external data ingestion from browser-facing credentials.
 
-This area illustrates a concrete engineering consideration in the project. Inspect the implementation, tests, and source contracts to establish the precise current behaviour and implementation maturity before using it in a live environment.
+**Reporting semantics:** Event dates, effective observation dates and technical change timestamps are not interchangeable. Snapshot-aware queries and null-safe metrics help avoid misleading historical reports.
 
-### 2. Snapshot-aware reporting, null-safe metrics and role-aware access
+**Governed analytics:** Model lifecycle, drift/anomaly monitoring, audit records and human feedback are documented alongside conventional reporting.
 
-This area illustrates a concrete engineering consideration in the project. Inspect the implementation, tests, and source contracts to establish the precise current behaviour and implementation maturity before using it in a live environment.
+**Operational quality:** The inspected package defines Node 24, separate frontend build, Prisma generation and extensive regression scripts. Their existence does not prove they currently pass.
 
-### 3. Governed model registry, feedback and operational telemetry
+| Domain | Repository command |
+|---|---|
+| Aggregate validation | `npm run check:all` |
+| Security | `npm run check:security` |
+| Imports | `npm run check:imports` |
+| React parity | `npm run check:react` |
+| Accessibility | `npm run check:accessibility` |
+| Performance | `npm run check:performance` |
 
-This area illustrates a concrete engineering consideration in the project. Inspect the implementation, tests, and source contracts to establish the precise current behaviour and implementation maturity before using it in a live environment.
+## Visual evidence plan
 
-### 4. Release checks for security, imports, UI and performance
+Capture a synthetic-data dashboard, ingestion workflow and administrative diagnostics, with all company identities and personal data removed. Only publish benchmark graphs with a stated fixture, run date, environment and observed values.
 
-This area illustrates a concrete engineering consideration in the project. Inspect the implementation, tests, and source contracts to establish the precise current behaviour and implementation maturity before using it in a live environment.
-
-## Engineering evidence checklist
-
-| Evidence | How to evaluate |
-| --- | --- |
-| Architecture | Trace actual components, data flow, trust boundaries and dependencies in this repository |
-| Data integrity | Verify schema, validation, migrations and failure handling against test cases |
-| Reliability | Check logging, error recovery, retries and existing test outcomes |
-| Security | Review auth, tenant isolation, secrets handling and data access controls |
-| Product quality | Check accessible UX, responsive layouts, empty/error states and real screenshots |
-| Deployment | Verify runtime variables, CI results and the currently active hosting configuration |
-
-## Visual gallery
-
-Real, approved screenshots, device mockups and dashboard visuals belong in a future `docs/media/` gallery. **No screenshot is displayed here until a real application view is captured, sanitised and approved.** The Mermaid flowchart above is a renderable architecture visual that works directly on GitHub.
-
-## Known limitations and honest status
-
-This repository's older README still describes Railway. Verify current Render/Cloudflare cutover and runtime configurations before treating deployment instructions as current.
-
-## Further reading
-
-[Back to repository README](../README.md) · [Cayelaem's engineering profile](https://github.com/CayelaemJ)
+[Back to README](../README.md) · [Architecture](ARCHITECTURE.md) · [Testing](TESTING.md)
