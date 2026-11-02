@@ -67,10 +67,19 @@ async function refresh(){
   if(!res.ok)throw Error('Please sign in as an administrator');
   const state=await res.json();
   document.getElementById('recovery').hidden=!state.canManageRecovery;
-  show(!state.configured?'Passkey verification is not configured on this environment.':
-   state.verified?'Passkey verified for this session. Administrative changes are available.':
-   state.enrolled?'A passkey is enrolled. Verify it to unlock administrator actions.':
-   'No passkey is enrolled yet. Request a one-time enrollment grant.');
+  document.getElementById('totp-panel').hidden=!state.totpAvailable;
+  document.getElementById('totp-start').hidden=!!state.totpEnrolled;
+  document.getElementById('totp-verify-panel').hidden=!state.totpEnrolled;
+  if(state.totpEnrolled){
+    document.getElementById('totp-setup').hidden=true;
+    document.getElementById('totp-manual-key').textContent='';
+    document.getElementById('totp-qr').removeAttribute('src');
+  }
+  show(state.verified?'Administrator MFA verified with '+(state.verificationMethod==='TOTP'?'authenticator app.':'passkey.')+' You may open the dashboard.':
+   !state.enrolled?'MFA setup is required. Enroll a passkey or scan the QR code with an authenticator app using your approved grant.':
+   state.passkeyEnrolled&&state.totpEnrolled?'Verify your passkey or enter a six-digit authenticator code to continue.':
+   state.totpEnrolled?'Authenticator app enrolled. Enter a six-digit code to unlock your account.':
+   'Passkey enrolled. Verify it to unlock administrator actions.');
  }catch(e){
   document.getElementById('recovery').hidden=true;
   show(e.message);
@@ -105,6 +114,49 @@ async function run(kind){
 verifyBtn.addEventListener('click',()=>run('verify'));
 enrollBtn.addEventListener('click',()=>run('enroll'));
 refresh();
+
+// The QR image is built privately by the server. Never use remote QR services,
+// persist a provisioning secret in localStorage, or log a six-digit code.
+const totpStart=document.getElementById('totp-start');
+const totpConfirm=document.getElementById('totp-confirm');
+const totpVerify=document.getElementById('totp-verify');
+async function withTotpBusy(button,action){
+ button.disabled=true;
+ try{await action();}catch(error){show(error?.message||'Authenticator app request failed');}
+ finally{button.disabled=false;}
+}
+totpStart.addEventListener('click',()=>withTotpBusy(totpStart,async()=>{
+ const grantCode=grantEl.value.trim();
+ show('Generating your private authenticator QR code…');
+ const data=await api('totp/setup',{grantCode});
+ if(typeof data.qrDataUri!=='string'||!data.qrDataUri.startsWith('data:image/svg+xml;base64,'))
+   throw Error('The QR code could not be generated');
+ document.getElementById('totp-qr').src=data.qrDataUri;
+ document.getElementById('totp-manual-key').textContent=data.manualKey||'';
+ document.getElementById('totp-setup').hidden=false;
+ show('Open Google or Microsoft Authenticator, add an account, scan this QR, and enter the six-digit code below.');
+}));
+totpConfirm.addEventListener('click',()=>withTotpBusy(totpConfirm,async()=>{
+ const code=document.getElementById('totp-confirm-code').value.trim();
+ if(!/^[0-9]{6}$/.test(code))throw Error('Enter the six-digit code shown in your authenticator app.');
+ await api('totp/confirm',{grantCode:grantEl.value.trim(),code});
+ document.getElementById('totp-confirm-code').value='';
+ document.getElementById('totp-manual-key').textContent='';
+ document.getElementById('totp-qr').removeAttribute('src');
+ document.getElementById('totp-setup').hidden=true;
+ grantEl.value='';
+ show('Authenticator app enrolled and verified. Your account is protected.');
+ await refresh();
+}));
+totpVerify.addEventListener('click',()=>withTotpBusy(totpVerify,async()=>{
+ const field=document.getElementById('totp-code');
+ const code=field.value.trim();
+ if(!/^[0-9]{6}$/.test(code))throw Error('Enter the current six-digit authenticator code.');
+ await api('totp/verify',{code});
+ field.value='';
+ show('Authenticator app verified. Administrator access granted.');
+ await refresh();
+}));
 
 async function recoveryApi(path,data){
  const response=await fetch('/api/admin/mfa/recovery/'+path,{
