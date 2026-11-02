@@ -29,8 +29,13 @@ footer{font-size:13px;margin:20px 3px;color:#625773}
 </style></head>
 <body><header><strong>THE FIXER · ADMIN SECURITY</strong><a href="/dashboard">Back to dashboard</a></header>
 <main><article><h1>Protect your administrator account</h1>
-<p>Use a passkey on this device or a hardware security key. Your passkey requires your device's biometric verification, PIN, or security-key confirmation.</p>
+<p>Choose a passkey or an authenticator app. If you are enrolling an app for the first time, scan the QR code and confirm one code. After enrollment, you do not need to confirm that same code again.</p>
 <div role="status" aria-live="polite" class="state" id="status">Checking your account security…</div>
+<div id="mfa-success" class="state" hidden>
+ <strong id="mfa-success-title">Authenticator verified successfully.</strong>
+ <p id="mfa-success-note">Your MFA setup is complete. You can continue to the dashboard now. When you next sign in, use a fresh six-digit code.</p>
+ <a href="/dashboard" id="mfa-continue" style="display:inline-block;background:#65349e;color:white;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:9px">Continue to dashboard</a>
+</div>
 <div class="actions"><section class="panel"><h2>Verify your passkey</h2>
 <p>Verify again when accessing sensitive administrative controls.</p>
 <button id="verify" type="button">Verify passkey</button></section>
