@@ -10,9 +10,8 @@ export function isApprovedManagedStagingUrl(raw) {
     const parsed=new URL(raw);
     const host=parsed.hostname.toLowerCase();
     const exactHost=host===RENDER_STAGING_DB_ID;
-    const regionalHost=host.startsWith(RENDER_STAGING_DB_ID+'.') &&
-      host.endsWith('.render.com');
-    return parsed.protocol==='postgresql:' &&
+    const regionalHost=host===RENDER_STAGING_DB_ID+'.frankfurt-postgres.render.com';
+    return ['postgresql:','postgres:'].includes(parsed.protocol) &&
       (exactHost || regionalHost) &&
       parsed.pathname==='/'+RENDER_STAGING_DB_NAME &&
       !!parsed.username && !!parsed.password &&
