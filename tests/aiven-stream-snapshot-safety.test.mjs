@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
+import { spawnSync } from 'node:child_process';
 
 const script = readFileSync(new URL('../scripts/aiven-stream-snapshot.sh', import.meta.url), 'utf8');
 
@@ -44,4 +45,27 @@ test('copy validates table and row counts and never switches application traffic
   assert.match(script, /checked.*source_tables/);
   assert.doesNotMatch(script, /done < <\(sql DR_SOURCE_DATABASE_URL/);
   assert.doesNotMatch(script, /render deploy|trigger_deploy|update_environment_variables/);
+});
+
+
+test('default invocation has no network or database prerequisites', () => {
+  const result = spawnSync('bash', ['scripts/aiven-stream-snapshot.sh'], {
+    cwd: new URL('..', import.meta.url),
+    env: { PATH: process.env.PATH ?? '' },
+    encoding: 'utf8',
+    timeout: 5000,
+  });
+  assert.equal(result.status, 0);
+  assert.match(result.stdout, /NO-OP/);
+});
+
+test('explicit execution fails before any connection without operator approvals', () => {
+  const result = spawnSync('bash', ['scripts/aiven-stream-snapshot.sh', '--execute'], {
+    cwd: new URL('..', import.meta.url),
+    env: { PATH: process.env.PATH ?? '' },
+    encoding: 'utf8',
+    timeout: 5000,
+  });
+  assert.equal(result.status, 2);
+  assert.match(result.stderr, /AIVEN_SOURCE_CONFIRMED/);
 });
