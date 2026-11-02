@@ -3,6 +3,30 @@
 Status: **temporary synthetic staging, not suitable for persistent passkey acceptance**. Render free services may sleep after 15 minutes without inbound traffic and take around one minute to wake. The loopback PostgreSQL database is stored on the service's ephemeral filesystem and is LOST on every spin-down/restart/redeploy, including previously enrolled passkeys. Automated CI is green, but multi-session hardware acceptance requires durable staging storage.
 This environment is not production and must never use production data, tokens, accounts or credentials.
 
+## Prepared managed PostgreSQL cutover — NOT YET APPLIED (2026-11-02)
+
+**The free Render database already exists and is available**: `newchanges-mfa-synthetic-staging-db`, Frankfurt, ID `dpg-dbib30142hec73cus92g-a`, expiry 2026-11-29. Its external IP allowlist is empty; do not enable public connections. The remote Render connector can't read its internal connection string, and cannot apply/sync Render Blueprints. It cannot directly query this database because external access is blocked.
+
+A separate, **staging-only** `render.mfa-staging.yaml` Blueprint has been prepared in this branch. It references the **existing** database through `DATABASE_URL.fromDatabase.name: newchanges-mfa-synthetic-staging-db` and `property: connectionString`; no username, password or URL is committed. The file defines no `databases` and does not include the production standby service.
+
+The Blueprint changes the existing staging application's modes **together**:
+- `MFA_STAGING_LOCAL_EPHEMERAL_DB=false`
+- `MFA_STAGING_MANAGED_DB=true`
+- `DATABASE_URL` injected privately by Render via `fromDatabase`
+- All synthetic-only/standby flags stay enabled; staging MFA enforcement stays independently approved
+- The three synthetic account passwords, enrollment grants and independent Basic access password remain in the **existing staging service environment**, not in source control
+
+**One-time action required in Render (no available connector can perform Blueprint sync):**
+
+1. Open Render Dashboard → Blueprints → New Blueprint, select repository `CayelaemJ/NewChanges`, branch `chore/manual-self-hosted-docker-ci-20261029`, and choose the Blueprint file path **`render.mfa-staging.yaml`** rather than the repository's production `render.yaml`.
+2. Set **Auto Sync = No**. Carefully inspect the proposed changes **before** applying them. The update should target only existing web service `srv-dbib5261egvs73e466a0` and existing database `dpg-dbib30142hec73cus92g-a`. **If it proposes creating a second web service, a new DB, changing `newchanges-standby`, a paid plan, or a different region, STOP.** A newly created Blueprint may suffix duplicate names; do not approve a duplicate.
+3. Once the diff is confirmed safe and the latest Docker CI passes, apply one controlled sync. Render should resolve the internal DB connection itself, without exposing the password.
+4. Review the staging service logs for `Synthetic MFA staging started with restricted access.` and Fastify startup, plus `/health` and `/ready` (readiness may require the separate staging Basic gate). Do not regard a `Live` badge alone as proof the DB is reachable.
+5. Perform passkey enrollment with the synthetic users, then allow the **free web service** to sleep and wake. Confirm the previously enrolled passkey remains registered **without re-enrollment**. Test both superadmin approvals and third-target recovery.
+6. Never enable production enforcement or change its database. The free managed DB persists through web service sleep, **but it expires on 2026-11-29**, so do not use it for permanent customer data.
+
+**Current live staging remains on the older, disposable local PostgreSQL mode until this manual Blueprint review and sync completes.** The dedicated, safety-checked managed-DB startup and fixture seeder are committed but not yet validated on the hosted environment.
+
 ## Render free service caveat and one-time wake-up
 
 Official Render free-tier behavior: after 15 minutes idle, a free web service spins down; the next incoming HTTP request can take around a minute to wake it. The container filesystem is not persistent across spin-downs. This staging service's **embedded PostgreSQL is on that filesystem**, so wake-up may recreate all three synthetic users and invalidate previous passkey enrollment.
