@@ -48,7 +48,7 @@
     "check:frontend:typecheck": "tsc -p frontend/tsconfig.json --noEmit",
     "check:daily-refresh": "node scripts/daily-refresh-regression-check.mjs",
     "check:neon-egress": "node scripts/neon-egress-regression-check.mjs",
-    "check:aiven-migration": "node --test tests/aiven-pg17-local-schema-safety.test.mjs tests/aiven-stream-snapshot-safety.test.mjs",
+    "check:aiven-migration": "node --test tests/aiven-pg17-local-schema-safety.test.mjs tests/aiven-pg18-local-schema-safety.test.mjs tests/aiven-stream-snapshot-safety.test.mjs",
     "check:source-sync-safety": "node scripts/source-sync-safety-regression-check.mjs",
     "check:semantic-planner": "tsx tests/semantic-refresh-planner.test.ts && tsx tests/semantic-refresh-pipeline-contract.test.ts && tsx tests/semantic-publication-ordering.test.ts && tsx tests/semantic-publication-cursor.test.ts && tsx tests/semantic-queue-wake.test.ts && tsx tests/semantic-notification-delivery.test.ts && tsx tests/semantic-latency-budget.test.ts && tsx tests/semantic-synthetic-score-prediction.test.ts && node scripts/semantic-e2e-fixture-safety-check.mjs",
     "semantic:shadow:once": "tsx scripts/run-semantic-shadow-worker.ts",
