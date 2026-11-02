@@ -92,17 +92,24 @@ restored_tables="$(sql DR_TARGET_DATABASE_URL "SELECT count(*) FROM pg_tables WH
 [[ "$restored_tables" == "$source_tables" ]] ||
   { echo 'FAIL: restored public table count mismatch.' >&2; exit 3; }
 
-# Row-count scan: reads and counts only; no data returned to the terminal.
+# Count-table enumeration must itself succeed. Process substitution hides query
+# failures, so use a checked command substitution before iterating.
+tables_to_check="$(sql DR_SOURCE_DATABASE_URL "SELECT format('%I.%I',schemaname,tablename) FROM pg_tables WHERE schemaname='public' ORDER BY tablename")"
+[[ -n "$tables_to_check" ]] || { echo 'FAIL: could not enumerate source tables.' >&2; exit 3; }
 mismatches=0
+checked=0
 while IFS= read -r table; do
   [[ -n "$table" ]] || continue
   before="$(sql DR_SOURCE_DATABASE_URL "SELECT count(*) FROM $table")"
   after="$(sql DR_TARGET_DATABASE_URL "SELECT count(*) FROM $table")"
+  checked=$((checked+1))
   if [[ "$before" != "$after" ]]; then
     mismatches=$((mismatches+1))
     echo "ROW COUNT MISMATCH: $table" >&2
   fi
-done < <(sql DR_SOURCE_DATABASE_URL "SELECT format('%I.%I',schemaname,tablename) FROM pg_tables WHERE schemaname='public' ORDER BY tablename")
+done <<< "$tables_to_check"
+[[ "$checked" == "$source_tables" ]] ||
+  { echo "FAIL: checked table count differs from source table count." >&2; exit 3; }
 [[ "$mismatches" == 0 ]] ||
   { echo "FAIL: $mismatches table counts do not match." >&2; exit 3; }
 
