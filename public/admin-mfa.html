@@ -41,7 +41,9 @@ footer{font-size:13px;margin:20px 3px;color:#625773}
 <section class="panel" id="totp-panel" hidden aria-labelledby="totp-title" style="margin-top:22px">
 <h2 id="totp-title">Set up an authenticator app</h2>
 <p>Use Google Authenticator, Microsoft Authenticator, or any TOTP-compatible app. Scan the QR code shown on this page and enter its six-digit code to confirm setup.</p>
-<p id="totp-state">Authenticator app setup is available.</p>
+<p id="totp-state">Authenticator app setup is available. First-time enrollment requires an approved one-time grant from your security administrator.</p>
+<label for="totp-grant">One-time MFA setup grant</label>
+<input id="totp-grant" type="password" maxlength="128" autocomplete="off" spellcheck="false" placeholder="43-character enrollment grant">
 <button id="totp-start" type="button">Show QR code to scan</button>
 <div id="totp-setup" hidden>
 <p><strong>1. Scan this QR code</strong> with your authenticator app's <em>Add account → Scan QR code</em> option.</p>
