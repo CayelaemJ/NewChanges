@@ -8,6 +8,7 @@ test('password login returns MFA-required routing for administrative accounts on
  assert.match(server,/next: MFA_ENFORCE && isAdminRole\(result\.user\) \? "\/mfa"/);
  assert.match(login,/if\(d\.mfaRequired===true && d\.next==='\/mfa'\)/);
  assert.match(login,/location\.assign\('\/mfa'\)/);
+ assert.doesNotMatch(login,/addEventListener\('keydown',\s*e\s*=>\s*\{\s*if\(e\.key==='Enter'\) signIn\(\)/);
 });
 test('browser pages cannot bypass passkey step-up after password login',()=>{
  const dashboard=server.slice(server.indexOf('app.get("/dashboard"'),server.indexOf('app.get("/admin"'));
