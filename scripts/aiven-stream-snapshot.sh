@@ -17,6 +17,8 @@ require_approval() {
     exit 2
   fi
 }
+require_approval AIVEN_SOURCE_CONFIRMED
+require_approval AIVEN_FREE_PLAN_VERIFIED
 require_approval AIVEN_BACKUP_VERIFIED
 require_approval AIVEN_EXTENSION_REVIEWED
 require_approval AIVEN_CROSS_BORDER_APPROVED
