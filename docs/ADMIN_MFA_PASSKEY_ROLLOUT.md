@@ -44,6 +44,19 @@ The protected `/mfa` page now shows the recovery request and approval controls o
 
 This route provides no self-service bypass. If fewer than two passkey-verified superadmins remain available, this workflow cannot recover the account. A separate out-of-band emergency recovery procedure, authorised and tested by the business, is required before production MFA enforcement. Identity checks and secure code delivery are human operational controls, not automatically verified by the API. Rollout remains opt-in and disabled by default.
 
+## Expanded automated acceptance coverage (2026-11-02)
+The staging branch now includes `scripts/admin-mfa-live-http-e2e.mjs`, executed by the local-only Docker suite **after** schema setup on the disposable `newchanges_ci` PostgreSQL instance. It launches the actual Fastify application on loopback and uses a Chromium CTAP2 virtual authenticator, not mock verification flags. It tests:
+
+- Synthetic SUPERADMIN password login and initial privileged access denial until MFA is verified
+- Signed WebAuthn passkey registration, re-authentication and server-persisted elevated sessions
+- A first verified SUPERADMIN requesting recovery, and refusal of that same approver's approval
+- Approval by a different verified SUPERADMIN, one-time request consumption and credential revocation
+- Replacement passkey enrollment for a third synthetic ADMIN using a fresh one-time recovery grant
+
+The executable test refuses every database except `postgresql://ci_fixture:ci_fixture@127.0.0.1:5432/newchanges_ci` with explicit CI safeguards; it does not use real customer data or hardware keys. **A successful staging Docker build alone does not prove this HTTP test passed.** It must pass the complete self-hosted CI after these changes.
+
+The Render synthetic preview has three accounts for interactive physical-device testing (two approvers and a distinct recovery target). The preview's loopback database is intentionally ephemeral; every redeploy or restart can invalidate existing passkeys.
+
 ## Before staging acceptance
 1. **Completed:** `@simplewebauthn/server@14.0.3` is pinned in both committed npm-generated dependency files. Validate clean-checkout reproducibility with **Prepare MFA lock unchecked**.
 2. Run the signed synthetic registration/authentication test and the full isolated Docker CI.
