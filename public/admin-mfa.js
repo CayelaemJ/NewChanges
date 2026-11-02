@@ -78,7 +78,7 @@ async function refresh(){
   if(passkeyActions)passkeyActions.hidden=!!state.verified ||
     (!!passkeyVerify?.hidden && !!passkeyEnroll?.hidden);
   document.getElementById('totp-grant').hidden=!!state.totpEnrolled || !!state.verified;
-  const totpGrantLabel=document.querySelector('label[for="totp-grant"]');
+  const totpGrantLabel=document.querySelector?.('label[for="totp-grant"]');
   if(totpGrantLabel)totpGrantLabel.hidden=!!state.totpEnrolled || !!state.verified;
   document.getElementById('totp-panel').hidden=!state.totpAvailable || !!state.verified;
   document.getElementById('totp-state').textContent=state.totpEnrolled
