@@ -30,6 +30,7 @@ test('snapshot streams exactly once without destructive operations or dumps on d
   assert.match(script, /--format=custom/);
   assert.match(script, /--exclude-extension=pg_session_jwt/);
   assert.match(script, /--exit-on-error/);
+  assert.match(script, /--single-transaction/);
   assert.doesNotMatch(script, /--clean|--force-reset|DROP DATABASE|CREATE DATABASE|while true|--jobs=/);
   assert.doesNotMatch(script, /AVNS_[A-Za-z0-9]+|postgres:\/\/avnadmin:/);
 });
