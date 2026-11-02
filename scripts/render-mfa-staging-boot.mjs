@@ -6,9 +6,8 @@ import {createServer} from 'node:http';
 import {readdirSync,mkdtempSync,readFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
+import {approvedStagingDatabaseEnvironment,EPHEMERAL_STAGING_URL} from './mfa-staging-db-target.mjs';
 
-const expectedHost='dpg-dbib30142hec73cus92g-a';
-const expectedDatabase='newchanges_mfa_synthetic_staging_db';
 const expectedOrigin='https://newchanges-mfa-isolated-staging.onrender.com';
 const expectedRpId='newchanges-mfa-isolated-staging.onrender.com';
 const port=Number(process.env.PORT||3000);
@@ -31,19 +30,14 @@ function safeConfig(){
  if(!gate || Buffer.byteLength(gate,'utf8')<24 ||
     Buffer.byteLength(gate,'utf8')>256) return false;
  if(localMode){
-   // A staging container must not inherit ANY external database connection.
-   // The only connection is generated below after starting loopback Postgres.
-   return !process.env.DATABASE_URL && process.env.NODE_ENV==='production';
+   // The disposable local DB URL exists only after initdb has completed.
+   return !process.env.DATABASE_URL &&
+     process.env.MFA_STAGING_MANAGED_DB!=='true' &&
+     process.env.NODE_ENV==='production';
  }
- const raw=process.env.DATABASE_URL;
- if(!raw)return false;
- try{
-  const u=new URL(raw),hostname=u.hostname.toLowerCase();
-  return ['postgresql:','postgres:'].includes(u.protocol) &&
-    decodeURIComponent(u.pathname)==='/'+expectedDatabase &&
-    (hostname===expectedHost ||
-     (hostname.startsWith(expectedHost+'.') && hostname.endsWith('.render.com')));
- }catch{return false}
+ // The managed database must match this exact separately provisioned Render
+ // staging database, with explicit mutually-exclusive mode switches.
+ return approvedStagingDatabaseEnvironment(process.env);
 }
 
 function locked(message){
@@ -106,8 +100,7 @@ function startDisposablePostgres(){
     PGPORT:localPort,PGUSER:'node',PGPASSWORD:''};
  if(!run(bin+'createdb',['-h','127.0.0.1','-p',localPort,
     '-U','node',localDatabase],pgEnv,true))return false;
- process.env.DATABASE_URL='postgresql://node@127.0.0.1:'+
-    localPort+'/'+localDatabase;
+ process.env.DATABASE_URL=EPHEMERAL_STAGING_URL;
  return true;
 }
 
