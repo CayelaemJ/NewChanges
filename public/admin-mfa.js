@@ -69,6 +69,21 @@ async function refresh(){
   document.getElementById('recovery').hidden=!state.canManageRecovery;
   document.getElementById('totp-panel').hidden=!state.totpAvailable;
   document.getElementById('totp-start').hidden=!!state.totpEnrolled;
+  // Only show the next relevant action. The server remains authoritative.
+  const passkeyVerify=document.getElementById('mfa-passkey-verify-panel');
+  const passkeyEnroll=document.getElementById('mfa-passkey-enroll-panel');
+  const passkeyActions=document.getElementById('mfa-passkey-actions');
+  if(passkeyVerify)passkeyVerify.hidden=!!state.verified || !state.passkeyEnrolled;
+  if(passkeyEnroll)passkeyEnroll.hidden=!!state.verified || !!state.passkeyEnrolled;
+  if(passkeyActions)passkeyActions.hidden=!!state.verified ||
+    (!!passkeyVerify?.hidden && !!passkeyEnroll?.hidden);
+  document.getElementById('totp-grant').hidden=!!state.totpEnrolled || !!state.verified;
+  const totpGrantLabel=document.querySelector('label[for="totp-grant"]');
+  if(totpGrantLabel)totpGrantLabel.hidden=!!state.totpEnrolled || !!state.verified;
+  document.getElementById('totp-panel').hidden=!state.totpAvailable || !!state.verified;
+  document.getElementById('totp-state').textContent=state.totpEnrolled
+    ? 'Use a fresh six-digit code from your authenticator app to continue.'
+    : 'Scan the setup QR using your approved one-time enrollment grant.';
   // The setup code was already consumed by confirmation. Never prompt the
   // user to verify it again on the same freshly elevated session.
   document.getElementById('totp-verify-panel').hidden=!state.totpEnrolled || !!state.verified;
