@@ -8,7 +8,9 @@ import { hashPassword } from '../dist/services/authService.js';
 const guard = process.env.MFA_STAGING_ONLY==='true' &&
   process.env.MFA_STAGING_SYNTHETIC_ONLY==='true' &&
   process.env.STANDBY_MODE==='true' &&
-  process.env.ADMIN_MFA_ENFORCE==='false' &&
+  (process.env.ADMIN_MFA_ENFORCE==='false' ||
+    (process.env.ADMIN_MFA_ENFORCE==='true' &&
+     process.env.MFA_STAGING_ENFORCEMENT_APPROVED==='true')) &&
   process.env.MFA_STAGING_LOCAL_EPHEMERAL_DB==='true' &&
   process.env.DATABASE_URL==='postgresql://node@127.0.0.1:55432/newchanges_mfa_ephemeral';
 
