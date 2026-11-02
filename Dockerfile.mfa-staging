@@ -12,6 +12,7 @@ RUN npm run build \
     && node --check public/admin-mfa.js \
     && node --check public/staging-access.js \
     && node --import tsx --test tests/security/mfa-staging-access.test.ts \
+    && node --test tests/security/mfa-login-navigation.test.mjs \
     && node --test tests/security/admin-mfa-browser-compat.test.mjs \
     && npm prune --omit=dev
 
