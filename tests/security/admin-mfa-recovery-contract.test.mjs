@@ -17,7 +17,7 @@ test('recovery requests persist distinct initiator, approver and target ownershi
 test('both phases require a passkey-verified superadmin',()=>{
  assert.match(routes,/\/api\/admin\/mfa\/recovery\/request/);
  assert.match(routes,/\/api\/admin\/mfa\/recovery\/:id\/approve/);
- const guard = "session.user.role!=='SUPERADMIN' || !await hasFreshAdminMfa(req,session.userId)";
+ const guard = "session.user.role!=='SUPERADMIN' || !await hasFreshAdminMfa(req,session.userId,'PASSKEY')";
  assert.equal(routes.split(guard).length-1,2);
 });
 test('prevents target self-approval, single-approver bypass and stale recovery',()=>{
@@ -46,7 +46,7 @@ test('recovery controls are restricted to an MFA-verified superadmin and never s
  const client=readFileSync('public/admin-mfa.js','utf8');
  assert.match(page,/id="recovery" hidden/);
  assert.match(client,/\.hidden=!state\.canManageRecovery/);
- assert.match(routes,/canManageRecovery:verified && session\.user\.role==='SUPERADMIN'/);
+ assert.match(routes,/canManageRecovery:passkeyVerified && session\.user\.role==='SUPERADMIN'/);
  assert.match(client,/output\.textContent=/);
  assert.doesNotMatch(client,/localStorage\.[\s\S]*grantCode/);
  assert.doesNotMatch(client,/sessionStorage\.[\s\S]*grantCode/);
