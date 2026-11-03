@@ -99,6 +99,9 @@ export async function uploadAndValidate(opts: {
   const batch = await prisma.importBatch.create({
     data: { reportKey: opts.reportKey, filename: opts.filename, fileFormat, status: "UPLOADED", uploadedBy: opts.uploadedBy },
   });
+  // Failed streaming must never leave partial staged rows approved for later use.
+  // Keep the FAILED audit record, but remove its uncommitted chunk rows.
+  try {
   const writeChunkToDb = await chunkedRowWriter(batch.id);
   const seenNaturalKeys = new Set<string>();
   const deferredErrors: CellError[] = [];
@@ -172,6 +175,21 @@ export async function uploadAndValidate(opts: {
   });
 
   return { batch: updated, result };
+  } catch (error) {
+    // A connection outage may also prevent cleanup. Fail closed regardless:
+    // a batch left UPLOADED cannot be committed by commitBatch.
+    await prisma.importBatchRow.deleteMany({ where: { batchId: batch.id } }).catch(() => {});
+    await prisma.importBatch.update({
+      where: { id: batch.id },
+      data: {
+        status: "FAILED",
+        errorCount: 1,
+        errors: { cellErrors: [], missingColumns: [], unknownColumns: [],
+          message: "File ingestion aborted before validation completed" },
+      },
+    }).catch(() => {});
+    throw error;
+  }
 }
 
 // Processes one bounded chunk of staged rows inside its own transaction.
