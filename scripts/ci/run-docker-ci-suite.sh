@@ -11,6 +11,7 @@ esac
 [ "${ENABLE_SEMANTIC_OBJECT_PUBLISH:-}" = "false" ] || exit 2
 [ "${ENABLE_SEMANTIC_SHADOW_WORKER:-}" = "false" ] || exit 2
 run() { echo ">>> RUN $1"; "$@"; echo "<<< PASS $1"; }
+run node scripts/ci/network-isolation-ci.mjs
 run npm run quality:lint
 run node scripts/password-form-contract-check.mjs
 run npm run quality:types
@@ -35,7 +36,7 @@ run npm run check:security-identity
 run npm run check:security-operations
 run npm run check:security-governance
 run npm run check:source-sync-safety
-run node --import tsx --test tests/ci/ingestion-faults.test.ts
+run node --import tsx --test tests/ci/ingestion-faults.test.ts tests/ci/adversarial-import-inputs.test.ts
 run npm run check:accessibility
 run npm run check:performance
 run npm run check:semantic-planner
