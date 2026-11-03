@@ -240,6 +240,23 @@ try{
  assert.equal(pre.status(),403,'Privileged recovery must fail before passkey');
  assert.equal((await pre.json()).code,'MFA_REQUIRED','Refusal must be MFA step-up, not CSRF');
  await enroll(A,users[0].grant);
+ // Simulate a pre-existing superadmin whose MFA predates recovery keys.
+ await prisma.adminMfaRecoveryCode.delete({where:{userId:users[0].id}});
+ const legacyBlocked=await A.ctx.request.get('/dashboard',{maxRedirects:0});
+ assert.equal(legacyBlocked.status(),302,'Superadmin missing key is redirected to MFA setup');
+ assert.equal(legacyBlocked.headers().location,'/mfa');
+ const noKeyApi=await postFrom(A.ctx,'/api/admin/mfa/recovery/request',
+   {targetUserId:users[2].id});
+ assert.equal(noKeyApi.status(),403,'Admin API denies missing recovery key');
+ assert.equal((await noKeyApi.json()).code,'RECOVERY_KEY_REQUIRED');
+ const legacyIssue=await postFrom(A.ctx,'/api/auth/mfa/recovery-key/issue',{});
+ assert.equal(legacyIssue.status(),200,'Existing verified superadmin can obtain first recovery key');
+ const issuedKey=(await legacyIssue.json()).recoveryKey;
+ assert.match(issuedKey,/^[A-Za-z0-9_-]{43}$/);
+ const legacyKey=await prisma.adminMfaRecoveryCode.findUnique({where:{userId:users[0].id}});
+ assert.equal(legacyKey.codeHash,hash(issuedKey),'Recovery key never stored in plaintext');
+ const repeatIssue=await postFrom(A.ctx,'/api/auth/mfa/recovery-key/issue',{});
+ assert.equal(repeatIssue.status(),409,'Recovery key cannot be displayed twice');
  const crossOrigin=await A.ctx.request.post('/api/admin/mfa/recovery/request',{
    data:{targetUserId:users[2].id},headers:{Origin:'https://untrusted.invalid'}
  });
