@@ -134,6 +134,17 @@ async function rotateElevatedSession(tx:any,session:any,now:Date,method:'PASSKEY
   }});
   return token;
 }
+// A user's emergency recovery key is not the TOTP encryption key and is
+// never stored in plaintext. Re-issuance replaces the prior unused key.
+async function issueRecoveryKey(tx:any,userId:string){
+  const key=randomBytes(32).toString('base64url');
+  await tx.adminMfaRecoveryCode.upsert({
+    where:{userId},
+    create:{userId,codeHash:digest(key)},
+    update:{codeHash:digest(key),failedAttempts:0,lockedUntil:null,usedAt:null,createdAt:new Date()},
+  });
+  return key;
+}
 type MfaBody={challenge?:string;response?:any;grantCode?:string};
 export function registerAdminMfaRoutes(app:FastifyInstance) {
   // A password-only administrator can request enrollment, but cannot approve
