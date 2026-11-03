@@ -84,6 +84,10 @@ async function refresh(){
   document.getElementById('totp-title').textContent=state.totpEnrolled
     ? 'Verify with your authenticator app'
     : 'Set up your authenticator app with a QR code';
+  const instructions=document.getElementById('totp-instructions');
+  if(instructions)instructions.textContent=state.totpEnrolled
+    ? 'Open the existing The Fixer entry in Google or Microsoft Authenticator and enter its current six-digit code. You only scan a QR during initial setup.'
+    : 'First time only: request your personal QR code, open Google Authenticator or Microsoft Authenticator, tap Add account and scan the QR. Enter one code to activate the saved account.';
   const totpGrantLabel=document.querySelector?.('label[for="totp-grant"]');
   if(totpGrantLabel)totpGrantLabel.hidden=!!state.totpEnrolled || !!state.verified;
   document.getElementById('totp-panel').hidden=!state.totpAvailable || !!state.verified;
