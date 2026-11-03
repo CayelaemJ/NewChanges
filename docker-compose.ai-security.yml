@@ -9,7 +9,10 @@ services:
       OLLAMA_MODEL: qwen2.5-coder:7b
       SCAN_ROOT: /workspace
       REPORT_DIR: /workspace/test-reports/ai-security
-      MAX_FILES: "25"
+      MAX_FILES: "0"
+      AI_SCAN_CHUNK_CHARS: "5500"
+      AI_SCAN_REQUEST_TIMEOUT: "360"
+      AI_SCAN_RETRIES: "4"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
