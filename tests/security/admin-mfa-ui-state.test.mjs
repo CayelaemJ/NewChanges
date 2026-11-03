@@ -60,10 +60,12 @@ test('returning authenticator-only admin is never asked to re-enter a setup gran
   assert.equal(el('totp-verify-panel').hidden,false);
   assert.match(el('totp-state').textContent,/No setup key or QR scan/i);
 });
-test('first-time authenticator setup offers private QR on demand',async()=>{
+test('first-time authenticator setup offers QR after secure server approval',async()=>{
   const el=await check({enrolled:false,verified:false,passkeyEnrolled:false,totpEnrolled:false,totpAvailable:true,canManageRecovery:false});
-  assert.equal(el('totp-grant').hidden,false);
+  assert.equal(el('totp-grant').hidden,true);
   assert.equal(el('totp-start').hidden,false);
+  assert.equal(el('totp-start').disabled,true);
+  assert.equal(el('mfa-approval-panel').hidden,false);
   assert.equal(el('totp-verify-panel').hidden,true);
   assert.match(el('totp-title').textContent,/QR code/i);
 });
