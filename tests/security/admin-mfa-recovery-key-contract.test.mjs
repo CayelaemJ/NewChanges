@@ -23,7 +23,7 @@ test('server generates recovery key using CSPRNG and stores only hash',()=>{
  assert.match(helper,/randomBytes\(32\)\.toString\('base64url'\)/);
  assert.match(helper,/codeHash:digest\(key\)/);
  assert.doesNotMatch(helper,/codeHash:key[,}]/);
- assert.match(helper,/if\(previous\)return null/);
+ assert.match(helper,/if\(previous && !previous\.usedAt\)return null/);
 });
 test('recovery key is issued only after verified enrollment or fresh MFA',()=>{
  assert.match(routes,/const recoveryKey=await issueRecoveryKey\(tx,session.userId\)/);
@@ -32,7 +32,7 @@ test('recovery key is issued only after verified enrollment or fresh MFA',()=>{
  const end=routes.indexOf("app.post<{Body:MfaBody}>('/api/auth/mfa/register/options'",start);
  const section=routes.slice(start,end);
  assert.match(section,/hasFreshAdminMfa\(req,session.userId\)/);
- assert.match(section,/if\(existing\)return reply\.code\(409\)/);
+ assert.match(section,/if\(existing && !existing\.usedAt\)return reply\.code\(409\)/);
  assert.match(section,/Cache-Control','no-store'/);
  assert.doesNotMatch(section,/return \{ok:true,recoveryKey:existing/);
 });
@@ -68,4 +68,16 @@ test('recovery re-enrollment rotates consumed key but does not leak an existing 
  assert.match(body,/if\(previous && !previous\.usedAt\)return null/);
  assert.match(body,/where:\{id:previous\.id\}/);
  assert.match(body,/data:\{codeHash:digest\(key\),usedAt:null/);
+});
+
+test('previously enrolled superadmins cannot skip one-time recovery-key issuance',()=>{
+ const server=readFileSync('src/server.ts','utf8');
+ assert.match(server,/hasIssuedAdminRecoveryKey/);
+ assert.match(server,/user\.role === "SUPERADMIN"/);
+ assert.match(server,/return reply\.redirect\("\/mfa"\)/);
+ assert.match(js,/mfa-existing-recovery-issue/);
+ assert.match(js,/hasRecoveryKey/);
+ assert.match(js,/recovery-key\/issue/);
+ assert.match(html,/id="mfa-existing-recovery-key"/);
+ assert.match(js,/mfa-continue'\)\.hidden/);
 });
