@@ -37,11 +37,17 @@ jobs:
             http://host.docker.internal:11434/api/tags \
             | python3 -c 'import json,sys; m=json.load(sys.stdin)["models"]; assert any(x.get("name")=="qwen2.5-coder:7b" and not x.get("remote_host") for x in m)'
 
-      - name: Post-deploy full tracked-source inventory (read-only)
+      - name: Observe Render and Cloudflare runtime health over deployment settling window
+        id: health
+        continue-on-error: true
         shell: bash
+        env:
+          FIXER_RENDER_BASE_URL: ${{ vars.FIXER_RENDER_BASE_URL }}
+          FIXER_CLOUDFLARE_BASE_URL: ${{ vars.FIXER_CLOUDFLARE_BASE_URL }}
+          DEPLOYMENT_SHA: ${{ github.event.deployment.sha || github.sha }}
         run: |
           set -Eeuo pipefail
-          python3 scripts/ci/codebase-inventory.py
+          python3 scripts/ci/post-deploy-health.py
 
       - name: Post-deploy full repository deterministic security scan
         id: static
@@ -123,7 +129,7 @@ jobs:
           PY
 
       - name: Mark failed patch tests for approval
-        if: ${{ steps.validate.outcome == 'failure' || steps.auto.outcome == 'failure' || steps.review.outcome == 'failure' || steps.static.outcome == 'failure' }}
+        if: ${{ steps.validate.outcome == 'failure' || steps.auto.outcome == 'failure' || steps.review.outcome == 'failure' || steps.static.outcome == 'failure' || steps.health.outcome == 'failure' }}
         shell: bash
         run: |
           python3 - <<'PY'
@@ -180,14 +186,30 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               title,
-              body: 'A post-deployment local AI security review found an issue outside the permitted small-fix scope, or its tests failed.\n\nPlease review [the workflow run](' + context.serverUrl + '/' + context.repo.owner + '/' + context.repo.repo + '/actions/runs/' + context.runId + ').\n\nNo unreviewed code was merged or deployed. Findings are unverified and kept locally on the runner.'
+              body: 'Post-deployment verification detected an unhealthy or unconfigured health target, a failed security scanner, or an issue outside the permitted AI small-fix scope.\n\nPlease review [the workflow run](' + context.serverUrl + '/' + context.repo.owner + '/' + context.repo.repo + '/actions/runs/' + context.runId + ').\n\nNo unreviewed code was merged or deployed. Findings are unverified and kept locally on the runner.'
             });
+
+      - name: Store sanitized post-deploy health and check evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: newchanges-post-deploy-health-${{ github.run_id }}
+          path: |
+            test-reports/deployment/health.json
+            test-reports/deployment/health.md
+            test-results/security/scanner-status.txt
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Summarize
         if: always()
         shell: bash
         run: |
-          echo "### Post-deployment Ollama review" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Deployment verification: ${{ github.event_name }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Deployment commit: ${{ github.event.deployment.sha || github.sha }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Health over 90-second observation window: ${{ steps.health.outcome }}" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f test-reports/deployment/health.md ]; then cat test-reports/deployment/health.md >> "$GITHUB_STEP_SUMMARY"; fi
+          echo "### Ollama and static security review" >> "$GITHUB_STEP_SUMMARY"
           echo "Static whole-repository scan: ${{ steps.static.outcome }}" >> "$GITHUB_STEP_SUMMARY"
           echo "Scanner result: ${{ steps.review.outcome }}" >> "$GITHUB_STEP_SUMMARY"
           echo "Auto-fix decision: ${{ steps.decision.outputs.status }}" >> "$GITHUB_STEP_SUMMARY"
