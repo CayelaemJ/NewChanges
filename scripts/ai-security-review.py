@@ -43,7 +43,7 @@ def priority(name):
 files = []
 try:
     tracked_paths = [ROOT / part.decode("utf-8", "surrogateescape")
-                     for part in subprocess.check_output(["git", "-C", str(ROOT), "ls-files", "-z"]).split(b"\\0") if part]
+                     for part in subprocess.check_output(["git", "-C", str(ROOT), "ls-files", "-z"]).split(b"\0") if part]
 except (OSError, subprocess.CalledProcessError):
     raise SystemExit("Git tracked-file inventory unavailable; cannot establish scan coverage")
 eligible = 0
