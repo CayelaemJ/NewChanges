@@ -20,6 +20,14 @@ jobs:
     runs-on: [self-hosted, linux, x64, newchanges-ci]
     timeout-minutes: 100
     steps:
+      - name: Verify scanner parser, chunk coverage and retries offline
+        shell: bash
+        run: python3 -m unittest discover -s tests/ci -p 'ollama-scanner-contract.test.py' -v
+
+      - name: Prepare private persistent local model checkpoint cache
+        shell: bash
+        run: install -d -m 700 "$HOME/.cache/the-fixer-ollama"
+
       - name: Checkout trusted main without stored credentials
         uses: actions/checkout@v4
         with:
