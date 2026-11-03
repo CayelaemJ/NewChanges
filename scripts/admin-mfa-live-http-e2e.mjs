@@ -34,6 +34,7 @@ const users=[
  {email:'mfa-e2e-b-'+nonce+'@example.invalid',name:'Synthetic Approver B',role:'SUPERADMIN'},
  {email:'mfa-e2e-target-'+nonce+'@example.invalid',name:'Synthetic Recovery Target',role:'ADMIN'},
  {email:'mfa-e2e-onboard-'+nonce+'@example.invalid',name:'Synthetic First-Time Admin',role:'ADMIN'},
+ {email:'mfa-e2e-onboard-qr-'+nonce+'@example.invalid',name:'Synthetic QR Enrollee',role:'ADMIN'},
 ].map(x=>({...x,password:randomBytes(32).toString('base64url'),
   grant:randomBytes(32).toString('base64url')}));
 let browser;
@@ -242,6 +243,31 @@ try{
  const replayEnrollment=await postFrom(A.ctx,
   '/api/admin/mfa/enrollment/'+enrollment.requestId+'/approve',{identityConfirmed:true});
  assert.equal(replayEnrollment.status(),409,'Consumed authorization cannot be approved again');
+
+ // Prove that the very same invisible authorization also works for QR-based
+ // authenticator enrollment. No 43-character enrollment grant is issued.
+ const Q=await loginAndLoad(users[4]);
+ const qrRequest=await postFrom(Q.ctx,'/api/auth/mfa/enrollment/request',{});
+ assert.equal(qrRequest.status(),200,'Authenticator-only new user can request first-time setup');
+ const qrRequestId=(await qrRequest.json()).requestId;
+ for(const approver of [A,B]){
+   const allowed=await postFrom(approver.ctx,
+     '/api/admin/mfa/enrollment/'+qrRequestId+'/approve',{identityConfirmed:true});
+   assert.equal(allowed.status(),200,'Separate passkey-verified superadmins approve QR enrollment');
+ }
+ const grantFreeQr=await postFrom(Q.ctx,'/api/auth/mfa/totp/setup',{});
+ assert.equal(grantFreeQr.status(),200,'Approved user can generate a QR without any enrollment grant');
+ const qrSecret=await grantFreeQr.json();
+ assert.ok(qrSecret.qrDataUri.startsWith('data:image/svg+xml;base64,'));
+ const qrCode=totpCode(qrSecret.manualKey,Math.floor(Date.now()/30000));
+ const qrConfirmed=await postFrom(Q.ctx,'/api/auth/mfa/totp/confirm',{code:qrCode});
+ assert.equal(qrConfirmed.status(),200,'First authenticator code activates the saved encrypted secret without grant');
+ const qrApproval=await prisma.adminMfaEnrollmentRequest.findUnique({where:{id:qrRequestId}});
+ assert.ok(qrApproval?.consumedAt,'QR enrollment must consume the invisible server approval');
+ const qrRecord=await prisma.adminMfaTotp.findUnique({where:{userId:users[4].id}});
+ assert.ok(qrRecord?.enabledAt && qrRecord.secretCiphertext &&
+   !qrRecord.secretCiphertext.includes(qrSecret.manualKey),
+   'QR enrollment persists ciphertext, not the plaintext authenticator key');
 
  const first=await postFrom(A.ctx,'/api/admin/mfa/recovery/request',{
    targetUserId:users[2].id});
