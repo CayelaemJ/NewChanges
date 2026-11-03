@@ -22,6 +22,7 @@ HELP
   exit 0
 fi
 command -v avn >/dev/null || { echo "Aiven CLI missing. Install it and sign in locally." >&2; exit 2; }
+command -v python3 >/dev/null || { echo "Python 3 is required to verify the Aiven task JSON." >&2; exit 2; }
 
 if [[ "$1" == "--check" ]]; then
   echo 'Requesting Aiven PostgreSQL 18 compatibility check on the existing service.'
