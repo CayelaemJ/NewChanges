@@ -67,3 +67,12 @@ test('first-time authenticator setup offers private QR on demand',async()=>{
   assert.equal(el('totp-verify-panel').hidden,true);
   assert.match(el('totp-title').textContent,/QR code/i);
 });
+
+test('passkey enrollment clearly explains device-native PIN and biometric options',()=>{
+ assert.match(html,/Windows Hello/);
+ assert.match(html,/Face ID/);
+ assert.match(html,/Touch ID/);
+ assert.match(html,/FIDO2/);
+ assert.match(html,/The Fixer never receives your PIN or biometric data/);
+ assert.match(html,/id="enroll" type="button">Set up device passkey/);
+});
