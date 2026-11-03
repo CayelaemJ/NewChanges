@@ -582,6 +582,10 @@ app.get("/login", async (_req, reply) => serveHtml(reply, "login.html"));
 app.get("/mfa", async (req, reply) => {
   const user = await currentUser(req);
   if (!user || !isAdminRole(user)) return reply.redirect("/login");
+  // This is a second-factor step, not a landing page. After successful
+  // authentication there is no reason to present enrollment again.
+  if (MFA_ENFORCE && await hasFreshAdminMfa(req, user.id))
+    return reply.redirect("/dashboard");
   return serveHtml(reply, "admin-mfa.html");
 });
 app.get("/set-password", async (_req, reply) => serveHtml(reply, "set-password.html"));
