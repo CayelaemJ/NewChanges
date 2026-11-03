@@ -62,9 +62,9 @@ FINDINGS_SCHEMA = {
                 "properties": {
                     "severity": {"type": "string", "enum": ["critical", "high", "medium", "low"]},
                     "line": {"type": "integer"},
-                    "title": {"type": "string"},
-                    "evidence": {"type": "string"},
-                    "recommendation": {"type": "string"}
+                    "title": {"type": "string", "maxLength": 150},
+                    "evidence": {"type": "string", "maxLength": 150},
+                    "recommendation": {"type": "string", "maxLength": 150}
                 },
                 "required": ["severity", "line", "title", "evidence", "recommendation"],
                 "additionalProperties": False
@@ -186,6 +186,8 @@ def ask_model(name, start, end, block):
             if envelope.get("done_reason") == "length":
                 raise ValueError("Model response truncated by output length")
             candidates = parse_answer(envelope["response"])
+            if len(candidates) > 4:
+                raise ValueError("Model returned more than four findings")
             valid = []
             for item in candidates:
                 if not isinstance(item, dict):
@@ -196,12 +198,13 @@ def ask_model(name, start, end, block):
                 severity = str(item.get("severity", "")).lower()
                 if severity not in ("critical", "high", "medium", "low"):
                     raise ValueError("Finding missing severity")
-                valid.append({
-                    "file": name, "line": line, "severity": severity,
-                    "title": str(item.get("title", ""))[:300],
-                    "evidence": str(item.get("evidence", ""))[:1200],
-                    "recommendation": str(item.get("recommendation", ""))[:1200]
-                })
+                fields = {}
+                for field in ("title", "evidence", "recommendation"):
+                    value = item.get(field)
+                    if not isinstance(value, str) or not value.strip() or len(value) > 150:
+                        raise ValueError(f"Finding has invalid {field}")
+                    fields[field] = value
+                valid.append({"file": name, "line": line, "severity": severity, **fields})
             return valid, attempt
         except (HTTPError, URLError, TimeoutError, OSError, ValueError, KeyError,
                 json.JSONDecodeError) as exc:
