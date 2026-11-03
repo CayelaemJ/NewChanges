@@ -113,8 +113,8 @@ jobs:
               pg_dump -U ci_fixture -d newchanges_ci -Fc -f /tmp/ci-backup.dump
               createdb -U ci_fixture newchanges_ci_restore
               pg_restore -U ci_fixture -d newchanges_ci_restore --no-owner --no-acl --exit-on-error /tmp/ci-backup.dump
-              original=$(psql -U ci_fixture -d newchanges_ci -tA -c "SELECT count(*) FROM pg_tables WHERE schemaname=\x27public\x27")
-              restored=$(psql -U ci_fixture -d newchanges_ci_restore -tA -c "SELECT count(*) FROM pg_tables WHERE schemaname=\x27public\x27")
+              original=$(psql -U ci_fixture -d newchanges_ci -tA -c "SELECT count(*) FROM pg_tables WHERE schemaname=current_schema()")
+              restored=$(psql -U ci_fixture -d newchanges_ci_restore -tA -c "SELECT count(*) FROM pg_tables WHERE schemaname=current_schema()")
               test "$original" -ge 20
               test "$original" = "$restored"
               echo "PASS disposable pg_dump/pg_restore: $original public tables matched"
