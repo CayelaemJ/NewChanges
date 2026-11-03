@@ -280,10 +280,10 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
       where:{userId:session.userId},select:{enabledAt:true}
     }) : null;
     const passkeyVerified=await hasFreshAdminMfa(req,session.userId,'PASSKEY');
-    const recoveryKey=await prisma.adminMfaRecoveryCode.findUnique({where:{userId:session.userId},select:{id:true}});
+    const recoveryKey=await prisma.adminMfaRecoveryCode.findUnique({where:{userId:session.userId},select:{usedAt:true}});
     return {configured:Boolean(mfaConfig()),enrolled:count>0 || Boolean(totp?.enabledAt),
       credentialCount:count,passkeyEnrolled:count>0,totpAvailable:totpIsEnabled(),
-      totpEnrolled:Boolean(totp?.enabledAt),verified,hasRecoveryKey:Boolean(recoveryKey),
+      totpEnrolled:Boolean(totp?.enabledAt),verified,hasRecoveryKey:Boolean(recoveryKey && !recoveryKey.usedAt),
       verificationMethod:session.mfaVerifiedAt && verified ? session.mfaMethod:null,
       canManageRecovery:passkeyVerified && session.user.role==='SUPERADMIN'};
   });
@@ -299,8 +299,8 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
     ]);
     if(!enrolled[0] && !enrolled[1]?.enabledAt)
       return reply.code(409).send({error:'Enroll MFA first'});
-    const existing=await prisma.adminMfaRecoveryCode.findUnique({where:{userId:session.userId},select:{id:true}});
-    if(existing)return reply.code(409).send({error:'A recovery key is already issued; it cannot be viewed again'});
+    const existing=await prisma.adminMfaRecoveryCode.findUnique({where:{userId:session.userId},select:{id:true,usedAt:true}});
+    if(existing && !existing.usedAt)return reply.code(409).send({error:'A recovery key is already issued; it cannot be viewed again'});
     try{
       const key=await prisma.$transaction(async tx=>{
         const issued=await issueRecoveryKey(tx,session.userId);
