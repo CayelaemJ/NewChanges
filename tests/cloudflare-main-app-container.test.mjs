@@ -6,7 +6,7 @@ const mainHost="newchanges.example.org";
 const base={NEWCHANGES_CANONICAL_HOST:mainHost,NEWCHANGES_BACKEND_ENABLED:"true",
   NEWCHANGES_NEON_DATABASE_URL:"synthetic-secret-never-used",NEWCHANGES_MAIN:{getByName(){return {fetch(){}}}}};
 const verified={database_name:"newchanges",role_name:"newchanges_application_reader",is_superuser:false,can_create_database:false,
- can_create_roles:false,bypasses_rls:false,member_superuser:false,member_application_owner:false,
+ can_create_roles:false,bypasses_rls:false,member_superuser:false,member_privileged_role:false,member_application_owner:false,
  can_create_database_objects:false,can_create_public_objects:false,can_read_session:true,can_read_employer:true,
  can_write_session:false,can_write_any_public_table:false,can_use_or_update_public_sequence:false};
 
@@ -35,7 +35,7 @@ test("ingest and report write leadership requires four independent flags",()=>{
 test("Neon connection role must be truly read only for migration staging",()=>{
  assert.equal(verifyDatabaseIdentity(verified).ok,true);
  for(const change of [{role_name:"newchanges_cf_migration_reader"},{role_name:"newchanges_owner"},
- {member_superuser:true},{can_create_roles:true},{can_create_database:true},
+ {member_superuser:true},{member_privileged_role:true},{can_create_roles:true},{can_create_database:true},
  {can_write_session:true},{member_application_owner:true},{bypasses_rls:true},
  {can_create_database_objects:true},{can_create_public_objects:true},{can_write_any_public_table:true},
  {can_use_or_update_public_sequence:true},{database_name:"other"},{can_read_session:false},{can_read_employer:false}]){
