@@ -79,20 +79,6 @@ jobs:
             -v "$PWD:/workspace:ro" -w /workspace node:24-slim \
             node --test tests/ci-docker-isolation.test.mjs
 
-      - name: Optional security scanners (requires pre-cached images and advisory access)
-        if: ${{ inputs.run_security_scanners == true }}
-        shell: bash
-        run: bash scripts/ci/run-security-scanners.sh
-
-      - name: Upload safe security status report
-        if: ${{ always() && inputs.run_security_scanners == true }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: newchanges-security-status-${{ github.run_id }}
-          path: test-results/security/scanner-status.txt
-          if-no-files-found: warn
-          retention-days: 7
-
       - name: Build and run synthetic Docker tests
         shell: bash
         run: |
@@ -145,6 +131,20 @@ jobs:
               test "$original" = "$restored"
               echo "PASS disposable pg_dump/pg_restore: $original public tables matched"
             '
+
+      - name: Security scanners (requires pre-cached images and advisory access)
+        if: ${{ always() && inputs.run_security_scanners == true }}
+        shell: bash
+        run: bash scripts/ci/run-security-scanners.sh
+
+      - name: Upload safe security status report
+        if: ${{ always() && inputs.run_security_scanners == true }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: newchanges-security-status-${{ github.run_id }}
+          path: test-results/security/scanner-status.txt
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Extract isolated Docker test evidence
         if: always()
