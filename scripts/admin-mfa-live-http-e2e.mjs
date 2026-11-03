@@ -168,6 +168,26 @@ try{
    'Separate database read must retain the encrypted enabled MFA seed');
 
  const A=await loginAndLoad(users[0]);
+ // Real Fastify HTTP authorization checks against synthetic sessions.
+ // A password-only superadmin must not access protected business API reads
+ // or use a guessed privileged mutation URL.
+ for(const endpoint of ['/api/admin/reports','/api/users','/api/admin/integration']){
+   const response=await A.ctx.request.get(endpoint,{maxRedirects:0});
+   assert.equal(response.status(),403,'Unverified admin must not read '+endpoint);
+   const denied=await response.json();
+   assert.equal(denied.code,'MFA_REQUIRED','Require an explicit MFA step-up on '+endpoint);
+ }
+ const unverifiedWrite=await postFrom(A.ctx,'/api/admin/mfa/recovery/request',{targetUserId:users[2].id});
+ assert.equal(unverifiedWrite.status(),403,'Unverified superadmin cannot mutate recovery state');
+ assert.equal((await unverifiedWrite.json()).code,'MFA_REQUIRED');
+ const anonymous=await browser.newContext({baseURL:origin});
+ try{
+   const anonymousRead=await anonymous.request.get('/api/admin/reports');
+   assert.ok([401,403].includes(anonymousRead.status()),'Anonymous API may not disclose reports');
+   const anonymousRecovery=await anonymous.request.post('/api/admin/mfa/recovery/request',{data:{targetUserId:users[2].id},headers:{Origin:origin}});
+   assert.ok([401,403].includes(anonymousRecovery.status()),'Anonymous recovery must be denied');
+ }finally{await anonymous.close();}
+
  const pre=await postFrom(A.ctx,'/api/admin/mfa/recovery/request',{
   targetUserId:users[2].id});
  assert.equal(pre.status(),403,'Privileged recovery must fail before passkey');
@@ -282,6 +302,8 @@ try{
    targetUserId:users[2].id});
  assert.equal(first.status(),200,'Verified superadmin A may request recovery');
  const requested=await first.json();
+ const unknownRecovery=await postFrom(B.ctx,'/api/admin/mfa/recovery/does-not-exist/approve',{});
+ assert.ok([400,404,409].includes(unknownRecovery.status()),'Unknown recovery request must fail closed');
  const self=await postFrom(A.ctx,
    '/api/admin/mfa/recovery/'+requested.requestId+'/approve',{});
  assert.equal(self.status(),409,'First approver cannot approve their own request');
