@@ -2,6 +2,8 @@
 
 Status: **draft PR #219 / isolated synthetic staging only**. Do not enable production without required security tests, grant issuance, rollback approval and an approved backup/restore procedure.
 
+**Update (2026-11-03):** Normal new/existing administrator onboarding now uses server-managed session-bound approval without users typing 43-character grants. See `docs/ADMIN_MFA_SERVER_MANAGED_ENROLLMENT.md`. The grant flow below is retained only for guarded bootstrap and account recovery.
+
 ## Expected administrator experience
 
 Every new or existing `ADMIN` / `SUPERADMIN` is subject to the same `ADMIN_MFA_ENFORCE=true` gate. A password alone cannot open the dashboard or privileged APIs. Upon sign-in, an unverified admin is redirected to `/mfa` and must do one of:
