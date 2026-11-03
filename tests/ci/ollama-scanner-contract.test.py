@@ -13,6 +13,10 @@ scanner = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(scanner)
 
 class LocalOllamaContractTests(unittest.TestCase):
+    def test_docker_uses_the_reduced_scanner_chunk_limit(self):
+        compose = Path(__file__).resolve().parents[2] / "docker-compose.ai-security.yml"
+        self.assertRegex(compose.read_text(), r'AI_SCAN_CHUNK_CHARS:\\s*"3000"')
+
     def test_chunking_preserves_every_char_and_line(self):
         lines = ["one", "two", "z" * 16000, "end"]
         pieces = scanner.chunks_for("\n".join(lines))
