@@ -137,3 +137,37 @@ AI findings can quote source code.
 Note that the first full scan may be very slow on local hardware and could exceed
 GitHub Actions' per-job timeout. In that case rerun and resume: incomplete jobs
 are not a successful security verdict.
+
+## NVIDIA RTX 5060 GPU acceleration (Windows-hosted Ollama)
+
+The Docker image is a Python HTTP client; Ollama itself runs on Windows.
+Do **not** install an additional Ollama daemon inside Docker, and do not
+add `gpus: all` to this scanner Compose service: that would not control the
+Windows-hosted Ollama server. The actual GPU selection and drivers belong to
+the Windows Ollama process.
+
+On Windows PowerShell:
+```powershell
+nvidia-smi
+ollama run qwen2.5-coder:7b "Reply OK."
+ollama ps
+```
+`ollama ps` should show a GPU percentage in the Processor column. The
+RTX 5060 is on Ollama's documented NVIDIA supported list, subject to a recent
+compatible NVIDIA driver. In Ubuntu Docker the scanner now warms the local model,
+checks Ollama's `GET /api/ps` `size_vram` value, and **refuses a CPU-only run**
+when `OLLAMA_REQUIRE_GPU=true` (default).
+
+A positive `size_vram` proves GPU memory is being used; it does **not**
+prove every layer is on GPU. If the RTX 5060 cannot hold model plus context,
+Ollama can still place some work on CPU. To diagnose use `ollama ps`, driver
+status, available VRAM and model settings before changing anything.
+
+A laptop GPU is **not a cloud request quota**. Hardware memory, driver
+compatibility, available compute and thermal limits still apply. The full
+scan is sequential and checkpointed, rather than spawning many model
+requests concurrently.
+
+If you intentionally want CPU fallback for troubleshooting only, override
+the Compose service with `-e OLLAMA_REQUIRE_GPU=false`; routine security
+checks should retain GPU-required mode.
