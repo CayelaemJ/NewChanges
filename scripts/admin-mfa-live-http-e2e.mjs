@@ -63,6 +63,9 @@ async function loginAndLoad(user){
   email:user.email,password:user.password
  });
  assert.equal(response.status(),200,'Synthetic account must log in with its own password');
+ const cookie=response.headers()['set-cookie']||'';
+ assert.match(cookie,/HttpOnly/i,'Administrator session cookie must be HttpOnly');
+ assert.match(cookie,/SameSite=Lax/i,'Administrator session cookie must constrain cross-site use');
  const signIn=await response.json();
  assert.equal(signIn.mfaRequired,true,'Administrator password login must require passkey enrollment/verification');
  assert.equal(signIn.next,'/mfa','Login must direct administrators to the passkey setup page');
@@ -168,6 +171,17 @@ try{
  assert.ok(durableRead?.enabledAt && durableRead.secretCiphertext===pending.secretCiphertext,
    'Separate database read must retain the encrypted enabled MFA seed');
 
+ // Force a verified TOTP session beyond the ten-minute privilege window.
+ const activeTargetSession=await prisma.session.findFirst({
+   where:{userId:users[2].id,endedAt:null,revokedAt:null,mfaVerifiedAt:{not:null}}
+ });
+ assert.ok(activeTargetSession,'TOTP elevation must have an active durable session');
+ await prisma.session.update({where:{id:activeTargetSession.id},
+   data:{mfaVerifiedAt:new Date(Date.now()-11*60_000)}});
+ const stalePrivilege=await totpAdmin.ctx.request.get('/api/admin/reports');
+ assert.equal(stalePrivilege.status(),403,'Old MFA session must lose privileged read access');
+ assert.equal((await stalePrivilege.json()).code,'MFA_REQUIRED');
+
  const A=await loginAndLoad(users[0]);
  // Real Fastify HTTP authorization checks against synthetic sessions.
  // A password-only superadmin must not access protected business API reads
@@ -226,6 +240,15 @@ try{
  assert.equal(pre.status(),403,'Privileged recovery must fail before passkey');
  assert.equal((await pre.json()).code,'MFA_REQUIRED','Refusal must be MFA step-up, not CSRF');
  await enroll(A,users[0].grant);
+ const crossOrigin=await A.ctx.request.post('/api/admin/mfa/recovery/request',{
+   data:{targetUserId:users[2].id},headers:{Origin:'https://untrusted.invalid'}
+ });
+ assert.equal(crossOrigin.status(),403,'Cross-origin cookie-based mutation must be blocked');
+ const readHeaders=await A.ctx.request.get('/api/admin/reports');
+ assert.equal(readHeaders.status(),200,'Fresh passkey unlocks authorized business API');
+ assert.equal(readHeaders.headers()['x-frame-options'],'DENY');
+ assert.equal(readHeaders.headers()['x-content-type-options'],'nosniff');
+
  const elevatedDashboard=await A.ctx.request.get('/dashboard',{maxRedirects:0});
  assert.equal(elevatedDashboard.status(),200,
    'After verified passkey, the signed-in admin can open the dashboard');
