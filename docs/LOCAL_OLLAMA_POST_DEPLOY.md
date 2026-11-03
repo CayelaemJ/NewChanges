@@ -69,3 +69,11 @@ and all proposed code changes require review and merge to reach production.
 
 A GitHub deployment-status event must be proven for **each** Render/Cloudflare
 service and deployment environment; the workflow also allows manual triggering.
+
+## Coverage policy update
+Security-sensitive implementation source is explicitly eligible for local review, including
+files named for MFA, authorization, recovery, secrets-handling or private access. Only
+actual credential stores and key material paths are excluded. A heuristic redacts some
+credential-like assignments from local prompts, but it is not a complete secret scrubber.
+Never use a cloud model or publish source-bearing reports. Existing Semgrep, Trivy,
+Gitleaks and functional authorization tests remain mandatory independent controls.
