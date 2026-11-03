@@ -180,7 +180,7 @@ try{
  assert.ok(protectedGets.length>=12,'Runtime authorization route inventory unexpectedly small');
  for(const item of protectedGets){
    const endpoint=item.path.replace(/:([A-Za-z_][A-Za-z0-9_]*)/g,'ci-test-missing')
-     .replace(/\\*/g,'ci-test-missing');
+     .replace(/\*/g,'ci-test-missing');
    const response=await A.ctx.request.get(endpoint,{maxRedirects:0});
    const status=response.status();
    // 400 is permitted only on parametrized URLs validated before preHandler.
