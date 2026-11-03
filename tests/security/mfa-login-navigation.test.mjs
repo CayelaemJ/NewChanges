@@ -45,3 +45,13 @@ test('isolated MFA preview starts with sign-in instead of marketing home',()=>{
  assert.match(scope,/return reply\.redirect\("\/login"\)/);
  assert.match(scope,/return serveHtml\(reply, "home\.html"\)/);
 });
+
+test('factor management requires an already verified admin session',()=>{
+ const start=server.indexOf('app.get("/mfa/manage",');
+ const end=server.indexOf('\napp.get(',start+8);
+ assert.ok(start>=0,'protected management route exists');
+ const scope=server.slice(start,end>start?end:start+700);
+ assert.match(scope,/if \(!user \|\| !isAdminRole\(user\)\) return reply\.redirect\("\/login"\)/);
+ assert.match(scope,/if \(!await hasFreshAdminMfa\(req, user\.id\)\) return reply\.redirect\("\/mfa"\)/);
+ assert.match(scope,/return serveHtml\(reply, "admin-mfa\.html"\)/);
+});
