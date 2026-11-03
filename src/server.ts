@@ -463,6 +463,8 @@ app.addHook("preHandler", async (req, reply) => {
   }
   if (!await hasFreshAdminMfa(req, user.id))
     return reply.code(403).send({error:"Fresh administrator passkey verification required", code:"MFA_REQUIRED"});
+  if (user.role === "SUPERADMIN" && !await hasIssuedAdminRecoveryKey(user.id))
+    return reply.code(403).send({error:"Save your account recovery key before continuing",code:"RECOVERY_KEY_REQUIRED"});
 });
 registerAdminMfaRoutes(app);
 function redactAuditDetail(value: unknown): unknown {
@@ -500,6 +502,8 @@ app.get("/react/admin", async (req, reply) => {
   if (!user) return reply.redirect("/login");
   if (!canAccessModule(user, "admin")) return reply.code(403).send({ error: "admin only" });
   if (MFA_ENFORCE && !await hasFreshAdminMfa(req, user.id)) return reply.redirect("/mfa");
+  if (MFA_ENFORCE && user.role === "SUPERADMIN" &&
+      !await hasIssuedAdminRecoveryKey(user.id)) return reply.redirect("/mfa");
   try {
     const html = await readFile(join(PUBLIC_DIR, "react", "index.html"), "utf-8");
     return reply.type("text/html; charset=utf-8").header("Cache-Control", "no-store").send(html);
@@ -640,6 +644,8 @@ app.get("/users", async (req, reply) => {
   const user = await currentUser(req);
   if (!user || (user.role !== "ADMIN" && user.role !== "SUPERADMIN")) return reply.redirect("/login");
   if (MFA_ENFORCE && !await hasFreshAdminMfa(req, user.id)) return reply.redirect("/mfa");
+  if (MFA_ENFORCE && user.role === "SUPERADMIN" &&
+      !await hasIssuedAdminRecoveryKey(user.id)) return reply.redirect("/mfa");
   return serveHtml(reply, "users.html");
 });
 
