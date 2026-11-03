@@ -30,6 +30,13 @@ class LocalOllamaContractTests(unittest.TestCase):
                 combined.setdefault(int(number), []).append(segment)
         self.assertEqual(["".join(combined[i]) for i in range(1, 5)], lines)
 
+    def test_findings_schema_bounds_count_and_text_length(self):
+        findings = scanner.FINDINGS_SCHEMA["properties"]["findings"]
+        self.assertEqual(findings["maxItems"], 4)
+        fields = findings["items"]["properties"]
+        for name in ("title", "evidence", "recommendation"):
+            self.assertEqual(fields[name]["maxLength"], 150)
+
     def test_plain_and_fenced_json(self):
         self.assertEqual(scanner.parse_answer('{"findings":[]}'), [])
         fence = chr(96) * 3
