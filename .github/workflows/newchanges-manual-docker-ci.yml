@@ -101,6 +101,30 @@ jobs:
             -f docker-compose.local-tests.yml \
             run --build --rm tests sh scripts/ci/run-docker-ci-suite.sh
 
+      - name: Extract isolated Docker test evidence
+        if: always()
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          mkdir -p test-results
+          PROJECT="newchanges-ci-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          VOLUME="${PROJECT}_test-artifacts"
+          if docker volume inspect "$VOLUME" >/dev/null 2>&1; then
+            docker run --rm --network none \
+              -v "$VOLUME:/reports:ro" -v "$PWD/test-results:/output" \
+              --entrypoint sh node:24-slim \
+              -c 'cp -R /reports/. /output/'
+          fi
+
+      - name: Upload test failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: newchanges-docker-failure-${{ github.run_id }}
+          path: test-results/
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Clean up only this CI test project
         if: always()
         shell: bash
