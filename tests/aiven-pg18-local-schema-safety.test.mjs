@@ -31,6 +31,8 @@ test('Aiven PG18 upgrade requires a successful, matching compatibility task and 
   assert.match(upgrade, /AIVEN_PG18_CHECK_TASK_ID/);
   assert.match(upgrade, /avn service task-get --task-id/);
   assert.match(upgrade, /task\.get\("success"\) is not True/);
+  assert.match(upgrade, /create_time/);
+  assert.match(upgrade, /age > 3600/);
   assert.match(upgrade, /upgrade_check/);
   assert.match(upgrade, /AIVEN_PG18_UPGRADE_APPROVED/);
   assert.match(upgrade, /UPGRADE-EXISTING-FREE/);
