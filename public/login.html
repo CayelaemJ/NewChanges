@@ -200,6 +200,7 @@ async function signIn(){
       body:JSON.stringify({email:$('#email').value,password:$('#password').value,remember:$('#remember').checked})});
     const d=await r.json();
     if(!r.ok) throw new Error(d.error||'Sign-in failed');
+    if(d.mfaRequired){ location.href='/admin-mfa'; return; }
     // A successful fresh sign-in should always get one The Fixer greeting.
     try{
       sessionStorage.removeItem('ef_splash_shown');
