@@ -4,6 +4,9 @@ const verifyBtn=document.getElementById('verify');
 const enrollBtn=document.getElementById('enroll');
 const grantEl=document.getElementById('grant');
 const managingMethods=window.location?.pathname==='/mfa/manage';
+let enrollmentApproved=false;
+let enrollmentRequestId=null;
+let legacyGrant='';
 function show(message){statusEl.textContent=message;}
 async function api(path,data){
  const response=await fetch('/api/auth/mfa/'+path,{method:'POST',credentials:'same-origin',
@@ -67,6 +70,22 @@ async function refresh(){
   const res=await fetch('/api/auth/mfa/status',{credentials:'same-origin'});
   if(!res.ok)throw Error('Please sign in as an administrator');
   const state=await res.json();
+  const firstTime=!state.enrolled&&!state.verified&&!managingMethods;
+  let approval={approved:false,requestId:null,expiresAt:null};
+  if(firstTime){
+    const ar=await fetch('/api/auth/mfa/enrollment/status',{credentials:'same-origin'});
+    if(ar.ok)approval=await ar.json();
+  }
+  enrollmentApproved=!!approval.approved;
+  enrollmentRequestId=approval.requestId||null;
+  document.getElementById('mfa-approval-panel').hidden=!firstTime;
+  document.getElementById('mfa-approval-admin').hidden=!state.canManageRecovery;
+  document.getElementById('mfa-approval-state').textContent=enrollmentApproved
+    ? 'Setup approved. Choose your authenticator QR code or device passkey below.'
+    : enrollmentRequestId
+      ? 'Awaiting two independent administrator approvals. Request ID: '+enrollmentRequestId
+      : 'Request identity-verified setup approval to get started.';
+  document.getElementById('mfa-approval-request').disabled=!!enrollmentRequestId;
   document.getElementById('recovery').hidden=!state.canManageRecovery;
   const manageBanner=document.getElementById('mfa-manage-banner');
   if(manageBanner)manageBanner.hidden=!(managingMethods && state.verified);
@@ -86,9 +105,12 @@ async function refresh(){
     (!!passkeyVerify?.hidden && !!passkeyEnroll?.hidden);
   const passkeyGrantLabel=document.querySelector?.('label[for="grant"]');
   if(passkeyGrantLabel)passkeyGrantLabel.hidden=managingMethods && !!state.verified;
-  grantEl.hidden=managingMethods && !!state.verified;
-  document.getElementById('totp-grant').hidden=!!state.totpEnrolled || !!state.verified || managingMethods;
+  grantEl.hidden=true;
+  if(passkeyGrantLabel)passkeyGrantLabel.hidden=true;
+  enrollBtn.disabled=firstTime && !enrollmentApproved && !legacyGrant;
+  document.getElementById('totp-grant').hidden=true;
   document.getElementById('totp-start').hidden=!!state.totpEnrolled || (!!state.verified && !managingMethods);
+  document.getElementById('totp-start').disabled=firstTime && !enrollmentApproved && !legacyGrant;
   document.getElementById('totp-title').textContent=state.totpEnrolled
     ? 'Verify with your authenticator app'
     : 'Set up your authenticator app with a QR code';
@@ -99,7 +121,7 @@ async function refresh(){
       ? 'Add a second method: scan your one-time QR code and verify a six-digit code. Your verified session replaces the first-time enrollment grant.'
       : 'First time only: request your personal QR code, open Google Authenticator or Microsoft Authenticator, tap Add account and scan the QR. Enter one code to activate the saved account.';
   const totpGrantLabel=document.querySelector?.('label[for="totp-grant"]');
-  if(totpGrantLabel)totpGrantLabel.hidden=!!state.totpEnrolled || !!state.verified || managingMethods;
+  if(totpGrantLabel)totpGrantLabel.hidden=true;
   document.getElementById('totp-panel').hidden=!state.totpAvailable || (!!state.verified && (!managingMethods || !!state.totpEnrolled));
   document.getElementById('totp-state').textContent=state.totpEnrolled
     ? 'Already set up. Enter the current six-digit code from your app. No setup key or QR scan is needed again.'
@@ -107,7 +129,7 @@ async function refresh(){
       ? 'Your session is verified. Add an authenticator using a QR code without another enrollment grant.'
     : state.verified
       ? 'Your account is verified. No new setup is needed to continue.'
-      : 'First-time setup only: enter your approved one-time enrollment grant, choose Show QR code, then scan it in Google or Microsoft Authenticator.';
+      : 'After your setup request is approved, choose Generate QR code and scan it using Google or Microsoft Authenticator. The Fixer handles authorization on the server.';
   // The setup code was already consumed by confirmation. Never prompt the
   // user to verify it again on the same freshly elevated session.
   document.getElementById('totp-verify-panel').hidden=!state.totpEnrolled || !!state.verified;
@@ -125,7 +147,7 @@ async function refresh(){
     document.getElementById('totp-qr').removeAttribute('src');
   }
   show(state.verified?'Administrator MFA verified with '+(state.verificationMethod==='TOTP'?'authenticator app.':'passkey.')+' You may open the dashboard.':
-   !state.enrolled?'MFA setup is required. Enroll a passkey or scan the QR code with an authenticator app using your approved grant.':
+   !state.enrolled?'MFA setup required. Request identity-verified approval, then choose a passkey or authenticator QR.':
    state.passkeyEnrolled&&state.totpEnrolled?'Verify your passkey or enter a six-digit authenticator code to continue.':
    state.totpEnrolled?'Authenticator app enrolled. Enter a fresh six-digit code — no enrollment grant is needed.':
    'Passkey enrolled. Verify it to unlock administrator actions.');
@@ -141,6 +163,8 @@ async function run(kind){
   if(!browserSupported())throw Error('This browser does not support the required WebAuthn passkey APIs.');
   if(kind==='enroll'){
     const grantCode=grantEl.value.trim();
+    if(!grantCode && !enrollmentApproved && !managingMethods)
+      throw Error('Request security enrollment approval before registering a passkey.');
     show('Waiting for passkey registration on your device…');
     const options=await api('register/options',{grantCode});
     const publicKey=creationOptions(options);
@@ -176,7 +200,7 @@ async function withTotpBusy(button,action){
 }
 totpStart.addEventListener('click',()=>withTotpBusy(totpStart,async()=>{
  const grantCode=document.getElementById('totp-grant').value.trim();
- if(!grantCode && !managingMethods)throw Error('Enter your approved one-time MFA setup grant first.');
+ if(!grantCode && !managingMethods && !enrollmentApproved)throw Error('Request security enrollment approval before generating your QR code.');
  show('Generating your private authenticator QR code…');
  const data=await api('totp/setup',{grantCode});
  if(typeof data.qrDataUri!=='string'||!data.qrDataUri.startsWith('data:image/svg+xml;base64,'))
@@ -243,3 +267,48 @@ recoveryApproveButton.addEventListener('click',()=>withRecoveryBusy(recoveryAppr
   '\nExpires: '+result.expiresAt+
   '\nDeliver privately to the identity-verified administrator. Do not paste into tickets or chat.';
 }));
+
+
+const approvalRequestButton=document.getElementById('mfa-approval-request');
+approvalRequestButton.addEventListener('click',async()=>{
+ approvalRequestButton.disabled=true;
+ try{
+  const result=await api('enrollment/request');
+  enrollmentRequestId=result.requestId;
+  document.getElementById('mfa-approval-state').textContent=
+    'Request sent. Share this ID with your security administrators for identity verification: '+result.requestId;
+ }catch(error){show(error?.message||'Enrollment approval request failed');}
+ finally{await refresh();}
+});
+document.getElementById('mfa-legacy-apply').addEventListener('click',async()=>{
+ const value=document.getElementById('mfa-legacy-grant').value.trim();
+ if(!/^[A-Za-z0-9_-]{43}$/.test(value)){show('A valid, approved recovery or bootstrap grant is required.');return;}
+ legacyGrant=value;
+ grantEl.value=value;
+ document.getElementById('totp-grant').value=value;
+ document.getElementById('mfa-legacy-grant').value='';
+ show('Approved bootstrap or recovery grant applied for this enrollment only.');
+ await refresh();
+});
+const approveEnrollment=document.getElementById('mfa-approval-approve');
+approveEnrollment.addEventListener('click',async()=>{
+ const target=document.getElementById('mfa-approval-id').value.trim();
+ const checked=document.getElementById('mfa-approval-confirm-identity').checked;
+ const resultEl=document.getElementById('mfa-approval-admin-status');
+ if(!checked){resultEl.textContent='Confirm identity through a separate trusted channel first.';return;}
+ if(!target || target.length>128){resultEl.textContent='Enter the enrollment request ID.';return;}
+ approveEnrollment.disabled=true;
+ try{
+  const response=await fetch('/api/admin/mfa/enrollment/'+encodeURIComponent(target)+'/approve',{
+   method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({identityConfirmed:true})
+  });
+  const result=await response.json().catch(()=>({}));
+  if(!response.ok)throw Error(result.error||'Approval rejected');
+  resultEl.textContent=result.approved
+    ? 'Second independent approval recorded. The requester may now enroll MFA.'
+    : 'First approval recorded. Another verified superadministrator must approve.';
+  document.getElementById('mfa-approval-confirm-identity').checked=false;
+ }catch(error){resultEl.textContent=error?.message||'Approval failed';}
+ finally{approveEnrollment.disabled=false;}
+});
