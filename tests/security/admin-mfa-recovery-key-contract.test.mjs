@@ -46,3 +46,26 @@ test('browser shows key once with explicit safe-storage acknowledgment and clear
  assert.doesNotMatch(js,/localStorage\.(setItem|getItem)\([^\n]*recoveryKey/);
  assert.doesNotMatch(js,/sessionStorage\.(setItem|getItem)\([^\n]*recoveryKey/);
 });
+
+test('existing two-superadmin credential recovery may consume a saved key only once',()=>{
+ const anchor="app.post<{Params:{id:string};Body:{recoveryKey?:string}}>('/api/admin/mfa/recovery/:id/approve'";
+ const i=routes.indexOf(anchor);
+ assert.ok(i>=0);
+ const recovery=routes.slice(i);
+ assert.match(recovery,/session\.user\.role!=='SUPERADMIN'/);
+ assert.match(recovery,/hasFreshAdminMfa\(req,session\.userId,'PASSKEY'\)/);
+ assert.match(recovery,/request\.requestedById===session\.userId/);
+ assert.match(recovery,/codeHash:digest\(key\),usedAt:null/);
+ assert.match(recovery,/data:\{usedAt:now\}/);
+ assert.match(recovery,/tx\.adminMfaCredential\.updateMany/);
+ assert.match(recovery,/tx\.session\.updateMany/);
+ assert.doesNotMatch(recovery,/detail:\{[^}]*recoveryKey/);
+});
+test('recovery re-enrollment rotates consumed key but does not leak an existing key',()=>{
+ const start=routes.indexOf('async function issueRecoveryKey(');
+ const end=routes.indexOf('\ntype MfaBody=',start);
+ const body=routes.slice(start,end);
+ assert.match(body,/if\(previous && !previous\.usedAt\)return null/);
+ assert.match(body,/where:\{id:previous\.id\}/);
+ assert.match(body,/data:\{codeHash:digest\(key\),usedAt:null/);
+});
