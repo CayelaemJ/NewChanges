@@ -603,7 +603,7 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
       next:'A different passkey-verified superadministrator must approve this request'};
   });
 
-  app.post<{Params:{id:string}}>('/api/admin/mfa/recovery/:id/approve',async(req,reply)=>{
+  app.post<{Params:{id:string};Body:{recoveryKey?:string}}>('/api/admin/mfa/recovery/:id/approve',async(req,reply)=>{
     const session=await adminSession(req,reply);if(!session)return;
     if(session.user.role!=='SUPERADMIN' || !await hasFreshAdminMfa(req,session.userId,'PASSKEY'))
       return reply.code(403).send({error:'Verified superadministrator required'});
@@ -637,6 +637,19 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
           data:{approvedById:session.userId,fulfilledAt:now},
         });
         if(claimed.count!==1)throw new Error('Already approved');
+        // A saved one-time recovery key may be supplied as additional proof.
+        // It never replaces either independent superadmin approval.
+        if(req.body?.recoveryKey!==undefined){
+          const key=req.body.recoveryKey;
+          if(typeof key!=='string' || !/^[A-Za-z0-9_-]{43}$/.test(key))
+            throw new Error('Invalid recovery proof');
+          const claimedCode=await tx.adminMfaRecoveryCode.updateMany({
+            where:{userId:target.id,codeHash:digest(key),usedAt:null,
+              OR:[{lockedUntil:null},{lockedUntil:{lt:now}}]},
+            data:{usedAt:now},
+          });
+          if(claimedCode.count!==1)throw new Error('Recovery proof already used');
+        }
         await tx.adminMfaEnrollmentGrant.updateMany({
           where:{userId:target.id,consumedAt:null},data:{consumedAt:now},
         });
