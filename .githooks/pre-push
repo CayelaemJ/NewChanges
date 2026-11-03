@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Install once: git config core.hooksPath .githooks
+set -Eeuo pipefail
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
+if ! command -v npm >/dev/null 2>&1; then echo "npm is required for the pre-push quality gate" >&2; exit 1; fi
+if [ ! -d node_modules ]; then echo "Dependencies missing. Run npm ci before pushing." >&2; exit 1; fi
+
+# Refuse known cloud database connection variables in this local-only test process.
+unset DATABASE_URL DIRECT_URL SHADOW_DATABASE_URL
+unset NEON_DATABASE_URL SEMANTIC_TESTING_DATABASE_URL SEMANTIC_LISTEN_DATABASE_URL
+unset RAILWAY_DATABASE_URL RAILWAY_ENVIRONMENT_NAME
+export CI=true NODE_ENV=test
+
+echo "== NewChanges pre-push gate =="
+git diff --check HEAD
+npm run quality:lint
+npm run quality:types
+npm run quality:unit
+npm run build
+node scripts/password-form-contract-check.mjs
+npm run check:security
+npm run check:security-identity
+npm run check:source-sync-safety
+echo "Pre-push checks passed."
