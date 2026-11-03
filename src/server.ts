@@ -571,6 +571,10 @@ app.post<{ Body: { name?: unknown; email?: unknown; organisation?: unknown; mess
 });
 app.get("/", async (req, reply) => {
   const user = await currentUser(req);
+  // The isolated MFA preview is a sign-in journey, not the marketing home.
+  // Keep the normal public home unchanged in production.
+  if (process.env.MFA_STAGING_ONLY === "true" && !user)
+    return reply.redirect("/login");
   if (user && canAccessModule(user, "dashboard")) {
     if (MFA_ENFORCE && isAdminRole(user) && !await hasFreshAdminMfa(req, user.id))
       return reply.redirect("/mfa");
