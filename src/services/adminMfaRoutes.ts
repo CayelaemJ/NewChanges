@@ -51,12 +51,13 @@ function grantHash(code: unknown) {
   return typeof code === 'string' && /^[A-Za-z0-9_-]{43}$/.test(code) ? digest(code) : null;
 }
 async function hasEnrollmentApproval(session: {id:string;userId:string}) {
-  return Boolean(await prisma.adminMfaEnrollmentRequest.findFirst({
+  const request=await prisma.adminMfaEnrollmentRequest.findFirst({
     where:{userId:session.userId,sessionId:session.id,
       approvedByOne:{not:null},approvedByTwo:{not:null},
       consumedAt:null,expiresAt:{gt:new Date()}},
-    select:{id:true},
-  }));
+    select:{approvedByOne:true,approvedByTwo:true},
+  });
+  return Boolean(request && request.approvedByOne!==request.approvedByTwo);
 }
 async function isAuthorizedToEnroll(
   session: {id:string;userId:string;mfaVerifiedAt:Date|null}, code: unknown
@@ -81,9 +82,9 @@ async function consumeEnrollmentApproval(
     where:{userId:session.userId,sessionId:session.id,
       approvedByOne:{not:null},approvedByTwo:{not:null},
       consumedAt:null,expiresAt:{gt:now}},
-    orderBy:{createdAt:'desc'},select:{id:true},
+    orderBy:{createdAt:'desc'},select:{id:true,approvedByOne:true,approvedByTwo:true},
   });
-  if (approved) {
+  if (approved && approved.approvedByOne!==approved.approvedByTwo) {
     const used=await tx.adminMfaEnrollmentRequest.updateMany({
       where:{id:approved.id,userId:session.userId,sessionId:session.id,
         consumedAt:null,approvedByOne:{not:null},approvedByTwo:{not:null},
@@ -211,6 +212,13 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
        targetSession.endedAt || targetSession.revokedAt || targetSession.expiresAt<=now ||
        passkeys>0 || Boolean(totp?.enabledAt))
       return reply.code(409).send({error:'Requester no longer eligible for first-time setup'});
+    if(request.approvedByOne){
+      const firstApprover=await prisma.user.findUnique({
+        where:{id:request.approvedByOne},select:{active:true,role:true},
+      });
+      if(!firstApprover?.active || firstApprover.role!=='SUPERADMIN')
+        return reply.code(409).send({error:'First approver is no longer authorized'});
+    }
     try{
       const stage=request.approvedByOne ? 2 : 1;
       const updated=await prisma.$transaction(async tx=>{
