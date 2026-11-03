@@ -37,6 +37,13 @@ async function adminSession(req: FastifyRequest, reply: FastifyReply) {
   }
   return session;
 }
+// Only an active, individually-issued recovery key satisfies the onboarding gate.
+export async function hasIssuedAdminRecoveryKey(userId:string){
+  const key=await prisma.adminMfaRecoveryCode.findUnique({
+    where:{userId},select:{usedAt:true},
+  });
+  return Boolean(key && !key.usedAt);
+}
 export async function hasFreshAdminMfa(req: FastifyRequest, userId: string, method?: 'PASSKEY') {
   const token = req.cookies?.session;
   if (typeof token !== 'string') return false;
