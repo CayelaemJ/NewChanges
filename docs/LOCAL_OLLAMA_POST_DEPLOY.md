@@ -77,3 +77,30 @@ actual credential stores and key material paths are excluded. A heuristic redact
 credential-like assignments from local prompts, but it is not a complete secret scrubber.
 Never use a cloud model or publish source-bearing reports. Existing Semgrep, Trivy,
 Gitleaks and functional authorization tests remain mandatory independent controls.
+
+## Full-codebase audit and bloat assessment
+
+- The manual self-hosted Docker workflow now inventories **all Git-tracked** source and
+  configuration files and reports size, line counts and byte-identical duplicate groups.
+  Nothing is deleted automatically; duplicates can be intentional.
+- The same manual workflow executes a priority Ollama pass after Docker tests. Its default
+  25-file limit is **not** a complete AI review. It continues to report denominators.
+- The post-deployment workflow runs the entire deterministic security scanner suite and
+  tracked-file inventory before the final priority Ollama pass. Both provider event wiring
+  and runner validation remain unverified.
+- For deeper review, manually dispatch `The Fixer deep full-codebase Ollama audit
+  (self-hosted)`. It sets `MAX_FILES=0` to attempt **all tracked eligible implementation
+  files**. It fails if files are skipped, truncated or time out. It may exceed the
+  360-minute job limit on local hardware. A nonzero job result means incomplete coverage,
+  not proof that every file contains a vulnerability.
+- The AI scanner currently accepts TypeScript, TSX, JS, JSX, MJS, CJS, Python, and Prisma
+  source. Configuration, shell, SQL, CSS, HTML, JSON and YAML are covered by the separate
+  tracked-file inventory and whichever deterministic scanners apply, not by full AI reasoning.
+  The scanner processes only the first 12,000 characters by default for any eligible file
+  and explicitly reports each truncation. Thus do not claim full AI coverage until these
+  limitations have been resolved.
+- The inventory identifies large and byte-identical files as **candidates**; dependency
+  graph analysis, generated-code classification, and verified dead-code removal are still
+  outstanding. Remove nothing without usage analysis, regression tests, and review.
+- Before enabling deployment promotion, gate on the deterministic checks and smoke tests.
+  A *post*-deploy scan cannot prevent an already-live release.
