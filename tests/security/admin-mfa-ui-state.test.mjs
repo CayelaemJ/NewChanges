@@ -49,3 +49,21 @@ test('verified administrator sees only completion state',async()=>{
   assert.equal(el('totp-panel').hidden,true);
   assert.match(el('mfa-success-title').textContent,/verified/i);
 });
+
+test('returning authenticator-only admin is never asked to re-enter a setup grant',async()=>{
+  const el=await check({enrolled:true,verified:false,passkeyEnrolled:false,totpEnrolled:true,totpAvailable:true,canManageRecovery:false});
+  assert.equal(el('mfa-passkey-enroll-panel').hidden,true);
+  assert.equal(el('mfa-passkey-verify-panel').hidden,true);
+  assert.equal(el('mfa-passkey-actions').hidden,true);
+  assert.equal(el('totp-grant').hidden,true);
+  assert.equal(el('totp-start').hidden,true);
+  assert.equal(el('totp-verify-panel').hidden,false);
+  assert.match(el('totp-state').textContent,/No setup key or QR scan/i);
+});
+test('first-time authenticator setup offers private QR on demand',async()=>{
+  const el=await check({enrolled:false,verified:false,passkeyEnrolled:false,totpEnrolled:false,totpAvailable:true,canManageRecovery:false});
+  assert.equal(el('totp-grant').hidden,false);
+  assert.equal(el('totp-start').hidden,false);
+  assert.equal(el('totp-verify-panel').hidden,true);
+  assert.match(el('totp-title').textContent,/QR code/i);
+});
