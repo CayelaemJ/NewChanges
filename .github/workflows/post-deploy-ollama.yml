@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   final-ollama-review:
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.deployment_status.state == 'success' && github.event.deployment.ref == 'main') }}
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.deployment.ref == 'main' && contains(fromJSON('["success","failure","error"]'), github.event.deployment_status.state)) }}
     runs-on: [self-hosted, linux, x64, newchanges-ci]
     timeout-minutes: 100
     steps:
@@ -36,6 +36,13 @@ jobs:
             curlimages/curl:latest -fsS --max-time 15 \
             http://host.docker.internal:11434/api/tags \
             | python3 -c 'import json,sys; m=json.load(sys.stdin)["models"]; assert any(x.get("name")=="qwen2.5-coder:7b" and not x.get("remote_host") for x in m)'
+
+      - name: Record deployment provider result
+        id: provider
+        shell: bash
+        run: |
+          echo "Provider state: ${{ github.event.deployment_status.state || 'manual' }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Deployment environment: ${{ github.event.deployment.environment || 'manual' }}" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Observe Render and Cloudflare runtime health over deployment settling window
         id: health
@@ -129,7 +136,7 @@ jobs:
           PY
 
       - name: Mark failed patch tests for approval
-        if: ${{ steps.validate.outcome == 'failure' || steps.auto.outcome == 'failure' || steps.review.outcome == 'failure' || steps.static.outcome == 'failure' || steps.health.outcome == 'failure' }}
+        if: ${{ steps.validate.outcome == 'failure' || steps.auto.outcome == 'failure' || steps.review.outcome == 'failure' || steps.static.outcome == 'failure' || steps.health.outcome == 'failure' || github.event.deployment_status.state == 'failure' || github.event.deployment_status.state == 'error' }}
         shell: bash
         run: |
           python3 - <<'PY'
@@ -206,6 +213,7 @@ jobs:
         shell: bash
         run: |
           echo "### Deployment verification: ${{ github.event_name }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Provider state: ${{ github.event.deployment_status.state || 'manual' }}" >> "$GITHUB_STEP_SUMMARY"
           echo "Deployment commit: ${{ github.event.deployment.sha || github.sha }}" >> "$GITHUB_STEP_SUMMARY"
           echo "Health over 90-second observation window: ${{ steps.health.outcome }}" >> "$GITHUB_STEP_SUMMARY"
           if [ -f test-reports/deployment/health.md ]; then cat test-reports/deployment/health.md >> "$GITHUB_STEP_SUMMARY"; fi
