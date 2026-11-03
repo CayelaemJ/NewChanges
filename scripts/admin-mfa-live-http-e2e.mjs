@@ -318,15 +318,31 @@ try{
    targetUserId:users[2].id});
  assert.equal(first.status(),200,'Verified superadmin A may request recovery');
  const requested=await first.json();
+ // Invalid backup-key proof cannot consume the request or revoke credentials.
+ const wrongProof=await postFrom(B.ctx,
+   '/api/admin/mfa/recovery/'+requested.requestId+'/approve',
+   {recoveryKey:randomBytes(32).toString('base64url')});
+ assert.equal(wrongProof.status(),409,'Wrong recovery proof cannot approve a request');
+ const intact=await prisma.adminMfaRecoveryRequest.findUnique({where:{id:requested.requestId}});
+ assert.equal(intact?.fulfilledAt,null,'Wrong recovery proof must roll back approval');
+ assert.ok(await prisma.adminMfaTotp.findUnique({where:{userId:users[2].id}}),
+   'Wrong recovery proof must not revoke live authenticator');
+
  const unknownRecovery=await postFrom(B.ctx,'/api/admin/mfa/recovery/does-not-exist/approve',{});
  assert.ok([400,404,409].includes(unknownRecovery.status()),'Unknown recovery request must fail closed');
  const self=await postFrom(A.ctx,
    '/api/admin/mfa/recovery/'+requested.requestId+'/approve',{});
  assert.equal(self.status(),409,'First approver cannot approve their own request');
  const approved=await postFrom(B.ctx,
-   '/api/admin/mfa/recovery/'+requested.requestId+'/approve',{});
+   '/api/admin/mfa/recovery/'+requested.requestId+'/approve',
+   {recoveryKey:confirmation.recoveryKey});
  assert.equal(approved.status(),200,'Different verified superadmin B can approve');
  const recovery=await approved.json();
+ const consumedKey=await prisma.adminMfaRecoveryCode.findUnique({where:{userId:users[2].id}});
+ assert.ok(consumedKey?.usedAt,'Recovery proof must be consumed atomically');
+ const oldSession=await totpAdmin.ctx.request.get('/api/admin/reports');
+ assert.ok([401,403].includes(oldSession.status()),
+   'Recovered administrator existing session must lose access');
  assert.match(recovery.grantCode,/^[A-Za-z0-9_-]{43}$/);
  const removedTotp=await prisma.adminMfaTotp.findUnique({where:{userId:users[2].id}});
  assert.equal(removedTotp,null,'Two-person recovery revokes the previously enrolled TOTP factor');
