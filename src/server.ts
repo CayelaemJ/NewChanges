@@ -592,6 +592,14 @@ app.get("/mfa", async (req, reply) => {
     return reply.redirect("/dashboard");
   return serveHtml(reply, "admin-mfa.html");
 });
+// Authenticated method management: never serve enrollment controls to a
+// password-only session. Existing verified factors can authorize adding another.
+app.get("/mfa/manage", async (req, reply) => {
+  const user = await currentUser(req);
+  if (!user || !isAdminRole(user)) return reply.redirect("/login");
+  if (!await hasFreshAdminMfa(req, user.id)) return reply.redirect("/mfa");
+  return serveHtml(reply, "admin-mfa.html");
+});
 app.get("/set-password", async (_req, reply) => serveHtml(reply, "set-password.html"));
 app.get("/privacy", async (_req, reply) => serveHtml(reply, "privacy.html"));
 app.get("/terms", async (_req, reply) => serveHtml(reply, "terms.html"));
