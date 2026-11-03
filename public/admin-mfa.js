@@ -84,6 +84,9 @@ async function refresh(){
     : (!!state.verified || !!state.enrolled);
   if(passkeyActions)passkeyActions.hidden=
     (!!passkeyVerify?.hidden && !!passkeyEnroll?.hidden);
+  const passkeyGrantLabel=document.querySelector?.('label[for="grant"]');
+  if(passkeyGrantLabel)passkeyGrantLabel.hidden=managingMethods && !!state.verified;
+  grantEl.hidden=managingMethods && !!state.verified;
   document.getElementById('totp-grant').hidden=!!state.totpEnrolled || !!state.verified || managingMethods;
   document.getElementById('totp-start').hidden=!!state.totpEnrolled || (!!state.verified && !managingMethods);
   document.getElementById('totp-title').textContent=state.totpEnrolled
@@ -92,7 +95,9 @@ async function refresh(){
   const instructions=document.getElementById('totp-instructions');
   if(instructions)instructions.textContent=state.totpEnrolled
     ? 'Open the existing The Fixer entry in Google or Microsoft Authenticator and enter its current six-digit code. You only scan a QR during initial setup.'
-    : 'First time only: request your personal QR code, open Google Authenticator or Microsoft Authenticator, tap Add account and scan the QR. Enter one code to activate the saved account.';
+    : managingMethods && state.verified
+      ? 'Add a second method: scan your one-time QR code and verify a six-digit code. Your verified session replaces the first-time enrollment grant.'
+      : 'First time only: request your personal QR code, open Google Authenticator or Microsoft Authenticator, tap Add account and scan the QR. Enter one code to activate the saved account.';
   const totpGrantLabel=document.querySelector?.('label[for="totp-grant"]');
   if(totpGrantLabel)totpGrantLabel.hidden=!!state.totpEnrolled || !!state.verified || managingMethods;
   document.getElementById('totp-panel').hidden=!state.totpAvailable || (!!state.verified && (!managingMethods || !!state.totpEnrolled));
