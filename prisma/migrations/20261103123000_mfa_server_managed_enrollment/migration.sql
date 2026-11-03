@@ -12,9 +12,9 @@ CREATE TABLE "AdminMfaEnrollmentRequest" (
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT "AdminMfaEnrollmentRequest_pkey" PRIMARY KEY ("id")
 );
-CREATE INDEX "AdminMfaEnrollmentRequest_userId_sessionId_expiresAt_consumedAt_idx"
+CREATE INDEX "AdminMfaEnroll_session_exp_idx"
   ON "AdminMfaEnrollmentRequest"("userId", "sessionId", "expiresAt", "consumedAt");
-CREATE INDEX "AdminMfaEnrollmentRequest_expiresAt_approvedByTwo_idx"
+CREATE INDEX "AdminMfaEnroll_exp_approved_idx"
   ON "AdminMfaEnrollmentRequest"("expiresAt", "approvedByTwo");
 ALTER TABLE "AdminMfaEnrollmentRequest" ADD CONSTRAINT
   "AdminMfaEnrollmentRequest_userId_fkey"
