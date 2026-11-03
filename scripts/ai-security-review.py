@@ -25,6 +25,7 @@ MAX_FILES = max(0, int(os.getenv("MAX_FILES", "0")))
 CHUNK_CHARS = max(1000, min(12000, int(os.getenv("AI_SCAN_CHUNK_CHARS", "5500"))))
 TIMEOUT = max(60, min(1200, int(os.getenv("AI_SCAN_REQUEST_TIMEOUT", "360"))))
 RETRIES = max(1, min(8, int(os.getenv("AI_SCAN_RETRIES", "4"))))
+REQUIRE_GPU = os.getenv("OLLAMA_REQUIRE_GPU", "true").lower() in ("1", "true", "yes")
 MAX_TEXT_BYTES = max(100000, int(os.getenv("AI_SCAN_MAX_TEXT_BYTES", "5000000")))
 CHECKPOINTS = Path(os.getenv("SCAN_CACHE_DIR", str(REPORTS / "checkpoints"))).resolve()
 # Only actual key material/credential stores are excluded. Security implementation
@@ -184,6 +185,45 @@ def ask_model(name, start, end, block):
                 time.sleep(min(20, 2 ** attempt))
     raise RuntimeError(f"{last} after {RETRIES} attempts")
 
+def gpu_residency(models, model=MODEL):
+    """Return VRAM bytes for the running exact Ollama model, 0 if CPU-only."""
+    for info in models:
+        if info.get("name") == model or info.get("model") == model:
+            return max(0, int(info.get("size_vram") or 0))
+    return 0
+
+def require_local_gpu():
+    """Warm the Windows Ollama host model and fail if its GPU is not active.
+
+    Docker merely makes HTTP requests; the model runs on Windows, not in Docker.
+    Ollama /api/ps provides the VRAM-resident size of a loaded model.
+    """
+    if not REQUIRE_GPU:
+        print("GPU requirement disabled explicitly; CPU inference is allowed.", flush=True)
+        return 0
+    body = json.dumps({"model": MODEL, "prompt": "Respond OK.", "stream": False,
+                       "keep_alive": "30m",
+                       "options": {"num_predict": 8, "num_ctx": 8192}}).encode()
+    request = Request(URL + "/api/generate", data=body,
+                      headers={"Content-Type": "application/json"}, method="POST")
+    try:
+        with urlopen(request, timeout=TIMEOUT) as response:
+            reply = json.load(response)
+        if reply.get("error"):
+            raise RuntimeError("Ollama warm-up failed")
+        with urlopen(URL + "/api/ps", timeout=30) as response:
+            status = json.load(response)
+        vram = gpu_residency(status.get("models", []))
+    except (HTTPError, URLError, TimeoutError, OSError, KeyError, ValueError) as exc:
+        raise RuntimeError(f"Cannot verify RTX GPU acceleration: {type(exc).__name__}") from exc
+    if vram <= 0:
+        raise RuntimeError(
+            "GPU acceleration REQUIRED but Ollama reports no model VRAM usage. "
+            "Check NVIDIA driver and 'ollama ps' on Windows; CPU fallback refused."
+        )
+    print(f"GPU verified for {MODEL}: {vram / (1024 ** 3):.2f} GiB resident in VRAM.", flush=True)
+    return vram
+
 def scan():
     if MODEL.endswith(":cloud") or URL not in (
         "http://host.docker.internal:11434", "http://localhost:11434",
@@ -192,6 +232,7 @@ def scan():
         raise SystemExit("Only local Ollama models/endpoints are allowed")
     REPORTS.mkdir(parents=True, exist_ok=True)
     CHECKPOINTS.mkdir(parents=True, exist_ok=True)
+    require_local_gpu()
     selected, excluded = read_manifest()
     if not selected:
         raise SystemExit("No reviewable tracked text files")
