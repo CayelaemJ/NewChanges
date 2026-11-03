@@ -23,7 +23,9 @@ h1{font-size:clamp(25px,4vw,36px);margin:0 0 9px}h2{font-size:19px;margin:0 0 8p
 label{display:block;margin-top:14px;font-size:14px;font-weight:600}
 input{width:100%;padding:13px;border:1px solid #aa9bc2;border-radius:8px;margin:8px 0 14px;font:inherit}
 button{width:100%;border:0;border-radius:9px;padding:13px;background:#65349e;color:white;font:inherit;font-weight:650;cursor:pointer}
-button:disabled{opacity:.55;cursor:wait}button:focus-visible,input:focus-visible{outline:3px solid #b48ae6;outline-offset:2px}
+button:disabled{opacity:.55;cursor:wait}
+.checkbox-line{display:flex;align-items:center;gap:10px;line-height:1.4}
+.checkbox-line input[type=checkbox]{width:20px;height:20px;min-height:0;margin:0;flex:none;padding:0;accent-color:#65349e}button:focus-visible,input:focus-visible{outline:3px solid #b48ae6;outline-offset:2px}
 small{line-height:1.5;color:#625773;display:block;margin-top:12px}
 footer{font-size:13px;margin:20px 3px;color:#625773}
 
@@ -113,7 +115,7 @@ input:focus{border-color:#65349e}
 <p>Verify the administrator's identity through a separate trusted channel before approving. Two different superadmins must each verify with a passkey.</p>
 <label for="mfa-approval-id">Enrollment request ID</label>
 <input id="mfa-approval-id" autocomplete="off" maxlength="128" spellcheck="false" placeholder="Request ID from the administrator">
-<label><input id="mfa-approval-confirm-identity" type="checkbox"> I independently confirmed this person's identity</label>
+<label class="checkbox-line"><input id="mfa-approval-confirm-identity" type="checkbox"> I independently confirmed this person's identity</label>
 <button type="button" id="mfa-approval-approve">Approve verified enrollment</button>
 <p id="mfa-approval-admin-status" role="status" aria-live="polite"></p>
 </section>
