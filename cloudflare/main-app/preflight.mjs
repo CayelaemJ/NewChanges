@@ -25,11 +25,28 @@ async function run() {
     const result = await connection.query(`SELECT
       current_database() AS database_name, current_user AS role_name,
       r.rolsuper AS is_superuser, r.rolcreatedb AS can_create_database,
-      r.rolcreaterole AS can_create_roles,
+      r.rolcreaterole AS can_create_roles, r.rolbypassrls AS bypasses_rls,
       pg_has_role(r.oid,'neon_superuser','MEMBER') AS member_superuser,
-      has_table_privilege(current_user,'public."Session"','SELECT') AS can_read_session,
-      has_table_privilege(current_user,'public."Employer"','SELECT') AS can_read_employer,
-      has_table_privilege(current_user,'public."Session"','INSERT') AS can_write_session
+      EXISTS (SELECT 1 FROM pg_roles owner_role
+        WHERE owner_role.rolname='newchanges_owner'
+          AND pg_has_role(r.oid,owner_role.oid,'MEMBER')) AS member_application_owner,
+      has_database_privilege(r.oid,current_database(),'CREATE') AS can_create_database_objects,
+      has_schema_privilege(r.oid,'public','CREATE') AS can_create_public_objects,
+      has_table_privilege(r.oid,'public."Session"','SELECT') AS can_read_session,
+      has_table_privilege(r.oid,'public."Employer"','SELECT') AS can_read_employer,
+      has_table_privilege(r.oid,'public."Session"','INSERT') AS can_write_session,
+      EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+        WHERE n.nspname='public' AND c.relkind IN ('r','p','v','m','f')
+          AND (has_table_privilege(r.oid,c.oid,'INSERT')
+            OR has_table_privilege(r.oid,c.oid,'UPDATE')
+            OR has_table_privilege(r.oid,c.oid,'DELETE')
+            OR has_table_privilege(r.oid,c.oid,'TRUNCATE')
+            OR has_table_privilege(r.oid,c.oid,'REFERENCES')
+            OR has_table_privilege(r.oid,c.oid,'TRIGGER'))) AS can_write_any_public_table,
+      EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+        WHERE n.nspname='public' AND c.relkind='S'
+          AND (has_sequence_privilege(r.oid,c.oid,'USAGE')
+            OR has_sequence_privilege(r.oid,c.oid,'UPDATE'))) AS can_use_or_update_public_sequence
       FROM pg_roles r WHERE r.rolname=current_user`);
     const check=verifyDatabaseIdentity(result.rows?.[0],{
       allowWrites:process.env.NEWCHANGES_ALLOW_WRITES==="true"
