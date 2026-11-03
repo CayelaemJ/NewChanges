@@ -7,7 +7,6 @@ const managingMethods=window.location?.pathname==='/mfa/manage';
 let enrollmentApproved=false;
 let enrollmentRequestId=null;
 let legacyGrant='';
-let recoveryKeyAcknowledged=false;
 function show(message){statusEl.textContent=message;}
 function displayRecoveryKey(key){
  if(typeof key!=='string'||!/^[A-Za-z0-9_-]{43}$/.test(key))return;
@@ -15,7 +14,6 @@ function displayRecoveryKey(key){
  document.getElementById('mfa-backup-value').textContent=key;
  document.getElementById('mfa-backup-confirm').checked=false;
  document.getElementById('mfa-backup-dismiss').disabled=true;
- recoveryKeyAcknowledged=false;
  document.getElementById('mfa-continue').hidden=true;
  panel.hidden=false;
  panel.scrollIntoView?.({behavior:'smooth',block:'center'});
@@ -359,7 +357,6 @@ document.getElementById('mfa-backup-confirm').addEventListener('change',()=>{
 document.getElementById('mfa-backup-dismiss').addEventListener('click',async()=>{
  document.getElementById('mfa-backup-value').textContent='';
  document.getElementById('mfa-backup-key').hidden=true;
- recoveryKeyAcknowledged=true;
  await refresh();
  show('Recovery key hidden. The Fixer cannot display it again.');
 });
