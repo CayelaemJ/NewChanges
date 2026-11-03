@@ -11,6 +11,7 @@ export function verifyDatabaseIdentity(row,{allowWrites=false}={}){
     row.can_create_roles===false &&
     row.bypasses_rls===false &&
     row.member_superuser===false &&
+    row.member_privileged_role===false &&
     row.member_application_owner===false &&
     row.can_create_database_objects===false &&
     row.can_create_public_objects===false &&
