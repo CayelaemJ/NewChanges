@@ -8,6 +8,16 @@ let enrollmentApproved=false;
 let enrollmentRequestId=null;
 let legacyGrant='';
 function show(message){statusEl.textContent=message;}
+function displayRecoveryKey(key){
+ if(typeof key!=='string'||!/^[A-Za-z0-9_-]{43}$/.test(key))return;
+ const panel=document.getElementById('mfa-backup-key');
+ document.getElementById('mfa-backup-value').textContent=key;
+ document.getElementById('mfa-backup-confirm').checked=false;
+ document.getElementById('mfa-backup-dismiss').disabled=true;
+ panel.hidden=false;
+ panel.scrollIntoView?.({behavior:'smooth',block:'center'});
+}
+
 async function api(path,data){
  const response=await fetch('/api/auth/mfa/'+path,{method:'POST',credentials:'same-origin',
   headers:{'Content-Type':'application/json'},body:JSON.stringify(data||{})});
@@ -174,7 +184,8 @@ async function run(kind){
     const publicKey=creationOptions(options);
     const credential=await navigator.credentials.create({publicKey});
     if(!credential)throw Error('Enrollment cancelled');
-    await api('register/verify',{challenge:options.challenge,response:serialize(credential),grantCode});
+    const result=await api('register/verify',{challenge:options.challenge,response:serialize(credential),grantCode});
+    displayRecoveryKey(result.recoveryKey);
     grantEl.value='';show('Passkey enrolled and verified. You can return to the admin console.');
   }else{
     show('Waiting for passkey confirmation…');
@@ -217,7 +228,8 @@ totpStart.addEventListener('click',()=>withTotpBusy(totpStart,async()=>{
 totpConfirm.addEventListener('click',()=>withTotpBusy(totpConfirm,async()=>{
  const code=document.getElementById('totp-confirm-code').value.trim();
  if(!/^[0-9]{6}$/.test(code))throw Error('Enter the six-digit code shown in your authenticator app.');
- await api('totp/confirm',{grantCode:document.getElementById('totp-grant').value.trim(),code});
+ const result=await api('totp/confirm',{grantCode:document.getElementById('totp-grant').value.trim(),code});
+ displayRecoveryKey(result.recoveryKey);
  document.getElementById('totp-confirm-code').value='';
  document.getElementById('totp-manual-key').textContent='';
  document.getElementById('totp-qr').removeAttribute('src');
@@ -316,4 +328,21 @@ approveEnrollment.addEventListener('click',async()=>{
   document.getElementById('mfa-approval-confirm-identity').checked=false;
  }catch(error){resultEl.textContent=error?.message||'Approval failed';}
  finally{approveEnrollment.disabled=false;}
+});
+
+
+document.getElementById('mfa-backup-copy').addEventListener('click',async()=>{
+ const key=document.getElementById('mfa-backup-value').textContent;
+ if(!key)return;
+ try{await navigator.clipboard.writeText(key);show('Recovery key copied. Store it in a protected password manager, then clear your clipboard.');}
+ catch{show('Clipboard unavailable. Copy the displayed key into your password manager manually.');}
+});
+document.getElementById('mfa-backup-confirm').addEventListener('change',()=>{
+ document.getElementById('mfa-backup-dismiss').disabled=
+  !document.getElementById('mfa-backup-confirm').checked;
+});
+document.getElementById('mfa-backup-dismiss').addEventListener('click',()=>{
+ document.getElementById('mfa-backup-value').textContent='';
+ document.getElementById('mfa-backup-key').hidden=true;
+ show('Recovery key hidden. The Fixer cannot display it again.');
 });
