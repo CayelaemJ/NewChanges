@@ -26,7 +26,7 @@ CHUNK_CHARS = max(1000, min(12000, int(os.getenv("AI_SCAN_CHUNK_CHARS", "5500"))
 TIMEOUT = max(60, min(1200, int(os.getenv("AI_SCAN_REQUEST_TIMEOUT", "360"))))
 RETRIES = max(1, min(8, int(os.getenv("AI_SCAN_RETRIES", "4"))))
 MAX_TEXT_BYTES = max(100000, int(os.getenv("AI_SCAN_MAX_TEXT_BYTES", "5000000")))
-CHECKPOINTS = REPORTS / "checkpoints"
+CHECKPOINTS = Path(os.getenv("SCAN_CACHE_DIR", str(REPORTS / "checkpoints"))).resolve()
 # Only actual key material/credential stores are excluded. Security implementation
 # code, including auth, MFA and secrets-handling logic, is always eligible.
 SENSITIVE_NAMES = {".env", ".env.local", ".env.production", "id_rsa", "id_ed25519",
@@ -149,7 +149,7 @@ def ask_model(name, start, end, block):
         "model": MODEL,
         "prompt": f"{PROMPT}\nPATH: {name}\nLINES: {start}-{end}\nSOURCE:\n{block}",
         "stream": False, "format": "json",
-        "options": {"temperature": 0, "num_predict": 1400}
+        "options": {"temperature": 0, "num_predict": 1400, "num_ctx": 8192}
     }).encode()
     req = Request(URL + "/api/generate", data=payload,
                   headers={"Content-Type": "application/json"}, method="POST")
@@ -196,11 +196,14 @@ def scan():
     if not selected:
         raise SystemExit("No reviewable tracked text files")
     total_chunks = sum(len(chunks_for(content)) for _, content in selected)
+    print(f"Local model: {MODEL}; files: {len(selected)}, chunks: {total_chunks}; "
+          f"persistent checkpoint dir: {CHECKPOINTS}", flush=True)
     all_findings, failed = [], []
     done = 0
     attempt_count = 0
     seen_findings = set()
-    for name, content in selected:
+    for file_index, (name, content) in enumerate(selected, 1):
+        print(f"File {file_index}/{len(selected)}: {name}", flush=True)
         for first, last, block in chunks_for(content):
             identity = json.dumps([VERSION, MODEL, name, first, last, block], ensure_ascii=False)
             key = hashlib.sha256(identity.encode()).hexdigest()
