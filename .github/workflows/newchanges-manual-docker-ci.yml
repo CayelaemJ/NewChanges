@@ -101,6 +101,32 @@ jobs:
             -f docker-compose.local-tests.yml \
             run --build --rm tests sh scripts/ci/run-docker-ci-suite.sh
 
+      - name: Rehearse committed Prisma migrations in a second disposable database
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          PROJECT="newchanges-ci-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          docker compose -p "$PROJECT" -f docker-compose.local-tests.yml \
+            exec -T db createdb -U ci_fixture newchanges_ci_migrations
+          docker compose -p "$PROJECT" -f docker-compose.local-tests.yml \
+            run --rm --no-deps \
+              -e DATABASE_URL=postgresql://ci_fixture:ci_fixture@127.0.0.1:5432/newchanges_ci_migrations \
+              tests sh -ceu '
+                test "$CI" = "true"
+                test "$DATABASE_URL" = "postgresql://ci_fixture:ci_fixture@127.0.0.1:5432/newchanges_ci_migrations"
+                node node_modules/prisma/build/index.js migrate deploy
+                node node_modules/prisma/build/index.js migrate status
+                echo "PASS isolated Prisma migration deploy and status"
+              '
+
+      - name: Drop temporary migration rehearsal database
+        if: always()
+        shell: bash
+        run: |
+          PROJECT="newchanges-ci-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          docker compose -p "$PROJECT" -f docker-compose.local-tests.yml \
+            exec -T db dropdb -U ci_fixture --if-exists --force newchanges_ci_migrations || true
+
       - name: Verify disposable PostgreSQL backup and restore
         shell: bash
         run: |
