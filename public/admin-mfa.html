@@ -65,6 +65,15 @@ input:focus{border-color:#65349e}
  <a href="/dashboard" id="mfa-continue" style="display:inline-block;background:#65349e;color:white;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:9px">Continue to dashboard</a>
  <a href="/mfa/manage" id="mfa-manage-link" style="display:inline-block;margin-left:12px;color:#65349e;font-weight:700">Manage authentication methods</a>
 </div>
+<section id="mfa-backup-key" class="panel" hidden style="border:2px solid #b66f18;background:#fffaf1;margin-top:18px">
+<h2>Save your account recovery key</h2>
+<p><strong>This key is shown only once.</strong> Copy it into a trusted password manager or write it down and store it somewhere secure. Do not share it, email it, save it in a screenshot, or keep it on the same phone as your authenticator.</p>
+<code id="mfa-backup-value" style="display:block;overflow-wrap:anywhere;font-size:15px;padding:15px;border-radius:9px;background:white;border:1px solid #d7b37e;user-select:all"></code>
+<button type="button" id="mfa-backup-copy" style="margin-top:14px">Copy recovery key</button>
+<label class="checkbox-line"><input id="mfa-backup-confirm" type="checkbox"> I have securely saved my one-time recovery key</label>
+<button type="button" id="mfa-backup-dismiss" disabled>I've saved my recovery key</button>
+<small>The Fixer stores only a hash and cannot display this key again. If you lose your MFA device, this key supports the identity-verified recovery process. It does not reveal the server's encryption key.</small>
+</section>
 <section id="mfa-manage-banner" class="panel" hidden><h2>Manage your authentication methods</h2><p>Your administrator session is verified. Add a device passkey or an authenticator app without repeating first-time grant enrollment. Existing methods cannot be silently replaced.</p></section>
 <section id="mfa-approval-panel" class="panel" hidden style="margin:18px 0">
 <h2>First-time security setup</h2>
