@@ -35,3 +35,13 @@ test('MFA ceremony routes users according to login and verification status',()=>
  assert.match(route,/return reply\.redirect\("\/dashboard"\)/);
  assert.match(route,/return serveHtml\(reply, "admin-mfa\.html"\)/);
 });
+
+test('isolated MFA preview starts with sign-in instead of marketing home',()=>{
+ const start=server.indexOf('app.get("/",');
+ const end=server.indexOf('\napp.get(',start+8);
+ assert.ok(start>=0,'root route exists');
+ const scope=server.slice(start,end>start?end:start+900);
+ assert.match(scope,/process\.env\.MFA_STAGING_ONLY === "true" && !user/);
+ assert.match(scope,/return reply\.redirect\("\/login"\)/);
+ assert.match(scope,/return serveHtml\(reply, "home\.html"\)/);
+});
