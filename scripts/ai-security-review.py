@@ -16,8 +16,8 @@ MAX_CHARS = min(max(int(os.environ.get("MAX_CHARS_PER_FILE", "12000")), 1000), 3
 SUFFIXES = {".ts", ".tsx", ".js", ".jsx", ".py", ".prisma", ".mjs", ".cjs"}
 EXCLUDE_DIRS = {"node_modules", ".git", "dist", "build", "coverage", "test-reports",
                 ".next", ".venv", "vendor", "generated", ".cache", "playwright-report"}
-BLOCK_NAMES = (".env", ".pem", ".key", "id_rsa", "id_ed25519", "credentials",
-               "secrets", "private", "token.json", "service-account")
+BLOCK_NAMES = (".env", ".pem", ".key", "id_rsa", "id_ed25519",
+               "token.json", "service-account.json", "credentials.json")
 # Conservative heuristic: omit files containing apparent embedded secrets.
 SECRET_ASSIGNMENT = re.compile(
     r"""(?im)^\s*(?:export\s+)?(?:const|let|var)?\s*
@@ -54,9 +54,9 @@ for path in ROOT.rglob("*"):
         content = path.read_text(encoding="utf-8")
     except (OSError, UnicodeError):
         continue
-    if SECRET_ASSIGNMENT.search(content):
-        print(f"Skipped potentially sensitive file: {rel}", flush=True)
-        continue
+    # Security-sensitive implementation code MUST be eligible for review.
+    # Redact candidate literals before sending source to the local model.
+    content = SECRET_ASSIGNMENT.sub("[REDACTED_POSSIBLE_CREDENTIAL]", content)
     files.append((str(rel), content[:MAX_CHARS]))
 files.sort(key=lambda x: priority(x[0]))
 files = files[:MAX_FILES]
