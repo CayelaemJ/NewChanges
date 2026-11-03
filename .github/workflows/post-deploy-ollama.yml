@@ -37,6 +37,20 @@ jobs:
             http://host.docker.internal:11434/api/tags \
             | python3 -c 'import json,sys; m=json.load(sys.stdin)["models"]; assert any(x.get("name")=="qwen2.5-coder:7b" and not x.get("remote_host") for x in m)'
 
+      - name: Post-deploy full tracked-source inventory (read-only)
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 scripts/ci/codebase-inventory.py
+
+      - name: Post-deploy full repository deterministic security scan
+        id: static
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          bash scripts/ci/run-security-scanners.sh
+
       - name: Final AI security and anomaly review
         id: review
         continue-on-error: true
@@ -109,7 +123,7 @@ jobs:
           PY
 
       - name: Mark failed patch tests for approval
-        if: ${{ steps.validate.outcome == 'failure' || steps.auto.outcome == 'failure' || steps.review.outcome == 'failure' }}
+        if: ${{ steps.validate.outcome == 'failure' || steps.auto.outcome == 'failure' || steps.review.outcome == 'failure' || steps.static.outcome == 'failure' }}
         shell: bash
         run: |
           python3 - <<'PY'
@@ -174,6 +188,7 @@ jobs:
         shell: bash
         run: |
           echo "### Post-deployment Ollama review" >> "$GITHUB_STEP_SUMMARY"
+          echo "Static whole-repository scan: ${{ steps.static.outcome }}" >> "$GITHUB_STEP_SUMMARY"
           echo "Scanner result: ${{ steps.review.outcome }}" >> "$GITHUB_STEP_SUMMARY"
           echo "Auto-fix decision: ${{ steps.decision.outputs.status }}" >> "$GITHUB_STEP_SUMMARY"
           echo "AI proposals are unverified; no automatic production deployment or merge." >> "$GITHUB_STEP_SUMMARY"
