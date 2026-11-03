@@ -131,8 +131,6 @@ def parse_answer(raw):
         obj = raw
     else:
         s = str(raw).strip()
-        if s.startswith("&#96;"):
-            s = s.replace("&#96;", "&#96;")
         s = re.sub(r"^"+chr(96)+r"{3}(?:json)?\s*", "", s)
         s = re.sub(r"\s*"+chr(96)+r"{3}$", "", s)
         try:
@@ -245,7 +243,7 @@ def scan():
     for failure in failed:
         covered_files[failure["file"]] = False
     completed_files = sum(covered_files.values())
-    complete = done == total_chunks and not failed and not excluded
+    complete = done == total_chunks and not failed
     report = {
         "schema_version": VERSION, "model": MODEL, "created_at": now(),
         "eligible_files": len(selected), "selected_files": len(selected),
@@ -254,7 +252,8 @@ def scan():
         "total_chunks": total_chunks, "completed_chunks": done,
         "skipped_files": excluded, "truncated_files": [],
         "errors": failed, "findings": all_findings,
-        "complete": complete, "attempt_count": attempt_count,
+        "complete": complete, "all_tracked_included": not excluded,
+        "attempt_count": attempt_count,
         "note": "AI findings are unverified. Excluded binary/key/generated files are reported, not silently ignored."
     }
     atom_json(REPORTS / "report.json", report)
@@ -265,7 +264,8 @@ def scan():
         f"Excluded tracked paths: {len(excluded)}",
         f"Failed chunks: {len(failed)}",
         f"AI findings (unverified): {len(all_findings)}",
-        f"Complete: {complete}", "",
+        f"All reviewable text complete: {complete}",
+        f"All Git-tracked paths included (including binaries/keys): {not excluded}", "",
         "## Unverified findings"
     ]
     for finding in all_findings:
@@ -276,7 +276,7 @@ def scan():
     if failed:
         lines.extend(["## Failed chunks"] + [f"- {f['file']}:{f['first']}-{f['last']} — {f['error']}" for f in failed])
     if excluded:
-        lines.extend(["## Excluded tracked paths"] + [f"- {i['file']}: {i['reason']}" for i in excluded])
+        lines.extend(["## Excluded tracked paths (not AI-readable source)"] + [f"- {i['file']}: {i['reason']}" for i in excluded])
     safe_write(REPORTS / "report.md", "\n".join(lines) + "\n")
     print(f"Completed {done}/{total_chunks} chunks, {completed_files}/{len(selected)} files; "
           f"{len(failed)} failures; {len(excluded)} excluded; {len(all_findings)} findings.", flush=True)
