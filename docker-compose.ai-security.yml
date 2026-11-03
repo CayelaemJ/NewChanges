@@ -3,17 +3,18 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.ai-security
-    environment:
+    environment: &ai_env
       OLLAMA_URL: http://host.docker.internal:11434
+      LOCAL_OLLAMA_URL: http://host.docker.internal:11434/api/generate
       OLLAMA_MODEL: qwen2.5-coder:7b
       SCAN_ROOT: /workspace
-      REPORT_DIR: /reports
+      REPORT_DIR: /workspace/test-reports/ai-security
       MAX_FILES: "25"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
       - ./:/workspace:ro
-      - ./test-reports/ai-security:/reports:rw
+      - ./test-reports/ai-security:/workspace/test-reports/ai-security:rw
     working_dir: /workspace
     read_only: true
     tmpfs:
@@ -23,4 +24,23 @@ services:
     security_opt:
       - no-new-privileges:true
     mem_limit: 512m
-    network_mode: bridge
+  ai-auto-repair:
+    build:
+      context: .
+      dockerfile: Dockerfile.ai-security
+    environment: *ai_env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./:/workspace:rw
+    working_dir: /workspace
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 512m
+    profiles:
+      - auto-repair
