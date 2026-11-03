@@ -5,10 +5,10 @@ on:
   workflow_dispatch:
     inputs:
       run_security_scanners:
-        description: 'Opt in to pre-cached security scanners (Semgrep, Gitleaks, Trivy, npm advisory)'
+        description: 'Run security scans (Semgrep, Gitleaks, Trivy, secret checks, npm advisories; cached images needed)'
         required: false
         type: boolean
-        default: false
+        default: true
       prepare_mfa_lock:
         description: 'Resolve SimpleWebAuthn 14.0.3 lockfile (uploads files; no push or deployment)'
         required: false
