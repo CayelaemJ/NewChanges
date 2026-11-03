@@ -1,13 +1,14 @@
 name: The Fixer final post-deploy Ollama check
 
-# Automatic only when a deployment provider reports success to GitHub.
-# Render/Cloudflare must publish deployment_status events for this to run.
+# Requires verified provider GitHub deployment_status reporting.
 on:
   deployment_status:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
+  pull-requests: write
+  issues: write
 
 concurrency:
   group: newchanges-final-ollama-check
@@ -19,13 +20,13 @@ jobs:
     runs-on: [self-hosted, linux, x64, newchanges-ci]
     timeout-minutes: 100
     steps:
-      - name: Checkout trusted code only
+      - name: Checkout trusted main without stored credentials
         uses: actions/checkout@v4
         with:
           ref: main
           persist-credentials: false
 
-      - name: Verify local Docker and Ollama model
+      - name: Verify Docker and local Ollama
         shell: bash
         run: |
           set -Eeuo pipefail
@@ -34,9 +35,9 @@ jobs:
           docker run --rm --add-host host.docker.internal:host-gateway \
             curlimages/curl:latest -fsS --max-time 15 \
             http://host.docker.internal:11434/api/tags \
-            | python3 -c 'import json,sys; m=json.load(sys.stdin)["models"]; assert any(x.get("name")=="qwen2.5-coder:7b" and not x.get("remote_host") for x in m), "Local model unavailable"'
+            | python3 -c 'import json,sys; m=json.load(sys.stdin)["models"]; assert any(x.get("name")=="qwen2.5-coder:7b" and not x.get("remote_host") for x in m)'
 
-      - name: Final AI security and anomaly review (advisory)
+      - name: Final AI security and anomaly review
         id: review
         continue-on-error: true
         shell: bash
@@ -45,39 +46,140 @@ jobs:
           mkdir -p test-reports/ai-security
           chmod 777 test-reports/ai-security
           docker compose -p "newchanges-ollama-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
-            -f docker-compose.ai-security.yml \
-            run --build --rm ai-security-review
+            -f docker-compose.ai-security.yml run --build --rm ai-security-review
 
-      - name: Generate remediation proposals (no automatic code changes)
+      - name: Plan remediation (draft only)
         if: ${{ steps.review.outcome == 'success' }}
         continue-on-error: true
         shell: bash
         run: |
           docker compose -p "newchanges-ollama-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
-            -f docker-compose.ai-security.yml \
-            run --rm --entrypoint python ai-security-review /scanner/ai-remediation-plan.py
+            -f docker-compose.ai-security.yml run --rm \
+            --entrypoint python ai-security-review /scanner/ai-remediation-plan.py
 
-      - name: Summarize check without publishing source excerpts
+      - name: Auto-repair only one low-risk UI finding
+        if: ${{ steps.review.outcome == 'success' }}
+        id: auto
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          docker compose -p "newchanges-ollama-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            -f docker-compose.ai-security.yml run --build --rm \
+            --user "$(id -u):$(id -g)" \
+            --entrypoint python ai-auto-repair /scanner/ai-auto-remediate.py
+
+      - name: Verify strictly bounded patch with isolated dependency installation
+        id: validate
+        if: ${{ steps.auto.outcome == 'success' }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 - <<'PY'
+          import json,subprocess
+          from pathlib import Path
+          d=json.loads(Path("test-reports/ai-security/decision.json").read_text())
+          if d.get("status")!="candidate":
+              print("No automatic candidate, skipping validations")
+              raise SystemExit(0)
+          files=subprocess.check_output(["git","diff","--name-only"],text=True).splitlines()
+          assert files==[d["file"]], "More than one changed source file"
+          assert files[0].startswith("frontend/src/components/ui/"), "Unapproved patch path"
+          changes=subprocess.check_output(["git","diff","--numstat"],text=True).split()
+          assert len(changes)==3 and changes[0].isdigit() and changes[1].isdigit()
+          assert int(changes[0])+int(changes[1])<=12, "Patch size limit exceeded"
+          PY
+          if [ "$(python3 -c 'import json;print(json.load(open("test-reports/ai-security/decision.json"))["status"])')" != "candidate" ]; then
+            exit 0
+          fi
+          git diff --check
+          # Use containerized Node on synthetic/local files; no database access or secrets.
+          docker run --rm --network none -e CI=true \
+            -v "$PWD:/workspace:rw" -w /workspace node:24-slim \
+            sh -ec 'npm ci --offline --ignore-scripts --no-audit --no-fund && npm ci --prefix frontend --offline --ignore-scripts --no-audit --no-fund && npm run check:frontend:typecheck && npm run build --prefix frontend'
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path("test-reports/ai-security/decision.json")
+          d=json.loads(p.read_text())
+          if d["status"]=="candidate":
+              d["status"]="validated"
+              d["reason"]="Small UI patch passed offline typecheck and frontend build"
+              p.write_text(json.dumps(d,indent=2))
+          PY
+
+      - name: Mark failed patch tests for approval
+        if: ${{ steps.validate.outcome == 'failure' || steps.auto.outcome == 'failure' || steps.review.outcome == 'failure' }}
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path("test-reports/ai-security/decision.json")
+          d=json.loads(p.read_text()) if p.exists() else {}
+          d.update(status="escalate",reason="Local model or patch validation failed; no PR will be generated")
+          p.parent.mkdir(parents=True,exist_ok=True)
+          p.write_text(json.dumps(d,indent=2))
+          PY
+
+      - name: Read decision for safe GitHub actions
+        if: always()
+        id: decision
+        shell: bash
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          from pathlib import Path
+          p=Path("test-reports/ai-security/decision.json")
+          d=json.loads(p.read_text()) if p.exists() else {"status":"escalate"}
+          state=d.get("status","escalate")
+          print("status="+(state if state in ("validated","escalate","no_action") else "escalate"))
+          PY
+
+      - name: Open PR for tested small fix (never merge automatically)
+        if: ${{ steps.decision.outputs.status == 'validated' }}
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: bot/ollama-small-fix
+          base: main
+          title: 'fix: local Ollama low-risk UI remediation'
+          body: |
+            Automatic small-scope AI change after post-deployment review.
+            Source was reviewed locally and frontend offline checks passed.
+            AI findings remain unverified. Human review required before merge.
+            This PR does not change authentication, MFA, databases or production.
+          commit-message: 'fix: small Ollama-proposed UI correction'
+          add-paths: |
+            frontend/src/components/ui/**
+          draft: true
+          delete-branch: false
+
+      - name: Notify owner for larger or unverified changes
+        if: ${{ steps.decision.outputs.status == 'escalate' }}
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const title = 'Ollama review requires approval (' + context.runId + ')';
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body: 'A post-deployment local AI security review found an issue outside the permitted small-fix scope, or its tests failed.\n\nPlease review [the workflow run](' + context.serverUrl + '/' + context.repo.owner + '/' + context.repo.repo + '/actions/runs/' + context.runId + ').\n\nNo unreviewed code was merged or deployed. Findings are unverified and kept locally on the runner.'
+            });
+
+      - name: Summarize
         if: always()
         shell: bash
         run: |
-          echo "### Final post-deployment Ollama check" >> "$GITHUB_STEP_SUMMARY"
-          echo "AI review: ${{ steps.review.outcome }}" >> "$GITHUB_STEP_SUMMARY"
-          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
-          import json
-          from pathlib import Path
-          p=Path("test-reports/ai-security/report.json")
-          if p.exists():
-              r=json.loads(p.read_text())
-              print(f"Files selected: {r.get('reviewed_files', 0)}")
-              print(f"Unverified findings: {len(r.get('findings', []))}")
-              print(f"Scan errors: {len(r.get('errors', []))}")
-          else:
-              print("No report produced; check runner logs.")
-          print("Remediation proposals need human review and regression testing.")
-          PY
+          echo "### Post-deployment Ollama review" >> "$GITHUB_STEP_SUMMARY"
+          echo "Scanner result: ${{ steps.review.outcome }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Auto-fix decision: ${{ steps.decision.outputs.status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "AI proposals are unverified; no automatic production deployment or merge." >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Clean up only this isolated scanner project
+      - name: Clean only dedicated scanner containers
         if: always()
         shell: bash
         run: |
