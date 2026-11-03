@@ -102,3 +102,29 @@ test('method manager refuses to display new enrollment before MFA verification',
  assert.equal(el('mfa-passkey-enroll-panel').hidden,true);
  assert.equal(el('totp-verify-panel').hidden,false);
 });
+
+test('first-time administrator uses server approval instead of entering a random key',async()=>{
+ const el=await check({enrolled:false,verified:false,passkeyEnrolled:false,
+  totpEnrolled:false,totpAvailable:true,canManageRecovery:false});
+ assert.equal(el('mfa-approval-panel').hidden,false);
+ assert.equal(el('grant').hidden,true);
+ assert.equal(el('totp-grant').hidden,true);
+ assert.equal(el('enroll').disabled,true);
+ assert.equal(el('totp-start').disabled,true);
+ assert.match(html,/id="mfa-approval-request"/);
+ assert.match(script,/\/api\/auth\/mfa\/enrollment\/status/);
+ assert.match(script,/enrollment\/request/);
+});
+test('once enrolled, the first-time approval panel disappears',async()=>{
+ const el=await check({enrolled:true,verified:false,passkeyEnrolled:false,
+  totpEnrolled:true,totpAvailable:true,canManageRecovery:false});
+ assert.equal(el('mfa-approval-panel').hidden,true);
+ assert.equal(el('totp-verify-panel').hidden,false);
+});
+test('independent superadmin enrollment approval UI requires fresh recovery authority',async()=>{
+ const el=await check({enrolled:true,verified:true,verificationMethod:'PASSKEY',
+  passkeyEnrolled:true,totpEnrolled:false,totpAvailable:true,canManageRecovery:true},'/mfa/manage');
+ assert.equal(el('mfa-approval-admin').hidden,false);
+ assert.match(html,/mfa-approval-confirm-identity/);
+ assert.match(script,/identityConfirmed:true/);
+});
