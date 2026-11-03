@@ -4,3 +4,6 @@ dist
 .env.*
 *.log
 !.env.example
+
+# Local-only AI security findings (may contain source excerpts)
+test-reports/ai-security/
