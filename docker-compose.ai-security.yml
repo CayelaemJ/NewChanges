@@ -9,6 +9,7 @@ services:
       OLLAMA_MODEL: qwen2.5-coder:7b
       SCAN_ROOT: /workspace
       REPORT_DIR: /workspace/test-reports/ai-security
+      SCAN_CACHE_DIR: /scan-cache
       MAX_FILES: "0"
       AI_SCAN_CHUNK_CHARS: "5500"
       AI_SCAN_REQUEST_TIMEOUT: "360"
@@ -18,6 +19,7 @@ services:
     volumes:
       - ./:/workspace:ro
       - ./test-reports/ai-security:/workspace/test-reports/ai-security:rw
+      - ${HOME}/.cache/the-fixer-ollama:/scan-cache:rw
     working_dir: /workspace
     read_only: true
     tmpfs:
@@ -36,6 +38,7 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - ./:/workspace:rw
+      - ${HOME}/.cache/the-fixer-ollama:/scan-cache:rw
     working_dir: /workspace
     read_only: true
     tmpfs:
