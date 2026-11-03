@@ -1,0 +1,77 @@
+name: The Fixer post-deploy Ollama security review
+
+# Automatic only if the deployment provider publishes a successful GitHub
+# deployment_status event. Render/Cloudflare may not emit these by default.
+# Manual dispatch remains available as a safe fallback.
+on:
+  deployment_status:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: newchanges-post-deploy-ollama
+  cancel-in-progress: false
+
+jobs:
+  ollama-final-review:
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.deployment_status.state == 'success' && github.event.deployment.ref == 'main') }}
+    runs-on: [self-hosted, linux, x64, newchanges-ci]
+    timeout-minutes: 100
+    steps:
+      - name: Check out trusted main branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Confirm host Docker and local Ollama
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          docker info >/dev/null
+          docker compose version
+          docker run --rm --network bridge --add-host host.docker.internal:host-gateway \
+            curlimages/curl:latest -fsS --max-time 15 \
+            http://host.docker.internal:11434/api/tags \
+            | python3 -c 'import json,sys; m=json.load(sys.stdin)["models"]; assert any(x.get("name")=="qwen2.5-coder:7b" and not x.get("remote_host") for x in m), "Local qwen2.5-coder:7b unavailable"'
+
+      - name: Final post-deploy security review (advisory)
+        id: review
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          mkdir -p test-reports/ai-security
+          chmod 777 test-reports/ai-security
+          docker compose -p "newchanges-ollama-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            -f docker-compose.ai-security.yml \
+            run --build --rm ai-security-review
+
+      - name: Report status without exposing source findings in Actions logs
+        if: always()
+        shell: bash
+        run: |
+          echo "### Post-deployment Ollama review" >> "$GITHUB_STEP_SUMMARY"
+          echo "Result: ${{ steps.review.outcome }}" >> "$GITHUB_STEP_SUMMARY"
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          from pathlib import Path
+          p=Path("test-reports/ai-security/report.json")
+          if p.exists():
+              r=json.loads(p.read_text())
+              print(f"Files selected: {r.get('reviewed_files', 0)}")
+              print(f"Unverified AI findings: {len(r.get('findings', []))}")
+              print(f"Scanner errors: {len(r.get('errors', []))}")
+          else:
+              print("No report produced; inspect runner logs.")
+          print("AI findings are advisory, not verified vulnerabilities.")
+          PY
+
+      - name: Clean up only this scanner project
+        if: always()
+        shell: bash
+        run: |
+          docker compose -p "newchanges-ollama-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            -f docker-compose.ai-security.yml down --volumes --remove-orphans
