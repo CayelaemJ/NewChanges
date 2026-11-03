@@ -29,13 +29,17 @@ cat test-reports/ai-security/remediation-plan.md
 ## Operational limits
 - Docker must reach the Windows Ollama service on `host.docker.internal:11434`.
 - The model must be pulled locally. Models ending in `:cloud` are rejected.
-- Only a bounded set of source files is scanned; default maximum 25 files, prioritized
-  toward authentication, security, MFA, database, tenant, and API paths.
+- The Docker scanner now attempts every Git-tracked UTF-8 reviewable text file by default
+  (MAX_FILES=0), prioritizing security-related implementation. Files are chunked into
+  bounded prompts rather than truncated. The report distinguishes excluded binaries,
+  generated paths and credential material from reviewed text and failed chunks.
 - Scan exclusions and a conservative source-credential heuristic reduce the chance
   of secrets entering prompts but are **not a complete secrets detector**.
 - Model findings can be wrong or incomplete. Validate with Semgrep, Gitleaks, Trivy,
   unit/integration tests, and manual review.
-- A scan timeout is recorded as an error and the AI step remains non-blocking.
+- Malformed JSON and transient Ollama failures are retried up to four times, with
+  a configurable per-request timeout (360 seconds by default). Repeated errors remain
+  visible as failures, not clean results. No promise of zero errors or runtime limit.
 - Reports stay on the local runner filesystem under `test-reports/ai-security`. GitHub
   Actions receives only aggregate counts, not source excerpts or full reports.
 - The remediation planner produces suggestions; the separate auto-repair stage may apply
@@ -104,3 +108,32 @@ Gitleaks and functional authorization tests remain mandatory independent control
   outstanding. Remove nothing without usage analysis, regression tests, and review.
 - Before enabling deployment promotion, gate on the deterministic checks and smoke tests.
   A *post*-deploy scan cannot prevent an already-live release.
+
+## Local Ubuntu full scan and resume
+
+Keep your Ollama process running on Windows. This uses the downloaded local
+`qwen2.5-coder:7b` model without cloud-model usage fees or request quotas.
+Local RAM/VRAM, model context, disk space, response reliability and runtime
+still impose real technical limits.
+
+```bash
+cd ~/NewChanges-pr219
+git pull --ff-only origin chore/manual-self-hosted-docker-ci-20261029
+install -d -m 700 "$HOME/.cache/the-fixer-ollama"
+python3 -m unittest discover -s tests/ci -p 'ollama-scanner-contract.test.py' -v
+mkdir -p test-reports/ai-security
+docker compose -f docker-compose.ai-security.yml run --build --rm \\
+  --user "$(id -u):$(id -g)" ai-security-review
+cat test-reports/ai-security/report.md
+```
+
+If a request fails or the local machine restarts, rerun the same Docker command.
+Checkpoint content is stored under `~/.cache/the-fixer-ollama` and keyed by
+model, source path, line boundaries and exact source content, so unchanged chunks
+will not need to be reviewed again. Reports live under
+`test-reports/ai-security`, not Git. Protect that folder and your cache because
+AI findings can quote source code.
+
+Note that the first full scan may be very slow on local hardware and could exceed
+GitHub Actions' per-job timeout. In that case rerun and resume: incomplete jobs
+are not a successful security verdict.
