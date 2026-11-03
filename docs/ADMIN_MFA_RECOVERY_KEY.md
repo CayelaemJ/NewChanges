@@ -33,11 +33,18 @@ issue keys without a deliberate user action.
 ## Recovery policy
 
 A recovery key alone must **not** bypass password login or the two-person
-superadministrator recovery authorization. As implemented so far, the key is
-issued and stored securely but its self-service redemption/reset workflow is
-**not yet implemented**. Do not claim this key can currently reset MFA
-credentials. Keep the existing independently verified two-superadministrator
-recovery route as the supported way to replace lost MFA credentials.
+superadministrator recovery authorization. The existing dual-superadmin recovery
+approval endpoint accepts an OPTIONAL saved recovery key as additional
+proof. When provided, the key must match its stored hash and is atomically
+consumed together with successful recovery. All old backup keys are invalidated
+when credentials are reset, whether or not a code was presented. The target's
+next successful MFA enrollment can issue a new key.
+
+There is NO self-service recovery-key redemption screen yet. The two-person
+administrator recovery remains mandatory; the backend's optional recovery-key
+input does not automatically restore access. Do not claim the code alone can
+reset MFA credentials, and never ask users to paste recovery keys into chat,
+support tickets or ordinary email.
 
 Before enabling recovery key redemption, separately review and test:
 single-use consumption; password plus key verification; account/session
