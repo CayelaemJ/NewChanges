@@ -31,6 +31,14 @@ jobs:
       CI: "true"
       NODE_ENV: test
     steps:
+      - name: Verify scanner parser, chunk coverage and retries offline
+        shell: bash
+        run: python3 -m unittest discover -s tests/ci -p 'ollama-scanner-contract.test.py' -v
+
+      - name: Prepare private persistent local model checkpoint cache
+        shell: bash
+        run: install -d -m 700 "$HOME/.cache/the-fixer-ollama"
+
       - name: Check out selected trusted ref without persisted credentials
         uses: actions/checkout@v4
         with:
@@ -137,7 +145,7 @@ jobs:
         shell: bash
         run: bash scripts/ci/run-security-scanners.sh
 
-      - name: Run pre-release Ollama security review (priority source files)
+      - name: Run resumable Ollama security review of all reviewable tracked files
         if: ${{ always() && !inputs.prepare_mfa_lock }}
         continue-on-error: true
         shell: bash
