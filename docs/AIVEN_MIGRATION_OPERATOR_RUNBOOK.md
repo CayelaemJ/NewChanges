@@ -22,11 +22,12 @@ In Aiven Console, open the existing service:
 Aiven CLI alternative (run via an authenticated local Aiven CLI; never paste tokens into chat or a repository):
 
 ```sh
-avn service task-create the-fixer-postgres --project cay-bed7 --operation upgrade_check --target-version 18
-# Review status of the returned task ID before upgrade; result expires after one hour.
-avn service task-get the-fixer-postgres --project cay-bed7 --task-id TASK_ID
-# Only after confirmed success, with price and region unchanged:
-avn service update the-fixer-postgres --project cay-bed7 -c pg_version=18
+bash scripts/aiven-pg18-upgrade.sh --check
+# Inspect the returned task ID and confirm it succeeded; check plan/region are unchanged.
+# Supply that exact task ID; the script re-queries Aiven and refuses a failed or mismatched task.
+AIVEN_PG18_CHECK_TASK_ID=TASK_ID AIVEN_PG18_UPGRADE_APPROVED=YES \
+  bash scripts/aiven-pg18-upgrade.sh --upgrade
+# The script still requires typing UPGRADE-EXISTING-FREE at its confirmation prompt.
 ```
 
 Official Aiven guide: https://aiven.io/docs/products/postgresql/howto/upgrade
