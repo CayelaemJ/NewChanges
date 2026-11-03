@@ -138,6 +138,12 @@ try{
  const confirmed=await postFrom(totpAdmin.ctx,'/api/auth/mfa/totp/confirm',
    {grantCode:users[2].grant,code:firstCode});
  assert.equal(confirmed.status(),200,'QR-scanned TOTP setup must activate after real code');
+ const confirmation=await confirmed.json();
+ assert.match(confirmation.recoveryKey,/^[A-Za-z0-9_-]{43}$/,'First MFA enrollment issues a strong one-time recovery key');
+ const recoveryRecord=await prisma.adminMfaRecoveryCode.findUnique({where:{userId:users[2].id}});
+ assert.equal(recoveryRecord.codeHash,hash(confirmation.recoveryKey),'Only a hash of the recovery key is persisted');
+ assert.equal(recoveryRecord.usedAt,null);
+
  const replay=await postFrom(totpAdmin.ctx,'/api/auth/mfa/totp/verify',
    {code:firstCode});
  assert.equal(replay.status(),403,'First TOTP time step cannot be replayed');
