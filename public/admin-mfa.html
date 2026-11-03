@@ -61,7 +61,9 @@ input:focus{border-color:#65349e}
  <strong id="mfa-success-title">Authenticator verified successfully.</strong>
  <p id="mfa-success-note">Your MFA setup is complete. You can continue to the dashboard now. When you next sign in, use a fresh six-digit code.</p>
  <a href="/dashboard" id="mfa-continue" style="display:inline-block;background:#65349e;color:white;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:9px">Continue to dashboard</a>
+ <a href="/mfa/manage" id="mfa-manage-link" style="display:inline-block;margin-left:12px;color:#65349e;font-weight:700">Manage authentication methods</a>
 </div>
+<section id="mfa-manage-banner" class="panel" hidden><h2>Manage your authentication methods</h2><p>Your administrator session is verified. Add a device passkey or an authenticator app without repeating first-time grant enrollment. Existing methods cannot be silently replaced.</p></section>
 <div class="actions" id="mfa-passkey-actions"><section class="panel" id="mfa-passkey-verify-panel"><h2>Verify your passkey</h2>
 <p>Verify again when accessing sensitive administrative controls.</p>
 <button id="verify" type="button">Verify passkey</button></section>
