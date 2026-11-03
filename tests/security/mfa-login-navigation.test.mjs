@@ -24,3 +24,14 @@ test('browser pages cannot bypass passkey step-up after password login',()=>{
  assert.match(server,/app.get\("\/mfa", async \(req, reply\) =>/);
  assert.match(server,/if \(!user \|\| !isAdminRole\(user\)\) return reply\.redirect\("\/login"\)/);
 });
+
+test('MFA ceremony routes users according to login and verification status',()=>{
+ const start=server.indexOf('app.get("/mfa",');
+ const end=server.indexOf('\napp.get(',start+8);
+ assert.ok(start>=0,'MFA route must exist');
+ const route=server.slice(start,end>start?end:start+900);
+ assert.match(route,/if \(!user \|\| !isAdminRole\(user\)\) return reply\.redirect\("\/login"\)/);
+ assert.match(route,/MFA_ENFORCE && await hasFreshAdminMfa\(req, user\.id\)/);
+ assert.match(route,/return reply\.redirect\("\/dashboard"\)/);
+ assert.match(route,/return serveHtml\(reply, "admin-mfa\.html"\)/);
+});
