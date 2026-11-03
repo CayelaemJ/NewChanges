@@ -120,7 +120,7 @@ still impose real technical limits.
 cd ~/NewChanges-pr219
 git pull --ff-only origin chore/manual-self-hosted-docker-ci-20261029
 install -d -m 700 "$HOME/.cache/the-fixer-ollama"
-python3 -m unittest discover -s tests/ci -p 'ollama-scanner-contract.test.py' -v
+python3 tests/ci/ollama-scanner-contract.test.py -v
 mkdir -p test-reports/ai-security
 docker compose -f docker-compose.ai-security.yml run --build --rm \\
   --user "$(id -u):$(id -g)" ai-security-review
