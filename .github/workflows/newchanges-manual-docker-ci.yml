@@ -33,7 +33,7 @@ jobs:
     steps:
       - name: Verify scanner parser, chunk coverage and retries offline
         shell: bash
-        run: python3 -m unittest discover -s tests/ci -p 'ollama-scanner-contract.test.py' -v
+        run: python3 tests/ci/ollama-scanner-contract.test.py -v
 
       - name: Prepare private persistent local model checkpoint cache
         shell: bash
