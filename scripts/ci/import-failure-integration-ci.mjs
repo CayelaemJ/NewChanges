@@ -12,7 +12,7 @@ const suffix=randomUUID().slice(0,12);
 const employer='ci-import-'+suffix;
 const filenames=[];
 const csv=(name,stamp)=>Buffer.from(
-  'employer_ref,name,source_updated_at\\n'+employer+','+name+','+stamp+'\\n'
+  'employer_ref,name,source_updated_at\n'+employer+','+name+','+stamp+'\n'
 );
 const filename=(label)=>{const f='ci-'+suffix+'-'+label+'.csv';filenames.push(f);return f};
 const upload=async(label,buffer)=>uploadAndValidate({reportKey:'employers',filename:filename(label),buffer});
@@ -30,7 +30,7 @@ try{
   console.log('[import-ci] PASS validated import, commit and double-commit rejection');
 
   const duplicate=await upload('duplicates',
-    Buffer.from('employer_ref,name,source_updated_at\\n'+employer+',Duplicate,2026-02-01T00:00:00Z\\n'+employer+',Duplicate again,2026-02-01T00:00:00Z\\n'));
+    Buffer.from('employer_ref,name,source_updated_at\n'+employer+',Duplicate,2026-02-01T00:00:00Z\n'+employer+',Duplicate again,2026-02-01T00:00:00Z\n'));
   assert.equal(duplicate.result.ok,false,'Duplicate natural keys must block commit');
   assert.equal(duplicate.batch.status,'FAILED');
   assert.equal(await prisma.importBatchRow.count({where:{batchId:duplicate.batch.id}}),0);
@@ -56,7 +56,7 @@ try{
   const faultFile=filename('staging-interrupted');
   await assert.rejects(
     uploadAndValidate({reportKey:'employers',filename:faultFile,buffer:Buffer.from(
-      'employer_ref,name,source_updated_at\\n'+overflow.join('\\n')+'\\n'
+      'employer_ref,name,source_updated_at\n'+overflow.join('\n')+'\n'
     )}),/synthetic staging outage/
   );
   const failed=await prisma.importBatch.findFirstOrThrow({where:{filename:faultFile}});
