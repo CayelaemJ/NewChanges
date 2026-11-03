@@ -1605,8 +1605,8 @@ model AdminMfaEnrollmentRequest {
   consumedAt    DateTime?
   createdAt     DateTime @default(now())
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  @@index([userId, sessionId, expiresAt, consumedAt])
-  @@index([expiresAt, approvedByTwo])
+  @@index([userId, sessionId, expiresAt, consumedAt], map: "AdminMfaEnroll_session_exp_idx")
+  @@index([expiresAt, approvedByTwo], map: "AdminMfaEnroll_exp_approved_idx")
 }
 
 // Recovery requires two distinct, passkey-verified SUPERADMIN approvals.
