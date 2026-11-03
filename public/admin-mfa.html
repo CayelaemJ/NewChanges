@@ -74,6 +74,11 @@ input:focus{border-color:#65349e}
 <button type="button" id="mfa-backup-dismiss" disabled>I've saved my recovery key</button>
 <small>The Fixer stores only a hash and cannot display this key again. If you lose your MFA device, this key supports the identity-verified recovery process. It does not reveal the server's encryption key.</small>
 </section>
+<section id="mfa-existing-recovery-key" class="panel" hidden style="margin-top:18px">
+<h2>Complete your account recovery setup</h2>
+<p>Your MFA method is already active, but you have not received a recovery key. Generate one now and save it in a trusted password manager or another secure place. It will be shown only once.</p>
+<button id="mfa-existing-recovery-issue" type="button">Generate my one-time recovery key</button>
+</section>
 <section id="mfa-manage-banner" class="panel" hidden><h2>Manage your authentication methods</h2><p>Your administrator session is verified. Add a device passkey or an authenticator app without repeating first-time grant enrollment. Existing methods cannot be silently replaced.</p></section>
 <section id="mfa-approval-panel" class="panel" hidden style="margin:18px 0">
 <h2>First-time security setup</h2>
