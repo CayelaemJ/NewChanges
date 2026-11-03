@@ -7,6 +7,7 @@ const managingMethods=window.location?.pathname==='/mfa/manage';
 let enrollmentApproved=false;
 let enrollmentRequestId=null;
 let legacyGrant='';
+let recoveryKeyAcknowledged=false;
 function show(message){statusEl.textContent=message;}
 function displayRecoveryKey(key){
  if(typeof key!=='string'||!/^[A-Za-z0-9_-]{43}$/.test(key))return;
@@ -14,6 +15,8 @@ function displayRecoveryKey(key){
  document.getElementById('mfa-backup-value').textContent=key;
  document.getElementById('mfa-backup-confirm').checked=false;
  document.getElementById('mfa-backup-dismiss').disabled=true;
+ recoveryKeyAcknowledged=false;
+ document.getElementById('mfa-continue').hidden=true;
  panel.hidden=false;
  panel.scrollIntoView?.({behavior:'smooth',block:'center'});
 }
@@ -81,6 +84,13 @@ async function refresh(){
   if(!res.ok)throw Error('Please sign in as an administrator');
   const state=await res.json();
   const firstTime=!state.enrolled&&!state.verified&&!managingMethods;
+  const missingRecovery=!!state.verified && !!state.enrolled && !state.hasRecoveryKey;
+  const issuePanel=document.getElementById('mfa-existing-recovery-key');
+  issuePanel.hidden=!missingRecovery || !document.getElementById('mfa-backup-key').hidden;
+  document.getElementById('mfa-continue').hidden=
+    !state.verified || missingRecovery || !document.getElementById('mfa-backup-key').hidden;
+  document.getElementById('mfa-manage-link').hidden=missingRecovery ||
+    !document.getElementById('mfa-backup-key').hidden;
   let approval={approved:false,requestId:null,expiresAt:null};
   if(firstTime){
     const ar=await fetch('/api/auth/mfa/enrollment/status',{credentials:'same-origin'});
@@ -341,8 +351,22 @@ document.getElementById('mfa-backup-confirm').addEventListener('change',()=>{
  document.getElementById('mfa-backup-dismiss').disabled=
   !document.getElementById('mfa-backup-confirm').checked;
 });
-document.getElementById('mfa-backup-dismiss').addEventListener('click',()=>{
+document.getElementById('mfa-backup-dismiss').addEventListener('click',async()=>{
  document.getElementById('mfa-backup-value').textContent='';
  document.getElementById('mfa-backup-key').hidden=true;
+ recoveryKeyAcknowledged=true;
+ await refresh();
  show('Recovery key hidden. The Fixer cannot display it again.');
+});
+
+document.getElementById('mfa-existing-recovery-issue').addEventListener('click',async()=>{
+ const button=document.getElementById('mfa-existing-recovery-issue');
+ button.disabled=true;
+ try{
+  const response=await api('recovery-key/issue');
+  displayRecoveryKey(response.recoveryKey);
+  document.getElementById('mfa-existing-recovery-key').hidden=true;
+  show('Save this account recovery key now. It cannot be displayed again.');
+ }catch(error){show(error?.message||'Recovery key could not be issued.');}
+ finally{button.disabled=false;}
 });
