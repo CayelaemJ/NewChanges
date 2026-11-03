@@ -44,6 +44,7 @@ run npm run check:source-continuity
 run npm run check:source-reconciliation
 run node scripts/security/rls-isolation-ci-probe.mjs
 run node scripts/prisma-upgrade-integration.mjs
+run node scripts/ci/database-resilience-ci.mjs
 run node scripts/admin-mfa-live-http-e2e.mjs
 run sh scripts/ci/run-circleci-verify-parity.sh
 run npm run quality:e2e
