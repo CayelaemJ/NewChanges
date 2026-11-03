@@ -77,7 +77,7 @@ jobs:
         run: |
           docker run --rm --network none --read-only \
             -v "$PWD:/workspace:ro" -w /workspace node:24-slim \
-            node --test tests/ci-docker-isolation.test.mjs
+            node --test tests/ci-docker-isolation.test.mjs tests/ci/test-suite-coverage-contract.test.mjs
 
       - name: Build and run synthetic Docker tests
         shell: bash
