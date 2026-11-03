@@ -806,6 +806,7 @@ model User {
   sessions        Session[]
   mfaCredentials  AdminMfaCredential[]
   mfaTotp         AdminMfaTotp?
+  mfaRecoveryCode AdminMfaRecoveryCode?
   mfaEnrollmentGrants AdminMfaEnrollmentGrant[]
   mfaEnrollmentRequests AdminMfaEnrollmentRequest[]
   mfaRecoveryRequests AdminMfaRecoveryRequest[]
@@ -1564,6 +1565,18 @@ model AdminMfaCredential {
   @@index([userId, revokedAt])
 }
 
+// One-time emergency account recovery material. Never save the plaintext code.
+model AdminMfaRecoveryCode {
+  id             String    @id @default(cuid())
+  userId         String    @unique
+  codeHash       String    @unique
+  failedAttempts Int       @default(0)
+  lockedUntil    DateTime?
+  createdAt      DateTime  @default(now())
+  usedAt         DateTime?
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
 // One-time WebAuthn challenges, scoped to the logged-in user and session.
 model AdminMfaChallenge {
   id          String   @id @default(cuid())
@@ -1602,6 +1615,7 @@ model AdminMfaEnrollmentRequest {
   expiresAt     DateTime
   approvedByOne String?
   approvedByTwo String?
+  recoveryVerifiedAt DateTime?
   consumedAt    DateTime?
   createdAt     DateTime @default(now())
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
