@@ -24,7 +24,7 @@ Aiven CLI alternative (run via an authenticated local Aiven CLI; never paste tok
 ```sh
 bash scripts/aiven-pg18-upgrade.sh --check
 # Inspect the returned task ID and confirm it succeeded; check plan/region are unchanged.
-# Supply that exact task ID; the script re-queries Aiven and refuses a failed or mismatched task.
+# Supply that exact task ID; the script re-queries Aiven and refuses a failed, mismatched or older-than-one-hour task.
 AIVEN_PG18_CHECK_TASK_ID=TASK_ID AIVEN_PG18_UPGRADE_APPROVED=YES \
   bash scripts/aiven-pg18-upgrade.sh --upgrade
 # The script still requires typing UPGRADE-EXISTING-FREE at its confirmation prompt.
