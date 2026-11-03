@@ -86,6 +86,7 @@ async function refresh(){
       ? 'Awaiting two independent administrator approvals. Request ID: '+enrollmentRequestId
       : 'Request identity-verified setup approval to get started.';
   document.getElementById('mfa-approval-request').disabled=!!enrollmentRequestId;
+  document.getElementById('mfa-approval-check').hidden=!firstTime || !enrollmentRequestId;
   document.getElementById('recovery').hidden=!state.canManageRecovery;
   const manageBanner=document.getElementById('mfa-manage-banner');
   if(manageBanner)manageBanner.hidden=!(managingMethods && state.verified);
@@ -269,6 +270,7 @@ recoveryApproveButton.addEventListener('click',()=>withRecoveryBusy(recoveryAppr
 }));
 
 
+document.getElementById('mfa-approval-check').addEventListener('click',()=>refresh());
 const approvalRequestButton=document.getElementById('mfa-approval-request');
 approvalRequestButton.addEventListener('click',async()=>{
  approvalRequestButton.disabled=true;
