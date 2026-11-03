@@ -152,7 +152,8 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
       where:{userId:session.userId,sessionId:session.id,consumedAt:null,expiresAt:{gt:now}},
       orderBy:{createdAt:'desc'},
     });
-    if(current) return {ok:true,requestId:current.id,approved:Boolean(current.approvedByTwo),
+    if(current) return {ok:true,requestId:current.id,
+      approved:Boolean(current.approvedByOne && current.approvedByTwo && current.approvedByOne!==current.approvedByTwo),
       expiresAt:current.expiresAt.toISOString()};
     const request=await prisma.$transaction(async tx=>{
       const row=await tx.adminMfaEnrollmentRequest.create({
@@ -175,11 +176,12 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
     const current=await prisma.adminMfaEnrollmentRequest.findFirst({
       where:{userId:session.userId,sessionId:session.id,
         consumedAt:null,expiresAt:{gt:new Date()}},
-      orderBy:{createdAt:'desc'},select:{id:true,expiresAt:true,approvedByTwo:true},
+      orderBy:{createdAt:'desc'},select:{id:true,expiresAt:true,approvedByOne:true,approvedByTwo:true},
     });
     reply.header('Cache-Control','no-store');
     return {ok:true,requestId:current?.id??null,
-      approved:Boolean(current?.approvedByTwo),
+      approved:Boolean(current?.approvedByOne && current?.approvedByTwo &&
+        current.approvedByOne!==current.approvedByTwo),
       expiresAt:current?.expiresAt.toISOString()??null};
   });
 
