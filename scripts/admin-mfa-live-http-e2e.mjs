@@ -35,6 +35,7 @@ const users=[
  {email:'mfa-e2e-target-'+nonce+'@example.invalid',name:'Synthetic Recovery Target',role:'ADMIN'},
  {email:'mfa-e2e-onboard-'+nonce+'@example.invalid',name:'Synthetic First-Time Admin',role:'ADMIN'},
  {email:'mfa-e2e-onboard-qr-'+nonce+'@example.invalid',name:'Synthetic QR Enrollee',role:'ADMIN'},
+ {email:'mfa-e2e-viewer-'+nonce+'@example.invalid',name:'Synthetic Read-Only User',role:'VIEWER'},
 ].map(x=>({...x,password:randomBytes(32).toString('base64url'),
   grant:randomBytes(32).toString('base64url')}));
 let browser;
@@ -203,6 +204,22 @@ try{
    const anonymousRecovery=await anonymous.request.post('/api/admin/mfa/recovery/request',{data:{targetUserId:users[2].id},headers:{Origin:origin}});
    assert.ok([401,403].includes(anonymousRecovery.status()),'Anonymous recovery must be denied');
  }finally{await anonymous.close();}
+ const viewer=await browser.newContext({baseURL:origin});
+ try {
+   const viewerLogin=await postFrom(viewer,'/api/auth/login',{
+     email:users[5].email,password:users[5].password
+   });
+   assert.equal(viewerLogin.status(),200,'Synthetic viewer must sign in');
+   for(const protectedPath of ['/api/admin/reports','/api/admin/integration',
+     '/api/admin/compliance/overview','/api/admin/security/overview']){
+     const denied=await viewer.request.get(protectedPath);
+     assert.equal(denied.status(),403,
+       'Read-only user must not access administrative data: '+protectedPath);
+   }
+   const illegalApproval=await postFrom(viewer,'/api/admin/mfa/recovery/request',
+     {targetUserId:users[2].id});
+   assert.equal(illegalApproval.status(),403,'Viewer cannot start administrator recovery');
+ }finally{await viewer.close();}
 
  const pre=await postFrom(A.ctx,'/api/admin/mfa/recovery/request',{
   targetUserId:users[2].id});
