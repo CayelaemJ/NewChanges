@@ -64,8 +64,8 @@ summary = [
     "No files were changed or removed.", "",
     "## Large-file refactoring candidates"
 ]
-summary.extend(f"- \`{f['file']}\`: {f['lines']} lines, {f['bytes']} bytes" for f in large)
+summary.extend(f"- `{f['file']}`: {f['lines']} lines, {f['bytes']} bytes" for f in large)
 summary += ["", "## Identical-content file groups (verify references before deletion)"]
-summary.extend("- " + ", ".join(f"\`{f}\`" for f in group) for group in duplicates[:50])
+summary.extend("- " + ", ".join(f"`{f}`" for f in group) for group in duplicates[:50])
 (out / "inventory.md").write_text("\n".join(summary) + "\n", encoding="utf-8")
 print(f"Codebase inventory: {len(files)} tracked eligible files, {len(duplicates)} duplicate groups, {len(large)} large-file candidates, {len(skipped)} skipped.")
