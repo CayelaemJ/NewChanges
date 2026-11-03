@@ -7,6 +7,7 @@ services:
       OLLAMA_URL: http://host.docker.internal:11434
       LOCAL_OLLAMA_URL: http://host.docker.internal:11434/api/generate
       OLLAMA_MODEL: qwen2.5-coder:7b
+      OLLAMA_REQUIRE_GPU: "true"
       SCAN_ROOT: /workspace
       REPORT_DIR: /workspace/test-reports/ai-security
       SCAN_CACHE_DIR: /scan-cache
