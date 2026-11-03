@@ -1,0 +1,11 @@
+{
+ "$schema":"node_modules/wrangler/config-schema.json",
+ "name":"newchanges-app",
+ "compatibility_date":"2026-10-29",
+ "pages_build_output_dir":"cloudflare-output/pages-full-gateway",
+ "vars":{
+  "NEWCHANGES_GATEWAY_ENABLED":"false",
+  "NEWCHANGES_GATEWAY_PRODUCTION_APPROVED":"false"
+ },
+ "services":[{"binding":"NEWCHANGES_FULL_APP_SERVICE","service":"newchanges-full-app"}]
+}

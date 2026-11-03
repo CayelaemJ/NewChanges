@@ -486,7 +486,7 @@ function AdminView({me}:{me:Me}) {
   return <main className="min-h-screen bg-[var(--brand-paper)]" style={adminThemeStyle}>
     <div className="mx-auto w-full max-w-[1480px] px-3 py-4 sm:px-5 lg:px-8">
       <header className="portal-header flex flex-col gap-4 border-b border-slate-200 pb-5 lg:flex-row lg:items-center lg:justify-between">
-        <div><div className="portal-kicker">EFS Optimise</div><h1 className="mt-1 font-display text-3xl font-bold tracking-tight text-[var(--brand-ink-strong)] sm:text-4xl">Administration</h1><p className="mt-1 text-sm text-slate-500">Governed control plane for identity, integrations, data and compliance.</p></div>
+        <div><div className="portal-kicker">The Fixer</div><h1 className="mt-1 font-display text-3xl font-bold tracking-tight text-[var(--brand-ink-strong)] sm:text-4xl">Administration</h1><p className="mt-1 text-sm text-slate-500">Governed control plane for identity, integrations, data and compliance.</p></div>
         <div className="flex items-center gap-3"><Badge>{roleLabels[me.role||""]||me.role||"User"}</Badge><Button variant="outline" onClick={()=>window.location.assign("/react/dashboard")}>Dashboard</Button></div>
       </header>
       <nav className="admin-nav mt-5 -mx-1 overflow-x-auto border-b border-[var(--brand-line)] pb-0" aria-label="Administration sections"><div className="flex min-w-max gap-0 bg-transparent">{nav.map(([key,label],index)=><Button key={key} size="sm" variant="ghost" className={tab===key?"admin-tab admin-tab-active":"admin-tab"} onClick={()=>setTab(key)}><span className="admin-tab-index">0{index+1}</span>{label}</Button>)}</div></nav>
@@ -546,7 +546,7 @@ function App() {
   const [me,setMe]=useState<Me|null>(null); const [loading,setLoading]=useState(true);
   useEffect(()=>{api<Me>("/api/auth/me").then(setMe).catch(()=>setMe(null)).finally(()=>setLoading(false));},[]);
   if(loading)return <div className="min-h-screen bg-[var(--brand-paper)] px-4 py-20"><Card className="mx-auto max-w-2xl"><CardContent className="py-12 text-center text-sm text-slate-500">Loading your workspace...</CardContent></Card></div>;
-  if(!me)return <div className="min-h-screen bg-[var(--brand-paper)] px-4 py-20"><Card className="mx-auto max-w-lg"><CardHeader><div className="text-[10px] font-extrabold uppercase tracking-[.16em] text-[var(--brand-accent)]">EFS Optimise</div><CardTitle className="mt-2 text-2xl">Sign in to continue</CardTitle><CardDescription>Your existing secure Fastify session remains the authentication authority.</CardDescription></CardHeader><CardContent><Button onClick={()=>window.location.assign("/login")}>Sign in</Button></CardContent></Card></div>;
+  if(!me)return <div className="min-h-screen bg-[var(--brand-paper)] px-4 py-20"><Card className="mx-auto max-w-lg"><CardHeader><div className="text-[10px] font-extrabold uppercase tracking-[.16em] text-[var(--brand-accent)]">The Fixer</div><CardTitle className="mt-2 text-2xl">Sign in to continue</CardTitle><CardDescription>Your existing secure Fastify session remains the authentication authority.</CardDescription></CardHeader><CardContent><Button onClick={()=>window.location.assign("/login")}>Sign in</Button></CardContent></Card></div>;
   const isAdminRoute=window.location.pathname==="/react/admin" || window.location.pathname==="/react/admin/";
   return isAdminRoute && (me.role==="ADMIN" || me.role==="SUPERADMIN") ? <AdminView me={me}/> : <DashboardView me={me}/>;
 }
@@ -554,7 +554,7 @@ class AppErrorBoundary extends Component<PropsWithChildren, {hasError:boolean}> 
   state={hasError:false};
   static getDerivedStateFromError(){ return {hasError:true}; }
   render(){
-    if(this.state.hasError) return <main className="min-h-screen bg-[var(--brand-paper)] px-4 py-20"><Card className="mx-auto max-w-lg"><CardHeader><div className="portal-kicker">EFS Optimise</div><CardTitle className="mt-2 text-2xl">Something went wrong</CardTitle><CardDescription>The dashboard could not render this view. Reload the page to restore the session.</CardDescription></CardHeader><CardContent><Button onClick={()=>window.location.reload()}>Reload dashboard</Button></CardContent></Card></main>;
+    if(this.state.hasError) return <main className="min-h-screen bg-[var(--brand-paper)] px-4 py-20"><Card className="mx-auto max-w-lg"><CardHeader><div className="portal-kicker">The Fixer</div><CardTitle className="mt-2 text-2xl">Something went wrong</CardTitle><CardDescription>The dashboard could not render this view. Reload the page to restore the session.</CardDescription></CardHeader><CardContent><Button onClick={()=>window.location.reload()}>Reload dashboard</Button></CardContent></Card></main>;
     return this.props.children;
   }
 }
