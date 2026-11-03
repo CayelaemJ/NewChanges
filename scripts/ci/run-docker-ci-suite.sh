@@ -35,6 +35,7 @@ run npm run check:security-identity
 run npm run check:security-operations
 run npm run check:security-governance
 run npm run check:source-sync-safety
+run node --import tsx --test tests/ci/ingestion-faults.test.ts
 run npm run check:accessibility
 run npm run check:performance
 run npm run check:semantic-planner
@@ -52,4 +53,5 @@ run node scripts/console-ux-browser-check.mjs
 run node scripts/header-responsive-check.mjs
 run node scripts/admin-browser-smoke.mjs
 run node scripts/admin-mfa-browser-smoke.mjs
+run node scripts/ci/visual-regression-ci.mjs
 echo "All configured Docker CI groups passed."
