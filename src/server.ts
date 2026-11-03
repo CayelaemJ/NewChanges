@@ -704,13 +704,19 @@ app.post("/api/auth/logout", async (req, reply) => {
 app.get("/api/auth/me", async (req, reply) => {
   const user = await currentUser(req);
   if (!user) return reply.code(401).send({ error: "not signed in" });
-  if (MFA_ENFORCE && isAdminRole(user) && !await hasFreshAdminMfa(req,user.id)) {
-    // Allow the login screen to learn that enrollment is mandatory without
-    // leaking employer names, report sections or accessible datasets.
-    reply.header("Cache-Control","no-store");
-    return {name:user.name,role:user.role,mfaRequired:true,
-      modules:{admin:false,dashboard:false,portfolio:false,users:false},
-      sections:[],employers:[]};
+  if (MFA_ENFORCE && isAdminRole(user)) {
+    const verified=await hasFreshAdminMfa(req,user.id);
+    const recoveryKeyRequired=verified && user.role==="SUPERADMIN" &&
+      !await hasIssuedAdminRecoveryKey(user.id);
+    if (!verified || recoveryKeyRequired) {
+      // Do not reveal employer records or module entitlements while the
+      // administrator still needs MFA or mandatory recovery-key setup.
+      reply.header("Cache-Control","no-store");
+      return {name:user.name,role:user.role,mfaRequired:!verified,
+        recoveryKeyRequired,
+        modules:{admin:false,dashboard:false,portfolio:false,users:false},
+        sections:[],employers:[]};
+    }
   }
   const ids = allowedEmployerIds(user);
   const syncStatus = await dashboardSyncState(req);
