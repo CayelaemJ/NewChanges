@@ -33,6 +33,7 @@ const users=[
  {email:'mfa-e2e-a-'+nonce+'@example.invalid',name:'Synthetic Approver A',role:'SUPERADMIN'},
  {email:'mfa-e2e-b-'+nonce+'@example.invalid',name:'Synthetic Approver B',role:'SUPERADMIN'},
  {email:'mfa-e2e-target-'+nonce+'@example.invalid',name:'Synthetic Recovery Target',role:'ADMIN'},
+ {email:'mfa-e2e-onboard-'+nonce+'@example.invalid',name:'Synthetic First-Time Admin',role:'ADMIN'},
 ].map(x=>({...x,password:randomBytes(32).toString('base64url'),
   grant:randomBytes(32).toString('base64url')}));
 let browser;
@@ -105,7 +106,7 @@ try{
   }});
   user.id=saved.id;records.push(saved.id);
  }
- for(const u of users){
+ for(const u of users.slice(0,3)){
   await prisma.adminMfaEnrollmentGrant.create({data:{
    userId:u.id,codeHash:hash(u.grant),
    expiresAt:new Date(Date.now()+15*60_000),
@@ -197,6 +198,51 @@ try{
   where:{userId:users[1].id,endedAt:null,revokedAt:null,mfaVerifiedAt:{not:null}},
  });
  assert.ok(signedSession,'Signed assertion must establish a fresh active session');
+ // Normal onboarding: the user never invents or receives an enrollment grant.
+ // Password-only login can request approval but cannot set up a passkey.
+ const O=await loginAndLoad(users[3]);
+ const premature=await postFrom(O.ctx,'/api/auth/mfa/register/options',{});
+ assert.equal(premature.status(),403,'Password alone cannot register the first MFA factor');
+ const enrollmentRequest=await postFrom(O.ctx,'/api/auth/mfa/enrollment/request',{});
+ assert.equal(enrollmentRequest.status(),200,'First-time administrator can request server-managed enrollment');
+ const enrollment=await enrollmentRequest.json();
+ assert.ok(enrollment.requestId,'Server generates a request ID without a user-generated grant');
+ assert.equal(enrollment.approved,false);
+ const selfApprove=await postFrom(O.ctx,
+  '/api/admin/mfa/enrollment/'+enrollment.requestId+'/approve',{identityConfirmed:true});
+ assert.equal(selfApprove.status(),403,'Enrollment requester cannot authorize their own MFA setup');
+ const withoutIdentity=await postFrom(A.ctx,
+  '/api/admin/mfa/enrollment/'+enrollment.requestId+'/approve',{identityConfirmed:false});
+ assert.equal(withoutIdentity.status(),400,'Approvers must declare independent identity verification');
+ const approvalOne=await postFrom(A.ctx,
+  '/api/admin/mfa/enrollment/'+enrollment.requestId+'/approve',{identityConfirmed:true});
+ assert.equal(approvalOne.status(),200,'Verified superadmin A issues first enrollment approval');
+ assert.equal((await approvalOne.json()).approved,false,'One approval cannot unlock enrollment');
+ const afterOne=await postFrom(O.ctx,'/api/auth/mfa/register/options',{});
+ assert.equal(afterOne.status(),403,'One approval cannot bypass initial enrollment gate');
+ const doubleApprove=await postFrom(A.ctx,
+  '/api/admin/mfa/enrollment/'+enrollment.requestId+'/approve',{identityConfirmed:true});
+ assert.equal(doubleApprove.status(),409,'Same superadmin cannot provide both approvals');
+ const approvalTwo=await postFrom(B.ctx,
+  '/api/admin/mfa/enrollment/'+enrollment.requestId+'/approve',{identityConfirmed:true});
+ assert.equal(approvalTwo.status(),200,'Independent verified superadmin B completes enrollment approval');
+ assert.equal((await approvalTwo.json()).approved,true);
+ const secondLogin=await loginAndLoad(users[3]);
+ const otherSessionAttempt=await postFrom(secondLogin.ctx,'/api/auth/mfa/register/options',{});
+ assert.equal(otherSessionAttempt.status(),403,'Approval cannot be used from a different password session');
+ await secondLogin.ctx.close();
+ await O.page.reload({waitUntil:'domcontentloaded'});
+ await O.page.locator('#enroll').waitFor({state:'visible'});
+ assert.equal(await O.page.locator('#enroll').isEnabled(),true,
+  'Approved first-time enrollment must enable passkey registration without a grant');
+ await O.page.locator('#enroll').click();
+ await O.page.locator('#mfa-success').waitFor({state:'visible',timeout:20000});
+ const persisted=await prisma.adminMfaEnrollmentRequest.findUnique({where:{id:enrollment.requestId}});
+ assert.ok(persisted?.consumedAt,'One-time server-managed approval must be consumed on enrollment');
+ const replayEnrollment=await postFrom(A.ctx,
+  '/api/admin/mfa/enrollment/'+enrollment.requestId+'/approve',{identityConfirmed:true});
+ assert.equal(replayEnrollment.status(),409,'Consumed authorization cannot be approved again');
+
  const first=await postFrom(A.ctx,'/api/admin/mfa/recovery/request',{
    targetUserId:users[2].id});
  assert.equal(first.status(),200,'Verified superadmin A may request recovery');
@@ -223,7 +269,7 @@ try{
  });
  assert.ok(newCredential,'Recovered target has registered a replacement passkey');
  assert.notEqual(newCredential.id,toRevoke.id);
- console.log('PASS MFA real HTTP/virtual passkey: password login, signed enrollment and assertion, step-up guard, dual approval, atomic credential revocation, one-time recovery and replacement enrollment.');
+ console.log('PASS MFA real HTTP/virtual passkey: password login, signed enrollment and assertion, step-up guard, dual approval, atomic credential revocation, one-time recovery and replacement enrollment, plus server-approved grant-free onboarding.');
 }finally{
  if(browser)await browser.close();
  if(listening)await app.close();
