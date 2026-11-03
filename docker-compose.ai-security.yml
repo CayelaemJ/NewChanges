@@ -12,7 +12,7 @@ services:
       REPORT_DIR: /workspace/test-reports/ai-security
       SCAN_CACHE_DIR: /scan-cache
       MAX_FILES: "0"
-      AI_SCAN_CHUNK_CHARS: "5500"
+      AI_SCAN_CHUNK_CHARS: "3000"
       AI_SCAN_REQUEST_TIMEOUT: "360"
       AI_SCAN_RETRIES: "4"
     extra_hosts:
