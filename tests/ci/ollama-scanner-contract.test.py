@@ -38,6 +38,27 @@ class LocalOllamaContractTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             scanner.parse_answer('{"unrelated": []}')
 
+    def test_gpu_residency_detection(self):
+        models = [{"name": "qwen2.5-coder:7b", "size_vram": 4870000000}]
+        self.assertEqual(scanner.gpu_residency(models), 4870000000)
+        self.assertEqual(scanner.gpu_residency([{"name": "qwen2.5-coder:7b", "size_vram": 0}]), 0)
+        self.assertEqual(scanner.gpu_residency([{"name": "other:7b", "size_vram": 9000}]), 0)
+
+    def test_gpu_required_refuses_cpu_only(self):
+        class FakeResponse:
+            def __init__(self, content): self.content = content
+            def __enter__(self): return self
+            def __exit__(self, *args): return False
+            def read(self): return self.content
+        replies = iter([
+            FakeResponse(json.dumps({"response": "OK"}).encode()),
+            FakeResponse(json.dumps({"models": [{"name": scanner.MODEL, "size_vram": 0}]}).encode())
+        ])
+        with patch.object(scanner, "REQUIRE_GPU", True), \
+             patch.object(scanner, "urlopen", side_effect=lambda *args, **kwargs: next(replies)):
+            with self.assertRaisesRegex(RuntimeError, "GPU acceleration REQUIRED"):
+                scanner.require_local_gpu()
+
     def test_checkpoint_atomic(self):
         with tempfile.TemporaryDirectory() as temp:
             p = Path(temp) / "audit" / "check.json"
