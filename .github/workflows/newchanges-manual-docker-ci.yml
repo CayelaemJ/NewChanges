@@ -147,7 +147,6 @@ jobs:
 
       - name: Run resumable Ollama security review of all reviewable tracked files
         if: ${{ always() && !inputs.prepare_mfa_lock }}
-        continue-on-error: true
         shell: bash
         run: |
           set -Eeuo pipefail
@@ -157,18 +156,24 @@ jobs:
             --user "$(id -u):$(id -g)" ai-security-review
 
       - name: Summarize pre-release AI coverage
-        if: always()
+        if: ${{ always() && !inputs.prepare_mfa_lock }}
         shell: bash
         run: |
           python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
           import json
           from pathlib import Path
           p=Path("test-reports/ai-security/report.json")
-          if p.exists():
-              d=json.loads(p.read_text())
-              print(f"Pre-release AI reviewed {d.get('reviewed_files',0)}/{d.get('eligible_files',0)} eligible files; complete={d.get('complete',False)}")
-          else:
-              print("Pre-release AI did not produce a report; not a complete AI audit")
+          if not p.exists():
+              print("FAIL: pre-release AI did not produce a report; audit incomplete")
+              raise SystemExit(1)
+          d=json.loads(p.read_text())
+          reviewed=d.get("reviewed_files",0)
+          eligible=d.get("eligible_files",0)
+          complete=d.get("complete",False)
+          print(f"Pre-release AI reviewed {reviewed}/{eligible} eligible files; complete={complete}")
+          if not complete or reviewed != eligible:
+              print("FAIL: incomplete Ollama scan; do not treat this run as a completed audit")
+              raise SystemExit(1)
           PY
 
       - name: Upload safe security status report
