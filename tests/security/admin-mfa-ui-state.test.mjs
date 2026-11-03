@@ -130,3 +130,11 @@ test('independent superadmin enrollment approval UI requires fresh recovery auth
  assert.match(html,/mfa-approval-confirm-identity/);
  assert.match(script,/identityConfirmed:true/);
 });
+
+test('TOTP-verified superadmin may step up with existing passkey before approval',async()=>{
+ const el=await check({enrolled:true,verified:true,verificationMethod:'TOTP',
+  passkeyEnrolled:true,totpEnrolled:true,totpAvailable:true,canManageRecovery:false},'/mfa/manage');
+ assert.equal(el('mfa-passkey-verify-panel').hidden,false);
+ assert.equal(el('mfa-passkey-actions').hidden,false);
+ assert.equal(el('mfa-approval-admin').hidden,true);
+});
