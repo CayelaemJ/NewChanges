@@ -807,6 +807,7 @@ model User {
   mfaCredentials  AdminMfaCredential[]
   mfaTotp         AdminMfaTotp?
   mfaEnrollmentGrants AdminMfaEnrollmentGrant[]
+  mfaEnrollmentRequests AdminMfaEnrollmentRequest[]
   mfaRecoveryRequests AdminMfaRecoveryRequest[]
   mfaChallenges   AdminMfaChallenge[]
   loginEvents     LoginEvent[]
@@ -1590,6 +1591,22 @@ model AdminMfaEnrollmentGrant {
   createdAt     DateTime @default(now())
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@index([userId, expiresAt, consumedAt])
+}
+
+// Identity-approved first-time setup: never send authorization codes to the browser.
+// Approval belongs to one password-authenticated session and expires quickly.
+model AdminMfaEnrollmentRequest {
+  id            String   @id @default(cuid())
+  userId        String
+  sessionId     String
+  expiresAt     DateTime
+  approvedByOne String?
+  approvedByTwo String?
+  consumedAt    DateTime?
+  createdAt     DateTime @default(now())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, sessionId, expiresAt, consumedAt])
+  @@index([expiresAt, approvedByTwo])
 }
 
 // Recovery requires two distinct, passkey-verified SUPERADMIN approvals.
