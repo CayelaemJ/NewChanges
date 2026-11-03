@@ -29,7 +29,7 @@ test('prevents target self-approval, single-approver bypass and stale recovery',
  assert.match(routes,/claimed.count!==1/);
 });
 test('atomic successful recovery revokes existing credentials, sessions, challenges and grants',()=>{
- const start=routes.indexOf("app.post<{Params:{id:string}}>('/api/admin/mfa/recovery/:id/approve'");
+ const start=routes.indexOf("'/api/admin/mfa/recovery/:id/approve'");
  assert.ok(start>=0);
  const section=routes.slice(start);
  for(const needle of [
