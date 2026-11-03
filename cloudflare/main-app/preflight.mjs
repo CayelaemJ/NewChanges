@@ -27,6 +27,9 @@ async function run() {
       r.rolsuper AS is_superuser, r.rolcreatedb AS can_create_database,
       r.rolcreaterole AS can_create_roles, r.rolbypassrls AS bypasses_rls,
       pg_has_role(r.oid,'neon_superuser','MEMBER') AS member_superuser,
+      EXISTS (SELECT 1 FROM pg_roles privileged_role
+        WHERE (privileged_role.rolsuper OR privileged_role.rolcreatedb OR privileged_role.rolcreaterole)
+          AND pg_has_role(r.oid,privileged_role.oid,'MEMBER')) AS member_privileged_role,
       EXISTS (SELECT 1 FROM pg_roles owner_role
         WHERE owner_role.rolname='newchanges_owner'
           AND pg_has_role(r.oid,owner_role.oid,'MEMBER')) AS member_application_owner,
