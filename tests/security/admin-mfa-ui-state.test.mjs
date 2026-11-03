@@ -138,3 +138,21 @@ test('TOTP-verified superadmin may step up with existing passkey before approval
  assert.equal(el('mfa-passkey-actions').hidden,false);
  assert.equal(el('mfa-approval-admin').hidden,true);
 });
+
+test('existing MFA admin missing backup key is prompted to issue it before continuing',async()=>{
+ const el=await check({enrolled:true,verified:true,hasRecoveryKey:false,
+  verificationMethod:'PASSKEY',passkeyEnrolled:true,totpEnrolled:true,
+  totpAvailable:true,canManageRecovery:true});
+ assert.equal(el('mfa-existing-recovery-key').hidden,false);
+ assert.equal(el('mfa-continue').hidden,true);
+ assert.equal(el('mfa-manage-link').hidden,true);
+ assert.match(el('mfa-success-note').textContent,/Generate and securely save/);
+});
+test('existing MFA admin with issued backup key may continue normally',async()=>{
+ const el=await check({enrolled:true,verified:true,hasRecoveryKey:true,
+  verificationMethod:'PASSKEY',passkeyEnrolled:true,totpEnrolled:true,
+  totpAvailable:true,canManageRecovery:true});
+ assert.equal(el('mfa-existing-recovery-key').hidden,true);
+ assert.equal(el('mfa-continue').hidden,false);
+ assert.equal(el('mfa-manage-link').hidden,false);
+});
