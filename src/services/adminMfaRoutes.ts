@@ -135,6 +135,108 @@ async function rotateElevatedSession(tx:any,session:any,now:Date,method:'PASSKEY
 }
 type MfaBody={challenge?:string;response?:any;grantCode?:string};
 export function registerAdminMfaRoutes(app:FastifyInstance) {
+  // A password-only administrator can request enrollment, but cannot approve
+  // their own request. Two independent passkey-verified superadmins verify
+  // identity through an out-of-band channel before the session is authorized.
+  app.post('/api/auth/mfa/enrollment/request',async(req,reply)=>{
+    const session=await adminSession(req,reply);if(!session)return;
+    const factors=await Promise.all([
+      prisma.adminMfaCredential.count({where:{userId:session.userId,revokedAt:null}}),
+      prisma.adminMfaTotp.findUnique({where:{userId:session.userId},select:{enabledAt:true}}),
+    ]);
+    if(factors[0] || factors[1]?.enabledAt)
+      return reply.code(409).send({error:'MFA already enrolled; verify an existing factor or use approved recovery'});
+    const now=new Date();
+    const current=await prisma.adminMfaEnrollmentRequest.findFirst({
+      where:{userId:session.userId,sessionId:session.id,consumedAt:null,expiresAt:{gt:now}},
+      orderBy:{createdAt:'desc'},
+    });
+    if(current) return {ok:true,requestId:current.id,approved:Boolean(current.approvedByTwo),
+      expiresAt:current.expiresAt.toISOString()};
+    const request=await prisma.$transaction(async tx=>{
+      const row=await tx.adminMfaEnrollmentRequest.create({
+        data:{userId:session.userId,sessionId:session.id,
+          expiresAt:new Date(now.getTime()+30*60_000)},
+      });
+      await tx.adminAuditLog.create({data:{
+        actorEmail:session.user.email,actorName:session.user.name,
+        action:'security.mfa.enrollment.requested',targetType:'User',targetId:session.userId,
+        summary:'Identity-verified first-time MFA enrollment requested',
+        detail:{requestId:row.id},riskLevel:'HIGH',flagged:true,
+      }});
+      return row;
+    });
+    return {ok:true,requestId:request.id,approved:false,expiresAt:request.expiresAt.toISOString()};
+  });
+
+  app.get('/api/auth/mfa/enrollment/status',async(req,reply)=>{
+    const session=await adminSession(req,reply);if(!session)return;
+    const current=await prisma.adminMfaEnrollmentRequest.findFirst({
+      where:{userId:session.userId,sessionId:session.id,
+        consumedAt:null,expiresAt:{gt:new Date()}},
+      orderBy:{createdAt:'desc'},select:{id:true,expiresAt:true,approvedByTwo:true},
+    });
+    reply.header('Cache-Control','no-store');
+    return {ok:true,requestId:current?.id??null,
+      approved:Boolean(current?.approvedByTwo),
+      expiresAt:current?.expiresAt.toISOString()??null};
+  });
+
+  app.post<{Params:{id:string};Body:{identityConfirmed?:boolean}}>(
+    '/api/admin/mfa/enrollment/:id/approve',async(req,reply)=>{
+    const session=await adminSession(req,reply);if(!session)return;
+    if(session.user.role!=='SUPERADMIN' ||
+      !await hasFreshAdminMfa(req,session.userId,'PASSKEY'))
+      return reply.code(403).send({error:'Fresh passkey-verified superadministrator required'});
+    if(req.body?.identityConfirmed!==true)
+      return reply.code(400).send({error:'Independently verify the requester's identity before approval'});
+    const id=req.params.id;
+    if(typeof id!=='string'||id.length>128||id.length<8)
+      return reply.code(400).send({error:'Invalid enrollment request'});
+    const request=await prisma.adminMfaEnrollmentRequest.findUnique({where:{id}});
+    const now=new Date();
+    if(!request || request.expiresAt<=now || request.consumedAt ||
+      request.userId===session.userId ||
+      request.approvedByOne===session.userId || request.approvedByTwo)
+      return reply.code(409).send({error:'Request expired, completed or independent approval required'});
+    const [target,targetSession,passkeys,totp]=await Promise.all([
+      prisma.user.findUnique({where:{id:request.userId},select:{active:true,role:true,email:true}}),
+      prisma.session.findUnique({where:{id:request.sessionId},
+        select:{userId:true,endedAt:true,revokedAt:true,expiresAt:true}}),
+      prisma.adminMfaCredential.count({where:{userId:request.userId,revokedAt:null}}),
+      prisma.adminMfaTotp.findUnique({where:{userId:request.userId},select:{enabledAt:true}}),
+    ]);
+    if(!target?.active || !['ADMIN','SUPERADMIN'].includes(target.role) ||
+       !targetSession || targetSession.userId!==request.userId ||
+       targetSession.endedAt || targetSession.revokedAt || targetSession.expiresAt<=now ||
+       passkeys>0 || Boolean(totp?.enabledAt))
+      return reply.code(409).send({error:'Requester no longer eligible for first-time setup'});
+    try{
+      const stage=request.approvedByOne ? 2 : 1;
+      const updated=await prisma.$transaction(async tx=>{
+        const claimed=await tx.adminMfaEnrollmentRequest.updateMany({
+          where:{id,userId:request.userId,sessionId:request.sessionId,
+            expiresAt:{gt:now},consumedAt:null,approvedByOne:request.approvedByOne,
+            approvedByTwo:null},
+          data:stage===1?{approvedByOne:session.userId}:{approvedByTwo:session.userId},
+        });
+        if(claimed.count!==1)throw new Error('Enrollment approval conflict');
+        await tx.adminAuditLog.create({data:{
+          actorEmail:session.user.email,actorName:session.user.name,
+          action:stage===1?'security.mfa.enrollment.first_approval':'security.mfa.enrollment.final_approval',
+          targetType:'User',targetId:request.userId,
+          summary:'Independent passkey-verified MFA enrollment approval',
+          detail:{requestId:id,stage},riskLevel:'HIGH',flagged:true,
+        }});
+        return stage;
+      });
+      reply.header('Cache-Control','no-store');
+      return {ok:true,approved:updated===2,approvals:updated,
+        instruction:updated===2?'User may now enroll MFA in the requesting session':
+          'A DIFFERENT passkey-verified superadministrator must independently approve'};
+    }catch{return reply.code(409).send({error:'Request already approved or no longer eligible'});}
+  });
+
   app.get('/api/auth/mfa/status',async(req,reply)=>{
     const session=await adminSession(req,reply);if(!session)return;
     const count=await prisma.adminMfaCredential.count({where:{userId:session.userId,revokedAt:null}});
