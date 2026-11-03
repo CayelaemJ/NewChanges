@@ -11,7 +11,7 @@ for(const id of ['mfa-passkey-verify-panel','mfa-passkey-enroll-panel','mfa-pass
     assert.match(html,new RegExp('id="'+id+'"'));
   });
 }
-async function check(state){
+async function check(state,pathname='/mfa'){
   const nodes=new Map();
   const getElementById=id=>{
     if(!nodes.has(id))nodes.set(id,{hidden:false,value:'',textContent:'',disabled:false,addEventListener(){},removeAttribute(){}});
@@ -19,7 +19,7 @@ async function check(state){
   };
   const document={getElementById,querySelector(){return {hidden:false}}};
   const context=createContext({
-    document,window:{isSecureContext:false},navigator:{credentials:{}},
+    document,window:{isSecureContext:false,location:{pathname}},navigator:{credentials:{}},
     fetch:async()=>({ok:true,json:async()=>state}),
     Uint8Array,atob,btoa,Error,JSON,PublicKeyCredential:undefined
   });
@@ -75,4 +75,30 @@ test('passkey enrollment clearly explains device-native PIN and biometric option
  assert.match(html,/FIDO2/);
  assert.match(html,/The Fixer never receives your PIN or biometric data/);
  assert.match(html,/id="enroll" type="button">Set up device passkey/);
+});
+
+test('verified authenticator user may add a Windows Hello passkey without a grant',async()=>{
+ const el=await check({enrolled:true,verified:true,verificationMethod:'TOTP',
+   passkeyEnrolled:false,totpEnrolled:true,totpAvailable:true,canManageRecovery:false},'/mfa/manage');
+ assert.equal(el('mfa-manage-banner').hidden,false);
+ assert.equal(el('mfa-passkey-enroll-panel').hidden,false);
+ assert.equal(el('mfa-passkey-actions').hidden,false);
+ assert.equal(el('grant').hidden,true);
+ assert.equal(el('totp-panel').hidden,true);
+});
+test('verified passkey user can add authenticator QR without a second grant',async()=>{
+ const el=await check({enrolled:true,verified:true,verificationMethod:'PASSKEY',
+   passkeyEnrolled:true,totpEnrolled:false,totpAvailable:true,canManageRecovery:false},'/mfa/manage');
+ assert.equal(el('mfa-manage-banner').hidden,false);
+ assert.equal(el('totp-panel').hidden,false);
+ assert.equal(el('totp-start').hidden,false);
+ assert.equal(el('totp-grant').hidden,true);
+ assert.equal(el('totp-verify-panel').hidden,true);
+});
+test('method manager refuses to display new enrollment before MFA verification',async()=>{
+ const el=await check({enrolled:true,verified:false,passkeyEnrolled:false,
+   totpEnrolled:true,totpAvailable:true,canManageRecovery:false},'/mfa/manage');
+ assert.equal(el('mfa-manage-banner').hidden,true);
+ assert.equal(el('mfa-passkey-enroll-panel').hidden,true);
+ assert.equal(el('totp-verify-panel').hidden,false);
 });
