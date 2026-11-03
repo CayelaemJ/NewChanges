@@ -27,6 +27,7 @@ run node --import tsx --test tests/security/admin-mfa-route-scope.test.ts
 run node --test tests/security/admin-mfa-recovery-contract.test.mjs
 run node --test tests/security/admin-mfa-server-enrollment-contract.test.mjs
 run node --test tests/security/admin-mfa-recovery-key-contract.test.mjs
+run node --test tests/security/admin-mfa-bootstrap-contract.test.mjs
 run node --import tsx --test tests/security/mfa-staging-gate.test.ts
 run node --import tsx --test tests/security/mfa-staging-access.test.ts
 run node --test tests/security/mfa-staging-blueprint.test.mjs
