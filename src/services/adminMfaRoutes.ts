@@ -264,11 +264,42 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
       where:{userId:session.userId},select:{enabledAt:true}
     }) : null;
     const passkeyVerified=await hasFreshAdminMfa(req,session.userId,'PASSKEY');
+    const recoveryKey=await prisma.adminMfaRecoveryCode.findUnique({where:{userId:session.userId},select:{id:true}});
     return {configured:Boolean(mfaConfig()),enrolled:count>0 || Boolean(totp?.enabledAt),
       credentialCount:count,passkeyEnrolled:count>0,totpAvailable:totpIsEnabled(),
-      totpEnrolled:Boolean(totp?.enabledAt),verified,
+      totpEnrolled:Boolean(totp?.enabledAt),verified,hasRecoveryKey:Boolean(recoveryKey),
       verificationMethod:session.mfaVerifiedAt && verified ? session.mfaMethod:null,
       canManageRecovery:passkeyVerified && session.user.role==='SUPERADMIN'};
+  });
+  // Previously enrolled users may obtain their first recovery key after a
+  // fresh MFA proof. Existing keys are never retrievable or overwritten here.
+  app.post('/api/auth/mfa/recovery-key/issue',async(req,reply)=>{
+    const session=await adminSession(req,reply);if(!session)return;
+    if(!await hasFreshAdminMfa(req,session.userId))
+      return reply.code(403).send({error:'Verify MFA before generating a recovery key'});
+    const enrolled=await Promise.all([
+      prisma.adminMfaCredential.count({where:{userId:session.userId,revokedAt:null}}),
+      prisma.adminMfaTotp.findUnique({where:{userId:session.userId},select:{enabledAt:true}}),
+    ]);
+    if(!enrolled[0] && !enrolled[1]?.enabledAt)
+      return reply.code(409).send({error:'Enroll MFA first'});
+    const existing=await prisma.adminMfaRecoveryCode.findUnique({where:{userId:session.userId},select:{id:true}});
+    if(existing)return reply.code(409).send({error:'A recovery key is already issued; it cannot be viewed again'});
+    try{
+      const key=await prisma.$transaction(async tx=>{
+        const issued=await issueRecoveryKey(tx,session.userId);
+        if(!issued)throw new Error('Already issued');
+        await tx.adminAuditLog.create({data:{
+          actorEmail:session.user.email,actorName:session.user.name,
+          action:'security.mfa.recovery_key.issued',targetType:'User',targetId:session.userId,
+          summary:'One-time-display MFA recovery key issued after fresh factor verification',
+          riskLevel:'HIGH',flagged:false,
+        }});
+        return issued;
+      });
+      reply.header('Cache-Control','no-store').header('Pragma','no-cache');
+      return {ok:true,recoveryKey:key};
+    }catch{return reply.code(409).send({error:'Recovery key already issued'});}
   });
   app.post<{Body:MfaBody}>('/api/auth/mfa/register/options',async(req,reply)=>{
     const session=await adminSession(req,reply);if(!session)return;
