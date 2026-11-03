@@ -245,6 +245,12 @@ try{
  const legacyBlocked=await A.ctx.request.get('/dashboard',{maxRedirects:0});
  assert.equal(legacyBlocked.status(),302,'Superadmin missing key is redirected to MFA setup');
  assert.equal(legacyBlocked.headers().location,'/mfa');
+ const privateProfile=await A.ctx.request.get('/api/auth/me');
+ assert.equal(privateProfile.status(),200,'Restricted profile reports next security step');
+ const restricted=await privateProfile.json();
+ assert.equal(restricted.recoveryKeyRequired,true,'Missing recovery key must be reported');
+ assert.deepEqual(restricted.employers,[],'Missing key must never reveal employer records');
+ assert.equal(restricted.modules.admin,false,'Missing key must not grant admin modules');
  const noKeyApi=await postFrom(A.ctx,'/api/admin/mfa/recovery/request',
    {targetUserId:users[2].id});
  assert.equal(noKeyApi.status(),403,'Admin API denies missing recovery key');
