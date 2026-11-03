@@ -52,10 +52,23 @@ new issues to reach you. The self-hosted runner and local Ollama must be online.
 
 ## Limits
 
-This observes availability briefly after deployment; it does not yet run continuously.
+The separate hourly scheduled workflow samples availability between deployments. It depends on your self-hosted runner remaining online and GitHub schedule execution. It is not independent external uptime monitoring.
 It does not verify the actual deployed commit digest, browser sign-in, authenticated
 MFA flows, tenant data correctness, monitoring history across deployments, or
 provider-level rollback. Keep the existing pre-deploy tests and staging acceptance
 criteria; a post-deploy scan cannot protect an already-deployed release.
 
 Do not enable automated production rollback or merge from model results.
+
+## Ongoing status (hourly)
+
+A separate **The Fixer hourly runtime health (self-hosted)** workflow runs
+at minute 11 of each hour on the repository default branch. It records the
+same three health samples and stores a 14-day sanitized artifact. If checks fail,
+it opens a single `[monitor] The Fixer runtime health requires attention` issue,
+adds links to subsequent failing runs, and closes the issue after recovery.
+
+This is not a guaranteed real-time SLA: scheduled GitHub Actions can be delayed
+or skipped, and your desktop self-hosted runner must be online. Keep provider
+alerts as an independent signal. The hourly run intentionally does not launch
+Ollama or Docker security tests, to avoid unnecessary local CPU use.
