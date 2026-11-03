@@ -96,7 +96,11 @@ async function refresh(){
   const passkeyVerify=document.getElementById('mfa-passkey-verify-panel');
   const passkeyEnroll=document.getElementById('mfa-passkey-enroll-panel');
   const passkeyActions=document.getElementById('mfa-passkey-actions');
-  if(passkeyVerify)passkeyVerify.hidden=!!state.verified || !state.passkeyEnrolled;
+  // On the protected method-manager page, an authenticator-verified
+  // superadmin may explicitly step up with an existing passkey for sensitive
+  // approvals without first logging out.
+  if(passkeyVerify)passkeyVerify.hidden=!state.passkeyEnrolled ||
+    (!!state.verified && (!managingMethods || state.verificationMethod==='PASSKEY'));
   // A user who already has authenticator MFA should not be asked for a new
   // passkey enrollment grant at every sign-in.
   if(passkeyEnroll)passkeyEnroll.hidden=managingMethods
@@ -105,7 +109,6 @@ async function refresh(){
   if(passkeyActions)passkeyActions.hidden=
     (!!passkeyVerify?.hidden && !!passkeyEnroll?.hidden);
   const passkeyGrantLabel=document.querySelector?.('label[for="grant"]');
-  if(passkeyGrantLabel)passkeyGrantLabel.hidden=managingMethods && !!state.verified;
   grantEl.hidden=true;
   if(passkeyGrantLabel)passkeyGrantLabel.hidden=true;
   enrollBtn.disabled=firstTime && !enrollmentApproved && !legacyGrant;
