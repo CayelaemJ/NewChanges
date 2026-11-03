@@ -171,12 +171,28 @@ try{
  // Real Fastify HTTP authorization checks against synthetic sessions.
  // A password-only superadmin must not access protected business API reads
  // or use a guessed privileged mutation URL.
- for(const endpoint of ['/api/admin/reports','/api/users','/api/admin/integration']){
+ // Probe every statically registered protected GET endpoint, not only a sample.
+ const {apiRouteInventory}=await import('./ci/api-route-inventory.mjs');
+ const inventory=apiRouteInventory().routes;
+ const protectedGets=inventory.filter(x=>x.method==='GET' &&
+   !x.path.startsWith('/api/auth/') && x.path!=='/api/contact' &&
+   !x.path.startsWith('/api/public/') && !x.path.startsWith('/api/partner-theme/'));
+ assert.ok(protectedGets.length>=12,'Runtime authorization route inventory unexpectedly small');
+ for(const item of protectedGets){
+   const endpoint=item.path.replace(/:([A-Za-z_][A-Za-z0-9_]*)/g,'ci-test-missing')
+     .replace(/\\*/g,'ci-test-missing');
    const response=await A.ctx.request.get(endpoint,{maxRedirects:0});
-   assert.equal(response.status(),403,'Unverified admin must not read '+endpoint);
-   const denied=await response.json();
-   assert.equal(denied.code,'MFA_REQUIRED','Require an explicit MFA step-up on '+endpoint);
+   const status=response.status();
+   // 400 is permitted only on parametrized URLs validated before preHandler.
+   assert.ok(status===403 || (item.path.includes(':') && status===400),
+     'Password-only administrator reached or bypassed '+item.path+' (status '+status+')');
+   if(status===403){
+     const denied=await response.json();
+     assert.equal(denied.code,'MFA_REQUIRED',
+       'MFA step-up missing on real registered endpoint '+item.path);
+   }
  }
+ console.log('PASS protected Fastify GET API inventory:',protectedGets.length,'routes denied before MFA');
  const unverifiedWrite=await postFrom(A.ctx,'/api/admin/mfa/recovery/request',{targetUserId:users[2].id});
  assert.equal(unverifiedWrite.status(),403,'Unverified superadmin cannot mutate recovery state');
  assert.equal((await unverifiedWrite.json()).code,'MFA_REQUIRED');
