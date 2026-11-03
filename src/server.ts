@@ -1,4 +1,4 @@
-import { registerAdminMfaRoutes, hasFreshAdminMfa } from "./services/adminMfaRoutes.js";
+import { registerAdminMfaRoutes, hasFreshAdminMfa, hasIssuedAdminRecoveryKey } from "./services/adminMfaRoutes.js";
 import { requiresAdminMfaStepUp } from "./services/adminMfaRouteScope.js";
 import { createDashboardPublicationStream } from "./services/dashboardPublicationStream.js";
 import { inspectReplacementDependencies } from "./services/datasetReplacementDependencies.js";
@@ -485,6 +485,9 @@ app.get("/react/", async (req, reply) => {
   if (!canAccessModule(user, "dashboard")) return reply.code(403).send({ error: "no dashboard access" });
   if (MFA_ENFORCE && isAdminRole(user) && !await hasFreshAdminMfa(req, user.id))
     return reply.redirect("/mfa");
+  if (MFA_ENFORCE && user.role === "SUPERADMIN" &&
+      !await hasIssuedAdminRecoveryKey(user.id))
+    return reply.redirect("/mfa");
   try {
     const html = await readFile(join(PUBLIC_DIR, "react", "index.html"), "utf-8");
     return reply.type("text/html; charset=utf-8").header("Cache-Control", "no-store").send(html);
@@ -509,6 +512,9 @@ app.get("/react/dashboard", async (req, reply) => {
   if (!user) return reply.redirect("/login");
   if (!canAccessModule(user, "dashboard")) return reply.code(403).send({ error: "no dashboard access" });
   if (MFA_ENFORCE && isAdminRole(user) && !await hasFreshAdminMfa(req, user.id))
+    return reply.redirect("/mfa");
+  if (MFA_ENFORCE && user.role === "SUPERADMIN" &&
+      !await hasIssuedAdminRecoveryKey(user.id))
     return reply.redirect("/mfa");
   try {
     const html = await readFile(join(PUBLIC_DIR, "react", "index.html"), "utf-8");
@@ -588,7 +594,8 @@ app.get("/mfa", async (req, reply) => {
   if (!user || !isAdminRole(user)) return reply.redirect("/login");
   // This is a second-factor step, not a landing page. After successful
   // authentication there is no reason to present enrollment again.
-  if (MFA_ENFORCE && await hasFreshAdminMfa(req, user.id))
+  if (MFA_ENFORCE && await hasFreshAdminMfa(req, user.id) &&
+      (user.role !== "SUPERADMIN" || await hasIssuedAdminRecoveryKey(user.id)))
     return reply.redirect("/dashboard");
   return serveHtml(reply, "admin-mfa.html");
 });
@@ -612,6 +619,9 @@ app.get("/dashboard", async (req, reply) => {
   if (!canAccessModule(user, "dashboard")) return reply.redirect("/login");
   if (MFA_ENFORCE && isAdminRole(user) && !await hasFreshAdminMfa(req, user.id))
     return reply.redirect("/mfa");
+  if (MFA_ENFORCE && user.role === "SUPERADMIN" &&
+      !await hasIssuedAdminRecoveryKey(user.id))
+    return reply.redirect("/mfa");
   // Keep the canonical dashboard route on the original production dashboard.
   // The React frontend remains available separately at /react/dashboard while
   // the original dashboard remains the visual source of truth for /dashboard.
@@ -622,6 +632,8 @@ app.get("/admin", async (req, reply) => {
   if (!user) return reply.redirect("/login");
   if (!canAccessModule(user, "admin")) return reply.code(403).type("text/html").send("<h2 style='font-family:sans-serif;padding:40px'>Admins only. <a href='/dashboard'>Go to dashboard</a></h2>");
   if (MFA_ENFORCE && !await hasFreshAdminMfa(req, user.id)) return reply.redirect("/mfa");
+  if (MFA_ENFORCE && user.role === "SUPERADMIN" &&
+      !await hasIssuedAdminRecoveryKey(user.id)) return reply.redirect("/mfa");
   return serveHtml(reply, "admin.html");
 });
 app.get("/users", async (req, reply) => {
