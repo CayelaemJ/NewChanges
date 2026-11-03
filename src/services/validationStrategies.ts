@@ -23,7 +23,17 @@ function parseDateOnly(value: string): Date | null {
 }
 
 function parseDateTime(value: string): Date | null {
-  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2})$/.test(value)) return null;
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2})$/.exec(value);
+  if (!match) return null;
+  const [year, month, day, hour, minute, second] = match.slice(1, 7).map(Number);
+  // JavaScript Date normalizes impossible dates (e.g. February 30th) instead
+  // of rejecting them. Do not let such invalid source watermarks enter sync.
+  const calendar = new Date(Date.UTC(year, month - 1, day, hour, minute, second || 0));
+  if (calendar.getUTCFullYear() !== year || calendar.getUTCMonth() !== month - 1 ||
+      calendar.getUTCDate() !== day || calendar.getUTCHours() !== hour ||
+      calendar.getUTCMinutes() !== minute || calendar.getUTCSeconds() !== (second || 0)) return null;
+  const offset = value.match(/([+-])(\d{2}):(\d{2})$/);
+  if (offset && (Number(offset[2]) > 23 || Number(offset[3]) > 59)) return null;
   const d = new Date(value);
   return Number.isNaN(d.getTime()) ? null : d;
 }
