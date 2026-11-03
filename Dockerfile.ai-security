@@ -2,5 +2,6 @@ FROM python:3.12-slim
 WORKDIR /scanner
 COPY scripts/ai-security-review.py /scanner/ai-security-review.py
 COPY scripts/ai-remediation-plan.py /scanner/ai-remediation-plan.py
+COPY scripts/ai-auto-remediate.py /scanner/ai-auto-remediate.py
 USER 65534:65534
 ENTRYPOINT ["python", "/scanner/ai-security-review.py"]
