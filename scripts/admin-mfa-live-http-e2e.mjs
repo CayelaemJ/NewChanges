@@ -80,7 +80,11 @@ async function loginAndLoad(user){
  return item;
 }
 async function enroll(item,grant){
- await item.page.locator('#grant').fill(grant);
+ // Synthetic bootstrap and independently approved recovery use the guarded
+ // legacy grant fallback. Ordinary users instead request server-side approval.
+ await item.page.locator('#mfa-legacy-details summary').click();
+ await item.page.locator('#mfa-legacy-grant').fill(grant);
+ await item.page.locator('#mfa-legacy-apply').click();
  await item.page.locator('#enroll').click();
  // Registration rotates the server-side session and refreshes MFA status.
  // Assert the authoritative verified completion state, not stale status copy.
