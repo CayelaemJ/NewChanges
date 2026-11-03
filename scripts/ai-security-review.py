@@ -3,6 +3,7 @@
 import json
 import os
 import re
+import subprocess
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -11,7 +12,7 @@ ROOT = Path(os.environ.get("SCAN_ROOT", "/workspace")).resolve()
 REPORTS = Path(os.environ.get("REPORT_DIR", "/reports"))
 MODEL = os.environ.get("OLLAMA_MODEL", "qwen2.5-coder:7b")
 URL = os.environ.get("OLLAMA_URL", "http://host.docker.internal:11434").rstrip("/")
-MAX_FILES = min(max(int(os.environ.get("MAX_FILES", "25")), 1), 200)
+MAX_FILES = int(os.environ.get("MAX_FILES", "25"))  # 0 means all eligible files
 MAX_CHARS = min(max(int(os.environ.get("MAX_CHARS_PER_FILE", "12000")), 1000), 30000)
 SUFFIXES = {".ts", ".tsx", ".js", ".jsx", ".py", ".prisma", ".mjs", ".cjs"}
 EXCLUDE_DIRS = {"node_modules", ".git", "dist", "build", "coverage", "test-reports",
@@ -40,26 +41,37 @@ def priority(name):
     return (-sum(1 for k in keywords if k in n), n)
 
 files = []
-for path in ROOT.rglob("*"):
+try:
+    tracked_paths = [ROOT / part.decode("utf-8", "surrogateescape")
+                     for part in subprocess.check_output(["git", "-C", str(ROOT), "ls-files", "-z"]).split(b"\\0") if part]
+except (OSError, subprocess.CalledProcessError):
+    raise SystemExit("Git tracked-file inventory unavailable; cannot establish scan coverage")
+eligible = 0
+skipped = []
+for path in tracked_paths:
     if not path.is_file() or path.suffix.lower() not in SUFFIXES:
         continue
     rel = path.relative_to(ROOT)
     if any(p.lower() in EXCLUDE_DIRS for p in rel.parts):
         continue
     if any(token in path.name.lower() for token in BLOCK_NAMES):
+        skipped.append(str(rel))
         continue
+    eligible += 1
     try:
         if path.stat().st_size > 100000 or path.is_symlink():
+            skipped.append(str(rel))
             continue
         content = path.read_text(encoding="utf-8")
     except (OSError, UnicodeError):
+        skipped.append(str(rel))
         continue
     # Security-sensitive implementation code MUST be eligible for review.
     # Redact candidate literals before sending source to the local model.
     content = SECRET_ASSIGNMENT.sub("[REDACTED_POSSIBLE_CREDENTIAL]", content)
     files.append((str(rel), content[:MAX_CHARS]))
 files.sort(key=lambda x: priority(x[0]))
-files = files[:MAX_FILES]
+files = files[:MAX_FILES] if MAX_FILES > 0 else files
 if not files:
     raise SystemExit("No eligible files found; run from the NewChanges repository root")
 
@@ -105,10 +117,12 @@ for name, content in files:
         print(f"Scan error: {name}: {type(exc).__name__}", flush=True)
 
 REPORTS.mkdir(parents=True, exist_ok=True)
-report = {"model": MODEL, "reviewed_files": len(files), "findings": findings,
-          "errors": errors, "note": "Unverified AI observations; human validation required."}
+report = {"model": MODEL, "selected_files": len(files), "reviewed_files": len(files) - len(errors),
+          "eligible_files": eligible, "skipped_files": skipped, "findings": findings,
+          "errors": errors, "complete": len(errors) == 0 and len(skipped) == 0 and len(files) == eligible,
+          "note": "Unverified AI observations; human validation required."}
 (REPORTS / "report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
-lines = ["# Local Ollama security review", f"Files selected: {len(files)}",
+lines = ["# Local Ollama security review", f"Eligible files: {eligible}", f"Files selected: {len(files)}", f"Skipped files: {len(skipped)}",
          f"Potential findings: {len(findings)}", f"Errors: {len(errors)}", "",
          "AI findings are unverified and should never be automatically applied.", ""]
 for item in findings:
@@ -119,6 +133,6 @@ for item in findings:
 for item in errors:
     lines.append(f"Scanner error: {item['file']} ({item['error']})")
 (REPORTS / "report.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
-print(f"Completed: {len(findings)} unverified findings; {len(errors)} errors.", flush=True)
-if errors:
+print(f"Completed: {len(findings)} unverified findings; {len(errors)} errors; coverage {len(files) - len(errors)}/{eligible}.", flush=True)
+if errors or (MAX_FILES == 0 and skipped):
     raise SystemExit(2)
