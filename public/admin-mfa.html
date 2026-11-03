@@ -68,6 +68,7 @@ input:focus{border-color:#65349e}
 <h2>First-time security setup</h2>
 <p>The Fixer handles enrollment authorization securely. Request approval and have two independently verified security administrators confirm your identity. You will not need to create or enter a 43-character code.</p>
 <button type="button" id="mfa-approval-request">Request MFA setup approval</button>
+<button type="button" id="mfa-approval-check" style="margin-top:10px;background:#e9e0f4;color:#42216d" hidden>Check approval status</button>
 <p id="mfa-approval-state" role="status" aria-live="polite">No approval requested yet.</p>
 <details id="mfa-legacy-details"><summary>Approved recovery or initial security bootstrap only</summary>
 <p>Only use this if your security administrator has specifically given you a one-time bootstrap or recovery grant. Ordinary onboarding does not use this field.</p>
@@ -79,14 +80,14 @@ input:focus{border-color:#65349e}
 <div class="actions" id="mfa-passkey-actions"><section class="panel" id="mfa-passkey-verify-panel"><h2>Verify your passkey</h2>
 <p>Verify again when accessing sensitive administrative controls.</p>
 <button id="verify" type="button">Verify passkey</button></section>
-<section class="panel" id="mfa-passkey-enroll-panel"><h2>Set up Windows Hello, Face ID or a security key</h2><p>Use a passkey secured by your device: Windows Hello PIN or biometrics, Apple Face ID/Touch ID, or a compatible FIDO2 security key. Your device selects the available verification method; The Fixer never receives your PIN or biometric data. First-time enrollment requires an approved one-time grant.</p>
+<section class="panel" id="mfa-passkey-enroll-panel"><h2>Set up Windows Hello, Face ID or a security key</h2><p>Use a passkey secured by your device: Windows Hello PIN or biometrics, Apple Face ID/Touch ID, or a compatible FIDO2 security key. Your device selects the available verification method; The Fixer never receives your PIN or biometric data. First-time enrollment requires approval by your organization's security administrators. The Fixer manages authorization internally.</p>
 <label for="grant" hidden>Approved bootstrap or recovery grant</label><input id="grant" type="password" autocomplete="off" spellcheck="false" hidden>
 <button id="enroll" type="button">Set up device passkey</button><small>Adding a second passkey requires recent verification or another approved grant.</small>
 </section></div>
 <section class="panel" id="totp-panel" hidden aria-labelledby="totp-title" style="margin-top:22px">
 <h2 id="totp-title">Set up your authenticator app with a QR code</h2>
 <p id="totp-instructions">First time only: request your personal QR code, open Google Authenticator or Microsoft Authenticator, tap Add account and scan the QR. Enter one code to activate the saved account.</p>
-<p id="totp-state">Authenticator app setup is available. First-time enrollment requires an approved one-time grant from your security administrator.</p>
+<p id="totp-state">Authenticator setup is available after identity-verified approval. The Fixer handles enrollment authorization.</p>
 <label for="totp-grant" hidden>Approved bootstrap or recovery grant</label>
 <input id="totp-grant" type="password" maxlength="128" autocomplete="off" spellcheck="false" hidden>
 <button id="totp-start" type="button">Generate my one-time setup QR code</button>
