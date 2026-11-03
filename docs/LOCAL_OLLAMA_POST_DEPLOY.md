@@ -38,8 +38,17 @@ cat test-reports/ai-security/remediation-plan.md
 - A scan timeout is recorded as an error and the AI step remains non-blocking.
 - Reports stay on the local runner filesystem under `test-reports/ai-security`. GitHub
   Actions receives only aggregate counts, not source excerpts or full reports.
-- The remediation planner produces a draft only. Any fixes require an isolated
-  change branch, deterministic regression tests, and human-reviewed PR.
+- The remediation planner produces suggestions; the separate auto-repair stage may apply
+  **one small low-severity UI fix** (up to six replacement lines, one allowlisted
+  component, max 12 total diff lines). It then runs offline dependency installation,
+  frontend TypeScript checking, and a frontend build. Only successful validation can
+  create a **draft pull request** on the bot branch. It does **not** merge or deploy.
+- High/critical, medium, authentication, MFA, authorization, database, API,
+  infrastructure, ambiguous, or failed-test changes are escalated through a GitHub
+  issue pointing to the workflow run. GitHub issue notifications depend on repository
+  notification settings and Actions permissions.
+- Offline npm verification requires pre-populated npm caches. Missing dependencies
+  cause escalation rather than bypassing tests.
 - Never automatically run remediation changes against live databases or deployed services.
 
 ## Deployment integration still required
@@ -50,3 +59,13 @@ cat test-reports/ai-security/remediation-plan.md
 3. Test the event trigger and timestamps with a real, approved staging deploy.
 4. Keep the scanner last in the release verification sequence, after existing
    deterministic tests and deployment smoke checks.
+
+## What the check cannot guarantee
+
+This is a **post-deployment** check. It cannot retroactively prevent a release
+that has already gone live. Keep deterministic tests and release gates before
+production promotion. The agent only makes a small subset of changes automatically,
+and all proposed code changes require review and merge to reach production.
+
+A GitHub deployment-status event must be proven for **each** Render/Cloudflare
+service and deployment environment; the workflow also allows manual triggering.
