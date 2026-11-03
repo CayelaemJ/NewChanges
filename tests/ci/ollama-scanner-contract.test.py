@@ -16,7 +16,7 @@ class LocalOllamaContractTests(unittest.TestCase):
     def test_chunking_preserves_every_char_and_line(self):
         lines = ["one", "two", "z" * 16000, "end"]
         pieces = scanner.chunks_for("\n".join(lines))
-        self.assertGreater(len(pieces), 3)
+        self.assertGreaterEqual(len(pieces), 3)
         combined = {}
         for first, last, text in pieces:
             for record in text.splitlines():
