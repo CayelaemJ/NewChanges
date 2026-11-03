@@ -48,6 +48,7 @@ except (OSError, subprocess.CalledProcessError):
     raise SystemExit("Git tracked-file inventory unavailable; cannot establish scan coverage")
 eligible = 0
 skipped = []
+truncated = []
 for path in tracked_paths:
     if not path.is_file() or path.suffix.lower() not in SUFFIXES:
         continue
@@ -69,6 +70,8 @@ for path in tracked_paths:
     # Security-sensitive implementation code MUST be eligible for review.
     # Redact candidate literals before sending source to the local model.
     content = SECRET_ASSIGNMENT.sub("[REDACTED_POSSIBLE_CREDENTIAL]", content)
+    if len(content) > MAX_CHARS:
+        truncated.append(str(rel))
     files.append((str(rel), content[:MAX_CHARS]))
 files.sort(key=lambda x: priority(x[0]))
 files = files[:MAX_FILES] if MAX_FILES > 0 else files
@@ -118,11 +121,12 @@ for name, content in files:
 
 REPORTS.mkdir(parents=True, exist_ok=True)
 report = {"model": MODEL, "selected_files": len(files), "reviewed_files": len(files) - len(errors),
-          "eligible_files": eligible, "skipped_files": skipped, "findings": findings,
-          "errors": errors, "complete": len(errors) == 0 and len(skipped) == 0 and len(files) == eligible,
+          "eligible_files": eligible, "skipped_files": skipped, "truncated_files": truncated,
+          "findings": findings,
+          "errors": errors, "complete": len(errors) == 0 and len(skipped) == 0 and not truncated and len(files) == eligible,
           "note": "Unverified AI observations; human validation required."}
 (REPORTS / "report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
-lines = ["# Local Ollama security review", f"Eligible files: {eligible}", f"Files selected: {len(files)}", f"Skipped files: {len(skipped)}",
+lines = ["# Local Ollama security review", f"Eligible files: {eligible}", f"Files selected: {len(files)}", f"Skipped files: {len(skipped)}", f"Truncated files: {len(truncated)}",
          f"Potential findings: {len(findings)}", f"Errors: {len(errors)}", "",
          "AI findings are unverified and should never be automatically applied.", ""]
 for item in findings:
@@ -134,5 +138,5 @@ for item in errors:
     lines.append(f"Scanner error: {item['file']} ({item['error']})")
 (REPORTS / "report.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 print(f"Completed: {len(findings)} unverified findings; {len(errors)} errors; coverage {len(files) - len(errors)}/{eligible}.", flush=True)
-if errors or (MAX_FILES == 0 and skipped):
+if errors or (MAX_FILES == 0 and (skipped or truncated)):
     raise SystemExit(2)
