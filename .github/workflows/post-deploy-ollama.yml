@@ -1,8 +1,7 @@
-name: The Fixer post-deploy Ollama security review
+name: The Fixer final post-deploy Ollama check
 
-# Automatic only if the deployment provider publishes a successful GitHub
-# deployment_status event. Render/Cloudflare may not emit these by default.
-# Manual dispatch remains available as a safe fallback.
+# Automatic only when a deployment provider reports success to GitHub.
+# Render/Cloudflare must publish deployment_status events for this to run.
 on:
   deployment_status:
   workflow_dispatch:
@@ -11,33 +10,33 @@ permissions:
   contents: read
 
 concurrency:
-  group: newchanges-post-deploy-ollama
+  group: newchanges-final-ollama-check
   cancel-in-progress: false
 
 jobs:
-  ollama-final-review:
+  final-ollama-review:
     if: ${{ github.event_name == 'workflow_dispatch' || (github.event.deployment_status.state == 'success' && github.event.deployment.ref == 'main') }}
     runs-on: [self-hosted, linux, x64, newchanges-ci]
     timeout-minutes: 100
     steps:
-      - name: Check out trusted main branch
+      - name: Checkout trusted code only
         uses: actions/checkout@v4
         with:
           ref: main
           persist-credentials: false
 
-      - name: Confirm host Docker and local Ollama
+      - name: Verify local Docker and Ollama model
         shell: bash
         run: |
           set -Eeuo pipefail
           docker info >/dev/null
           docker compose version
-          docker run --rm --network bridge --add-host host.docker.internal:host-gateway \
+          docker run --rm --add-host host.docker.internal:host-gateway \
             curlimages/curl:latest -fsS --max-time 15 \
             http://host.docker.internal:11434/api/tags \
-            | python3 -c 'import json,sys; m=json.load(sys.stdin)["models"]; assert any(x.get("name")=="qwen2.5-coder:7b" and not x.get("remote_host") for x in m), "Local qwen2.5-coder:7b unavailable"'
+            | python3 -c 'import json,sys; m=json.load(sys.stdin)["models"]; assert any(x.get("name")=="qwen2.5-coder:7b" and not x.get("remote_host") for x in m), "Local model unavailable"'
 
-      - name: Final post-deploy security review (advisory)
+      - name: Final AI security and anomaly review (advisory)
         id: review
         continue-on-error: true
         shell: bash
@@ -49,12 +48,21 @@ jobs:
             -f docker-compose.ai-security.yml \
             run --build --rm ai-security-review
 
-      - name: Report status without exposing source findings in Actions logs
+      - name: Generate remediation proposals (no automatic code changes)
+        if: ${{ steps.review.outcome == 'success' }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          docker compose -p "newchanges-ollama-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            -f docker-compose.ai-security.yml \
+            run --rm --entrypoint python ai-security-review /scanner/ai-remediation-plan.py
+
+      - name: Summarize check without publishing source excerpts
         if: always()
         shell: bash
         run: |
-          echo "### Post-deployment Ollama review" >> "$GITHUB_STEP_SUMMARY"
-          echo "Result: ${{ steps.review.outcome }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Final post-deployment Ollama check" >> "$GITHUB_STEP_SUMMARY"
+          echo "AI review: ${{ steps.review.outcome }}" >> "$GITHUB_STEP_SUMMARY"
           python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
           import json
           from pathlib import Path
@@ -62,14 +70,14 @@ jobs:
           if p.exists():
               r=json.loads(p.read_text())
               print(f"Files selected: {r.get('reviewed_files', 0)}")
-              print(f"Unverified AI findings: {len(r.get('findings', []))}")
-              print(f"Scanner errors: {len(r.get('errors', []))}")
+              print(f"Unverified findings: {len(r.get('findings', []))}")
+              print(f"Scan errors: {len(r.get('errors', []))}")
           else:
-              print("No report produced; inspect runner logs.")
-          print("AI findings are advisory, not verified vulnerabilities.")
+              print("No report produced; check runner logs.")
+          print("Remediation proposals need human review and regression testing.")
           PY
 
-      - name: Clean up only this scanner project
+      - name: Clean up only this isolated scanner project
         if: always()
         shell: bash
         run: |
