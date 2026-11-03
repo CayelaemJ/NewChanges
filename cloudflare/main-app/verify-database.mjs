@@ -1,6 +1,6 @@
 // Effective grants, not intended GRANT statements, determine eligibility.
 export function verifyDatabaseIdentity(row,{allowWrites=false}={}){
-  if (!row || typeof row!=="object")return {ok:false};
+  if (!row || typeof row!=="object") return {ok:false};
   const role = String(row.role_name||"");
   const restricted =
     role.length>0 &&
@@ -9,12 +9,19 @@ export function verifyDatabaseIdentity(row,{allowWrites=false}={}){
     row.is_superuser===false &&
     row.can_create_database===false &&
     row.can_create_roles===false &&
+    row.bypasses_rls===false &&
     row.member_superuser===false &&
+    row.member_application_owner===false &&
+    row.can_create_database_objects===false &&
+    row.can_create_public_objects===false &&
     row.can_read_session===true &&
     row.can_read_employer===true;
-  // Read-only staging cannot be connected with an accidental write-capable
-  // identity role. Production requires write grants and separate review gates.
-  const permissions=allowWrites ? row.can_write_session===true
-                               : row.can_write_session===false;
+  // Standby must have no effective public-table or sequence write grants.
+  // A separately approved writer must still be a non-owner, non-superuser role.
+  const permissions=allowWrites
+    ? row.can_write_session===true && row.can_write_any_public_table===true
+    : row.can_write_session===false &&
+      row.can_write_any_public_table===false &&
+      row.can_use_or_update_public_sequence===false;
   return {ok:restricted && permissions};
 }
