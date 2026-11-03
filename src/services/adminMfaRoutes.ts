@@ -50,14 +50,55 @@ export async function hasFreshAdminMfa(req: FastifyRequest, userId: string, meth
 function grantHash(code: unknown) {
   return typeof code === 'string' && /^[A-Za-z0-9_-]{43}$/.test(code) ? digest(code) : null;
 }
-async function isAuthorizedToEnroll(session: {userId:string;mfaVerifiedAt:Date|null}, code: unknown) {
+async function hasEnrollmentApproval(session: {id:string;userId:string}) {
+  return Boolean(await prisma.adminMfaEnrollmentRequest.findFirst({
+    where:{userId:session.userId,sessionId:session.id,
+      approvedByOne:{not:null},approvedByTwo:{not:null},
+      consumedAt:null,expiresAt:{gt:new Date()}},
+    select:{id:true},
+  }));
+}
+async function isAuthorizedToEnroll(
+  session: {id:string;userId:string;mfaVerifiedAt:Date|null}, code: unknown
+) {
   if (session.mfaVerifiedAt && Date.now() - session.mfaVerifiedAt.getTime() >= 0 &&
       Date.now() - session.mfaVerifiedAt.getTime() <= MAX_MFA_AGE) return true;
+  // Server-managed authorization: the session itself is the bearer;
+  // the approval record never leaves PostgreSQL or becomes a browser secret.
+  if (await hasEnrollmentApproval(session)) return true;
+  // Retain legacy, explicitly provisioned one-time grants only for isolated
+  // initial-superadmin bootstrap and vetted recovery flows.
   const hash=grantHash(code);
   if (!hash) return false;
   const grant=await prisma.adminMfaEnrollmentGrant.findUnique({where:{codeHash:hash}});
   return Boolean(grant && grant.userId === session.userId && !grant.consumedAt &&
     grant.expiresAt > new Date() && grant.approvedByOne !== grant.approvedByTwo);
+}
+async function consumeEnrollmentApproval(
+  tx:any, session:{id:string;userId:string}, now:Date, grantCode:unknown
+) {
+  const approved=await tx.adminMfaEnrollmentRequest.findFirst({
+    where:{userId:session.userId,sessionId:session.id,
+      approvedByOne:{not:null},approvedByTwo:{not:null},
+      consumedAt:null,expiresAt:{gt:now}},
+    orderBy:{createdAt:'desc'},select:{id:true},
+  });
+  if (approved) {
+    const used=await tx.adminMfaEnrollmentRequest.updateMany({
+      where:{id:approved.id,userId:session.userId,sessionId:session.id,
+        consumedAt:null,approvedByOne:{not:null},approvedByTwo:{not:null},
+        expiresAt:{gt:now}},data:{consumedAt:now},
+    });
+    if(used.count!==1)throw new Error('Enrollment approval already used');
+    return;
+  }
+  const hash=grantHash(grantCode);
+  if(!hash)throw new Error('Enrollment approval required');
+  const used=await tx.adminMfaEnrollmentGrant.updateMany({
+    where:{userId:session.userId,codeHash:hash,consumedAt:null,
+      expiresAt:{gt:now}},data:{consumedAt:now},
+  });
+  if(used.count!==1)throw new Error('Enrollment grant already used');
 }
 async function recordChallenge(userId:string,sessionId:string,purpose:string,challenge:string) {
   await prisma.adminMfaChallenge.create({data:{
@@ -157,14 +198,7 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
           now.getTime()-session.mfaVerifiedAt.getTime()>=0 &&
           now.getTime()-session.mfaVerifiedAt.getTime()<=MAX_MFA_AGE;
         if(!recent){
-          const hash=grantHash(body.grantCode);
-          if(!hash)throw new Error('Missing grant');
-          const grant=await tx.adminMfaEnrollmentGrant.updateMany({
-            where:{userId:session.userId,codeHash:hash,consumedAt:null,
-              expiresAt:{gt:now}},
-            data:{consumedAt:now},
-          });
-          if(grant.count!==1)throw new Error('Grant already used');
+          await consumeEnrollmentApproval(tx,session,now,body.grantCode);
         }
         await tx.adminMfaCredential.create({data:{
           userId:session.userId,credentialId:info.credential.id,
@@ -307,13 +341,7 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
           now.getTime()-session.mfaVerifiedAt.getTime()>=0 &&
           now.getTime()-session.mfaVerifiedAt.getTime()<=MAX_MFA_AGE;
         if(!alreadyVerified){
-          const hash=grantHash(req.body?.grantCode);
-          if(!hash)throw new Error('Enrollment grant missing');
-          const consumed=await tx.adminMfaEnrollmentGrant.updateMany({
-            where:{userId:session.userId,codeHash:hash,consumedAt:null,
-              expiresAt:{gt:now}},data:{consumedAt:now},
-          });
-          if(consumed.count!==1)throw new Error('Enrollment grant already used');
+          await consumeEnrollmentApproval(tx,session,now,req.body?.grantCode);
         }
         await tx.adminAuditLog.create({data:{
           actorEmail:session.user.email,actorName:session.user.name,
