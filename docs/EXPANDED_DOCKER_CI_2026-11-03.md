@@ -1,28 +1,51 @@
-# Expanded isolated Docker CI tests (2026-11-03)
+# The Fixer | Expanded self-hosted Docker CI (3 November 2026)
 
-This addition extends the existing **manual, self-hosted** workflow and the disposable PostgreSQL 18 Docker Compose suite on PR #219. No hosted runners, deployment, source credentials, external databases, or production changes are introduced.
+## Scope
 
-## Added checks
+This change expands existing PR #219 on `chore/manual-self-hosted-docker-ci-20261029`. The sole execution target is the reviewed `newchanges-ci` Ubuntu self-hosted runner. The workflow is manual-dispatch only; **no push/PR auto-trigger, hosted CI, production cutover, external database or production user accounts are involved**.
 
-1. `scripts/ci/database-resilience-ci.mjs`: transaction rollback, constraint violations, concurrent optimistic locking, and savepoint recovery against a unique synthetic schema.
-2. `scripts/admin-mfa-live-http-e2e.mjs`: additional **real Fastify HTTP** negative cases for anonymous access, password-only administrator reads, privileged recovery mutation, and unknown recovery requests. The existing virtual passkey/TOTP enrollment and two-superadmin recovery flows remain intact.
-3. `tests/ci/ingestion-faults.test.ts`: malformed JSON, invalid CSV validation, interrupted CSV/JSON staging callbacks, and duplicate natural-key rejection against the actual import parser. These are parser-level fault injections, **not** a simulation of an entire source outage or multi-page database commit.
-4. `scripts/ci/visual-regression-ci.mjs`: isolated Chromium rendering of the real MFA HTML/JS with mocked API responses across 320/390/768/1366px. Fails on page errors, horizontal overflow, and differing pixel output across two identical deterministic renders. Stores failure screenshots and a status report under `test-results/visual-regression/`.
+The main Compose test container joins an **internal Docker network**, shares the network namespace of a disposable `postgres:18-alpine` service and accepts only the fixed `postgresql://ci_fixture:ci_fixture@127.0.0.1:5432/newchanges_ci` URL. Production/cloud provider environment variables are prohibited and the network-isolation test attempts to connect to external addresses to verify egress is blocked.
 
-## Run
+## Release gates now included
 
-Select the `chore/manual-self-hosted-docker-ci-20261029` branch and manually dispatch `.github/workflows/newchanges-manual-docker-ci.yml` on the dedicated `newchanges-ci` runner.
+| Gate | Implementation | Assertions |
+| --- | --- | --- |
+| Base quality | Existing lint, TypeScript, Vitest, build, Playwright, UI/contract checks | Fail on regressions |
+| Security scanners | `scripts/ci/run-security-scanners.sh` (default enabled for manual runs) | Local tracked-file secret scan, npm advisories, Semgrep, Gitleaks, Trivy; pre-cached reviewed images needed |
+| MFA | `scripts/admin-mfa-live-http-e2e.mjs`, existing MFA test collection | TOTP/passkey enrollment, two-superadmin approval, recovery proof mismatch, one-time proof consumption, session rotation/revocation and expired MFA step-up |
+| API/roles | `scripts/ci/api-route-inventory.mjs`, `route-authorization-inventory-ci.mjs`, expanded live HTTP e2e | Automatic inventory of statically registered endpoints, mutation policy for every discovered route, real protected GET probes, viewer/anonymous denials, CSRF and headers |
+| Import validation | `tests/ci/ingestion-faults.test.ts`, `adversarial-import-inputs.test.ts` | Bad CSV/JSON, unknown columns, invalid dates/counts, file duplicates, interrupted streaming callbacks |
+| Import transactions | `scripts/ci/import-failure-integration-ci.mjs` | Real PostgreSQL valid load, stale watermark, duplicate rejection, double commit rejection and synthetic failure on stage chunk 2, with cleanup |
+| DB resilience | `scripts/ci/database-resilience-ci.mjs` and existing Prisma/RLS integration checks | Rollback, uniqueness, optimistic locking, savepoint handling and disposable RLS policy checks |
+| Database migration rehearsal | Workflow second disposable `newchanges_ci_migrations` database | `prisma migrate deploy` and `prisma migrate status`, followed by forced temporary DB removal |
+| Database restore | Workflow `pg_dump` / `pg_restore` inside `postgres:18-alpine` | Restore into separate temporary database, compare number of public tables, discard dump/database |
+| Visual regression | `scripts/ci/visual-regression-ci.mjs`, `console-ux-browser-check.mjs`, `mfa-design-contract.json` | Mobile/tablet/desktop layout, brand colour, required controls, touch target size, overflow, runtime exceptions, deterministic screenshots |
+| Load | `scripts/ci/local-http-load-ci.mjs` | 180 localhost requests with 12 concurrent clients, no errors, 3s local p95 guard, bounded heap growth, admin authentication boundary |
+| Offline/anti-regression | `tests/ci-docker-isolation.test.mjs`, `tests/ci/test-suite-coverage-contract.test.mjs`, runtime network test | Detect removed test gates, untrusted auto-triggers, privileged cloud env variables and unexpected outbound network access |
+| Source sync / dashboards | Existing `run-circleci-verify-parity.sh` plus other check scripts | Interrupted sync recovery, source continuity, source reconciliation, scheduling, dashboards, responsive admin/user UI |
 
-The existing `scripts/ci/run-docker-ci-suite.sh` runs all added checks; failures stop the job. The service uses the existing isolated Compose database, CI-only environment and pre-existing cleanup step.
+## Real bug fixed
 
-## What remains to verify
+`uploadAndValidate` previously allowed a streaming exception to leave already-written staging chunks attached to an `UPLOADED` batch. The importer now attempts to remove those chunks and marks the batch `FAILED` with a non-sensitive error description, then rethrows the original exception. If the database is unavailable throughout cleanup, the unvalidated `UPLOADED` status still prevents commitment. A disposable PostgreSQL trigger deliberately fails the second 2,000-row chunk and verifies that the original staged rows are discarded.
 
-- The committed tests have **not** been executed in this connector environment. The latest commit must pass on the Ubuntu runner.
-- Visual consistency across two screenshots is not an approved image-baseline comparison. Add reviewed image baselines to detect intentional/unintentional visual redesigns.
-- The ingestion fault tests verify errors propagate from parser/writer callbacks; they do not yet prove database-level import cleanup after a write outage, nor network-backed source timeouts.
-- Extended HTTP checks cover selected protected endpoints, not a complete route-by-route authorization matrix.
-- Inspect the self-hosted runner's logs and retained failure screenshots before release; do not merge or deploy solely on the presence of tests.
+`parseDateTime` also now rejects impossible ISO calendar dates instead of allowing JavaScript to silently normalize source watermarks such as 30 February.
 
-## Safety
+## How to execute
 
-Do not execute self-hosted workflows for untrusted pull requests or arbitrary forks. Runner host Docker permissions are powerful. Restrict access and review the selected branch before dispatch. Keep test traffic offline, the database disposable, and secrets absent.
+1. Open GitHub Actions > **NewChanges manual Docker CI (self-hosted only)**.
+2. Select branch `chore/manual-self-hosted-docker-ci-20261029`. Leave `run_security_scanners=true` for the full security gate. Ensure the pinned Semgrep/Gitleaks/Trivy images are already reviewed and cached; npm audit requires working public advisory access.
+3. Dispatch only after reviewing the branch. Confirm the job runs on `[self-hosted, linux, x64, newchanges-ci]`, **not** hosted infrastructure.
+4. Inspect every gate's log, the isolated migration/restore steps and scanner report. On failure, the workflow copies screenshots/JSON from a named volume and uploads them for seven days; cleanup removes the test project's volumes.
+
+### Mandatory release criteria
+
+- The **latest branch commit** passes the entire manual job with the scanners enabled.
+- The isolated test database and temporary migration/restore databases are removed.
+- The source code, migration history, and observed authentication behaviour are reviewed before any production MFA enforcement or database cutover.
+- No secrets, credentials, or production records appear in logs or artifacts.
+
+### Limits that must not be presented as 100% measured coverage
+
+This is broad **scenario coverage**. There is not yet a measured 100% statement/branch/endpoint coverage report, nor a user-reviewed golden PNG baseline across commits. Deterministic screenshot stability and a versioned MFA design contract are enforced, but exact cross-version screenshot comparison would require reviewed image baselines. Source parsing automatically classifies statically registered routes; dynamic registrations are separately flagged for review. The tests are committed but **not executed in the GitHub connector environment**. A passing latest-commit runner run is required to claim a successful verification.
+
+No merge or deployment was performed.
