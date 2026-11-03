@@ -137,12 +137,10 @@ async function rotateElevatedSession(tx:any,session:any,now:Date,method:'PASSKEY
 // A user's emergency recovery key is not the TOTP encryption key and is
 // never stored in plaintext. Re-issuance replaces the prior unused key.
 async function issueRecoveryKey(tx:any,userId:string){
+  const previous=await tx.adminMfaRecoveryCode.findUnique({where:{userId},select:{id:true}});
+  if(previous)return null;
   const key=randomBytes(32).toString('base64url');
-  await tx.adminMfaRecoveryCode.upsert({
-    where:{userId},
-    create:{userId,codeHash:digest(key)},
-    update:{codeHash:digest(key),failedAttempts:0,lockedUntil:null,usedAt:null,createdAt:new Date()},
-  });
+  await tx.adminMfaRecoveryCode.create({data:{userId,codeHash:digest(key)}});
   return key;
 }
 type MfaBody={challenge?:string;response?:any;grantCode?:string};
@@ -335,10 +333,12 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
           summary:'Administrator passkey enrollment cryptographically verified',
           riskLevel:'HIGH',flagged:false,
         }});
-        return rotateElevatedSession(tx,session,now);
+        const recoveryKey=await issueRecoveryKey(tx,session.userId);
+        return {token:await rotateElevatedSession(tx,session,now),recoveryKey};
       });
-      newSessionCookie(reply,token,session.expiresAt);
-      return {ok:true};
+      newSessionCookie(reply,token.token,session.expiresAt);
+      reply.header('Cache-Control','no-store').header('Pragma','no-cache');
+      return {ok:true,recoveryKey:token.recoveryKey};
     }catch{return reply.code(409).send({error:'Enrollment authorization expired or credential already exists'});}
   });
   app.post('/api/auth/mfa/authenticate/options',async(req,reply)=>{
@@ -472,11 +472,12 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
           summary:'Administrator authenticator app enrolled with verified TOTP code',
           riskLevel:'HIGH',flagged:false,
         }});
-        return rotateElevatedSession(tx,session,now,'TOTP');
+        const recoveryKey=await issueRecoveryKey(tx,session.userId);
+        return {token:await rotateElevatedSession(tx,session,now,'TOTP'),recoveryKey};
       });
-      newSessionCookie(reply,token,session.expiresAt);
-      reply.header('Cache-Control','no-store');
-      return {ok:true};
+      newSessionCookie(reply,token.token,session.expiresAt);
+      reply.header('Cache-Control','no-store').header('Pragma','no-cache');
+      return {ok:true,recoveryKey:token.recoveryKey};
     }catch{return reply.code(409).send({error:'Authenticator setup or enrollment grant already used'});}
   });
   app.post<{Body:{code?:string}}>('/api/auth/mfa/totp/verify',async(req,reply)=>{
