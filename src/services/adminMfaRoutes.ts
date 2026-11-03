@@ -137,10 +137,19 @@ async function rotateElevatedSession(tx:any,session:any,now:Date,method:'PASSKEY
 // A user's emergency recovery key is not the TOTP encryption key and is
 // never stored in plaintext. Re-issuance replaces the prior unused key.
 async function issueRecoveryKey(tx:any,userId:string){
-  const previous=await tx.adminMfaRecoveryCode.findUnique({where:{userId},select:{id:true}});
-  if(previous)return null;
+  const previous=await tx.adminMfaRecoveryCode.findUnique({
+    where:{userId},select:{id:true,usedAt:true},
+  });
+  if(previous && !previous.usedAt)return null;
   const key=randomBytes(32).toString('base64url');
-  await tx.adminMfaRecoveryCode.create({data:{userId,codeHash:digest(key)}});
+  if(previous){
+    await tx.adminMfaRecoveryCode.update({
+      where:{id:previous.id},
+      data:{codeHash:digest(key),usedAt:null,failedAttempts:0,lockedUntil:null,createdAt:new Date()},
+    });
+  }else{
+    await tx.adminMfaRecoveryCode.create({data:{userId,codeHash:digest(key)}});
+  }
   return key;
 }
 type MfaBody={challenge?:string;response?:any;grantCode?:string};
@@ -655,6 +664,11 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
         });
         await tx.adminMfaCredential.updateMany({
           where:{userId:target.id,revokedAt:null},data:{revokedAt:now},
+        });
+        // Revocation invalidates every old backup key even when the
+        // administrator completed approved recovery without presenting one.
+        await tx.adminMfaRecoveryCode.updateMany({
+          where:{userId:target.id,usedAt:null},data:{usedAt:now},
         });
         await tx.adminMfaTotp.deleteMany({where:{userId:target.id}});
         await tx.session.updateMany({
