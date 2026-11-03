@@ -16,13 +16,13 @@ from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-VERSION = 3
+VERSION = 4
 ROOT = Path(os.getenv("SCAN_ROOT", "/workspace")).resolve()
 REPORTS = Path(os.getenv("REPORT_DIR", "/workspace/test-reports/ai-security")).resolve()
 MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5-coder:7b")
 URL = os.getenv("OLLAMA_URL", "http://host.docker.internal:11434").rstrip("/")
 MAX_FILES = max(0, int(os.getenv("MAX_FILES", "0")))
-CHUNK_CHARS = max(1000, min(12000, int(os.getenv("AI_SCAN_CHUNK_CHARS", "5500"))))
+CHUNK_CHARS = max(1000, min(12000, int(os.getenv("AI_SCAN_CHUNK_CHARS", "3000"))))
 TIMEOUT = max(60, min(1200, int(os.getenv("AI_SCAN_REQUEST_TIMEOUT", "360"))))
 RETRIES = max(1, min(8, int(os.getenv("AI_SCAN_RETRIES", "4"))))
 REQUIRE_GPU = os.getenv("OLLAMA_REQUIRE_GPU", "true").lower() in ("1", "true", "yes")
@@ -47,8 +47,32 @@ PROMPT = (
     'Return exactly a JSON object: {"findings":[{"severity":"high",'
     '"line":1,"title":"...","evidence":"...","recommendation":"..."}]}. '
     "Use severity critical/high/medium/low; cite line numbers shown. "
-    "Only report evidence-backed concerns. Return an empty findings list if none."
+    "Report at most FOUR high-confidence findings per chunk. Keep each field concise "
+    "(under 150 characters). Prefer only actionable, well-supported defects. "
+    "Return an empty findings list if none. Do not include markdown or commentary."
 )
+
+FINDINGS_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "findings": {
+            "type": "array", "maxItems": 4,
+            "items": {
+                "type": "object",
+                "properties": {
+                    "severity": {"type": "string", "enum": ["critical", "high", "medium", "low"]},
+                    "line": {"type": "integer"},
+                    "title": {"type": "string"},
+                    "evidence": {"type": "string"},
+                    "recommendation": {"type": "string"}
+                },
+                "required": ["severity", "line", "title", "evidence", "recommendation"],
+                "additionalProperties": False
+            }
+        }
+    },
+    "required": ["findings"], "additionalProperties": False
+}
 
 def now():
     return datetime.now(timezone.utc).isoformat()
@@ -149,8 +173,8 @@ def ask_model(name, start, end, block):
     payload = json.dumps({
         "model": MODEL,
         "prompt": f"{PROMPT}\nPATH: {name}\nLINES: {start}-{end}\nSOURCE:\n{block}",
-        "stream": False, "format": "json",
-        "options": {"temperature": 0, "num_predict": 1400, "num_ctx": 8192}
+        "stream": False, "format": FINDINGS_SCHEMA, "keep_alive": "30m",
+        "options": {"temperature": 0, "num_predict": 2048, "num_ctx": 8192}
     }).encode()
     req = Request(URL + "/api/generate", data=payload,
                   headers={"Content-Type": "application/json"}, method="POST")
@@ -159,6 +183,8 @@ def ask_model(name, start, end, block):
         try:
             with urlopen(req, timeout=TIMEOUT) as resp:
                 envelope = json.load(resp)
+            if envelope.get("done_reason") == "length":
+                raise ValueError("Model response truncated by output length")
             candidates = parse_answer(envelope["response"])
             valid = []
             for item in candidates:
