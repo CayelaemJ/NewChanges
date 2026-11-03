@@ -25,10 +25,14 @@ subsequent calls return null for already-issued keys.
 
 ## Previously enrolled users
 
-A newly added server endpoint can issue a first recovery key only after fresh
-MFA verification. It refuses if the account already has a recovery key. Browser
-self-service UI for these pre-existing accounts is still pending and must not
-issue keys without a deliberate user action.
+Existing administrators who have already enrolled MFA but lack an active
+recovery key are directed to The Fixer's one-time recovery-key issuance screen
+following successful MFA verification. They explicitly choose **Generate my
+one-time recovery key**, receive it once, and must acknowledge secure storage
+before proceeding. With `ADMIN_MFA_ENFORCE=true`, SUPERADMIN accounts cannot
+load the dashboard or privileged APIs until an unused key has been issued.
+The original key cannot be retrieved again. A used key can be replaced only
+after verified MFA; successful approved credential recovery also rotates it.
 
 ## Recovery policy
 
@@ -53,3 +57,26 @@ revoked before new enrollment; and loss/theft scenarios.
 
 This feature uses an additive Prisma migration and must be tested against the
 disposable self-hosted Docker CI PostgreSQL before any isolated staging deploy.
+
+## Initial superadmin bootstrap
+
+The first two SUPERADMIN accounts cannot approve each other's first enrollment
+until one of them has a passkey. An explicitly selected, authorized security
+operator may run `scripts/mfa-bootstrap-initial-superadmins.mjs` from a
+**private interactive terminal**, with two separately verified human approval
+records, only while there are no active SUPERADMIN MFA factors and no pending
+bootstrap grants. It creates two distinct short-lived one-time authorization
+grants in a database transaction and displays them once to the operator.
+
+It must **never** be executed automatically in production startup, CI, app
+requests or scheduled jobs. Never paste its output in chat, tickets or CI logs.
+After independent delivery to the two verified targets, both superadmins enroll
+MFA and each receives their own separate, personal recovery key to store.
+
+After both have enrolled, verify the two active factors and recovery-key records
+before switching on production enforcement. The script rejects later use once
+any active superadmin factor exists. Operator approval environment values are
+manual attestations, not cryptographic proof of independent approvals; the
+organization must validate them out of band. Production remains unchanged
+until explicit rollout approval and a tested rollback procedure.
+
