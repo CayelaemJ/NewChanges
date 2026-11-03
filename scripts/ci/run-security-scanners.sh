@@ -3,8 +3,8 @@
 set -Eeuo pipefail
 cd "$(dirname "$0")/../.."
 mkdir -p test-results/security
-printf "Scanner suite incomplete. Do not certify this commit.\\n" > test-results/security/scanner-status.txt
-trap 'printf "Scanner suite FAILED or interrupted. See job logs.\\n" > test-results/security/scanner-status.txt' ERR
+printf 'Scanner suite incomplete. Do not certify this commit.\n' > test-results/security/scanner-status.txt
+trap 'printf "Scanner suite FAILED or interrupted. See job logs.\n" > test-results/security/scanner-status.txt' ERR
 # Keep a minimal report of completed checks without exporting secret matches.
 # Scan repository-tracked files (redacts values from output).
 docker run --rm --network none -v "$PWD:/src:ro" -w /src node:24-slim node --test scripts/security/scan-secrets.test.mjs
