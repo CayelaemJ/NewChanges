@@ -162,8 +162,13 @@ async function refresh(){
   if(state.verified){
     document.getElementById('mfa-success-title').textContent=
       state.verificationMethod==='TOTP'?'Authenticator app connected and verified.':'Passkey verified successfully.';
+    const keyStillVisible=!document.getElementById('mfa-backup-key').hidden;
     document.getElementById('mfa-success-note').textContent=
-      'Your administrator MFA is active for this session. Continue to the dashboard. On your next sign-in, enter a NEW six-digit code from your authenticator app or use your enrolled passkey.';
+      keyStillVisible
+        ? 'Save and acknowledge the recovery key shown below before continuing. You cannot view it again.'
+        : missingRecovery
+          ? 'MFA is verified. Generate and securely save your one-time recovery key before opening the dashboard.'
+          : 'Your administrator MFA is active. On your next sign-in, use an enrolled passkey or a fresh authenticator code.';
   }
   if(state.totpEnrolled){
     document.getElementById('totp-setup').hidden=true;
