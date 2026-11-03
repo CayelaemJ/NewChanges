@@ -233,6 +233,8 @@ try{
  assert.equal(otherSessionAttempt.status(),403,'Approval cannot be used from a different password session');
  await secondLogin.ctx.close();
  await O.page.reload({waitUntil:'domcontentloaded'});
+ await O.page.locator('#mfa-approval-state').getByText(
+   /Setup approved/).waitFor({state:'visible',timeout:20000});
  await O.page.locator('#enroll').waitFor({state:'visible'});
  assert.equal(await O.page.locator('#enroll').isEnabled(),true,
   'Approved first-time enrollment must enable passkey registration without a grant');
