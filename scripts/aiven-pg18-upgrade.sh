@@ -46,6 +46,7 @@ task_json="$(avn service task-get --task-id "$check_task_id" --project "$project
 }
 if ! printf '%s' "$task_json" | python3 -c '
 import json, sys
+from datetime import datetime, timezone
 expected = sys.argv[1]
 try:
     payload = json.load(sys.stdin)
@@ -68,6 +69,18 @@ task = matches[0]
 if task.get("success") is not True:
     raise SystemExit(2)
 if "upgrade_check" not in str(task.get("task_type", "")).lower():
+    raise SystemExit(2)
+created = task.get("create_time")
+if not isinstance(created, str):
+    raise SystemExit(2)
+try:
+    created_at = datetime.fromisoformat(created.replace("Z", "+00:00"))
+except ValueError:
+    raise SystemExit(2)
+if created_at.tzinfo is None:
+    raise SystemExit(2)
+age = (datetime.now(timezone.utc) - created_at.astimezone(timezone.utc)).total_seconds()
+if age < 0 or age > 3600:
     raise SystemExit(2)
 ' "$check_task_id"; then
   echo 'BLOCKED: task ID is not a successful Aiven PostgreSQL upgrade_check.' >&2
