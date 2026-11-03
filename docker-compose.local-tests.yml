@@ -31,6 +31,11 @@ services:
         condition: service_healthy
     network_mode: "service:db"
     init: true
+    volumes:
+      - test-artifacts:/app/test-results
+
+volumes:
+  test-artifacts:
 
 networks:
   isolated-tests:
