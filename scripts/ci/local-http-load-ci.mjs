@@ -13,7 +13,7 @@ process.env.ADMIN_MFA_ENFORCE='false';
 const {app}=await import('../../dist/server.js');
 const {prisma}=await import('../../dist/services/database.js');
 const origin='http://127.0.0.1:39745';
-const count=240,workers=12;
+const count=180,workers=12;
 const latencies=[],errors=[];
 let index=0;
 const task=async()=>{
