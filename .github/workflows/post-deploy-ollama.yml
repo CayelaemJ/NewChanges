@@ -44,9 +44,8 @@ jobs:
         run: |
           set -Eeuo pipefail
           mkdir -p test-reports/ai-security
-          chmod 777 test-reports/ai-security
           docker compose -p "newchanges-ollama-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
-            -f docker-compose.ai-security.yml run --build --rm ai-security-review
+            -f docker-compose.ai-security.yml run --build --rm --user "$(id -u):$(id -g)" ai-security-review
 
       - name: Plan remediation (draft only)
         if: ${{ steps.review.outcome == 'success' }}
@@ -55,7 +54,7 @@ jobs:
         run: |
           docker compose -p "newchanges-ollama-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
             -f docker-compose.ai-security.yml run --rm \
-            --entrypoint python ai-security-review /scanner/ai-remediation-plan.py
+            --user "$(id -u):$(id -g)" --entrypoint python ai-security-review /scanner/ai-remediation-plan.py
 
       - name: Auto-repair only one low-risk UI finding
         if: ${{ steps.review.outcome == 'success' }}
