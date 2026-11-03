@@ -22,7 +22,7 @@ const port=39731;
 const origin='http://localhost:'+port;
 process.env.MFA_EXPECTED_ORIGIN=origin;
 // No MFA_STAGING_ONLY flags: this test binds to localhost and is not a Render service.
-const [{totpCode},{app},{prisma},{hashPassword}] = await Promise.all([
+const [{totpCode,decryptTotpSecret,requireTotpEncryptionKey},{app},{prisma},{hashPassword}] = await Promise.all([
  import('../dist/services/adminTotp.js'),
  import('../dist/server.js'),import('../dist/services/database.js'),
  import('../dist/services/authService.js')
@@ -143,6 +143,17 @@ try{
  assert.ok(pending.enabledAt && pending.lastUsedStep!==null,
   'Secret is stored in encrypted durable database and replay counter is set');
  assert.ok(!pending.secretCiphertext.includes(provisioning.manualKey));
+ assert.equal(pending.pendingCiphertext,null,'Confirmed QR enrollment must clear temporary seed');
+ assert.equal(pending.pendingExpiresAt,null,'Confirmed QR enrollment must clear temporary expiry');
+ assert.equal(decryptTotpSecret(pending.secretCiphertext,requireTotpEncryptionKey()),
+   provisioning.manualKey,'Database ciphertext must decrypt to the same authenticator seed after confirmation');
+ assert.throws(()=>decryptTotpSecret(pending.secretCiphertext,randomBytes(32)),
+   'A different encryption key must not decrypt the persisted authenticator seed');
+ const durableRead=await prisma.adminMfaTotp.findUnique({
+   where:{userId:users[2].id},select:{enabledAt:true,secretCiphertext:true}
+ });
+ assert.ok(durableRead?.enabledAt && durableRead.secretCiphertext===pending.secretCiphertext,
+   'Separate database read must retain the encrypted enabled MFA seed');
 
  const A=await loginAndLoad(users[0]);
  const pre=await postFrom(A.ctx,'/api/admin/mfa/recovery/request',{
