@@ -74,16 +74,24 @@ async function refresh(){
   const passkeyEnroll=document.getElementById('mfa-passkey-enroll-panel');
   const passkeyActions=document.getElementById('mfa-passkey-actions');
   if(passkeyVerify)passkeyVerify.hidden=!!state.verified || !state.passkeyEnrolled;
-  if(passkeyEnroll)passkeyEnroll.hidden=!!state.verified || !!state.passkeyEnrolled;
+  // A user who already has authenticator MFA should not be asked for a new
+  // passkey enrollment grant at every sign-in.
+  if(passkeyEnroll)passkeyEnroll.hidden=!!state.verified || !!state.enrolled;
   if(passkeyActions)passkeyActions.hidden=!!state.verified ||
     (!!passkeyVerify?.hidden && !!passkeyEnroll?.hidden);
   document.getElementById('totp-grant').hidden=!!state.totpEnrolled || !!state.verified;
+  document.getElementById('totp-start').hidden=!!state.totpEnrolled || !!state.verified;
+  document.getElementById('totp-title').textContent=state.totpEnrolled
+    ? 'Verify with your authenticator app'
+    : 'Set up your authenticator app with a QR code';
   const totpGrantLabel=document.querySelector?.('label[for="totp-grant"]');
   if(totpGrantLabel)totpGrantLabel.hidden=!!state.totpEnrolled || !!state.verified;
   document.getElementById('totp-panel').hidden=!state.totpAvailable || !!state.verified;
   document.getElementById('totp-state').textContent=state.totpEnrolled
-    ? 'Use a fresh six-digit code from your authenticator app to continue.'
-    : 'Scan the setup QR using your approved one-time enrollment grant.';
+    ? 'Already set up. Enter the current six-digit code from your app. No setup key or QR scan is needed again.'
+    : state.verified
+      ? 'Your account is verified. No new setup is needed to continue.'
+      : 'First-time setup only: enter your approved one-time enrollment grant, choose Show QR code, then scan it in Google or Microsoft Authenticator.';
   // The setup code was already consumed by confirmation. Never prompt the
   // user to verify it again on the same freshly elevated session.
   document.getElementById('totp-verify-panel').hidden=!state.totpEnrolled || !!state.verified;
@@ -103,7 +111,7 @@ async function refresh(){
   show(state.verified?'Administrator MFA verified with '+(state.verificationMethod==='TOTP'?'authenticator app.':'passkey.')+' You may open the dashboard.':
    !state.enrolled?'MFA setup is required. Enroll a passkey or scan the QR code with an authenticator app using your approved grant.':
    state.passkeyEnrolled&&state.totpEnrolled?'Verify your passkey or enter a six-digit authenticator code to continue.':
-   state.totpEnrolled?'Authenticator app enrolled. Enter a six-digit code to unlock your account.':
+   state.totpEnrolled?'Authenticator app enrolled. Enter a fresh six-digit code — no enrollment grant is needed.':
    'Passkey enrolled. Verify it to unlock administrator actions.');
  }catch(e){
   document.getElementById('recovery').hidden=true;
