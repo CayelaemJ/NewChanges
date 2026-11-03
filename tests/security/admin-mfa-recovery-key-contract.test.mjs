@@ -81,3 +81,16 @@ test('previously enrolled superadmins cannot skip one-time recovery-key issuance
  assert.match(html,/id="mfa-existing-recovery-key"/);
  assert.match(js,/mfa-continue'\)\.hidden/);
 });
+
+test('superadmin profile endpoint hides all business access until recovery key issued',()=>{
+ const server=readFileSync('src/server.ts','utf8');
+ const begin=server.indexOf('app.get("/api/auth/me"');
+ const end=server.indexOf('\napp.',begin+8);
+ assert.ok(begin>=0,'profile endpoint exists');
+ const profile=server.slice(begin,end>begin?end:begin+2400);
+ assert.match(profile,/const recoveryKeyRequired=verified && user\.role==="SUPERADMIN"/);
+ assert.match(profile,/hasIssuedAdminRecoveryKey\(user\.id\)/);
+ assert.match(profile,/if \(!verified \|\| recoveryKeyRequired\)/);
+ assert.match(profile,/sections:\[\],employers:\[\]/);
+ assert.match(profile,/modules:\{admin:false,dashboard:false,portfolio:false,users:false\}/);
+});
