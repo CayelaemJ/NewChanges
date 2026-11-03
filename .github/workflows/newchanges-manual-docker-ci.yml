@@ -137,14 +137,6 @@ jobs:
         shell: bash
         run: bash scripts/ci/run-security-scanners.sh
 
-      - name: Complete codebase inventory and bloat candidates (read-only)
-        if: always()
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          python3 scripts/ci/codebase-inventory.py
-          test -s test-reports/codebase-audit/inventory.json
-
       - name: Run pre-release Ollama security review (priority source files)
         if: ${{ always() && !inputs.prepare_mfa_lock }}
         continue-on-error: true
