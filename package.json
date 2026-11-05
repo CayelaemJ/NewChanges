@@ -25,7 +25,7 @@
     "check:production": "node scripts/production-readiness-check.mjs",
     "check:brand": "node tests/brand-engine.test.mjs",
     "test:score": "node scripts/run-score-test.mjs",
-    "check:all": "npm run check:neon-egress && npm run check:source-sync-safety && npm run check:semantic-planner && npm run check:semantic-storage && npm run check:source-vault && npm run check:source-continuity && npm run check:source-reconciliation && npm run check:react && npm run check:role-perspective && npm run check:daily-refresh && npm run check:enterprise-operations && npm run check:admin-realtime && npm run check:admin-report-selector && npm run check:unified-data-ingestion && npm run check:enterprise-analytics-phase-2 && npm run build && npm run check:production && npm run check:security && npm run check:ui && npm run check:imports && npm run check:scheduling && npm run check:security-identity && npm run check:security-operations && npm run check:security-governance && npm run check:south-africa-compliance && npm run check:enterprise && npm run test:score && npm audit --audit-level=high",
+    "check:all": "npm run check:neon-egress && npm run check:source-sync-safety && npm run check:semantic-planner && npm run check:semantic-storage && npm run check:source-vault && npm run check:source-continuity && npm run check:source-reconciliation && npm run check:react && npm run check:role-perspective && npm run check:daily-refresh && npm run check:enterprise-operations && npm run check:admin-realtime && npm run check:admin-report-selector && npm run check:unified-data-ingestion && npm run check:enterprise-analytics-phase-2 && npm run build && npm run check:production && npm run check:security && npm run check:ui && npm run check:imports && npm run check:scheduling && npm run check:security-identity && npm run check:security-operations && npm run check:security-governance && npm run check:south-africa-compliance && npm run check:enterprise && npm run test:score && npm run check:aiven-migration && npm audit --audit-level=high",
     "check:accessibility": "node scripts/accessibility-regression-check.mjs",
     "check:performance": "node scripts/performance-regression-check.mjs && node scripts/dashboard-freshness-regression-check.mjs && node --test scripts/dashboard-refresh-behaviour.test.mjs",
     "check:enterprise": "npm run check:period-comparison && npm run check:accessibility && npm run check:performance && npm run check:brand && npm run check:mlops && npm run check:mlops-data-quality",
@@ -48,6 +48,7 @@
     "check:frontend:typecheck": "tsc -p frontend/tsconfig.json --noEmit",
     "check:daily-refresh": "node scripts/daily-refresh-regression-check.mjs",
     "check:neon-egress": "node scripts/neon-egress-regression-check.mjs",
+    "check:aiven-migration": "node --test tests/aiven-pg17-local-schema-safety.test.mjs tests/aiven-pg18-local-schema-safety.test.mjs tests/aiven-pg18-local-data-safety.test.mjs tests/aiven-local-recovery-backup-safety.test.mjs tests/aiven-stream-snapshot-safety.test.mjs tests/aiven-pg18-upgrade-safety.test.mjs tests/aiven-verify-postcopy-safety.test.mjs",
     "check:source-sync-safety": "node scripts/source-sync-safety-regression-check.mjs",
     "check:semantic-planner": "tsx tests/semantic-refresh-planner.test.ts && tsx tests/semantic-refresh-pipeline-contract.test.ts && tsx tests/semantic-publication-ordering.test.ts && tsx tests/semantic-publication-cursor.test.ts && tsx tests/semantic-queue-wake.test.ts && tsx tests/semantic-notification-delivery.test.ts && tsx tests/semantic-latency-budget.test.ts && tsx tests/semantic-synthetic-score-prediction.test.ts && node scripts/semantic-e2e-fixture-safety-check.mjs",
     "semantic:shadow:once": "tsx scripts/run-semantic-shadow-worker.ts",
@@ -71,7 +72,8 @@
     "quality:types": "tsc --noEmit && npm run check:frontend:typecheck",
     "quality:unit": "vitest run",
     "quality:e2e": "playwright test",
-    "security:tenant-audit": "node scripts/security/tenant-isolation-audit.mjs"
+    "security:tenant-audit": "node scripts/security/tenant-isolation-audit.mjs",
+    "check:aiven-postcopy": "node scripts/aiven-verify-postcopy.mjs"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.3",
