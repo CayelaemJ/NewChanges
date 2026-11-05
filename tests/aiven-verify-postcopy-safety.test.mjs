@@ -6,7 +6,9 @@ const text = readFileSync(new URL('../scripts/aiven-verify-postcopy.mjs',import.
 test('validator is read-only and scoped to known source/target endpoints',()=>{
   assert.match(text,/\.neon\.tech\|newchanges/);
   assert.match(text,/the-fixer-postgres-cay-bed7\.b\.aivencloud\.com\|defaultdb/);
-  assert.match(text,/default_transaction_read_only=on/);
+  assert.match(text,/BEGIN TRANSACTION READ ONLY/);
+  assert.match(text,/SET LOCAL statement_timeout/);
+  assert.match(text,/delete env.PGOPTIONS/);
   assert.doesNotMatch(text,/DROP TABLE|CREATE TABLE|INSERT INTO|UPDATE public|DELETE FROM|pg_restore|pg_dump/);
 });
 test('validator checks table, column, index, constraint, sequence and view structure and all counts',()=>{
@@ -35,4 +37,10 @@ test('connection URI is split into libpq settings without passing the password i
   assert.match(text,/\['-w', '-X'/);
   assert.match(text,/table count '/);
   assert.match(text,/authentication failed/);
+});
+
+test('queries use stdin rather than sensitive command arguments or connection startup options',()=>{
+  assert.match(text,/\['-w', '-X', '-A', '-t', '-q', '-v', 'ON_ERROR_STOP=1', '-f', '-'\]/);
+  assert.match(text,/input: `BEGIN TRANSACTION READ ONLY/);
+  assert.doesNotMatch(text,/env.PGOPTIONS = /);
 });
