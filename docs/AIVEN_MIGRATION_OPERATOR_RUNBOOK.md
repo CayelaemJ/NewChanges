@@ -52,8 +52,8 @@ bash scripts/aiven-pg17-local-schema-test.sh
 `scripts/aiven-pg17-local-schema-test.sh` exports schema only, so it does not replicate user data or consume Aiven capacity. The PG17 trial is independent of the proposed version-matched PG18 migration.
 
 ## Gate D: one controlled snapshot, NOT production cutover
-`scripts/aiven-stream-snapshot.sh` is a manual, one-shot, compressed stream to the existing isolated Aiven destination. By default it exits without connecting to either DB. The execute mode requires source and target secrets in the operator's secure environment, plus seven separate `AIVEN_...=YES` approvals covering:
-- authoritative source identity and existing free plan
+`scripts/aiven-stream-snapshot.sh` is a manual, one-shot, compressed stream to the existing isolated Aiven destination. By default it exits without connecting to either DB. The execute mode requires source and target secrets in the operator's secure environment, plus eight separate `AIVEN_...=YES` approvals covering:
+- authoritative source identity and existing free plan\n- independently verified Aiven host disk headroom including restore WAL
 - verified backup and extension review
 - cross-border transfer and write freeze
 - explicit approval to copy the snapshot
@@ -70,3 +70,15 @@ A failure may leave a **partial copy** in Aiven. Do not rerun the script until t
 - Schedule a separate, explicitly approved production cutover and rollback decision.
 
 **No database traffic switch, merge, deletion, or data transfer has been authorized by this document.**
+
+
+## 2026-11-05 verified PG18 preflight and portability correction
+
+- Both Neon source and Aiven destination run PostgreSQL **18.6**.
+- Neon database `newchanges`: 428,351,488 bytes (~408.5 MiB), 57 public application tables, 2 public views. Public tables occupy approximately 183 MB heap plus 157 MB indexes; total public relation footprint about 399 MB (PostgreSQL human-readable units).
+- Neon also has **9 tables in `neon_auth`**, separate from the 57 public application tables. This is a vendor-managed identity schema and is **not copied** by the new `--schema=public` dump scope. No public function or view text directly referenced `neon_auth` on the checked source. Application code, identities, login flows, and any external authentication integrations still require independent inspection before cutover.
+- Aiven destination `defaultdb`: PostgreSQL 18.6, 8,304,319 bytes (~7.9 MiB), 0 user tables, 0 user views; existing free plan, 1 GiB storage.
+- Aiven monitoring's latest disk_usage metric was 26.553 in its native units. **Do not assume ~408 MiB source DB can fit safely**: destination disk includes PostgreSQL internals, write-ahead logs, indexes, vacuum, and transient migration overhead. The SQL database size is not the total occupied disk space.
+- **AIVEN_DISK_HEADROOM_VERIFIED=YES** now requires explicit operator assessment of headroom and WAL budget before data copying. Setting it blindly is not validation.
+- Use `npm run check:aiven-migration` after pulling this branch. For an actual schema-only test, ensure PostgreSQL 18 `pg_dump` and `pg_restore`, the existing local Docker `postgres:18-alpine` image, and a securely supplied read-only source URL are available; run `bash scripts/aiven-pg18-local-schema-test.sh`. The schema archive and restore container are local and disposable.
+- Do not execute the full snapshot transfer or production cutover until restored schema, cross-border transfer, authentication dependencies, and free-tier disk pressure are confirmed safe.
