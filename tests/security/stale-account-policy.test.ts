@@ -17,3 +17,18 @@ test("inactivity policy still applies to ordinary accounts", () => {
 test("bad timestamps fail closed and cannot trigger deactivation", () => {
   assert.equal(shouldAutoDeactivateAccount({role:"VIEWER",createdAt:"invalid date",sessions:[]},cutoff),false);
 });
+
+test("recent activity on an old session protects a currently active user", () => {
+  assert.equal(shouldAutoDeactivateAccount({
+    role: "VIEWER", createdAt: old, sessions: [{ createdAt: old, lastSeenAt: fresh }],
+  }, cutoff), false, "An old session must not be mistaken for an inactive user");
+  assert.equal(shouldAutoDeactivateAccount({
+    role: "EMPLOYER_MANAGER", createdAt: old, sessions: [{ createdAt: old, lastSeenAt: old }],
+  }, cutoff), true, "Actually inactive sessions should still trigger the policy");
+});
+
+test("legacy sessions without lastSeenAt fall back to their creation time", () => {
+  assert.equal(shouldAutoDeactivateAccount({
+    role: "VIEWER", createdAt: old, sessions: [{ createdAt: old, lastSeenAt: null }],
+  }, cutoff), true);
+});
