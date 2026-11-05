@@ -4,7 +4,7 @@ export type EmailProvider = "smtp" | "resend";
 type StoredProviderSettings = {
   emailProvider?: string | null;
   resendApiKey?: string | null;
-  resendFromEmail?: string | null;
+  fromEmail?: string | null;
 };
 type ProviderDraft = {
   emailProvider?: EmailProvider;
@@ -34,6 +34,6 @@ export function resolveEmailProviderConfig(
     nonempty(env.RESEND_API_KEY) ?? nonempty(stored.resendApiKey);
   const resendFromEmail = draft.resendFromEmail !== undefined
     ? nonempty(draft.resendFromEmail)
-    : nonempty(env.RESEND_FROM_EMAIL) ?? nonempty(stored.resendFromEmail);
+    : nonempty(env.RESEND_FROM_EMAIL) ?? nonempty(stored.fromEmail);
   return { emailProvider, resendApiKey, resendFromEmail };
 }
