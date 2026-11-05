@@ -82,3 +82,20 @@ A failure may leave a **partial copy** in Aiven. Do not rerun the script until t
 - **AIVEN_DISK_HEADROOM_VERIFIED=YES** now requires explicit operator assessment of headroom and WAL budget before data copying. Setting it blindly is not validation.
 - Use `npm run check:aiven-migration` after pulling this branch. For an actual schema-only test, ensure PostgreSQL 18 `pg_dump` and `pg_restore`, the existing local Docker `postgres:18-alpine` image, and a securely supplied read-only source URL are available; run `bash scripts/aiven-pg18-local-schema-test.sh`. The schema archive and restore container are local and disposable.
 - Do not execute the full snapshot transfer or production cutover until restored schema, cross-border transfer, authentication dependencies, and free-tier disk pressure are confirmed safe.
+
+## Gate C2: isolated full-data PostgreSQL 18 restore trial
+
+After the 57-table schema trial passes, use the optional full-data trial, **before any Aiven restore**:
+
+```sh
+git pull --ff-only
+npm run check:aiven-migration
+# DR_SOURCE_DATABASE_URL must already be supplied securely in the local shell.
+AIVEN_LOCAL_DATA_TRIAL_APPROVED=YES bash scripts/aiven-pg18-local-data-test.sh --execute
+```
+
+This reads the Neon `newchanges` source and creates one consistent custom-format `public` schema-and-data snapshot in a permissions-restricted temporary local directory. It then restores that archive into a disposable local Docker PostgreSQL 18 container with `--network none`, no published ports, `--single-transaction` and `--exit-on-error`. It checks all public table counts against the current live source and prints restored database and compressed archive sizes (bytes). Archives, logs and container are removed at exit. The snapshot does not include Neon-managed `neon_auth`; authentication and identity flows must be assessed separately.
+
+Neon application writes can continue during this **diagnostic trial**, but source row counts captured *after* the snapshot can drift; this is reported as a count mismatch and is not proof of lost data. Do not freeze production writes just for a disposable diagnostic trial. A final cutover would need a separately authorized write freeze and snapshot-consistent verification.
+
+The archive contains real application data on the local machine during this test. Ensure local disk space, Docker space, endpoint privacy, and applicable data handling approval before executing. The test creates **no Aiven connection** and does not initiate cutover. A successful local restore measures the application footprint but does not guarantee Aiven has sufficient available disk/WAL headroom.
