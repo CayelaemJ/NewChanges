@@ -31,7 +31,8 @@ test("administrator reset also invalidates sessions in the same database transac
   assert.ok(start>0&&end>start);
   const handler=users.slice(start,end);
   assert.match(handler,/await prisma\.\$transaction\(async tx =>/);
-  assert.match(handler,/await tx\.user\.update\(/);
+  assert.match(handler,/await tx\.user\.updateMany\(/);
+  assert.match(handler,/if \(updated\.count !== 1\) throw/);
   assert.match(handler,/await tx\.session\.updateMany\(/);
 });
 
