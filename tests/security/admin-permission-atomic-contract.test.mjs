@@ -55,3 +55,24 @@ test("password-reset and hard-delete routes enforce privileged-target guards at 
   assert.match(dbTest, /superadmin password reset is privileged and transactional/);
   assert.match(dbTest, /retired superadmin deletion requires privileged actor/);
 });
+
+test("all superadmin role retirements serialize and preserve the final active control-plane account", () => {
+  const policy = read("src/services/superadminAvailabilityPolicy.ts");
+  assert.match(update, /SELECT 1 AS locked FROM pg_advisory_xact_lock\(761231, 20261105\)/);
+  assert.match(update, /await tx\.user\.count\(\{/);
+  assert.match(update, /assertSuperadminRetirementAllowed\(current, patch, activeSuperadmins\)/);
+  assert.match(policy, /activeSuperadminCount <= 1/);
+  assert.match(dbTest, /last active superadministrator cannot be retired/);
+  assert.match(dbTest, /privileged retirement preserves another active superadministrator/);
+});
+
+test("superadmin self-deactivation is denied at HTTP and database mutation boundaries", () => {
+  assert.match(server, /if \(user\.role === "SUPERADMIN"\)/);
+  const self = users.slice(users.indexOf("export async function deactivateSelf("),
+    users.indexOf("export async function listRevokedUsers("));
+  assert.match(self, /return prisma\.\$transaction\(async tx =>|const user = await prisma\.\$transaction\(async tx =>/);
+  assert.match(self, /await tx\.user\.updateMany\(/);
+  assert.match(self, /role: \{ not: "SUPERADMIN" \}/);
+  assert.match(self, /await tx\.session\.updateMany\(/);
+  assert.match(dbTest, /superadministrator cannot self-deactivate/);
+});
