@@ -10,7 +10,7 @@
 //  calculations.
 // ════════════════════════════════════════════════════════════════════
 
-import { readSourceJson } from "./boundedSourceJson.js";
+import { readPinnedSourceApiJson } from "./pinnedSourceHttps.js";
 import { LOAD_ORDER, getFormat } from "./reportFormats.js";
 import { lookup } from "node:dns/promises";
 import { isBlockedSourceAddress as privateOrLocalAddress } from "./sourceAddressPolicy.js";
@@ -267,19 +267,11 @@ async function createApiAdapter(config: IntegrationSourceConfig): Promise<Source
 
     url.searchParams.set("limit", "5000");
     if(cursor)url.searchParams.set("cursor",cursor);
-    // Revalidate immediately before each request; a pinned connection or egress firewall
-    // is still required to eliminate the DNS lookup-to-connect race completely.
+    // Validate each page URL, then resolve and pin the vetted DNS answers
+    // inside the actual HTTPS socket connection. Native TLS still verifies the
+    // configured hostname; no redirect or second DNS lookup can override it.
     await assertSafeApiBaseUrl(url.toString());
-    const response = await fetch(url, {
-      headers: token
-        ? { Authorization: `Bearer ${token}`, Accept: "application/json" }
-        : { Accept: "application/json" },
-      signal: AbortSignal.timeout(60_000),
-      redirect: "error",
-    });
-    if (!response.ok) throw new Error(`HTTP ${response.status} from ${reportKey} endpoint`);
-
-    const body: any = await readSourceJson(response);
+    const body: any = await readPinnedSourceApiJson(url, token);
     const records = Array.isArray(body) ? body : body?.records;
     if (!Array.isArray(records)) throw new Error(`${reportKey}: response missing "records" array`);
     const nextCursor=Array.isArray(body)?undefined:body?.nextCursor;
