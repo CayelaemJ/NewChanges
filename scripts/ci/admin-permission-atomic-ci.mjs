@@ -9,7 +9,7 @@ assert.equal(process.env.CI_RLS_PROBE_APPROVED, "CI_DISPOSABLE_ONLY");
 assert.equal(process.env.DATABASE_URL, DB, "Refusing access to anything but disposable local CI PostgreSQL");
 
 const { prisma } = await import("../../dist/services/database.js");
-const { updateUser, resetPassword, deleteUserPermanently } = await import("../../dist/services/userService.js");
+const { updateUser, resetPassword, deleteUserPermanently, deactivateSelf } = await import("../../dist/services/userService.js");
 const digest = token => createHash("sha256").update(token).digest("hex");
 const employerIds = [];
 const userIds = [];
@@ -75,6 +75,46 @@ try {
 
   const superadmin = await makeUser("SUPERADMIN", employerA);
   const superadminSession = await makeSession(superadmin);
+
+  // A superadministrator must never deactivate their own control-plane
+  // access through the generic user endpoint, even with an authenticated
+  // session. The denial must not revoke that session.
+  await assert.rejects(deactivateSelf(superadmin, "synthetic self retirement"),
+    /cannot self-deactivate/);
+  assert.equal((await prisma.user.findUniqueOrThrow({
+    where: { id: superadmin },
+  })).active, true);
+  assert.equal((await prisma.session.findUniqueOrThrow({
+    where: { id: superadminSession.id },
+  })).endedAt, null);
+  console.log("[admin-access] PASS superadministrator cannot self-deactivate");
+
+  // When this fixture is the only active superadmin, changing its role or
+  // active status must be forbidden. Other seeded test superadmins must not
+  // be modified merely to manufacture this scenario.
+  const currentSuperadmins = await prisma.user.count({
+    where: { active: true, role: "SUPERADMIN" },
+  });
+  if (currentSuperadmins === 1) {
+    await assert.rejects(updateUser(superadmin, { active: false }, {
+      forbidSuperadminTarget: false,
+    }), /last active superadministrator/);
+    await assert.rejects(updateUser(superadmin, { role: "ADMIN" }, {
+      forbidSuperadminTarget: false,
+    }), /last active superadministrator/);
+    console.log("[admin-access] PASS last active superadministrator cannot be retired");
+  } else {
+    console.log("[admin-access] NOTE last-superadmin DB check skipped; other active superadmins exist");
+  }
+
+  // With at least two active superadmins, privileged retirement is allowed,
+  // while preserving the originally active administrator above.
+  const additionalSuperadmin = await makeUser("SUPERADMIN");
+  await updateUser(additionalSuperadmin, { active: false }, { forbidSuperadminTarget: false });
+  assert.equal((await prisma.user.findUniqueOrThrow({
+    where: { id: additionalSuperadmin },
+  })).active, false);
+  console.log("[admin-access] PASS privileged retirement preserves another active superadministrator");
   await assert.rejects(updateUser(superadmin, {
     role: "VIEWER", active: false, employerIds: [employerB],
   }, { forbidSuperadminTarget: true }), /no longer editable/);
