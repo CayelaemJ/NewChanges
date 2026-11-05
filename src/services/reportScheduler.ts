@@ -4,6 +4,7 @@ import { DateTime } from "luxon";
 import { prisma, getDashboardPayload } from "./snapshotBuilder.js";
 import { themeForEmployer } from "./partnerService.js";
 import { allowedSlackWebhookUrl } from "./slackWebhookPolicy.js";
+import { safeEmailColor, safePortalBaseUrl } from "./notificationTextSafety.js";
 
 export type ReportFilters = {
   period?: string;
@@ -157,7 +158,11 @@ export async function saveEmailConfig(input: EmailDraft) {
     if (!DateTime.now().setZone(zone).isValid) throw new Error("default timezone is not a valid IANA timezone");
     data.defaultTimezone = zone;
   }
-  if ("portalBaseUrl" in input) data.portalBaseUrl = clean(input.portalBaseUrl);
+  if ("portalBaseUrl" in input) {
+    const base = clean(input.portalBaseUrl);
+    if (base && !safePortalBaseUrl(base)) throw new Error("Portal base URL must be a secure HTTPS origin");
+    data.portalBaseUrl = base;
+  }
   if ("alertEmails" in input) data.alertEmails = clean(input.alertEmails);
   if ("alertSlackWebhookUrl" in input) {
     const webhook = input.alertSlackWebhookUrl;
@@ -244,7 +249,7 @@ export async function sendMail(opts: { to: string; subject: string; html: string
 
 export async function portalBaseUrl(): Promise<string | null> {
   const cfg = await publicEmailConfig();
-  return clean((cfg as any).portalBaseUrl) || null;
+  return safePortalBaseUrl((cfg as any).portalBaseUrl);
 }
 
 export async function testEmailConnection(draft: EmailDraft & { recipient?: string | null }) {
@@ -401,12 +406,12 @@ export async function deleteReportSchedule(user: any, id: string) {
 
 function money(value: unknown) {
   if (value == null || value === "") return "—";
-  return typeof value === "number" ? `R ${value.toLocaleString("en-ZA")}` : String(value);
+  return typeof value === "number" ? `R ${value.toLocaleString("en-ZA")}` : escapeHtml(value);
 }
 
 function reportHtml(payload: any, schedule: any, theme: any) {
-  const primary = `#${String(theme?.primaryColor || "32217C").replace(/^#/, "")}`;
-  const accent = `#${String(theme?.accentColor || "B15BE8").replace(/^#/, "")}`;
+  const primary = safeEmailColor(theme?.primaryColor, "32217C");
+  const accent = safeEmailColor(theme?.accentColor, "B15BE8");
   const label = payload.filterContext?.label || "Programme to date";
   const site = payload.filterContext?.site || "All regions";
   const income = payload.filterContext?.incomeLabel || "All income bands";
@@ -414,7 +419,7 @@ function reportHtml(payload: any, schedule: any, theme: any) {
   const outcomeRows = (payload.outcomes || []).map((row: any) => `<tr><td style="padding:9px 8px;border-bottom:1px solid #eee">${escapeHtml(row.name)}</td><td style="padding:9px 8px;border-bottom:1px solid #eee;text-align:right">${Number(row.count || 0).toLocaleString("en-ZA")}</td><td style="padding:9px 8px;border-bottom:1px solid #eee;text-align:right;font-weight:700">${escapeHtml(row.stat)} ${escapeHtml(row.statL)}</td></tr>`).join("");
   const drivers = (payload.wellness?.drivers || []).map((row: any) => `<tr><td style="padding:7px 8px">${escapeHtml(row.name)}</td><td style="padding:7px 8px;text-align:right;font-weight:700">${row.available ? escapeHtml(row.score) : "Data not loaded"}</td></tr>`).join("");
   const warnings = payload.dataQuality?.warnings || [];
-  const portalBase = clean((schedule as any).portalBaseUrl);
+  const portalBase = safePortalBaseUrl((schedule as any).portalBaseUrl);
   const portal = portalBase ? `${portalBase.replace(/\/$/, "")}/dashboard?employer=${encodeURIComponent(schedule.employerId)}` : null;
   return `<!doctype html><html><body style="margin:0;background:#f5f4fa;font-family:Arial,Helvetica,sans-serif;color:#241536"><div style="max-width:760px;margin:0 auto;padding:28px 16px">
     <div style="background:${primary};padding:22px 26px;border-radius:16px 16px 0 0;color:white"><div style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#e6dcff;font-weight:700">${escapeHtml(theme?.name || "The Fixer (Pty) Ltd Dashboard Portal")}</div><h1 style="font-size:26px;margin:8px 0 4px">${escapeHtml(payload.employer)} — Financial Wellbeing Report</h1><div style="font-size:13px;color:#e6dcff">${escapeHtml(label)} · ${escapeHtml(site)} · ${escapeHtml(income)}</div></div>
