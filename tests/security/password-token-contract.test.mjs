@@ -15,6 +15,8 @@ test("password setup token consumption and session invalidation use one transact
   assert.match(handler,/await prisma\.\$transaction\(async tx =>/);
   assert.match(handler,/await tx\.user\.updateMany\(/);
   assert.match(handler,/setupExpires: \{ gt: now \}/);
+  assert.match(handler,/active: true, \/\/ An old invitation/);
+  assert.doesNotMatch(handler,/data: \{ passwordHash, setupToken: null, setupExpires: null, active: true \}/);
   assert.match(handler,/OR: \[\{ setupToken: digest \}, \{ setupToken: token \}\]/);
   assert.match(handler,/if \(used\.count !== 1\) throw invalid\(\)/);
   assert.match(handler,/await tx\.session\.updateMany\(/);
@@ -39,4 +41,5 @@ test("physical DB replay test runs after schema deployment on isolated CI databa
   assert.match(integration,/Promise\.allSettled/);
   assert.match(integration,/adminSession\.id/);
   assert.match(integration,/expired token causes no account\/session mutation/);
+  assert.match(integration,/revoked accounts cannot self-reactivate/);
 });
