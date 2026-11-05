@@ -179,6 +179,14 @@ The API adapter now calls `readPinnedSourceApiJson(url, token)` for every page a
 
 **Status:** Source-level wiring checks passed. The actual disposable PostgreSQL concurrency integration test and complete Node 24 self-hosted Docker suite **have not yet been executed**. Review historical plaintext setup token fallback separately during migration; do not expose raw reset tokens in logs. Do not merge or deploy before database replay tests pass.
 
+## Inactivity policy: last activity and concurrent login protection (2026-11-05)
+
+**Verified availability/security-control issue:** `runStaleAccountCheck` previously retrieved each user's most recently **created** session and treated that session's `createdAt` as their last activity. An account actively using a long-lived session could be deactivated just because the original sign-in occurred before the configured threshold.
+
+**Draft fix:** The query selects the session with the newest `lastSeenAt` and the policy evaluates that timestamp (falling back to `createdAt` when no last-seen timestamp exists). Importantly, the final conditional `updateMany` now checks `sessions: { none: { lastSeenAt: { gte: cutoff } } }` and account `createdAt < cutoff` **at write time**, in addition to `active:true` and non-`SUPERADMIN` role. A request that updates last activity after the initial sweep no longer causes an unintended deactivation if its update reaches the DB before the sweep's conditional write. Notifications now describe **account activity**, not merely sign-in dates.
+
+**Regression checks:** `tests/security/stale-account-policy.test.ts` covers old sessions with fresh last-use timestamps, truly stale sessions and legacy fallback. `tests/security/security-boundaries-contract.test.mjs` requires the actual Prisma query and atomic write guards. Tests are wired into the existing `check:security` script, with pending Node 24/self-hosted Docker execution.
+
 ## Workstream acceptance checks
 
 - [x] Separate code changes on a non-production branch based on PR #219.
