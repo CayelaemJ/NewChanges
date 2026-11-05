@@ -259,6 +259,16 @@ The API adapter now calls `readPinnedSourceApiJson(url, token)` for every page a
 
 **Executed:** isolated Node.js v22 tests (13 assertions) and strict TypeScript compilation of the redaction policy passed. The full Node 24 build and self-hosted Docker CI have not run. Existing stored audit logs cannot be retroactively considered redacted; separately assess historic audit contents and retention without exporting raw credentials into public artifacts.
 
+## Correction: Resend sender persistence must match the Prisma schema (2026-11-05)
+
+**Verified regression in the first Resend patch:** `SystemEmailConfig` has `emailProvider`, `resendApiKey` and `fromEmail` but **does not have** a `resendFromEmail` column. The previous implementation attempted to write `data.resendFromEmail`, which Prisma would reject, and read an absent stored property. The earlier draft's claim that Resend sender addresses were persisted independently was incorrect.
+
+**Correction committed:** `emailProviderConfig.ts` now reads the saved Resend sender from the existing `fromEmail` field, with draft and explicit `RESEND_FROM_EMAIL` overrides still respected. `saveEmailConfig` stores the selected provider's Resend sender in `fromEmail`, *after* the general `fromEmail` field is processed, so the Resend value wins when both fields are submitted. The admin UI explicitly says the addresses share storage. No Prisma migration or production data change is necessary.
+
+**Compatibility:** The schema supports **one shared persisted From address**, not separate durable SMTP and Resend addresses. Switching providers reuses the saved sender unless an environment override applies. This is disclosed in the UI. If independent persisted sender addresses become a requirement, introduce a separately reviewed migration rather than inventing a write to an unknown Prisma column.
+
+**Verification:** 7 source/schema/UI checks passed; **11 isolated Node 22 behaviour tests** and strict TypeScript compilation of the corrected resolver passed. End-to-end delivery and the full self-hosted Node 24 CI suite remain unverified.
+
 ## Workstream acceptance checks
 
 - [x] Separate code changes on a non-production branch based on PR #219.
