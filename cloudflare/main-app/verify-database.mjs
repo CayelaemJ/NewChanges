@@ -1,11 +1,12 @@
 // Effective grants, not intended GRANT statements, determine eligibility.
-export function verifyDatabaseIdentity(row,{allowWrites=false}={}){
+export function verifyDatabaseIdentity(row,{allowWrites=false,provider='neon'}={}){
   if (!row || typeof row!=="object") return {ok:false};
   const role = String(row.role_name||"");
   const restricted =
     role.length>0 &&
-    !["newchanges_cf_migration_reader","newchanges_owner"].includes(role) &&
-    row.database_name==="newchanges" &&
+    !["newchanges_cf_migration_reader","newchanges_owner","avnadmin"].includes(role) &&
+    ((provider==="neon" && row.database_name==="newchanges") ||
+      (provider==="aiven" && row.database_name==="defaultdb")) &&
     row.is_superuser===false &&
     row.can_create_database===false &&
     row.can_create_roles===false &&
