@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 
 const source=(path)=>readFileSync(new URL("../../"+path,import.meta.url),"utf8");
 const users=source("src/services/userService.ts");
+const automation=source("src/services/automationService.ts");
 const suite=source("scripts/ci/run-docker-ci-suite.sh");
 const integration=source("scripts/ci/password-token-replay-ci.mjs");
 
@@ -42,4 +43,15 @@ test("physical DB replay test runs after schema deployment on isolated CI databa
   assert.match(integration,/adminSession\.id/);
   assert.match(integration,/expired token causes no account\/session mutation/);
   assert.match(integration,/revoked accounts cannot self-reactivate/);
+});
+
+test("deactivating accounts invalidates pending reset links even after future reactivation",()=>{
+  assert.match(users,/revokeFields\.setupToken = null/);
+  assert.match(users,/revokeFields\.setupExpires = null/);
+  assert.match(users,/data: \{ active: false, setupToken: null, setupExpires: null/);
+  const sweep=automation.slice(automation.indexOf("export async function runStaleAccountCheck"),
+    automation.indexOf("export async function runWeeklyDigestIfDue"));
+  assert.match(sweep,/data: \{ active: false, setupToken: null, setupExpires: null/);
+  assert.match(integration,/administrator deactivation permanently invalidates prior links/);
+  assert.match(integration,/self-deactivation clears recovery\/reset links/);
 });
