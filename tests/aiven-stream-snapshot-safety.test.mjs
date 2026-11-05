@@ -69,3 +69,9 @@ test('explicit execution fails before any connection without operator approvals'
   assert.equal(result.status, 2);
   assert.match(result.stderr, /AIVEN_SOURCE_CONFIRMED/);
 });
+
+
+test('portable dump scopes to public application schema, not Neon-managed auth', () => {
+  assert.match(script, /--schema=public/);
+  assert.match(script, /--exclude-extension=pg_session_jwt/);
+});
