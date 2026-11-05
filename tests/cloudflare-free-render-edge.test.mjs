@@ -7,6 +7,7 @@ const good = {
   NEWCHANGES_FREE_EDGE_ENABLED: 'true',
   NEWCHANGES_CANONICAL_HOST: 'fixer.example.org',
   NEWCHANGES_RENDER_ORIGIN: 'https://newchanges-example.onrender.com',
+  NEWCHANGES_EDGE_ORIGIN_SHARED_SECRET: 'synthetic-only-test-token-with-48-characters-xxxx',
 };
 test('free edge is disabled by default in Wrangler and has no route', () => {
   const cfg = JSON.parse(readFileSync(new URL('../wrangler.newchanges-free.jsonc', import.meta.url), 'utf8'));
@@ -20,6 +21,7 @@ test('free edge fails closed without approved hostname and HTTPS Render origin',
   for (const input of [
     {...good, NEWCHANGES_FREE_EDGE_ENABLED: 'false'},
     {...good, NEWCHANGES_CANONICAL_HOST: ''},
+    {...good, NEWCHANGES_EDGE_ORIGIN_SHARED_SECRET: ''},
     {...good, NEWCHANGES_RENDER_ORIGIN: 'http://newchanges-example.onrender.com'},
     {...good, NEWCHANGES_RENDER_ORIGIN: 'https://attacker.com'},
     {...good, NEWCHANGES_RENDER_ORIGIN: 'https://newchanges-example.onrender.com.evil.test'},
@@ -51,7 +53,7 @@ test('proxy retains cookies, request path and method, and rewrites same-origin r
   };
   try {
     const request = new Request('https://fixer.example.org/api/test?q=1', {
-      method:'POST',headers:{cookie:'session=test','x-forwarded-host':'spoofed.example','x-forwarded-for':'127.0.0.1'},body:'synthetic'
+      method:'POST',headers:{cookie:'session=test','x-forwarded-host':'spoofed.example','x-forwarded-for':'127.0.0.1','x-newchanges-edge-token':'spoofed'},body:'synthetic'
     });
     const response=await worker.fetch(request,good);
     assert.equal(call.url,'https://newchanges-example.onrender.com/api/test?q=1');
@@ -59,6 +61,7 @@ test('proxy retains cookies, request path and method, and rewrites same-origin r
     assert.equal(call.headers.get('cookie'),'session=test');
     assert.equal(call.headers.get('x-forwarded-host'),'fixer.example.org');
     assert.equal(call.headers.get('x-forwarded-for'),null);
+    assert.equal(call.headers.get('x-newchanges-edge-token'),good.NEWCHANGES_EDGE_ORIGIN_SHARED_SECRET);
     assert.equal(await call.text(),'synthetic');
     assert.equal(response.status,302);
     assert.equal(response.headers.get('location'),'https://fixer.example.org/auth/login?next=%2Fadmin');
@@ -73,4 +76,13 @@ test('Render candidate cannot auto deploy or silently receive a production datab
   assert.match(y,/STANDBY_MODE\n\s+value: "true"/);
   assert.match(y,/DATABASE_URL\n\s+sync: false/);
   assert.doesNotMatch(y,/postgresql:\/\//);
+});
+
+test('Fastify origin guard is installed before routing and cannot be bypassed when enabled',()=>{
+ const src=readFileSync(new URL('../src/server.ts',import.meta.url),'utf8');
+ const guard=readFileSync(new URL('../src/services/cloudflareOriginGuard.ts',import.meta.url),'utf8');
+ assert.match(src,/cloudflareOriginAccessAllowed\(req.headers, process.env\)/);
+ assert.match(guard,/timingSafeEqual\(a, b\)/);
+ assert.match(guard,/secret.length < 32/);
+ assert.match(guard,/NEWCHANGES_EDGE_ORIGIN_GUARD_ENABLED === "true"/);
 });
