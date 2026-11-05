@@ -187,6 +187,59 @@ try {
     where: { id: upgradedUser.userId },
   })).passwordHash.startsWith("v2$"));
   console.log("[password-reset] PASS legacy password upgrade uses guarded session creation");
+
+  // Exercise the real inactivity automation against ONLY this disposable
+  // database. A successful account deactivation must revoke its sessions
+  // in the very same Prisma transaction.
+  const stale = await createFixture();
+  const ancient = new Date("2012-01-01T00:00:00Z");
+  await prisma.user.update({
+    where: { id: stale.userId },
+    data: { createdAt: ancient },
+  });
+  const staleSession = await prisma.session.create({
+    data: {
+      userId: stale.userId,
+      token: tokenDigest(randomBytes(32).toString("hex")),
+      createdAt: ancient,
+      lastSeenAt: ancient,
+      expiresAt: nowPlus(7 * 864e5),
+    },
+  });
+  const emailSettings = await prisma.systemEmailConfig.upsert({
+    where: { id: "default" }, create: { id: "default" }, update: {},
+  });
+  try {
+    await prisma.systemEmailConfig.update({
+      where: { id: "default" },
+      data: {
+        staleDeactivateDays: 3650,
+        alertEmails: null,
+        alertSlackWebhookUrl: null,
+      },
+    });
+    const { runStaleAccountCheck } = await import("../../dist/services/automationService.js");
+    const sweep = await runStaleAccountCheck();
+    assert.equal(sweep.ran, true);
+    assert.equal((await prisma.user.findUniqueOrThrow({
+      where: { id: stale.userId },
+    })).active, false);
+    const revokedSession = await prisma.session.findUniqueOrThrow({
+      where: { id: staleSession.id },
+    });
+    assert.ok(revokedSession.endedAt && revokedSession.revokedAt);
+    assert.equal(revokedSession.revokedBy, "system_auto_deactivation");
+    console.log("[password-reset] PASS inactivity deactivation and session revocation are atomic");
+  } finally {
+    await prisma.systemEmailConfig.update({
+      where: { id: "default" },
+      data: {
+        staleDeactivateDays: emailSettings.staleDeactivateDays,
+        alertEmails: emailSettings.alertEmails,
+        alertSlackWebhookUrl: emailSettings.alertSlackWebhookUrl,
+      },
+    });
+  }
 } finally {
   if (fixtures.length) await prisma.user.deleteMany({ where: { id: { in: fixtures } } });
   await prisma.$disconnect();
