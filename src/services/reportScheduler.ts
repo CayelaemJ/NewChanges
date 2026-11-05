@@ -6,6 +6,7 @@ import { themeForEmployer } from "./partnerService.js";
 import { allowedSlackWebhookUrl } from "./slackWebhookPolicy.js";
 import { safeEmailColor, safePortalBaseUrl } from "./notificationTextSafety.js";
 import { assertSecureSmtpTls } from "./smtpTlsPolicy.js";
+import { resolveEmailProviderConfig } from "./emailProviderConfig.js";
 
 export type ReportFilters = {
   period?: string;
@@ -71,10 +72,9 @@ function withEnv(cfg: any, draft: EmailDraft = {}) {
   const draftString = (key: keyof EmailDraft) => draft[key] === undefined ? undefined : clean(draft[key]);
   const envString = (name: string) => process.env[name] === undefined ? undefined : clean(process.env[name]);
   const envPort = process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : undefined;
+  const provider = resolveEmailProviderConfig(cfg, draft);
   return {
-    emailProvider: pick(draft.emailProvider, (envString("EMAIL_PROVIDER") || "smtp") as "smtp" | "resend", cfg.emailProvider || "smtp"),
-    resendApiKey: pick(draftString("resendApiKey") as any, envString("RESEND_API_KEY") as any, undefined),
-    resendFromEmail: pick(draftString("resendFromEmail") as any, envString("RESEND_FROM_EMAIL") as any, undefined),
+    ...provider,
     smtpHost: pick(draftString("smtpHost") as any, envString("SMTP_HOST") as any, cfg.smtpHost),
     smtpPort: pick(draft.smtpPort ?? undefined, Number.isFinite(envPort) ? envPort : undefined, cfg.smtpPort),
     smtpSecure: pick(draft.smtpSecure, boolEnv("SMTP_SECURE"), cfg.smtpSecure),
