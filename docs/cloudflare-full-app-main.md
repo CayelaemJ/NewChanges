@@ -1,3 +1,5 @@
+> **2026-11-05 production target update:** This document records the original Neon-backed design from October. The approved target has changed to **Cloudflare Containers running the complete application as the active primary, backed by Aiven PostgreSQL 18**. Neon remains live solely until a separately verified final data synchronization and traffic cutover. The authoritative current instructions and release gates are in [CLOUDFLARE_AIVEN_PRODUCTION_CUTOVER.md](CLOUDFLARE_AIVEN_PRODUCTION_CUTOVER.md). No paid Cloudflare Containers deployment, live database secret change or production routing switch has occurred.
+
 # NewChanges full application → Cloudflare primary (not a React-only migration)
 
 ## Scope correction (29 October 2026)
