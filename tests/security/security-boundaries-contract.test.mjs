@@ -25,7 +25,12 @@ test("stale account sweeps exclude superadmins at query and write boundaries",()
   assert.match(sweep,/shouldAutoDeactivateAccount\(u, cutoff\)/);
   assert.match(sweep,/orderBy: \{ lastSeenAt: "desc" \}/);
   assert.match(sweep,/select: \{ createdAt: true, lastSeenAt: true \}/);
-  assert.match(sweep,/await prisma\.user\.updateMany\(/);
+  assert.match(sweep,/await prisma\.\$transaction\(async tx =>/);
+  assert.match(sweep,/await tx\.user\.updateMany\(/);
+  assert.match(sweep,/if \(changed\.count === 1\) \{/);
+  assert.match(sweep,/await tx\.session\.updateMany\(/);
+  assert.match(sweep,/revokedBy: "system_auto_deactivation"/);
+  assert.doesNotMatch(sweep,/await destroyAllSessionsForUser\(u\.id\)/);
   assert.match(sweep,/id: u\.id,\s+active: true,\s+role: \{ not: "SUPERADMIN" \}/);
   assert.match(sweep,/createdAt: \{ lt: cutoff \}/);
   assert.match(sweep,/sessions: \{ none: \{ lastSeenAt: \{ gte: cutoff \} \} \}/);
