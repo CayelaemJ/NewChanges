@@ -106,7 +106,13 @@ export async function requestPasswordReset(email: string) {
   const rawSetupToken = randomBytes(32).toString("hex");
   const setupToken = digestSetupToken(rawSetupToken);
   const setupExpires = new Date(Date.now() + 2 * 3600e3); // 2 hours — shorter than the 3-day admin invite link
-  await prisma.user.update({ where: { id: user.id }, data: { setupToken, setupExpires } });
+  // Active state is checked at the write boundary too. An administrator
+  // may have revoked the account after the initial lookup.
+  const issued = await prisma.user.updateMany({
+    where: { id: user.id, active: true },
+    data: { setupToken, setupExpires },
+  });
+  if (issued.count !== 1) return { ok: true };
   const setupPath = `/set-password?token=${rawSetupToken}`;
   try {
     const base = (await portalBaseUrl()) || "";
