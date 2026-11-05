@@ -65,3 +65,11 @@ test("active Cloudflare container keep-warm is opt-in and cannot start before cu
   assert.match(worker,/evaluateNewChangesPrimary\(env, host\)\.ready/);
   assert.match(worker,/container\.fetch\(new Request/);
 });
+
+test("active Cloudflare Fastify runtime gets secure proxy, cookie and canonical URL configuration",()=>{
+ const worker=readFileSync(new URL("./worker.mjs",import.meta.url),"utf8");
+ assert.match(worker,/TRUST_PROXY: "true"/);
+ assert.match(worker,/COOKIE_SECURE: "true"/);
+ assert.match(worker,/PUBLIC_BASE_URL: secrets.NEWCHANGES_CANONICAL_HOST/);
+ assert.match(worker,/DATABASE_URL: secrets.NEWCHANGES_AIVEN_DATABASE_URL/);
+});
