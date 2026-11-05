@@ -67,7 +67,7 @@ export async function runStaleAccountCheck() {
     // Exclude protected superadministrators at query time; updateMany below
     // repeats this condition atomically in case their role changes mid-run.
     where: { active: true, role: { not: "SUPERADMIN" } },
-    select: { id: true, role: true, name: true, email: true, createdAt: true, sessions: { orderBy: { createdAt: "desc" }, take: 1, select: { createdAt: true } } },
+    select: { id: true, role: true, name: true, email: true, createdAt: true, sessions: { orderBy: { lastSeenAt: "desc" }, take: 1, select: { createdAt: true, lastSeenAt: true } } },
   });
   const stale = users.filter((u: any) => shouldAutoDeactivateAccount(u, cutoff));
   const deactivated: typeof stale = [];
