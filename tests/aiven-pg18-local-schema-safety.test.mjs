@@ -39,3 +39,9 @@ test('Aiven PG18 upgrade requires a successful, matching compatibility task and 
   assert.match(upgrade, /avn service update .*pg_version=/);
   assert.doesNotMatch(upgrade, /--plan|--cloud/);
 });
+
+
+test('portable dump scopes to public application schema, not Neon-managed auth', () => {
+  assert.match(script, /--schema=public/);
+  assert.match(script, /--exclude-extension=pg_session_jwt/);
+});
