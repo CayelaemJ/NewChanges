@@ -10,9 +10,14 @@ export class NewChangesMainContainer extends Container {
   envVars = {
     PORT: "3000",
     NODE_ENV: "production",
-    DATABASE_URL: secrets.NEWCHANGES_NEON_DATABASE_URL,
-    STANDBY_MODE: allowWriteLeadership(secrets) ? "false" : "true",
-    TRAFFIC_SAVER_MODE: "true",
+    DATABASE_URL: secrets.NEWCHANGES_AIVEN_DATABASE_URL,
+    NEWCHANGES_DATABASE_PROVIDER: "aiven",
+    NEWCHANGES_AIVEN_PRODUCTION_APPROVED: secrets.NEWCHANGES_AIVEN_PRODUCTION_APPROVED,
+    NEWCHANGES_CLOUDFLARE_PRIMARY: allowWriteLeadership(secrets) ? "YES" : "NO",
+    NEWCHANGES_SOURCE_WRITERS_FENCED: secrets.NEWCHANGES_SOURCE_WRITERS_FENCED,
+    NEWCHANGES_FINAL_SYNC_VERIFIED: secrets.NEWCHANGES_FINAL_SYNC_VERIFIED,
+    STANDBY_MODE: "false",
+    TRAFFIC_SAVER_MODE: "false",
     ENABLE_AUTHORITATIVE_INCREMENTAL_SCHEDULER: "false",
     ENABLE_SEMANTIC_SHADOW_WORKER: "false",
     ENABLE_SEMANTIC_SHADOW_ENQUEUE: "false",
@@ -39,7 +44,7 @@ export default {
         sourceRepository: "CayelaemJ/NewChanges",
         backendAvailable: gate.ready,
         writeLeader: gate.ready && allowWriteLeadership(env),
-        stage: gate.ready ? "candidate" : "disabled"
+        stage: gate.ready ? "primary" : "disabled"
       }), { status: 200, headers });
     }
     if (!gate.ready)
