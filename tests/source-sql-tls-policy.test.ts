@@ -26,10 +26,9 @@ test("disposable local SQL integration fixtures remain available outside product
   }
 });
 
-test("production policy fails closed for the unset NODE_ENV label", () => {
-  // The production policy is applied only when the actual runtime explicitly
-  // identifies itself as production; release gates verify NODE_ENV separately.
-  assert.doesNotThrow(
-    () => assertSecureSourceSqlTransport(false, true, "Dev fixture", undefined),
+test("explicit production environment never inherits weaker fixture settings", () => {
+  assert.throws(
+    () => assertSecureSourceSqlTransport(false, true, "SQL replica", "production"),
+    /requires encrypted SQL transport/,
   );
 });
