@@ -56,3 +56,9 @@ node --check cloudflare/main-app/preflight.mjs
 ```
 
 None of these checks deploys the image, enables billing, configures customer traffic or tests the live app.
+
+## Runtime-role evidence (2026-11-05)
+
+Operator ran `scripts/provision-aiven-cloudflare-runtime.sh` successfully and independently confirmed `newchanges_app_runtime` exists, can log in, and has neither CREATEDB nor CREATEROLE. Subsequent credential-free verification via Aiven's SQL interface confirmed: no SUPERUSER, BYPASSRLS, database/schema CREATE privileges, no `avnadmin` inheritance or other role memberships, SELECT and INSERT on the required Session table, SELECT on Employer, and complete SELECT/INSERT/UPDATE/DELETE grants on all 57 public application tables. Zero public tables have this role's TRUNCATE, REFERENCES or TRIGGER privileges.
+
+**Still unverified:** authentication using the operator-selected password, Cloudflare-to-Aiven TLS connectivity, operational application permissions and Auth/MFA/tenant E2E. These results do not authorize enabling write leadership or setting final-sync flags.
