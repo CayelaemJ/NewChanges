@@ -269,6 +269,16 @@ The API adapter now calls `readPinnedSourceApiJson(url, token)` for every page a
 
 **Verification:** 7 source/schema/UI checks passed; **11 isolated Node 22 behaviour tests** and strict TypeScript compilation of the corrected resolver passed. End-to-end delivery and the full self-hosted Node 24 CI suite remain unverified.
 
+## Inactivity sweep session consistency (2026-11-05)
+
+**Source-confirmed transactional gap:** `runStaleAccountCheck` previously deactivated a user with one `prisma.user.updateMany`, then separately invoked `destroyAllSessionsForUser`. If the second operation failed, the inactive user would retain old unrevoked sessions. A later privileged reactivation could make those previously issued sessions usable again.
+
+**Draft correction:** The inactivity sweep now uses a single `prisma.$transaction` for its conditionally fenced user deactivation, setup/reset-token removal and old session revocation. Only a successful conditional account update triggers the session update. The existing active status, non-`SUPERADMIN` role, age cutoff and recent-activity predicate remain enforced at the write boundary. Notification counts reflect only successful transaction commits.
+
+**Regression coverage:** `tests/security/security-boundaries-contract.test.mjs` now requires the transaction, `tx.user.updateMany`, `tx.session.updateMany` and absence of the old separate revocation path. The disposable PostgreSQL `password-token-replay-ci.mjs` test now adds one synthetic ancient user/session, enables a 3,650-day threshold only within the protected CI database, runs the real inactivity automation, verifies account deactivation and session revocation, and restores the notification configuration. The test is part of the existing full Docker CI suite.
+
+**Verification:** Nine source-level implementation/CI-wiring checks passed. **The physical disposable PostgreSQL test has not yet run.** No production automation, user account or database setting was changed.
+
 ## Workstream acceptance checks
 
 - [x] Separate code changes on a non-production branch based on PR #219.
