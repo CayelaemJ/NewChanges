@@ -68,6 +68,6 @@ test('synthetic Docker rehearsal is isolated and never connects to production en
   assert.match(rehearsal,/buildAivenDeltaSql/);
   assert.match(rehearsal,/idempotent/);
   assert.match(rehearsal,/Conflicting existing audit history must abort/);
-  assert.match(rehearsal,/docker',['rm','-f'/);
+  assert.ok(rehearsal.includes("run('docker',['rm','-f',name])"));
   assert.doesNotMatch(rehearsal,/DR_SOURCE_DATABASE_URL|DR_TARGET_DATABASE_URL|neon\.tech|the-fixer-postgres-cay/);
 });
