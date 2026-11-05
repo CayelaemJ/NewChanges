@@ -271,25 +271,44 @@ export async function listRevokedUsers() {
 
 // admin-only: permanent delete. Only allowed on an already-deactivated account,
 // so nobody is removed without first going through the revoke/audit step.
-export async function deleteUserPermanently(userId: string) {
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user) throw new Error("user not found");
-  if (user.active) throw new Error("deactivate the account before deleting it permanently");
-  await destroyAllSessionsForUser(userId);
-  await prisma.user.delete({ where: { id: userId } });
+export async function deleteUserPermanently(
+  userId: string,
+  options: { forbidSuperadminTarget?: boolean } = {},
+) {
+  // Both conditions are checked at the actual DELETE boundary, not only by
+  // a preceding route-level lookup. Cascading session deletion is governed by
+  // the Session.user FK in the database and rolls back on any FK failure.
+  const deleted = await prisma.user.deleteMany({
+    where: {
+      id: userId,
+      active: false,
+      ...(options.forbidSuperadminTarget ? { role: { not: "SUPERADMIN" as const } } : {}),
+    },
+  });
+  if (deleted.count !== 1)
+    throw new Error("account must be deactivated and editable before deletion");
   return { ok: true };
 }
 
-export async function resetPassword(userId: string, newPassword: string) {
+export async function resetPassword(
+  userId: string,
+  newPassword: string,
+  options: { forbidSuperadminTarget?: boolean } = {},
+) {
   validatePassword(newPassword);
   const passwordHash = hashPassword(newPassword);
   const now = new Date();
-  // Password changes and session revocation must commit as one unit.
   await prisma.$transaction(async tx => {
-    await tx.user.update({
-      where: { id: userId },
+    // The role guard must be in the password UPDATE predicate. An ordinary
+    // admin cannot reset a privileged account, even across role-change races.
+    const updated = await tx.user.updateMany({
+      where: {
+        id: userId,
+        ...(options.forbidSuperadminTarget ? { role: { not: "SUPERADMIN" as const } } : {}),
+      },
       data: { passwordHash, setupToken: null, setupExpires: null },
     });
+    if (updated.count !== 1) throw new Error("user not found or no longer editable");
     await tx.session.updateMany({
       where: { userId, endedAt: null },
       data: { endedAt: now, revokedAt: now, revokedBy: "password_changed" },
