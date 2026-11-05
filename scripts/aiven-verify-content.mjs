@@ -41,7 +41,7 @@ const digest = (table, limit = null) => {
   let inner = 'SELECT * FROM public.' + quote(table);
   if (limit !== null) inner += ' ORDER BY "createdAt", id LIMIT ' + limit;
   const normalization = table === 'Session' ? "to_jsonb(t) - 'lastSeenAt'" : 'row_to_json(t)';
-  return 'SELECT md5(' + normalization + '::text) AS h FROM (' + inner + ') t';
+  return 'SELECT md5((' + normalization + ')::text) AS h FROM (' + inner + ') t';
 };
 const aggregate = (table, limit = null) =>
   'SELECT ' + "'" + table + "'" +
