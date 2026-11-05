@@ -45,8 +45,8 @@ test('driver imports the reviewed SQL plan, without generating independent write
 });
 test('connection info is passed by process environment rather than in argv',()=>{
   for(const src of [verifier,delta]){
-    assert.match(src,/env\.PGPASSWORD/);
-    assert.match(src,/env\.PGDATABASE/);
+    assert.match(src,/(?:env\.PGPASSWORD\s*=|\bPGPASSWORD\s*:)/);
+    assert.match(src,/(?:env\.PGDATABASE\s*=|\bPGDATABASE\s*:)/);
     assert.match(src,/PGHOST/);
     assert.doesNotMatch(src,/psql'\s*,\s*\[[^\]]*DATABASE_URL/);
   }
