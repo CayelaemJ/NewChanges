@@ -14,7 +14,7 @@ test('mandatory Docker suite preserves comprehensive test groups',()=>{
   'quality:e2e','check:security','check:accessibility','check:performance',
   'check:source-sync-safety','check:source-reconciliation',
   'rls-isolation-ci-probe.mjs','prisma-upgrade-integration.mjs',
-  'password-token-replay-ci.mjs','admin-permission-atomic-ci.mjs'
+  'email-provider-persistence-ci.mjs','password-token-replay-ci.mjs','admin-permission-atomic-ci.mjs'
  ]){
   assert.ok(suite.includes(required),'Missing release gate: '+required);
  }
@@ -37,6 +37,7 @@ test('all database-changing integration suites have hard disposable URL guards',
   'scripts/ci/import-failure-integration-ci.mjs',
   'scripts/ci/local-http-load-ci.mjs',
   'scripts/admin-mfa-live-http-e2e.mjs',
+  'scripts/ci/email-provider-persistence-ci.mjs',
   'scripts/ci/password-token-replay-ci.mjs',
   'scripts/ci/admin-permission-atomic-ci.mjs'
  ]){
