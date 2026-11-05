@@ -7,6 +7,7 @@
 
 import { prisma } from "./authService.js";
 import { classifyAdminRisk, type RequestSecurityContext } from "./securityService.js";
+import { redactAuditDetail } from "./auditRedaction.js";
 
 export async function logAdminAction(
   actor: { email: string; name: string },
@@ -28,7 +29,7 @@ export async function logAdminAction(
         summary,
         targetType: opts.targetType,
         targetId: opts.targetId,
-        detail: opts.detail == null ? undefined : (JSON.parse(JSON.stringify(opts.detail))),
+        detail: opts.detail == null ? undefined : JSON.parse(JSON.stringify(redactAuditDetail(opts.detail))),
         ipAddress: opts.context?.ipAddress,
         userAgent: opts.context?.userAgent,
         deviceType: opts.context?.deviceType,
