@@ -50,8 +50,25 @@ test("saved Resend API configuration is resolved without leaking secrets to the 
   assert.match(resolver,/\.\.\.provider/);
   assert.doesNotMatch(resolver,/envString\("EMAIL_PROVIDER"\) \|\| "smtp"/);
   assert.match(provider,/nonempty\(stored\.resendApiKey\)/);
-  assert.match(provider,/nonempty\(stored\.resendFromEmail\)/);
+  assert.match(provider,/nonempty\(stored\.fromEmail\)/);
   const publicResponse=scheduler.slice(end,scheduler.indexOf("export async function saveEmailConfig",end));
   assert.match(publicResponse,/resendConfigured: Boolean/);
   assert.doesNotMatch(publicResponse,/resendApiKey\s*:/);
+});
+
+test("Resend sender persists to a real Prisma field, with no phantom column",()=>{
+  const schema=read("prisma/schema.prisma");
+  const a=schema.indexOf("model SystemEmailConfig {");
+  const b=schema.indexOf("\nmodel ",a+2);
+  assert.ok(a>=0 && b>a,"SystemEmailConfig model must exist");
+  const model=schema.slice(a,b);
+  assert.match(model,/\bfromEmail\s+String\?/);
+  assert.doesNotMatch(model,/\bresendFromEmail\s+/);
+  const saveStart=scheduler.indexOf("export async function saveEmailConfig(");
+  const saveEnd=scheduler.indexOf("async function smtpTransport(",saveStart);
+  const saving=scheduler.slice(saveStart,saveEnd);
+  assert.match(saving,/data\.fromEmail = clean\(input\.resendFromEmail\)/);
+  assert.doesNotMatch(saving,/data\.resendFromEmail\s*=/);
+  assert.ok(saving.indexOf('if ("fromEmail" in input)') < saving.indexOf('if ("resendFromEmail" in input'),
+    "Resend field must override generic form field when the selected provider is Resend");
 });
