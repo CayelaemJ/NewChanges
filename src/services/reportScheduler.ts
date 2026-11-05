@@ -143,7 +143,12 @@ export async function saveEmailConfig(input: EmailDraft) {
     data.emailProvider = input.emailProvider;
   }
   if ("resendApiKey" in input && clean(input.resendApiKey)) data.resendApiKey = clean(input.resendApiKey);
-  if ("resendFromEmail" in input) data.resendFromEmail = clean(input.resendFromEmail);
+  if ("resendFromEmail" in input && clean(input.resendFromEmail) &&
+      (input.emailProvider ?? current.emailProvider) === "resend") {
+    // Prisma SystemEmailConfig has one persisted fromEmail column, not a
+    // separate resendFromEmail column. Reuse it for the selected provider.
+    data.fromEmail = clean(input.resendFromEmail);
+  }
   if ("smtpHost" in input) data.smtpHost = clean(input.smtpHost);
   if ("smtpPort" in input && input.smtpPort != null) data.smtpPort = Math.max(1, Math.min(65535, Number(input.smtpPort)));
   if ("smtpSecure" in input) data.smtpSecure = Boolean(input.smtpSecure);
