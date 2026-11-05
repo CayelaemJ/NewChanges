@@ -237,6 +237,7 @@ try {
         staleDeactivateDays: emailSettings.staleDeactivateDays,
         alertEmails: emailSettings.alertEmails,
         alertSlackWebhookUrl: emailSettings.alertSlackWebhookUrl,
+        lastStaleCheckAt: emailSettings.lastStaleCheckAt,
       },
     });
   }
