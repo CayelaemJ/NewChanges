@@ -10,6 +10,9 @@ export class NewChangesMainContainer extends Container {
   envVars = {
     PORT: "3000",
     NODE_ENV: "production",
+    TRUST_PROXY: "true",
+    COOKIE_SECURE: "true",
+    PUBLIC_BASE_URL: secrets.NEWCHANGES_CANONICAL_HOST ? "https://" + secrets.NEWCHANGES_CANONICAL_HOST : "",
     DATABASE_URL: secrets.NEWCHANGES_AIVEN_DATABASE_URL,
     NEWCHANGES_DATABASE_PROVIDER: "aiven",
     NEWCHANGES_AIVEN_PRODUCTION_APPROVED: secrets.NEWCHANGES_AIVEN_PRODUCTION_APPROVED,
