@@ -28,7 +28,7 @@ require_approval AIVEN_SNAPSHOT_COPY_APPROVED
 
 : "${DR_SOURCE_DATABASE_URL:?Missing source connection secret}"
 : "${DR_TARGET_DATABASE_URL:?Missing target connection secret}"
-for tool in node psql pg_dump pg_restore; do
+for tool in node psql pg_dump pg_restore awk cmp grep; do
   command -v "$tool" >/dev/null || { echo "Missing: $tool" >&2; exit 2; }
 done
 pg_dump --version | grep -Eq 'PostgreSQL\) 18\.' ||
@@ -72,24 +72,52 @@ source_tables="$(sql DR_SOURCE_DATABASE_URL "SELECT count(*) FROM pg_tables WHER
   { echo 'BLOCKED: invalid database metadata.' >&2; exit 2; }
 [[ "$target_tables" == 0 && "$target_views" == 0 && "$target_bytes" -lt 50000000 && "$source_tables" -gt 0 ]] ||
   { echo 'BLOCKED: Aiven must contain no user tables/views and use less than 50 MB, while Neon must contain application tables.' >&2; exit 2; }
-# This source size check is NOT a disk/WAL headroom guarantee. Review the\n# Aiven host disk usage metric, index and WAL overhead before approving a copy.
+# This source size check is NOT a disk/WAL headroom guarantee. Review the
+# Aiven host disk usage metric, index and WAL overhead before approving a copy.
 [[ "$source_bytes" -le 700000000 ]] ||
   { echo 'BLOCKED: source size exceeds conservative free-tier migration limit.' >&2; exit 2; }
 extension_deps="$(sql DR_SOURCE_DATABASE_URL "SELECT count(*) FROM pg_depend d JOIN pg_extension e ON e.oid=d.refobjid WHERE e.extname='pg_session_jwt' AND d.deptype='n'")"
 [[ "$extension_deps" == 0 ]] ||
   { echo 'BLOCKED: source objects depend on an unsupported extension.' >&2; exit 2; }
 echo "PREFLIGHT OK: source tables=$source_tables, source bytes=$source_bytes; target is empty."
-echo 'Streaming a single compressed snapshot, without local dump files or automatic retries.'
+echo 'Creating one temporary compressed snapshot; removing only the redundant public-schema CREATE entry.'
+# Use a private local archive (~17 MiB in the offline trial), allowing pg_restore
+# to validate and filter the TOC before modifying the Aiven destination.
+umask 077
+workdir="$(mktemp -d)"
+cleanup() { rm -rf -- "$workdir"; }
+trap cleanup EXIT
 
-# A PostgreSQL 18 custom-format archive is streamed once. Vendor extensions are
-# excluded, and the dump is restricted to the public application schema.\n# Neon-managed neon_auth tables are NOT part of the portable application copy.\n# Confirm auth and identity dependencies separately before cutover.
-# EXIT-ON-ERROR stops on the first failure. A failed restore aborts the transaction; review target state and quota
-# before any retry. Do not repeat the network transfer automatically.
 PGCONNECT_TIMEOUT=12 pg_dump --dbname="$DR_SOURCE_DATABASE_URL" \
   --schema=public --format=custom --compress=6 --no-owner --no-acl \
-  --exclude-extension=pg_session_jwt --exclude-extension=pg_stat_statements |
-  PGCONNECT_TIMEOUT=12 pg_restore --dbname="$DR_TARGET_DATABASE_URL" \
-    --no-owner --no-acl --exit-on-error --single-transaction
+  --exclude-extension=pg_session_jwt --exclude-extension=pg_stat_statements \
+  --file="$workdir/snapshot.dump"
+pg_restore --list "$workdir/snapshot.dump" > "$workdir/snapshot.toc"
+# Aiven's default database already has an empty public schema. Do not DROP it.
+# Remove precisely the archive TOC's SCHEMA - public entry, leaving tables,
+# sequences, functions, views, indexes and all other entries untouched.
+awk '!/^[0-9]+; [0-9]+ [0-9]+ SCHEMA - public /' "$workdir/snapshot.toc" > "$workdir/restore.toc"
+grep -Eq '^[0-9]+; [0-9]+ [0-9]+ TABLE public ' "$workdir/restore.toc" || {
+  echo 'BLOCKED: snapshot has no application tables.' >&2; exit 2;
+}
+if cmp -s "$workdir/snapshot.toc" "$workdir/restore.toc"; then
+  echo 'BLOCKED: expected public schema creation entry not found; review archive TOC.' >&2
+  exit 2
+fi
+
+# The preflight checked destination emptiness, but verify it AGAIN immediately
+# before write. This is not a cross-process exclusive lock; do not run
+# competing restores or schema migrations.
+target_tables_now="$(sql DR_TARGET_DATABASE_URL "SELECT count(*) FROM pg_tables WHERE schemaname NOT IN ('pg_catalog','information_schema')")"
+target_views_now="$(sql DR_TARGET_DATABASE_URL "SELECT count(*) FROM pg_views WHERE schemaname NOT IN ('pg_catalog','information_schema')")"
+[[ "$target_tables_now" == 0 && "$target_views_now" == 0 ]] || {
+  echo 'BLOCKED: destination is no longer empty.' >&2; exit 2;
+}
+
+echo 'Restoring into Aiven in a single transaction; no schema drops or production configuration changes.'
+PGCONNECT_TIMEOUT=12 pg_restore --dbname="$DR_TARGET_DATABASE_URL" \
+  --use-list="$workdir/restore.toc" --no-owner --no-acl \
+  --exit-on-error --single-transaction "$workdir/snapshot.dump"
 
 restored_tables="$(sql DR_TARGET_DATABASE_URL "SELECT count(*) FROM pg_tables WHERE schemaname='public'")"
 [[ "$restored_tables" == "$source_tables" ]] ||
