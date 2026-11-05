@@ -239,27 +239,57 @@ export async function deleteUserPermanently(userId: string) {
 
 export async function resetPassword(userId: string, newPassword: string) {
   validatePassword(newPassword);
-  await prisma.user.update({ where: { id: userId }, data: { passwordHash: hashPassword(newPassword), setupToken: null, setupExpires: null } });
-  await destroyAllSessionsForUser(userId);
+  const passwordHash = hashPassword(newPassword);
+  const now = new Date();
+  // Password changes and session revocation must commit as one unit.
+  await prisma.$transaction(async tx => {
+    await tx.user.update({
+      where: { id: userId },
+      data: { passwordHash, setupToken: null, setupExpires: null },
+    });
+    await tx.session.updateMany({
+      where: { userId, endedAt: null },
+      data: { endedAt: now, revokedAt: now, revokedBy: "password_changed" },
+    });
+  });
   return { ok: true };
 }
 
 // set-password flow (user clicks the emailed link)
 export async function completeSetup(token: string, newPassword: string) {
   validatePassword(newPassword);
-  if (typeof token !== "string" || token.length < 32 || token.length > 256) throw new Error("this setup link is invalid or has expired");
-  const digest = digestSetupToken(token);
-  const user = await prisma.user.findFirst({
-    where: { OR: [{ setupToken: digest }, { setupToken: token }] },
-  });
-  if (!user || !user.setupExpires || user.setupExpires < new Date()) {
+  if (typeof token !== "string" || token.length < 32 || token.length > 256)
     throw new Error("this setup link is invalid or has expired");
-  }
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { passwordHash: hashPassword(newPassword), setupToken: null, setupExpires: null, active: true },
+  const digest = digestSetupToken(token);
+  const passwordHash = hashPassword(newPassword);
+  const invalid = () => new Error("this setup link is invalid or has expired");
+  await prisma.$transaction(async tx => {
+    // The initial lookup is only to identify the account. It does NOT grant
+    // permission to change its password; the conditional write below does.
+    const account = await tx.user.findFirst({
+      where: { OR: [{ setupToken: digest }, { setupToken: token }] },
+      select: { id: true },
+    });
+    if (!account) throw invalid();
+    const now = new Date();
+    // A concurrent request that already consumed/expired the token must
+    // lose at the DATABASE write boundary, not at a stale application read.
+    const used = await tx.user.updateMany({
+      where: {
+        id: account.id,
+        OR: [{ setupToken: digest }, { setupToken: token }],
+        setupExpires: { gt: now },
+      },
+      data: { passwordHash, setupToken: null, setupExpires: null, active: true },
+    });
+    if (used.count !== 1) throw invalid();
+    // Existing sessions cannot survive a password reset. Commit this
+    // revocation atomically with the password change, including MFA sessions.
+    await tx.session.updateMany({
+      where: { userId: account.id, endedAt: null },
+      data: { endedAt: now, revokedAt: now, revokedBy: "password_changed" },
+    });
   });
-  await destroyAllSessionsForUser(user.id);
   return { ok: true };
 }
 
