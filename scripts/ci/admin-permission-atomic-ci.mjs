@@ -89,23 +89,20 @@ try {
   })).endedAt, null);
   console.log("[admin-access] PASS superadministrator cannot self-deactivate");
 
-  // When this fixture is the only active superadmin, changing its role or
-  // active status must be forbidden. Other seeded test superadmins must not
-  // be modified merely to manufacture this scenario.
+  // Fail when disposable CI fixtures are contaminated with extra admins;
+  // security release gates must never report success after skipping the case.
   const currentSuperadmins = await prisma.user.count({
     where: { active: true, role: "SUPERADMIN" },
   });
-  if (currentSuperadmins === 1) {
-    await assert.rejects(updateUser(superadmin, { active: false }, {
-      forbidSuperadminTarget: false,
-    }), /last active superadministrator/);
-    await assert.rejects(updateUser(superadmin, { role: "ADMIN" }, {
-      forbidSuperadminTarget: false,
-    }), /last active superadministrator/);
-    console.log("[admin-access] PASS last active superadministrator cannot be retired");
-  } else {
-    console.log("[admin-access] NOTE last-superadmin DB check skipped; other active superadmins exist");
-  }
+  assert.equal(currentSuperadmins, 1,
+    "Disposable CI fixture must contain exactly one active SUPERADMIN here; do not silently skip this release gate");
+  await assert.rejects(updateUser(superadmin, { active: false }, {
+    forbidSuperadminTarget: false,
+  }), /last active superadministrator/);
+  await assert.rejects(updateUser(superadmin, { role: "ADMIN" }, {
+    forbidSuperadminTarget: false,
+  }), /last active superadministrator/);
+  console.log("[admin-access] PASS last active superadministrator cannot be retired");
 
   // With at least two active superadmins, privileged retirement is allowed,
   // while preserving the originally active administrator above.
@@ -173,30 +170,25 @@ try {
   assert.equal(await prisma.user.findUnique({ where: { id: retiredSuperadmin } }), null);
   console.log("[admin-access] PASS retired superadmin deletion requires privileged actor");
 
-  // When this isolated CI database has exactly one existing active
-  // superadmin, race two *synthetic* retirements from a two-admin state.
-  // The transaction advisory lock must make exactly one operation lose.
-  // Do not touch any other seeded superadmins simply to force this scenario.
+  // Race two synthetic retirements. The transaction advisory lock must
+  // let exactly one succeed; fail CI rather than skipping when contaminated.
   const beforeRace = await prisma.user.count({
     where: { role: "SUPERADMIN", active: true },
   });
-  if (beforeRace === 1) {
-    const other = await makeUser("SUPERADMIN");
-    const outcomes = await Promise.allSettled([
-      updateUser(superadmin, { active: false }, { forbidSuperadminTarget: false }),
-      updateUser(other, { active: false }, { forbidSuperadminTarget: false }),
-    ]);
-    assert.equal(outcomes.filter(x => x.status === "fulfilled").length, 1,
-      "Concurrent retirements must allow only one successful operation");
-    assert.equal(outcomes.filter(x => x.status === "rejected").length, 1,
-      "The second final-superadmin retirement must be rejected");
-    assert.equal(await prisma.user.count({
-      where: { role: "SUPERADMIN", active: true },
-    }), 1, "At least one active superadministrator must survive the race");
-    console.log("[admin-access] PASS concurrent superadministrator retirements preserve the last account");
-  } else {
-    console.log("[admin-access] NOTE last-superadmin concurrency scenario skipped: other CI superadmins exist");
-  }
+  assert.equal(beforeRace, 1, "Disposable CI fixture must have exactly one active SUPERADMIN before concurrency test");
+  const other = await makeUser("SUPERADMIN");
+  const outcomes = await Promise.allSettled([
+    updateUser(superadmin, { active: false }, { forbidSuperadminTarget: false }),
+    updateUser(other, { active: false }, { forbidSuperadminTarget: false }),
+  ]);
+  assert.equal(outcomes.filter(x => x.status === "fulfilled").length, 1,
+    "Concurrent retirements must allow only one successful operation");
+  assert.equal(outcomes.filter(x => x.status === "rejected").length, 1,
+    "The second final-superadmin retirement must be rejected");
+  assert.equal(await prisma.user.count({
+    where: { role: "SUPERADMIN", active: true },
+  }), 1, "At least one active superadministrator must survive the race");
+  console.log("[admin-access] PASS concurrent superadministrator retirements preserve the last account");
 } finally {
   if (userIds.length) await prisma.user.deleteMany({ where: { id: { in: userIds } } });
   if (employerIds.length) await prisma.employer.deleteMany({ where: { id: { in: employerIds } } });
