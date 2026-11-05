@@ -248,5 +248,12 @@ class LocalOllamaContractTests(unittest.TestCase):
             self.assertEqual(report["scope_gaps"], [])
             self.assertFalse(report["all_tracked_included"])
 
+    def test_self_hosted_release_gate_checks_scope_gaps_explicitly(self):
+        workflow = (Path(__file__).resolve().parents[2] / ".github" / "workflows" /
+                    "newchanges-manual-docker-ci.yml").read_text()
+        self.assertIn('scope_gaps=d.get("scope_gaps")', workflow)
+        self.assertIn('not isinstance(scope_gaps,list) or scope_gaps', workflow)
+        self.assertIn('not complete or reviewed != eligible', workflow)
+
 if __name__ == "__main__":
     unittest.main()
