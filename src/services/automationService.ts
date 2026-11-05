@@ -76,7 +76,7 @@ export async function runStaleAccountCheck() {
     // during the sweep from being disabled by a stale earlier query result.
     const updated = await prisma.user.updateMany({
       where: { id: u.id, active: true, role: { not: "SUPERADMIN" } },
-      data: { active: false, revokedAt: new Date(), revokedReason: `Auto-deactivated: no activity for ${days}+ days`, revokedBy: "system (auto)" },
+      data: { active: false, setupToken: null, setupExpires: null, revokedAt: new Date(), revokedReason: `Auto-deactivated: no activity for ${days}+ days`, revokedBy: "system (auto)" },
     });
     if (updated.count !== 1) continue;
     deactivated.push(u);
