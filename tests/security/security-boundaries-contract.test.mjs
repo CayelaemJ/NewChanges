@@ -23,6 +23,8 @@ test("stale account sweeps exclude superadmins at query and write boundaries",()
     automation.indexOf("export async function runWeeklyDigestIfDue"));
   assert.match(sweep,/where: \{ active: true, role: \{ not: "SUPERADMIN" \} \}/);
   assert.match(sweep,/shouldAutoDeactivateAccount\(u, cutoff\)/);
+  assert.match(sweep,/orderBy: \{ lastSeenAt: "desc" \}/);
+  assert.match(sweep,/select: \{ createdAt: true, lastSeenAt: true \}/);
   assert.match(sweep,/await prisma\.user\.updateMany\(/);
   assert.match(sweep,/where: \{ id: u\.id, active: true, role: \{ not: "SUPERADMIN" \} \}/);
   assert.match(sweep,/if \(updated\.count !== 1\) continue;/);
