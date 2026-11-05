@@ -13,6 +13,9 @@ export function evaluateFreeEdgeConfig(env, incomingHost) {
   const canonical = String(env.NEWCHANGES_CANONICAL_HOST || "").toLowerCase();
   if (env.NEWCHANGES_FREE_EDGE_ENABLED !== "true")
     return { ready: false, reason: "disabled" };
+  if (typeof env.NEWCHANGES_EDGE_ORIGIN_SHARED_SECRET !== "string" ||
+      env.NEWCHANGES_EDGE_ORIGIN_SHARED_SECRET.length < 32)
+    return { ready: false, reason: "private_origin_token_missing" };
   if (!canonical || !/^[a-z0-9.-]+$/.test(canonical) || canonical.includes("..") ||
       host !== canonical)
     return { ready: false, reason: "hostname_not_approved" };
@@ -49,10 +52,12 @@ export default {
     const h = new Headers(request.headers);
     // Never send the browser's Host or spoofed forwarding headers upstream.
     for (const key of ["host", "x-forwarded-for", "x-forwarded-host",
-      "x-forwarded-proto", "x-real-ip", "forwarded", "cf-connecting-ip"])
+      "x-forwarded-proto", "x-real-ip", "forwarded", "cf-connecting-ip",
+      "x-newchanges-edge-token"])
       h.delete(key);
     h.set("X-Forwarded-Host", gate.canonical);
     h.set("X-Forwarded-Proto", "https");
+    h.set("X-NewChanges-Edge-Token", env.NEWCHANGES_EDGE_ORIGIN_SHARED_SECRET);
     // The backend must still authenticate, authorize and rate-limit requests.
     const upstreamRequest = new Request(target, {
       method: request.method,
