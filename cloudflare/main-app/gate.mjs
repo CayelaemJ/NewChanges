@@ -9,9 +9,10 @@ export function evaluateNewChangesPrimary(env, requestedHost) {
     failures.push("NewChanges hostname not configured or mismatched");
   if (env.NEWCHANGES_BACKEND_ENABLED !== "true")
     failures.push("Backend is explicitly disabled");
-  if (typeof env.NEWCHANGES_NEON_DATABASE_URL !== "string" ||
-      !env.NEWCHANGES_NEON_DATABASE_URL)
-    failures.push("Neon primary database secret unavailable");
+  if (typeof env.NEWCHANGES_AIVEN_DATABASE_URL !== "string" ||
+      !env.NEWCHANGES_AIVEN_DATABASE_URL)
+    failures.push("Aiven primary database secret unavailable");
+  if (!allowWriteLeadership(env)) failures.push("Cloudflare live primary is not authorized");
   if (!env.NEWCHANGES_MAIN?.getByName)
     failures.push("Cloudflare Container binding unavailable");
   return { ready: failures.length === 0, failures };
@@ -21,5 +22,8 @@ export function allowWriteLeadership(env) {
   return env.NEWCHANGES_WRITE_LEADER_ENABLED === "true" &&
     env.NEWCHANGES_CUTOVER_APPROVED === "true" &&
     env.NEWCHANGES_DATABASE_PERMISSIONS_VERIFIED === "true" &&
-    env.NEWCHANGES_TENANT_E2E_VERIFIED === "true";
+    env.NEWCHANGES_TENANT_E2E_VERIFIED === "true" &&
+    env.NEWCHANGES_SOURCE_WRITERS_FENCED === "YES" &&
+    env.NEWCHANGES_FINAL_SYNC_VERIFIED === "YES" &&
+    env.NEWCHANGES_AIVEN_PRODUCTION_APPROVED === "YES";
 }
