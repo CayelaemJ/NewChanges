@@ -5,6 +5,7 @@ import { prisma, getDashboardPayload } from "./snapshotBuilder.js";
 import { themeForEmployer } from "./partnerService.js";
 import { allowedSlackWebhookUrl } from "./slackWebhookPolicy.js";
 import { safeEmailColor, safePortalBaseUrl } from "./notificationTextSafety.js";
+import { assertSecureSmtpTls } from "./smtpTlsPolicy.js";
 
 export type ReportFilters = {
   period?: string;
@@ -180,6 +181,10 @@ export async function saveEmailConfig(input: EmailDraft) {
   if (data.fromEmail && !emailOk(data.fromEmail)) throw new Error("from email is not valid");
   if (data.replyTo && !emailOk(data.replyTo)) throw new Error("reply-to email is not valid");
   if (data.resendFromEmail && !emailOk(data.resendFromEmail)) throw new Error("Resend From email is not valid");
+  if (process.env.NODE_ENV === "production" &&
+      ["smtpSecure", "smtpRequireTls", "smtpRejectUnauthorized"].some(key => key in data)) {
+    assertSecureSmtpTls(withEnv({ ...current, ...data }));
+  }
   await prisma.systemEmailConfig.update({ where: { id: current.id }, data });
   return publicEmailConfig();
 }
@@ -187,6 +192,7 @@ export async function saveEmailConfig(input: EmailDraft) {
 async function smtpTransport(draft: EmailDraft = {}) {
   const saved = await getEmailConfig();
   const cfg = withEnv(saved, draft);
+  assertSecureSmtpTls(cfg);
   if (!cfg.smtpHost) throw new Error("SMTP host is required");
   if (!cfg.smtpPort) throw new Error("SMTP port is required");
   if (!cfg.fromEmail || !emailOk(cfg.fromEmail)) throw new Error("A valid From email is required");
