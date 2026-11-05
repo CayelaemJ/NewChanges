@@ -1,0 +1,28 @@
+name: Free Cloudflare and Render candidate checks
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  free-edge:
+    name: Verify free-edge routing and backend Docker build
+    runs-on: [self-hosted, Linux]
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify Node 24 on local runner
+        run: |
+          node --version
+          node -e "if(process.versions.node.split('.')[0]!=='24')process.exit(1)"
+      - name: Offline free-edge safety and routing tests
+        run: node --test tests/cloudflare-free-render-edge.test.mjs
+      - name: Verify full original application Dockerfile exists
+        run: test -s Dockerfile
+      - name: Build backend image with local Docker
+        run: docker build --pull=false -f Dockerfile -t newchanges-free-backend:preflight .
+      - name: Confirm no secrets or production traffic were changed
+        run: |
+          echo "Local checks only: no Cloudflare deploy, no Render deploy, no database access."
