@@ -44,3 +44,8 @@ test('queries use stdin rather than sensitive command arguments or connection st
   assert.match(text,/input: `BEGIN TRANSACTION READ ONLY/);
   assert.doesNotMatch(text,/env.PGOPTIONS = /);
 });
+
+test('column comparison excludes extension monitoring view columns', () => {
+  assert.match(text, /table_name IN \(SELECT tablename FROM pg_tables WHERE schemaname='public'\)/);
+  assert.match(text, /viewname NOT IN \('pg_stat_statements','pg_stat_statements_info'\)/);
+});
