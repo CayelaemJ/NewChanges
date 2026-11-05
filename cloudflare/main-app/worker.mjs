@@ -34,6 +34,21 @@ const headers = {
   "X-Robots-Tag": "noindex, nofollow"
 };
 export default {
+  // Optional health heartbeat for the active primary. It is disabled until
+  // the user approves Cloudflare Containers runtime charges and final cutover.
+  // This is availability support, NOT a durable job scheduler.
+  async scheduled(_controller, env) {
+    if (env.NEWCHANGES_KEEP_WARM_ENABLED !== "true") return;
+    const host = String(env.NEWCHANGES_CANONICAL_HOST || "");
+    if (!evaluateNewChangesPrimary(env, host).ready) return;
+    try {
+      const container = env.NEWCHANGES_MAIN.getByName("authoritative-app");
+      const r = await container.fetch(new Request("https://" + host + "/ready", { method: "GET" }));
+      if (!r.ok) console.error("NewChanges active-primary readiness heartbeat failed");
+    } catch {
+      console.error("NewChanges active-primary heartbeat unavailable");
+    }
+  },
   async fetch(request, env) {
     const host = new URL(request.url).hostname;
     const gate = evaluateNewChangesPrimary(env, host);
