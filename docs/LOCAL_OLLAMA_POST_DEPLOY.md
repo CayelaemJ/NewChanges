@@ -171,3 +171,37 @@ requests concurrently.
 If you intentionally want CPU fallback for troubleshooting only, override
 the Compose service with `-e OLLAMA_REQUIRE_GPU=false`; routine security
 checks should retain GPU-required mode.
+
+## Export a private PDF to Windows Downloads from Ubuntu
+
+The audit can now create a compact PDF directly in the signed-in Windows
+user's Downloads folder through WSL. The exporter is pure Python and needs
+no third-party PDF library.
+
+Export an **existing** completed or incomplete audit immediately:
+```bash
+cd ~/NewChanges-pr219
+python3 scripts/ci/export-ollama-pdf.py
+```
+
+Run the scan and export a PDF automatically on exit:
+```bash
+cd ~/NewChanges-pr219
+bash scripts/ci/run-and-export-ollama.sh
+```
+
+The exporter determines the Windows profile using `powershell.exe` and
+converts its path with `wslpath`. It saves
+`The_Fixer_Security_Audit_YYYYMMDD_HHMMSS.pdf` inside `Downloads`,
+including unresolved-error status if the scan is incomplete. If Windows
+profile discovery fails, give an explicit directory:
+```bash
+python3 scripts/ci/export-ollama-pdf.py --output-dir "/mnt/c/Users/YOUR_USER/Downloads"
+```
+
+The PDF contains coverage, error accounting, severity caveats, file-category
+counts, most flagged files and up to 75 unverified application/database
+titles. Full findings remain in the local `report.json`. The PDF intentionally
+omits model evidence excerpts and raw source. The local PDF and JSON may still
+contain sensitive filenames, so keep them private; do not upload as public
+GitHub artifacts. The exporter does not write to production or alter source.
