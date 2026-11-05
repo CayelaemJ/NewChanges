@@ -181,16 +181,21 @@ def parse_answer(raw):
     return obj["findings"]
 
 def ask_model(name, start, end, block):
-    payload = json.dumps({
-        "model": MODEL,
-        "prompt": f"{PROMPT}\nPATH: {name}\nLINES: {start}-{end}\nSOURCE:\n{block}",
-        "stream": False, "format": FINDINGS_SCHEMA, "keep_alive": "30m",
-        "options": {"temperature": 0, "num_predict": 2048, "num_ctx": 8192}
-    }).encode()
-    req = Request(URL + "/api/generate", data=payload,
-                  headers={"Content-Type": "application/json"}, method="POST")
+    source_prompt = f"{PROMPT}\nPATH: {name}\nLINES: {start}-{end}\nSOURCE:\n{block}"
     last = "unknown"
+    retry_guidance = ""
     for attempt in range(1, RETRIES+1):
+        # Malformed JSON or out-of-range evidence should NOT be retried with
+        # an identical deterministic prompt: the model often repeats it.
+        # Feedback stays bounded to validation metadata, never model output.
+        prompt = source_prompt + retry_guidance
+        payload = json.dumps({
+            "model": MODEL, "prompt": prompt,
+            "stream": False, "format": FINDINGS_SCHEMA, "keep_alive": "30m",
+            "options": {"temperature": 0, "num_predict": 2048, "num_ctx": 8192}
+        }).encode()
+        req = Request(URL + "/api/generate", data=payload,
+                      headers={"Content-Type": "application/json"}, method="POST")
         try:
             with urlopen(req, timeout=TIMEOUT) as resp:
                 envelope = json.load(resp)
@@ -220,6 +225,18 @@ def ask_model(name, start, end, block):
         except (HTTPError, URLError, TimeoutError, OSError, ValueError, KeyError,
                 json.JSONDecodeError) as exc:
             last = f"HTTP_{exc.code}" if isinstance(exc, HTTPError) else f"{type(exc).__name__}: {str(exc)[:110]}"
+            if isinstance(exc, (ValueError, KeyError, json.JSONDecodeError)):
+                retry_guidance = (
+                    "\nRETRY CONSTRAINT: Your previous output failed strict JSON or "
+                    "source-line validation. Return one valid JSON object with a "
+                    "findings array. Every finding must cite a real integer line "
+                    f"from {start} through {end}, not a line from another chunk. "
+                    "If there is no independently defensible defect in these "
+                    "source lines, use an empty findings array. "
+                    "Do not repeat unsupported claims or invent evidence."
+                )
+            else:
+                retry_guidance = ""
             print(f"Retry {attempt}/{RETRIES}: {name}:{start}-{end} ({last})", flush=True)
             if attempt < RETRIES:
                 time.sleep(min(20, 2 ** attempt))
