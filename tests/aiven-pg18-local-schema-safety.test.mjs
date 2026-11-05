@@ -48,7 +48,7 @@ test('portable dump scopes to public application schema, not Neon-managed auth',
 
 
 test('PG18 failure diagnostics expose only PostgreSQL errors, not SQL or credentials', () => {
-  assert.match(script, /grep -E '\^psql:/);
+  assert.match(script, /grep -E '\(ERROR\|FATAL\):'/);
   assert.match(script, /restore\.log/);
   assert.match(script, /head -n 15/);
   assert.doesNotMatch(script, /cat "\$workdir\/restore\.log"/);
