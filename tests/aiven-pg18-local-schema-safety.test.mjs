@@ -53,3 +53,10 @@ test('PG18 failure diagnostics expose only PostgreSQL errors, not SQL or credent
   assert.match(script, /head -n 15/);
   assert.doesNotMatch(script, /cat "\$workdir\/restore\.log"/);
 });
+
+
+test('PG18 template public schema is removed only inside disposable container before restore', () => {
+  assert.match(script, /docker exec "\$cid" psql[^\n]*DROP SCHEMA IF EXISTS public CASCADE/);
+  assert.ok(script.indexOf('DROP SCHEMA IF EXISTS public CASCADE;') > script.indexOf('docker run --detach --rm --network none'));
+  assert.doesNotMatch(script, /psql.*DR_SOURCE_DATABASE_URL.*DROP SCHEMA/);
+});
