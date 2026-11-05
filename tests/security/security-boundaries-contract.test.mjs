@@ -28,3 +28,11 @@ test("stale account sweeps exclude superadmins at query and write boundaries",()
   assert.match(sweep,/if \(updated\.count !== 1\) continue;/);
   assert.match(sweep,/return \{ ran: true, deactivated: deactivated\.length \}/);
 });
+
+
+test("production SMTP transport cannot silently downgrade TLS verification",()=>{
+  const scheduler=source("src/services/reportScheduler.ts");
+  assert.match(scheduler,/import \{ assertSecureSmtpTls \} from/);
+  assert.match(scheduler,/assertSecureSmtpTls\(cfg\)/);
+  assert.match(scheduler,/assertSecureSmtpTls\(withEnv\(\{ \.\.\.current, \.\.\.data \}\)\)/);
+});
