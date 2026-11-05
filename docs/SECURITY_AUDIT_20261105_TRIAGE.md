@@ -162,6 +162,19 @@ The API adapter now calls `readPinnedSourceApiJson(url, token)` for every page a
 
 **Executed:** isolated strict TypeScript compilation and 16 synthetic CSV assertions passed on Node 22. **Not yet run:** full project build/Node 24, production export format compatibility or self-hosted Docker suite.
 
+## Password setup/reset single-use, session revocation and deactivated-account boundary (2026-11-05)
+
+**Confirmed authorization flaws:**
+
+1. `completeSetup` used `findFirst` to validate a reset/setup token and then performed a separate unconditional `prisma.user.update({where:{id}})`. Two concurrent requests with the same token could both pass validation and overwrite the password. `resetPassword` and `completeSetup` also revoked existing sessions after the password update as a separate database operation.
+2. `completeSetup` unconditionally set `active: true`. An account disabled by an administrator after a setup or reset link was issued could present the still-valid token and reactivate its own account. This bypasses the administrator's explicit revocation.
+
+**Draft remediation:** Both password-change paths now perform user updates and session revocation inside one `prisma.$transaction`. The token flow uses `updateMany` with a current-token digest match and `setupExpires > now`; it must affect exactly one account to succeed. The claim also requires `active:true` in the *atomic update predicate* and never changes an inactive account to active. Already-issued links for disabled accounts are intentionally rejected, even if they have not reached their expiry.
+
+**Verification:** `scripts/ci/password-token-replay-ci.mjs` was wired into the disposable PostgreSQL Docker suite directly after the schema deployment check. It validates two concurrent consumers (exactly one must succeed), replay rejection, expiration rejection, existing regular/MFA session invalidation, admin password resets and deactivated-account non-reactivation. This test refuses any URL other than the fixed local `ci_fixture` database and requires `CI=true` and `CI_RLS_PROBE_APPROVED=CI_DISPOSABLE_ONLY`. `tests/security/password-token-contract.test.mjs` is wired to the standard security gate to prevent bypassing the transactional path.
+
+**Status:** Source-level wiring checks passed. The actual disposable PostgreSQL concurrency integration test and complete Node 24 self-hosted Docker suite **have not yet been executed**. Review historical plaintext setup token fallback separately during migration; do not expose raw reset tokens in logs. Do not merge or deploy before database replay tests pass.
+
 ## Workstream acceptance checks
 
 - [x] Separate code changes on a non-production branch based on PR #219.
