@@ -24,7 +24,7 @@ The Worker serves the original HTML, React build artifacts, REST APIs, admin con
 
 ## What's implemented (isolated GitHub branch)
 
-- `cloudflare/free-edge/worker.mjs`: restricted HTTPS `*.onrender.com` origin proxy, canonical hostname allowlist, spoofed forwarding-header removal, no caching, secure cookie forwarding, same-origin redirect rewriting, no external secrets or credentials, disabled by default. Does not create Cloudflare paid resources.
+- `cloudflare/free-edge/worker.mjs`: restricted HTTPS `*.onrender.com` origin proxy, canonical hostname allowlist, spoofed forwarding-header removal, private edge-to-origin secret, no caching, secure cookie forwarding, same-origin redirect rewriting, no external secrets or credentials, disabled by default. Does not create Cloudflare paid resources.
 - `wrangler.newchanges-free.jsonc`: **no public route or workers.dev subdomain**, no database secrets, `NEWCHANGES_FREE_EDGE_ENABLED=false`. This is deployment-ready configuration only after staging/approval.
 - `render.free-candidate.yaml`: separate Render Free backend candidate, no automatic deployment, `STANDBY_MODE=true` and no database secret value. The existing `render.yaml` standby configuration remains unchanged.
 - `tests/cloudflare-free-render-edge.test.mjs`: offline request-routing and security regression tests.
@@ -59,3 +59,12 @@ No `DATABASE_URL` or live production credentials are needed for these static/syn
 Cloudflare free frontend success is NOT the same as entire application success. Mark production complete only when the end-to-end full application, Aiven sole-writer state, MFA, tenants, MySQL/email dependencies, backup restore, error monitoring, availability expectations, and rollback have all been verified.
 
 Do **not** delete Neon, enable paid Workers Containers, migrate secrets into public Pages assets, or merge/deploy this branch blindly.
+
+
+## Protecting the public Render address
+
+The Render URL is reachable directly, bypassing any Cloudflare WAF rules. To reduce that bypass risk, `src/server.ts` now enforces an optional constant-time shared-token guard (implemented in `src/services/cloudflareOriginGuard.ts`). The new Render candidate blueprint enables `NEWCHANGES_EDGE_ORIGIN_GUARD_ENABLED=true` and requires the private `NEWCHANGES_EDGE_ORIGIN_SHARED_SECRET`, which must be at least 32 characters. Cloudflare Worker refuses to proxy unless that same token is stored **as its encrypted secret**. The Worker removes any caller-provided token header and injects its own. `/health` and `/ready` are exempt so Render's platform checks can work; they must not expose sensitive state.
+
+Do **not** commit the actual token, embed it in Wrangler `vars`, copy it into build arguments or paste it into chat. Configure it through protected environment settings on Render and an encrypted Cloudflare secret. The original application's production environment is unaffected while the guard is not enabled there.
+
+This addresses direct-origin requests but is not a replacement for proper user MFA, per-user authorization, tenant isolation, CSRF protections or application rate limits.
