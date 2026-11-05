@@ -368,14 +368,20 @@ def scan():
     for failure in failed:
         covered_files[failure["file"]] = False
     completed_files = sum(covered_files.values())
-    complete = done == total_chunks and not failed
+    # Explicit binary assets/keys are not reviewable source. But omitting code
+    # because of max-file limits, size, unreadability or symlinks must BLOCK a
+    # full-coverage release claim even if every selected chunk was reviewed.
+    incomplete_reasons = {"file_limit", "exceeds_max_text_bytes",
+                          "unreadable_or_non_utf8", "not_regular_file"}
+    scope_gaps = [item for item in excluded if item["reason"] in incomplete_reasons]
+    complete = done == total_chunks and not failed and not scope_gaps
     report = {
         "schema_version": VERSION, "model": MODEL, "created_at": now(),
         "eligible_files": len(selected), "selected_files": len(selected),
         "reviewed_files": completed_files,
         "total_tracked_files": len(selected) + len(excluded),
         "total_chunks": total_chunks, "completed_chunks": done,
-        "skipped_files": excluded, "truncated_files": [],
+        "skipped_files": excluded, "scope_gaps": scope_gaps, "truncated_files": [],
         "errors": failed, "findings": all_findings,
         "complete": complete, "all_tracked_included": not excluded,
         "attempt_count": attempt_count,
@@ -387,6 +393,7 @@ def scan():
         f"Reviewed files: {completed_files}/{len(selected)} reviewable tracked text files",
         f"Completed chunks: {done}/{total_chunks}",
         f"Excluded tracked paths: {len(excluded)}",
+        f"Unreviewed source scope gaps: {len(scope_gaps)}",
         f"Failed chunks: {len(failed)}",
         f"AI findings (unverified): {len(all_findings)}",
         f"All reviewable text complete: {complete}",
@@ -398,6 +405,8 @@ def scan():
             f"File: {finding['file']} line {finding['line']}",
             f"Evidence: {finding['evidence']}",
             f"Recommendation: {finding['recommendation']}", ""])
+    if scope_gaps:
+        lines.extend(["## Blocking unreviewed source scope"] + [f"- {i['file']}: {i['reason']}" for i in scope_gaps])
     if failed:
         lines.extend(["## Failed chunks"] + [f"- {f['file']}:{f['first']}-{f['last']} — {f['error']}" for f in failed])
     if excluded:
