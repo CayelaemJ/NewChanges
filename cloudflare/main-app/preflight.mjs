@@ -7,12 +7,18 @@ import { verifyDatabaseIdentity } from "./verify-database.mjs";
 
 async function run() {
   const url = process.env.DATABASE_URL;
-  if (!url) throw new Error("NewChanges Neon database binding missing");
+  if (!url) throw new Error("NewChanges database binding missing");
   const target = new URL(url);
-  if (!["postgres:","postgresql:"].includes(target.protocol) ||
-      !target.hostname.endsWith(".neon.tech") ||
-      target.pathname !== "/newchanges")
-    throw new Error("Database must be existing NewChanges Neon primary");
+  const provider = process.env.NEWCHANGES_DATABASE_PROVIDER || "neon";
+  const validNeon = provider==="neon" &&
+    target.hostname.endsWith(".neon.tech") && target.pathname==="/newchanges";
+  const validAiven = provider==="aiven" &&
+    target.hostname==="the-fixer-postgres-cay-bed7.b.aivencloud.com" &&
+    target.port==="26029" && target.pathname==="/defaultdb";
+  if (!["postgres:","postgresql:"].includes(target.protocol) || !(validNeon || validAiven))
+    throw new Error("Database endpoint does not match the approved provider");
+  if (validAiven && process.env.NEWCHANGES_AIVEN_PRODUCTION_APPROVED!=="YES")
+    throw new Error("Aiven production target requires explicit cutover approval");
   if (decodeURIComponent(target.username)==="newchanges_cf_migration_reader")
     throw new Error("Unsafe migration role cannot be used");
   if (process.env.NEWCHANGES_CLOUDFLARE_RUNTIME!=="true")
@@ -26,12 +32,13 @@ async function run() {
       current_database() AS database_name, current_user AS role_name,
       r.rolsuper AS is_superuser, r.rolcreatedb AS can_create_database,
       r.rolcreaterole AS can_create_roles, r.rolbypassrls AS bypasses_rls,
-      pg_has_role(r.oid,'neon_superuser','MEMBER') AS member_superuser,
+      EXISTS (SELECT 1 FROM pg_roles nr WHERE nr.rolname='neon_superuser'
+        AND pg_has_role(r.oid,nr.oid,'MEMBER')) AS member_superuser,
       EXISTS (SELECT 1 FROM pg_roles privileged_role
         WHERE (privileged_role.rolsuper OR privileged_role.rolcreatedb OR privileged_role.rolcreaterole OR privileged_role.rolbypassrls)
           AND pg_has_role(r.oid,privileged_role.oid,'MEMBER')) AS member_privileged_role,
       EXISTS (SELECT 1 FROM pg_roles owner_role
-        WHERE owner_role.rolname='newchanges_owner'
+        WHERE owner_role.rolname IN ('newchanges_owner','avnadmin')
           AND pg_has_role(r.oid,owner_role.oid,'MEMBER')) AS member_application_owner,
       has_database_privilege(r.oid,current_database(),'CREATE') AS can_create_database_objects,
       has_schema_privilege(r.oid,'public','CREATE') AS can_create_public_objects,
@@ -52,7 +59,7 @@ async function run() {
             OR has_sequence_privilege(r.oid,c.oid,'UPDATE'))) AS can_use_or_update_public_sequence
       FROM pg_roles r WHERE r.rolname=current_user`);
     const check=verifyDatabaseIdentity(result.rows?.[0],{
-      allowWrites:process.env.NEWCHANGES_ALLOW_WRITES==="true"
+      allowWrites:process.env.NEWCHANGES_ALLOW_WRITES==="true",provider
     });
     if (!check.ok) throw new Error("Database identity/permissions preflight failed");
   } finally {
