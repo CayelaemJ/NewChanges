@@ -1031,7 +1031,7 @@ app.patch<{ Params: { id: string }; Body: any }>("/api/users/:id", async (req, r
     body.revokedReason = body.reason || body.revokedReason || "Deactivated by admin";
   }
   let updated;
-  try { updated = await updateUser(req.params.id, body); }
+  try { updated = await updateUser(req.params.id, body, { forbidSuperadminTarget: admin.role !== "SUPERADMIN" }); }
   catch (e: any) { return reply.code(e?.code === "P2025" ? 404 : 400).send({ error: e?.code === "P2025" ? "user not found" : (e?.message || "could not update user") }); }
   const changedKeys = Object.keys(body).join(", ") || "no fields";
   logAdminAction(admin, "user.update", `Updated user ${req.params.id} (${changedKeys})`, { targetType: "User", targetId: req.params.id, detail: redactAuditDetail(body), impactCount: body.employerIds?.length ?? 1, context: requestSecurityContext(req) });
