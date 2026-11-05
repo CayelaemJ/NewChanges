@@ -30,10 +30,25 @@ class LocalOllamaContractTests(unittest.TestCase):
                 combined.setdefault(int(number), []).append(segment)
         self.assertEqual(["".join(combined[i]) for i in range(1, 5)], lines)
 
+    def test_chunk_ranges_match_the_lines_they_actually_contain(self):
+        chunks = scanner.chunks_for("first\\n" + "x" * 4000 + "\\nlast")
+        for first, last, content in chunks:
+            line_numbers = [int(row.split(": ", 1)[0]) for row in content.splitlines()]
+            self.assertEqual(first, min(line_numbers))
+            self.assertEqual(last, max(line_numbers))
+
+    def test_checkpoint_key_tracks_prompt_and_schema(self):
+        original = scanner.checkpoint_key("source.ts", 2, 3, "2: safe")
+        with patch.object(scanner, "PROMPT", scanner.PROMPT + " stronger policy"):
+            self.assertNotEqual(original, scanner.checkpoint_key("source.ts", 2, 3, "2: safe"))
+        with patch.object(scanner, "FINDINGS_SCHEMA", {"type": "object"}):
+            self.assertNotEqual(original, scanner.checkpoint_key("source.ts", 2, 3, "2: safe"))
+        self.assertEqual(original, scanner.checkpoint_key("source.ts", 2, 3, "2: safe"))
+
     def test_prompt_does_not_seed_high_severity_finding(self):
         self.assertNotIn('"severity":"high"', scanner.PROMPT)
         self.assertIn("Never infer severity from examples", scanner.PROMPT)
-        self.assertEqual(scanner.VERSION, 5)
+        self.assertEqual(scanner.VERSION, 6)
 
     def test_findings_schema_bounds_count_and_text_length(self):
         findings = scanner.FINDINGS_SCHEMA["properties"]["findings"]
