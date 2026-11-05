@@ -53,10 +53,10 @@ class PdfExportTests(unittest.TestCase):
             self.assertGreater(dest.stat().st_size, 10000)
             import zlib
             payload = dest.read_bytes()
-            streams = payload.split(b"stream\\n")
+            import re
             text = b"".join(
-                zlib.decompress(part.split(b"\\nendstream")[0])
-                for part in streams[1:]
+                zlib.decompress(match.group(1))
+                for match in re.finditer(rb"\\nstream\\n(.*?)\\nendstream", payload, re.S)
             )
             self.assertIn(b"Finding #1", text)
             self.assertIn(b"Finding #150", text)
