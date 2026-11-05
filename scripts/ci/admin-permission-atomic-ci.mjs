@@ -16,7 +16,7 @@ const userIds = [];
 
 const makeEmployer = async () => {
   const row = await prisma.employer.create({
-    data: { name: "Synthetic authorization fixture " + randomUUID() },
+    data: { id: "SYNTH-CI-" + randomUUID(), name: "Synthetic authorization fixture " + randomUUID() },
   });
   employerIds.push(row.id);
   return row.id;
