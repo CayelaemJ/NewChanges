@@ -44,6 +44,7 @@ import { createUser, listUsers, updateUser, resetPassword, completeSetup, deacti
 import { recordEvent, engagementSummary } from "./services/analyticsService.js";
 import { notifyAdmins, notifyScoreChangeIfCurrentPeriod, runStaleAccountCheck, runWeeklyDigestIfDue } from "./services/automationService.js";
 import { logAdminAction, listAuditLog } from "./services/auditService.js";
+import { redactAuditDetail } from "./services/auditRedaction.js";
 import { complianceOverview, listProcessingActivities, createProcessingActivity, listDataSubjectRequests, createDataSubjectRequest, updateDataSubjectRequest, listComplianceVendors, createComplianceVendor, listRetentionPolicies, createRetentionPolicy, listSecurityIncidents, createSecurityIncident } from "./services/complianceService.js";
 import { requestSecurityContext, enrichSecurityContext, recordLoginEvent, securityOverview, listSessions, listLoginEvents, listSecurityAlerts, resolveSecurityAlert, pruneSecurityHistory, listSecurityDevices, listDataAccessEvents, recordDataAccessEvent, databaseSecuritySnapshot } from "./services/securityService.js";
 import { exportAuditLogCsv, exportSecurityAuditLogCsv, exportImportBatchCsv } from "./services/exportService.js";
@@ -468,17 +469,6 @@ app.addHook("preHandler", async (req, reply) => {
     return reply.code(403).send({error:"Save your account recovery key before continuing",code:"RECOVERY_KEY_REQUIRED"});
 });
 registerAdminMfaRoutes(app);
-function redactAuditDetail(value: unknown): unknown {
-  if (!value || typeof value !== "object") return value;
-  if (Array.isArray(value)) return value.map(redactAuditDetail);
-  const out: Record<string, unknown> = {};
-  for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
-    if (/password|token|secret|authorization|smtp/i.test(key)) out[key] = "[REDACTED]";
-    else out[key] = redactAuditDetail(val);
-  }
-  return out;
-}
-
 
 // ── public pages ──
 app.get("/react", async (_req, reply) => reply.redirect("/react/"));
