@@ -13,7 +13,8 @@ test('mandatory Docker suite preserves comprehensive test groups',()=>{
   'visual-regression-ci.mjs','quality:lint','quality:types','quality:unit',
   'quality:e2e','check:security','check:accessibility','check:performance',
   'check:source-sync-safety','check:source-reconciliation',
-  'rls-isolation-ci-probe.mjs','prisma-upgrade-integration.mjs'
+  'rls-isolation-ci-probe.mjs','prisma-upgrade-integration.mjs',
+  'password-token-replay-ci.mjs','admin-permission-atomic-ci.mjs'
  ]){
   assert.ok(suite.includes(required),'Missing release gate: '+required);
  }
@@ -35,7 +36,9 @@ test('all database-changing integration suites have hard disposable URL guards',
   'scripts/ci/database-resilience-ci.mjs',
   'scripts/ci/import-failure-integration-ci.mjs',
   'scripts/ci/local-http-load-ci.mjs',
-  'scripts/admin-mfa-live-http-e2e.mjs'
+  'scripts/admin-mfa-live-http-e2e.mjs',
+  'scripts/ci/password-token-replay-ci.mjs',
+  'scripts/ci/admin-permission-atomic-ci.mjs'
  ]){
   const script=read(path);
   assert.ok(script.includes('newchanges_ci'),'Missing disposable DB identity guard: '+path);
