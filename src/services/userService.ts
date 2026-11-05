@@ -5,7 +5,7 @@
 // ════════════════════════════════════════════════════════════════════
 
 import { randomBytes } from "node:crypto";
-import { prisma, hashPassword, destroyAllSessionsForUser, digestSetupToken } from "./authService.js";
+import { prisma, hashPassword, digestSetupToken } from "./authService.js";
 import { sendMail, portalBaseUrl } from "./reportScheduler.js";
 import { notifyAdmins } from "./automationService.js";
 import { assertSuperadminRetirementAllowed } from "./superadminAvailabilityPolicy.js";
