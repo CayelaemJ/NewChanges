@@ -10,6 +10,7 @@ test('snapshot copy never starts without the execute flag and separate approvals
   for (const approval of [
     'AIVEN_SOURCE_CONFIRMED',
     'AIVEN_FREE_PLAN_VERIFIED',
+    'AIVEN_DISK_HEADROOM_VERIFIED',
     'AIVEN_BACKUP_VERIFIED',
     'AIVEN_EXTENSION_REVIEWED',
     'AIVEN_CROSS_BORDER_APPROVED',
