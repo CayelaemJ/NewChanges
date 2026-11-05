@@ -23,6 +23,10 @@ services:
         value: "true"
       - key: TRUST_PROXY
         value: "true"
+      - key: NEWCHANGES_EDGE_ORIGIN_GUARD_ENABLED
+        value: "true"
+      - key: NEWCHANGES_EDGE_ORIGIN_SHARED_SECRET
+        sync: false
       - key: DATABASE_URL
         sync: false
       - key: PUBLIC_BASE_URL
@@ -30,3 +34,7 @@ services:
 # Do not supply live Neon/Aiven credentials to this publicly accessible
 # candidate until authentication, read-only isolation and write fencing are
 # independently validated. STANDBY_MODE is NOT a database read-only role.
+
+# Share exactly one independently generated >=32-character token between
+# Render's private env and the Cloudflare Worker's encrypted secret store.
+# Without this token, direct Render requests other than /health and /ready fail.
