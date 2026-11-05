@@ -56,6 +56,7 @@ import { getBrandLearningProfile, learnFromBrandUpload, recordBrandCorrection } 
 
 import { browserSafeFailure } from "./services/browserErrorSafety.js";
 import { InMemoryRateLimiter } from "./services/inMemoryRateLimiter.js";
+import { cloudflareOriginAccessAllowed } from "./services/cloudflareOriginGuard.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = [join(__dirname, "public"), join(__dirname, "..", "public")]
@@ -154,6 +155,13 @@ app.addHook("onSend", async (_req, reply, payload) => {
 app.addHook("onRequest", async (req, reply) => {
   applySecurityHeaders(reply);
   const path = req.url.split("?", 1)[0];
+  // When the free Cloudflare edge becomes the production front door, reject
+  // direct requests to the public Render origin without its private token.
+  // /health and /ready remain available to Render health checks only.
+  if (path !== "/health" && path !== "/ready" &&
+      !cloudflareOriginAccessAllowed(req.headers, process.env)) {
+    return reply.code(403).send({ error: "forbidden" });
+  }
   // HTML must go through its authorised route, never the public asset server.
   // Source maps and dotfiles are not production assets.
   let assetPath: string;
