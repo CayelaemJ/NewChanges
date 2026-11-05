@@ -13,7 +13,7 @@
 import { readSourceJson } from "./boundedSourceJson.js";
 import { LOAD_ORDER, getFormat } from "./reportFormats.js";
 import { lookup } from "node:dns/promises";
-import { isIP } from "node:net";
+import { isBlockedSourceAddress as privateOrLocalAddress } from "./sourceAddressPolicy.js";
 
 export type SourceMode = "API" | "SQL";
 export type SqlDialect = "POSTGRESQL" | "MSSQL" | "MYSQL";
@@ -223,18 +223,6 @@ function normalizeSqlRows(reportKey: string, rows: Record<string, unknown>[]): R
     }
     return out;
   });
-}
-
-function privateOrLocalAddress(address: string): boolean {
-  if (isIP(address) === 6) {
-    const a = address.toLowerCase();
-    return a === "::1" || a.startsWith("fc") || a.startsWith("fd") || a.startsWith("fe8") || a.startsWith("fe9") || a.startsWith("fea") || a.startsWith("feb") || a.startsWith("::ffff:127.") || a.startsWith("::ffff:10.") || a.startsWith("::ffff:192.168.") || a.startsWith("::ffff:172.16.");
-  }
-  if (isIP(address) === 4) {
-    const [a,b] = address.split(".").map(Number);
-    return a === 10 || a === 127 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127) || a === 0;
-  }
-  return false;
 }
 
 async function assertSafeApiBaseUrl(raw: string): Promise<string> {
