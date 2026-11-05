@@ -123,3 +123,30 @@ DR_LOCAL_BACKUP_APPROVED=YES bash scripts/aiven-local-recovery-backup.sh --execu
 This dumps **all readable source schemas**, unlike the portable Aiven public-only transfer, to a user-owned local directory with 0700 directory/0600 archive permissions; it verifies readable archive metadata and 57 public table definitions and prints a checksum. It neither uses Aiven nor changes Neon. Archive contents contain sensitive live records and must be stored and protected appropriately. A metadata check and checksum are **not a recovery restore test**; mark recovery as verified only after performing a successful restore to an isolated authorized environment and validating the data. Neon-managed auth and provider-specific extensions can prevent portable restoration; retain Neon and its existing recovery options through the migration.
 
 Extension inspection on 2026-11-05: Neon has plpgsql, pg_stat_statements, and pg_session_jwt installed; the two Neon-specific extensions are excluded from the 57-table portable application copy. Aiven has pg_stat_statements available, but does not expose pg_session_jwt as available. Source application-schema restore already succeeded without those extensions. Cross-border data transfer to India still requires authorization. Aiven's disk metric has been 26.553 in native units; do not set AIVEN_DISK_HEADROOM_VERIFIED=YES on that number alone.
+
+## Verified recovery and point-in-time test-copy mode (2026-11-05)
+
+The local archive `newchanges-recovery-20261105T104649Z.dump` was restored by the operator in network-isolated Docker PostgreSQL 18. Output confirmed `PASS: exact backup restored to isolated PG18; public tables=57` and expected SHA256 `f284e31b37f20416c2d473787857052e193c1edfd865e5d0fc3b923bfffdb77a`. This verifies the portable public schema and data, **not** complete Neon-managed auth recovery.
+
+The user authorized proceeding with an Aiven India test copy while Neon remains the active writable production database. The import script now supports `AIVEN_POINT_IN_TIME_TEST=YES` and `AIVEN_LIVE_SOURCE_DRIFT_ACCEPTED=YES` in place of `AIVEN_WRITES_FROZEN=YES`. In that mode, live row-count differences are warnings and are not proof of corruption. Do not treat source/live counts as snapshot-consistent validation.
+
+Before running `--execute`, the operator must **actually verify** disk/WAL headroom on Aiven's 1GB free plan and determine whether the available local recovery archive satisfies their backup policy; only then should they set `AIVEN_DISK_HEADROOM_VERIFIED=YES` and `AIVEN_BACKUP_VERIFIED=YES`. The current Aiven metrics API reports disk_usage=26.553 without independently established units; this is not by itself an authorization to set the storage flag. Operator must also approve `AIVEN_CROSS_BORDER_APPROVED=YES` for transfer of live user/audit records from Germany to India, and `AIVEN_SNAPSHOT_COPY_APPROVED=YES`. No application cutover is authorized. Restoring to an empty target is an intentional database write, and Aiven target will no longer be empty afterward; do not rerun a completed import.
+
+At the execution point, after reviewing the limits:
+```sh
+cd ~/NewChanges
+git pull --ff-only
+npm run check:aiven-migration
+# Existing exported source + target environment variables must be present.
+AIVEN_SOURCE_CONFIRMED=YES \
+AIVEN_FREE_PLAN_VERIFIED=YES \
+AIVEN_DISK_HEADROOM_VERIFIED=YES \
+AIVEN_BACKUP_VERIFIED=YES \
+AIVEN_EXTENSION_REVIEWED=YES \
+AIVEN_CROSS_BORDER_APPROVED=YES \
+AIVEN_POINT_IN_TIME_TEST=YES \
+AIVEN_LIVE_SOURCE_DRIFT_ACCEPTED=YES \
+AIVEN_SNAPSHOT_COPY_APPROVED=YES \
+bash scripts/aiven-stream-snapshot.sh --execute
+```
+Do not set approval variables unless their conditions are met. If a write fails because of the 1GiB storage limit, do not upgrade or delete production; preserve Neon and investigate target restore state first.
