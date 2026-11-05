@@ -4,6 +4,8 @@
 A completed scan requires every reviewable chunk to succeed. Network/model failures
 are retained as failures, never turned into clean passes. Reports remain local.
 """
+import base64
+import binascii
 import hashlib
 import json
 import os
@@ -96,6 +98,26 @@ def tracked_files():
     )
     return [os.fsdecode(p) for p in raw.split(b"\0") if p]
 
+def is_encoded_raster_fixture(name, raw):
+    # These test fixtures are RGBA bytes encoded into JSON as Base64, not code.
+    # Only exclude after validating the full declared pixel payload.
+    if not name.startswith("tests/fixtures/") or not name.endswith(".json"):
+        return False
+    try:
+        obj = json.loads(raw.decode("utf-8"))
+        if not isinstance(obj, dict) or set(obj) != {"w", "h", "data"}:
+            return False
+        width, height, data = obj["w"], obj["h"], obj["data"]
+        if (type(width) is not int or type(height) is not int
+                or width < 1 or height < 1 or width * height > 1_000_000
+                or not isinstance(data, str) or len(data) < 1024):
+            return False
+        pixels = base64.b64decode(data, validate=True)
+        return len(pixels) == width * height * 4
+    except (ValueError, TypeError, UnicodeError, binascii.Error):
+        return False
+
+
 def read_manifest():
     selected, excluded = [], []
     for name in tracked_files():
@@ -118,6 +140,9 @@ def read_manifest():
                 continue
             if b"\0" in data[:8192]:
                 excluded.append({"file": name, "reason": "binary"})
+                continue
+            if is_encoded_raster_fixture(name, data):
+                excluded.append({"file": name, "reason": "validated_rgba_image_fixture"})
                 continue
             raw = data.decode("utf-8")
         except (OSError, UnicodeError):
