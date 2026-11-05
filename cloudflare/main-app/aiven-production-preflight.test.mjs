@@ -43,3 +43,13 @@ test("production Cloudflare is an active Aiven writer, never standby",()=>{
   assert.match(d,/verify-database\.mjs/);
   assert.doesNotMatch(d,/db:deploy|db:push|db:migrate/);
 });
+
+test("runtime role bootstrap is single-use and keeps passwords outside Git and CLI args",()=>{
+  const p=readFileSync(new URL("../../scripts/provision-aiven-cloudflare-runtime.sh",import.meta.url),"utf8");
+  assert.match(p,/DR_TARGET_DATABASE_URL/);
+  assert.match(p,/role exists; inspect it/);
+  assert.match(p,/read -r -s -p/);
+  assert.match(p,/\\getenv app_password AV_APP_ROLE_PASSWORD/);
+  assert.match(p,/NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION/);
+  assert.doesNotMatch(p,/DROP ROLE|ALTER ROLE|REVOKE|--password=/);
+});
