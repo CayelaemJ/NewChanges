@@ -24,3 +24,35 @@ Status: **NOT CUT OVER**. The user selected Aiven as the intended production pri
 - Dropping the current Aiven schema.
 - Paid plan upgrade.
 - Claiming Cloudflare is production-ready based only on a Pages deployment or a passing schema comparison.
+
+
+## Active production host contract (2026-11-05)
+
+**Cloudflare is to be the always-live application primary, never a standby.** The actual full Node 24 Fastify/Prisma application is behind `cloudflare/main-app/worker.mjs` and the `NewChangesMainContainer` class; the Pages preview is not the backend. On the Cloudflare production container, `STANDBY_MODE=false` and `TRAFFIC_SAVER_MODE=false`. No public backend routing is enabled until the complete gate is satisfied.
+
+The Worker accepts only `NEWCHANGES_AIVEN_DATABASE_URL` as its server-side database secret (never put it in client-facing Pages env). Runtime `DATABASE_URL` is injected into the container. The preflight requires `NEWCHANGES_DATABASE_PROVIDER=aiven` and a dedicated non-owner Aiven user, plus matching service host and database. The Worker and container both refuse active release without independent gates:
+- `NEWCHANGES_BACKEND_ENABLED=true` with an exact dedicated canonical hostname and an installed Container binding;
+- `NEWCHANGES_WRITE_LEADER_ENABLED=true`, `NEWCHANGES_CUTOVER_APPROVED=true`, `NEWCHANGES_DATABASE_PERMISSIONS_VERIFIED=true`, `NEWCHANGES_TENANT_E2E_VERIFIED=true`;
+- `NEWCHANGES_SOURCE_WRITERS_FENCED=YES`, `NEWCHANGES_FINAL_SYNC_VERIFIED=YES`, `NEWCHANGES_AIVEN_PRODUCTION_APPROVED=YES`.
+
+**These are human release attestations, not automated proof.** Do not set them until the corresponding technical evidence is recorded. Keep all deployment flags disabled until actual final sync, production domain, Docker image, access control, Cloudflare billing entitlement and operational tests are verified.
+
+The container image includes the preflight and database-identity module. Build on Linux/amd64 with `docker build -f Dockerfile.cloudflare .`; do not run schema migrations on startup. The former Worker used a Neon-specific secret; the active primary uses the Aiven secret exclusively.
+
+**Always live vs never sleeping:** `STANDBY_MODE=false` enables primary application behavior; it does *not* guarantee the Cloudflare Container process will stay resident 24/7. The current Container class has `sleepAfter=20m`. Request routing can bring it back, but on-process Node cron jobs will pause while it sleeps. Before go-live, move required authoritative schedules to durable Cloudflare Cron/Queues or another explicitly approved continuously running worker, with a single writer and tested idempotency. Do not assert scheduled-job parity without this.
+
+## Runbook for final sync
+
+Aiven contains a verified **stale snapshot**. Source writes continue. Never mark `NEWCHANGES_FINAL_SYNC_VERIFIED=YES` based on matching schemas or historical row-count checks alone. Arrange an operator-controlled maintenance window, drain/fence legacy web writes AND every job/ingestion worker, take a verified independent recovery archive, choose a capacity-safe method to refresh existing Aiven data, and compare source/target at one frozen checkpoint. The previous import script requires an *empty* destination and cannot run again on the populated Aiven database; do not bypass that guard, drop tables, or restore over the top.
+
+Verify PostgreSQL sessions/authentication, app-managed MFA state, source connectors and MySQL integration separately. If cloud hosting or database credentials have been pasted into logs, rotate before production secrets are installed. Keep Neon intact for rollback and define how any writes made after cutover would be reconciled.
+
+## Local static regression checks
+
+```sh
+node --test tests/cloudflare-main-app-container.test.mjs cloudflare/main-app/aiven-production-preflight.test.mjs
+node --check cloudflare/main-app/worker.mjs
+node --check cloudflare/main-app/preflight.mjs
+```
+
+None of these checks deploys the image, enables billing, configures customer traffic or tests the live app.
