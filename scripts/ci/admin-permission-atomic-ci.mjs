@@ -172,6 +172,31 @@ try {
   await deleteUserPermanently(retiredSuperadmin, { forbidSuperadminTarget: false });
   assert.equal(await prisma.user.findUnique({ where: { id: retiredSuperadmin } }), null);
   console.log("[admin-access] PASS retired superadmin deletion requires privileged actor");
+
+  // When this isolated CI database has exactly one existing active
+  // superadmin, race two *synthetic* retirements from a two-admin state.
+  // The transaction advisory lock must make exactly one operation lose.
+  // Do not touch any other seeded superadmins simply to force this scenario.
+  const beforeRace = await prisma.user.count({
+    where: { role: "SUPERADMIN", active: true },
+  });
+  if (beforeRace === 1) {
+    const other = await makeUser("SUPERADMIN");
+    const outcomes = await Promise.allSettled([
+      updateUser(superadmin, { active: false }, { forbidSuperadminTarget: false }),
+      updateUser(other, { active: false }, { forbidSuperadminTarget: false }),
+    ]);
+    assert.equal(outcomes.filter(x => x.status === "fulfilled").length, 1,
+      "Concurrent retirements must allow only one successful operation");
+    assert.equal(outcomes.filter(x => x.status === "rejected").length, 1,
+      "The second final-superadmin retirement must be rejected");
+    assert.equal(await prisma.user.count({
+      where: { role: "SUPERADMIN", active: true },
+    }), 1, "At least one active superadministrator must survive the race");
+    console.log("[admin-access] PASS concurrent superadministrator retirements preserve the last account");
+  } else {
+    console.log("[admin-access] NOTE last-superadmin concurrency scenario skipped: other CI superadmins exist");
+  }
 } finally {
   if (userIds.length) await prisma.user.deleteMany({ where: { id: { in: userIds } } });
   if (employerIds.length) await prisma.employer.deleteMany({ where: { id: { in: employerIds } } });
