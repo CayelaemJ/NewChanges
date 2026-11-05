@@ -90,3 +90,19 @@ The implementation only stages new audit rows at/after the last Aiven audit time
 The full-app Cloudflare Worker now has a gated `scheduled` handler with a five-minute Cloudflare Cron Trigger. The handler only invokes the container's internal `/ready` endpoint when `NEWCHANGES_KEEP_WARM_ENABLED=true` **and** the full active-primary release gate passes. Wrangler configuration keeps `NEWCHANGES_KEEP_WARM_ENABLED=false` by default. This is intended to reduce idle container shutdowns while Cloudflare is primary, but it is **not a guarantee of uninterrupted 24/7 process residency** and does not replace resilient scheduled work, health monitoring, durable job orchestration, or recovery after platform restarts.
 
 **Billing:** keeping the Container resident can materially increase CPU/memory runtime charges. Do not enable the Cron keep-warm flag or Workers Paid without checking costs and user approval. Even with keep-warm off, normal web requests can start the Container when active release gates are open. The current in-process schedulers remain disabled pending dedicated job-leadership and retry testing.
+
+
+## Synthetic transaction rehearsal (no external databases)
+
+The delta commit SQL was extracted to `scripts/aiven-final-delta-plan.mjs` so the exact same statement sequence is used by the guarded live-sync driver and a separate isolated Docker integration rehearsal, `scripts/aiven-final-delta-docker-rehearsal.mjs`. The rehearsal starts `postgres:18-alpine` with `--network none`, no published ports, and synthetic audit/session values, then tests successful insertion, idempotent rerun, refusal to overwrite conflicting audit history, and atomic rollback when the session inventory is incomplete.
+
+```sh
+cd ~/NewChanges-cloudflare
+git fetch origin
+git merge --ff-only origin/feat/cloudflare-main-app-container-20261029
+node --test tests/aiven-final-sync-safety.test.mjs
+node scripts/aiven-final-delta-docker-rehearsal.mjs
+node scripts/aiven-final-delta-sync.mjs --check
+```
+
+**Do not run `--execute` until the local Docker integration rehearsal is green, all write-producing source apps and jobs are fenced, source data is frozen, a tested independent recovery backup exists, the remaining Cloudflare/Aiven prerequisites are cleared, and the explicit operator gates are approved.** The rehearsal itself does not require any source/target connection environment variables.
