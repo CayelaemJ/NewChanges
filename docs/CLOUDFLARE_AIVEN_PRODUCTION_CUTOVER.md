@@ -106,3 +106,19 @@ node scripts/aiven-final-delta-sync.mjs --check
 ```
 
 **Do not run `--execute` until the local Docker integration rehearsal is green, all write-producing source apps and jobs are fenced, source data is frozen, a tested independent recovery backup exists, the remaining Cloudflare/Aiven prerequisites are cleared, and the explicit operator gates are approved.** The rehearsal itself does not require any source/target connection environment variables.
+
+
+## Current Cloudflare entitlement blocker and deployment readiness (2026-11-05)
+
+A read-only request to the actual Cloudflare Containers API responded HTTP 401 with the explicit platform message: **"Unauthorized: You do not have access to Cloudflare Containers. Deploying containers requires the Workers Paid plan."** This confirms the current Cloudflare account cannot launch the full Node/Fastify backend as a Container until billing entitlement is enabled. The user has not authorized upgrading billing. **Do not start a paid upgrade or attempt a deployment that silently creates billed resources.** An existing Pages site or ordinary Worker is not the full backend and must not be declared production-ready.
+
+The full app's Worker now provides `TRUST_PROXY=true`, `COOKIE_SECURE=true`, and `PUBLIC_BASE_URL=https://<approved canonical host>` to Fastify. All runtime credentials must be stored as Cloudflare Worker encrypted secrets and passed server-side to the Container, never provided to the browser. The existing populated Aiven DB already has users; `ADMIN_EMAIL`/`ADMIN_PASSWORD` are first-run bootstrap inputs and should not be set unnecessarily on this production database.
+
+**Readiness after Workers Paid is explicitly enabled:**
+1. Confirm account entitlement, cost budget and protected canonical production hostname; use `cloudflare/main-app/package-lock.json`'s project-local Wrangler.
+2. Deploy the full `newchanges-main-application` container only with all release gates false. No production domain routing or cutover yet.
+3. Configure `NEWCHANGES_AIVEN_DATABASE_URL` through an encrypted Worker secret using a newly generated, restricted `newchanges_app_runtime` connection URI with TLS validation. Never commit or print it. Keep `NEWCHANGES_BACKEND_ENABLED=false` and `NEWCHANGES_AIVEN_PRODUCTION_APPROVED=NO` during provisioning.
+4. Verify no other required application or MFA encryption key or external integration secret is missing. MFA/admin security, file storage, data sync, mail, external MySQL and scheduled jobs need independent staging proof. A Container's local disk is ephemeral.
+5. Verify the published image starts and serves the full original app in isolation, rather than simply confirming that Wrangler accepted the Worker script. This implementation deliberately refuses normal traffic until the final source-fencing gates are true; a safe staging strategy needs a separate non-production database and tests, not bypassing release gates against live Aiven.
+6. Finalize last-write fencing, backup, frozen-source delta, end-to-end application tests, single production writer and rollback procedures. Enable the primary gate and DNS only after all evidence is recorded.
+7. If billing remains disallowed, do not represent Cloudflare Pages or standalone Workers as an equivalent backend replacement. A separate backend-hosted architecture would require a distinct explicit decision.
