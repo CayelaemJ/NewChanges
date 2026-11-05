@@ -106,3 +106,20 @@ The archive contains real application data on the local machine during this test
 - Aiven `defaultdb` already has an empty `public` schema. The one-shot transfer now saves a private local compressed archive, omits only the redundant `SCHEMA - public` table-of-contents entry and performs an atomic restore with `--use-list` and `--single-transaction`. No remote schema drop is performed. The archive is deleted on exit.
 - The Prisma schema defines application `User` and `Session` models and contains no literal `neon_auth` reference. This is not sufficient evidence to skip runtime authentication acceptance testing.
 - Live transfer remains **blocked** until free-tier disk/WAL headroom, a verified independent Neon backup, applicable cross-border data transfer approval, extension support and cutover/write coordination have been assessed and explicitly approved. No production DATABASE_URL change is permitted during this trial.
+
+## Gate B2: no-new-cloud-charge local recovery archive
+
+The source Neon project is on a usage-billed Launch subscription. A new Neon snapshot can accrue storage charges, so **do not create a new hosted snapshot automatically** under the zero-additional-cost constraint. The available historical Neon snapshot dates to 2026-10-13 and does not protect current data.
+
+To create a persistent local recovery artifact without adding hosted storage, run:
+
+```sh
+git pull --ff-only
+npm run check:aiven-migration
+# DR_SOURCE_DATABASE_URL must already be configured in your current shell.
+DR_LOCAL_BACKUP_APPROVED=YES bash scripts/aiven-local-recovery-backup.sh --execute
+```
+
+This dumps **all readable source schemas**, unlike the portable Aiven public-only transfer, to a user-owned local directory with 0700 directory/0600 archive permissions; it verifies readable archive metadata and 57 public table definitions and prints a checksum. It neither uses Aiven nor changes Neon. Archive contents contain sensitive live records and must be stored and protected appropriately. A metadata check and checksum are **not a recovery restore test**; mark recovery as verified only after performing a successful restore to an isolated authorized environment and validating the data. Neon-managed auth and provider-specific extensions can prevent portable restoration; retain Neon and its existing recovery options through the migration.
+
+Extension inspection on 2026-11-05: Neon has plpgsql, pg_stat_statements, and pg_session_jwt installed; the two Neon-specific extensions are excluded from the 57-table portable application copy. Aiven has pg_stat_statements available, but does not expose pg_session_jwt as available. Source application-schema restore already succeeded without those extensions. Cross-border data transfer to India still requires authorization. Aiven's disk metric has been 26.553 in native units; do not set AIVEN_DISK_HEADROOM_VERIFIED=YES on that number alone.
