@@ -52,7 +52,7 @@ bash scripts/aiven-pg17-local-schema-test.sh
 `scripts/aiven-pg17-local-schema-test.sh` exports schema only, so it does not replicate user data or consume Aiven capacity. The PG17 trial is independent of the proposed version-matched PG18 migration.
 
 ## Gate D: one controlled snapshot, NOT production cutover
-`scripts/aiven-stream-snapshot.sh` is a manual, one-shot, compressed stream to the existing isolated Aiven destination. By default it exits without connecting to either DB. The execute mode requires source and target secrets in the operator's secure environment, plus eight separate `AIVEN_...=YES` approvals covering:
+`scripts/aiven-stream-snapshot.sh` is a manual, one-shot, compressed archive restore to the existing Aiven destination. By default it exits without connecting to either DB. The execute mode requires source and target secrets in the operator's secure environment, plus eight separate `AIVEN_...=YES` approvals covering:
 - authoritative source identity and existing free plan\n- independently verified Aiven host disk headroom including restore WAL
 - verified backup and extension review
 - cross-border transfer and write freeze
@@ -60,7 +60,7 @@ bash scripts/aiven-pg17-local-schema-test.sh
 
 The script refuses a PostgreSQL major-version mismatch, unknown endpoints, nonempty destination, source database larger than 700,000,000 bytes, or normal dependency on the unsupported Neon JWT extension. It never deletes Neon and never rewrites production configuration.
 
-A failure may leave a **partial copy** in Aiven. Do not rerun the script until the target is reviewed. Every complete rerun would generate another network transfer.
+A failed SQL restore uses a single transaction and should roll back database changes, but inspect the destination and capacity after any failure before retrying. Do not assume a connection or infrastructure failure was harmless.
 
 ## Gate E: isolated application acceptance testing
 - Compare table counts and all source/target row counts.
@@ -99,3 +99,10 @@ This reads the Neon `newchanges` source and creates one consistent custom-format
 Neon application writes can continue during this **diagnostic trial**, but source row counts captured *after* the snapshot can drift; this is reported as a count mismatch and is not proof of lost data. Do not freeze production writes just for a disposable diagnostic trial. A final cutover would need a separately authorized write freeze and snapshot-consistent verification.
 
 The archive contains real application data on the local machine during this test. Ensure local disk space, Docker space, endpoint privacy, and applicable data handling approval before executing. The test creates **no Aiven connection** and does not initiate cutover. A successful local restore measures the application footprint but does not guarantee Aiven has sufficient available disk/WAL headroom.
+
+## 2026-11-05 data trial and managed-schema restore update
+- Disposable PostgreSQL 18 full-data restore completed: **57 public tables**, **206,608,063 restored database bytes**, and **17,295,651 compressed archive bytes**.
+- Live Neon audit activity caused a four-record count difference in `DataAccessEvent` (61,151 live versus 61,147 at snapshot). 56/57 post-snapshot live counts matched. This does not establish final snapshot parity.
+- Aiven `defaultdb` already has an empty `public` schema. The one-shot transfer now saves a private local compressed archive, omits only the redundant `SCHEMA - public` table-of-contents entry and performs an atomic restore with `--use-list` and `--single-transaction`. No remote schema drop is performed. The archive is deleted on exit.
+- The Prisma schema defines application `User` and `Session` models and contains no literal `neon_auth` reference. This is not sufficient evidence to skip runtime authentication acceptance testing.
+- Live transfer remains **blocked** until free-tier disk/WAL headroom, a verified independent Neon backup, applicable cross-border data transfer approval, extension support and cutover/write coordination have been assessed and explicitly approved. No production DATABASE_URL change is permitted during this trial.
