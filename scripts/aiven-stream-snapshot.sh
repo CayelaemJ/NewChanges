@@ -71,7 +71,7 @@ source_tables="$(sql DR_SOURCE_DATABASE_URL "SELECT count(*) FROM pg_tables WHER
   { echo 'BLOCKED: invalid database metadata.' >&2; exit 2; }
 [[ "$target_tables" == 0 && "$target_views" == 0 && "$target_bytes" -lt 50000000 && "$source_tables" -gt 0 ]] ||
   { echo 'BLOCKED: Aiven must contain no user tables/views and use less than 50 MB, while Neon must contain application tables.' >&2; exit 2; }
-# 700 million bytes reserves >=~35% of 1 GiB for storage growth and restore overhead.
+# This source size check is NOT a disk/WAL headroom guarantee. Review the\n# Aiven host disk usage metric, index and WAL overhead before approving a copy.
 [[ "$source_bytes" -le 700000000 ]] ||
   { echo 'BLOCKED: source size exceeds conservative free-tier migration limit.' >&2; exit 2; }
 extension_deps="$(sql DR_SOURCE_DATABASE_URL "SELECT count(*) FROM pg_depend d JOIN pg_extension e ON e.oid=d.refobjid WHERE e.extname='pg_session_jwt' AND d.deptype='n'")"
@@ -81,11 +81,11 @@ echo "PREFLIGHT OK: source tables=$source_tables, source bytes=$source_bytes; ta
 echo 'Streaming a single compressed snapshot, without local dump files or automatic retries.'
 
 # A PostgreSQL 18 custom-format archive is streamed once. Vendor extensions are
-# excluded; application objects are not excluded. No data is deliberately dropped.
+# excluded, and the dump is restricted to the public application schema.\n# Neon-managed neon_auth tables are NOT part of the portable application copy.\n# Confirm auth and identity dependencies separately before cutover.
 # EXIT-ON-ERROR stops on the first failure. A failed restore aborts the transaction; review target state and quota
 # before any retry. Do not repeat the network transfer automatically.
 PGCONNECT_TIMEOUT=12 pg_dump --dbname="$DR_SOURCE_DATABASE_URL" \
-  --format=custom --compress=6 --no-owner --no-acl \
+  --schema=public --format=custom --compress=6 --no-owner --no-acl \
   --exclude-extension=pg_session_jwt --exclude-extension=pg_stat_statements |
   PGCONNECT_TIMEOUT=12 pg_restore --dbname="$DR_TARGET_DATABASE_URL" \
     --no-owner --no-acl --exit-on-error --single-transaction
