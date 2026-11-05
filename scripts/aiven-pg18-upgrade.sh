@@ -24,6 +24,36 @@ fi
 command -v avn >/dev/null || { echo "Aiven CLI missing. Install it and sign in locally." >&2; exit 2; }
 command -v python3 >/dev/null || { echo "Python 3 is required to verify the Aiven task JSON." >&2; exit 2; }
 
+verify_free_destination() {
+  local details
+  details="$(avn service get "$service" --project "$project" --json)" || {
+    echo 'BLOCKED: unable to inspect existing Aiven service.' >&2
+    exit 2
+  }
+  if ! printf '%s' "$details" | python3 -c '
+import json, sys
+try:
+    payload = json.load(sys.stdin)
+    svc = payload.get("service", payload)
+    assert isinstance(svc, dict)
+    assert svc.get("service_name") == "the-fixer-postgres"
+    assert svc.get("service_type") == "pg"
+    assert svc.get("plan") == "free-1-1gb"
+    assert svc.get("cloud_name") == "do-blr"
+    assert svc.get("state") == "RUNNING"
+    version = str(svc.get("metadata", {}).get("pg_version", ""))
+    assert version.startswith(("17.", "18."))
+    disk = svc.get("disk_space_mb")
+    assert disk is None or int(disk) <= 1024
+except (AssertionError, ValueError, TypeError, AttributeError):
+    raise SystemExit(2)
+'; then
+    echo 'BLOCKED: Aiven service must be RUNNING, free-1-1gb, and do-blr; no paid upgrade.' >&2
+    exit 2
+  fi
+}
+verify_free_destination
+
 if [[ "$1" == "--check" ]]; then
   echo 'Requesting Aiven PostgreSQL 18 compatibility check on the existing service.'
   avn service task-create "$service" --project "$project" --operation upgrade_check --target-version "$target_version" --json
@@ -66,27 +96,29 @@ visit(payload)
 if len(matches) != 1:
     raise SystemExit(2)
 task = matches[0]
-if task.get("success") is not True:
+if task.get("success") is not True or task.get("task_status") != "DONE":
     raise SystemExit(2)
 if "upgrade_check" not in str(task.get("task_type", "")).lower():
     raise SystemExit(2)
+# The Aiven API rejects stale upgrade-check results when updating the service.
+# Some CLI task responses omit create_time; don't reject solely for this.
 created = task.get("create_time")
-if not isinstance(created, str):
-    raise SystemExit(2)
-try:
-    created_at = datetime.fromisoformat(created.replace("Z", "+00:00"))
-except ValueError:
-    raise SystemExit(2)
-if created_at.tzinfo is None:
-    raise SystemExit(2)
-age = (datetime.now(timezone.utc) - created_at.astimezone(timezone.utc)).total_seconds()
-if age < 0 or age > 3600:
-    raise SystemExit(2)
+if created:
+    try:
+        created_at = datetime.fromisoformat(created.replace("Z", "+00:00"))
+        if created_at.tzinfo is None:
+            raise ValueError("timestamp has no timezone")
+        age = (datetime.now(timezone.utc) - created_at.astimezone(timezone.utc)).total_seconds()
+        if age < 0 or age > 3600:
+            raise SystemExit(2)
+    except ValueError:
+        raise SystemExit(2)
 ' "$check_task_id"; then
   echo 'BLOCKED: task ID is not a successful Aiven PostgreSQL upgrade_check.' >&2
   exit 2
 fi
-# Operator must still verify the service remains free-1-1gb in do-blr.
+# Recheck plan and region immediately before the version-only update.
+verify_free_destination
 read -r -p 'Confirm upgrade of the existing Aiven service to PG18 (type UPGRADE-EXISTING-FREE): ' typed
 [[ "$typed" == "UPGRADE-EXISTING-FREE" ]] || { echo 'Aborted.' >&2; exit 2; }
 avn service update "$service" --project "$project" -c pg_version="$target_version"
