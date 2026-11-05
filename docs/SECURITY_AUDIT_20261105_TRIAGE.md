@@ -187,6 +187,16 @@ The API adapter now calls `readPinnedSourceApiJson(url, token)` for every page a
 
 **Regression checks:** `tests/security/stale-account-policy.test.ts` covers old sessions with fresh last-use timestamps, truly stale sessions and legacy fallback. `tests/security/security-boundaries-contract.test.mjs` requires the actual Prisma query and atomic write guards. Tests are wired into the existing `check:security` script, with pending Node 24/self-hosted Docker execution.
 
+## Administrator role and employer-grant atomicity (2026-11-05)
+
+**Verified implementation issue:** `updateUser` previously revoked sessions, deleted existing employer links, created new links, and finally updated the user's role/active status as separate database operations. An error or concurrent change could strand a user with only part of the intended authorization state. The route also checked the target user’s current role in a separate query, creating a time-of-check/time-of-use race if that user became a superadministrator before the write.
+
+**Draft fix:** `updateUser` now uses a single `prisma.$transaction` for the user row, employer link replacement and session revocation. Requested employer IDs are type/size checked, deduplicated and verified against real employers before mutation, rather than silently discarding unknown IDs. For ordinary administrators the route passes `forbidSuperadminTarget:true`, and the database `updateMany` predicate explicitly requires the target role not be `SUPERADMIN`; zero affected rows rejects the operation and rolls back the transaction. Readback uses the same transaction. Ordinary administrator promotion to privileged roles remains forbidden by the route’s existing allowlist.
+
+**Regression tests:** `scripts/ci/admin-permission-atomic-ci.mjs` creates synthetic employers, users and sessions against the fixed disposable local `newchanges_ci` PostgreSQL database. It checks combined role+link updates and old-session revocation, rejection of invalid employer IDs without changing permissions, attempted ordinary-admin modification of superadmins, and legitimate privileged name updates. The script requires `CI=true`, `CI_RLS_PROBE_APPROVED=CI_DISPOSABLE_ONLY` and the exact loopback fixture database. It is wired immediately after the password-token race test in `scripts/ci/run-docker-ci-suite.sh`. A static integration contract is included in `npm run check:security`, and the CI coverage contract now requires both auth database tests and their hard isolation guards.
+
+**Verification:** 12 live GitHub source/wiring invariants passed; no GitHub Actions run exists yet for the latest PR head. The actual database integration test and full Node 24 self-hosted Docker suite are **not executed**. The source-level assertions do not constitute production authorization assurance.
+
 ## Workstream acceptance checks
 
 - [x] Separate code changes on a non-production branch based on PR #219.
