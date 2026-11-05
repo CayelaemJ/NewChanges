@@ -10,7 +10,7 @@
 
 import { prisma } from "./authService.js";
 import { sendMail } from "./reportScheduler.js";
-import { destroyAllSessionsForUser } from "./authService.js";
+
 import { engagementSummary } from "./analyticsService.js";
 import { allowedSlackWebhookUrl } from "./slackWebhookPolicy.js";
 import { escapeNotificationHtml } from "./notificationTextSafety.js";
@@ -74,21 +74,34 @@ export async function runStaleAccountCheck() {
   for (const u of stale) {
     // Atomic role/active fencing prevents an account promoted to SUPERADMIN
     // during the sweep from being disabled by a stale earlier query result.
-    const updated = await prisma.user.updateMany({
-      where: {
-        id: u.id,
-        active: true,
-        role: { not: "SUPERADMIN" },
-        createdAt: { lt: cutoff },
-        // A new login or page request might occur after the candidate read.
-        // Re-check recent activity in the SAME conditional database write.
-        sessions: { none: { lastSeenAt: { gte: cutoff } } },
-      },
-      data: { active: false, setupToken: null, setupExpires: null, revokedAt: new Date(), revokedReason: `Auto-deactivated: no activity for ${days}+ days`, revokedBy: "system (auto)" },
+    const updated = await prisma.$transaction(async tx => {
+      const changed = await tx.user.updateMany({
+        where: {
+          id: u.id,
+          active: true,
+          role: { not: "SUPERADMIN" },
+          createdAt: { lt: cutoff },
+          // Fence concurrent logins and activity updates at the actual write.
+          sessions: { none: { lastSeenAt: { gte: cutoff } } },
+        },
+        data: {
+          active: false, setupToken: null, setupExpires: null,
+          revokedAt: new Date(),
+          revokedReason: `Auto-deactivated: no activity for ${days}+ days`,
+          revokedBy: "system (auto)",
+        },
+      });
+      if (changed.count === 1) {
+        const now = new Date();
+        await tx.session.updateMany({
+          where: { userId: u.id, endedAt: null },
+          data: { endedAt: now, revokedAt: now, revokedBy: "system_auto_deactivation" },
+        });
+      }
+      return changed;
     });
     if (updated.count !== 1) continue;
     deactivated.push(u);
-    await destroyAllSessionsForUser(u.id);
   }
   await prisma.systemEmailConfig.update({ where: { id: "default" }, data: { lastStaleCheckAt: new Date() } as any });
 
