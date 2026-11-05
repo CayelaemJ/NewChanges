@@ -66,7 +66,7 @@ function connectionEnv(raw) {
   env.PGOPTIONS = '-c default_transaction_read_only=on -c statement_timeout=120000';
   return env;
 }
-function query(url, sql, step) {
+function query(url, sql, step, side) {
   const result = spawnSync('psql', ['-w', '-X', '-A', '-t', '-q', '-v', 'ON_ERROR_STOP=1', '-c', sql], {
     env: connectionEnv(url),
     encoding: 'utf8',
@@ -78,24 +78,25 @@ function query(url, sql, step) {
     let category = 'SQL or client error';
     if (/password authentication failed|no password supplied|fe_sendauth/i.test(stderr)) category = 'authentication failed';
     else if (/could not translate host name|name or service not known/i.test(stderr)) category = 'DNS failed';
-    else if (/timeout|timed out|connection refused|could not connect/i.test(stderr)) category = 'connection failed';
+    else if (/timeout|timed out/i.test(stderr) || result.error?.code === 'ETIMEDOUT') category = 'connection timeout';
+    else if (/connection refused|could not connect/i.test(stderr)) category = 'connection refused or unavailable';
     else if (/ssl|certificate|channel binding/i.test(stderr)) category = 'TLS/channel-binding failed';
     else if (/permission denied/i.test(stderr)) category = 'permission denied';
-    throw new Error('PostgreSQL read-only query failed (' + step + '; ' + category + ').');
+    throw new Error('PostgreSQL read-only query failed (' + side + ', ' + step + '; ' + category + '; exit=' + String(result.status) + ').');
   }
   return result.stdout.trim();
 }
 
-function inspect(url) {
+function inspect(url, side) {
   const meta = {};
   for (const [kind, innerQuery] of Object.entries(metadataQueries)) {
     const sql = `SELECT COALESCE(json_agg(row_to_json(x)), '[]'::json)::text FROM (${innerQuery}) x`;
-    meta[kind] = JSON.parse(query(url, sql, 'metadata ' + kind));
+    meta[kind] = JSON.parse(query(url, sql, 'metadata ' + kind, side));
   }
   const counts = {};
   for (const { name } of meta.tables) {
     // Table names originate from PostgreSQL metadata and are always quoted as identifiers.
-    const n = query(url, `SELECT count(*)::text FROM public.${quote(name)}`, 'table count ' + name);
+    const n = query(url, `SELECT count(*)::text FROM public.${quote(name)}`, 'table count ' + name, side);
     if (!/^\d+$/.test(n)) throw new Error('Invalid table count.');
     counts[name] = n;
   }
@@ -103,8 +104,8 @@ function inspect(url) {
 }
 
 try {
-  const source = inspect(sourceUrl);
-  const target = inspect(targetUrl);
+  const source = inspect(sourceUrl, 'Neon source');
+  const target = inspect(targetUrl, 'Aiven target');
   let structureDifferences = 0;
   for (const kind of Object.keys(metadataQueries)) {
     const s = source.meta[kind], t = target.meta[kind];
