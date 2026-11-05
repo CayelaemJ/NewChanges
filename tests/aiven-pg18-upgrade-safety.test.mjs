@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { mkdtempSync, writeFileSync, chmodSync, rmSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, chmodSync, rmSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -59,4 +59,13 @@ test('Aiven helper does nothing by default', () => {
   });
   assert.equal(result.status, 0);
   assert.match(result.stdout, /Aiven PostgreSQL 18 version alignment/);
+});
+
+test('upgrade helper accepts actual Aiven successful upgrade-check task shape', () => {
+  const scriptText = readFileSync(script, 'utf8');
+  assert.match(scriptText, /pg_upgrade_check/);
+  assert.match(scriptText, /source_pg_version/);
+  assert.match(scriptText, /target_pg_version/);
+  assert.match(scriptText, /Clusters are compatible/);
+  assert.match(scriptText, /task_status", "DONE"/);
 });
