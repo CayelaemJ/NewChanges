@@ -30,6 +30,11 @@ class LocalOllamaContractTests(unittest.TestCase):
                 combined.setdefault(int(number), []).append(segment)
         self.assertEqual(["".join(combined[i]) for i in range(1, 5)], lines)
 
+    def test_prompt_does_not_seed_high_severity_finding(self):
+        self.assertNotIn('"severity":"high"', scanner.PROMPT)
+        self.assertIn("Never infer severity from examples", scanner.PROMPT)
+        self.assertEqual(scanner.VERSION, 5)
+
     def test_findings_schema_bounds_count_and_text_length(self):
         findings = scanner.FINDINGS_SCHEMA["properties"]["findings"]
         self.assertEqual(findings["maxItems"], 4)
