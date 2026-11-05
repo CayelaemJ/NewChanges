@@ -1051,6 +1051,8 @@ app.post<{ Params: { id: string }; Body: { password: string } }>("/api/users/:id
 // session immediately, so the response redirects them straight to /login.
 app.post<{ Body: { reason?: string } }>("/api/users/me/deactivate", async (req, reply) => {
   const user = await requireUser(req, reply); if (!user) return;
+  if (user.role === "SUPERADMIN")
+    return reply.code(403).send({ error: "Superadministrator self-deactivation requires an approved account-retirement action" });
   await deactivateSelf(user.id, req.body?.reason);
   reply.clearCookie("session", { path: "/", httpOnly: true, sameSite: "lax", secure: COOKIE_SECURE });
   return { ok: true };
