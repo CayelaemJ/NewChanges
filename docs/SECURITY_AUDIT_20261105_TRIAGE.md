@@ -111,6 +111,28 @@ These were found by inspecting the implementation, not by trusting AI severity l
 
 **Coverage:** `tests/security/smtp-tls-policy.test.ts` plus the source-integration contract have been added to `check:security`; full npm/Docker execution on the changed branch is still pending.
 
+## Source audit coverage correction and retry hardening (2026-11-05)
+
+The user supplied the full 577-page local scanner export (schema 4), confirming five original failed chunks:
+
+| Failed chunk | Actual source type | Current disposition |
+|---|---|---|
+| `frontend/src/enterprise.css:1395-1521` | Stylesheet, malformed Ollama output (ValueError) | **Still requires successful rescanning.** Retry prompt now provides bounded validation feedback rather than resending the same deterministic prompt. |
+| `src/services/sourceAdapter.ts:1-128` | Critical HTTPS/SQL ingestion adapter, malformed output (ValueError) | **Still requires successful rescanning and independent review.** Retry prompt improved. |
+| `tests/fixtures/mono_black.json:1` | 300x100 RGBA image encoded as one-line Base64 JSON | Explicitly excluded as validated binary-equivalent fixture. |
+| `tests/fixtures/navy_gold_aa.json:1` | 300x100 RGBA image encoded as one-line Base64 JSON | Explicitly excluded as validated binary-equivalent fixture. |
+| `tests/fixtures/pastel_mint.json:1` | 300x100 RGBA image encoded as one-line Base64 JSON | Explicitly excluded as validated binary-equivalent fixture. |
+
+`is_encoded_raster_fixture` checks the exact `{w,h,data}` object shape, integer pixel dimensions, valid Base64 and exact RGBA byte count (`width*height*4`). It applies **only** to `tests/fixtures/*.json`. Ordinary JSON source and suspicious JSON with extra keys remain reviewable. Tests document this separation.
+
+The old twelve exclusions from the original report are `.env.example` (key-material policy), `docs/Optimise_Integration_Spec_v2.docx` (binary document) and ten `public/*` images/icons (binary assets). None of those files was presented as scanned source code; they require separate artifact/document handling if relevant to an independent release review.
+
+**Release-gate defect corrected:** Previously the scanner could report `complete=true` after `MAX_FILES` excluded source, after a text-size cap, or after a path could not be read. The scanner now exposes `scope_gaps`, fails completion for `file_limit`, `exceeds_max_text_bytes`, `unreadable_or_non_utf8` and `not_regular_file`, and returns exit code 2. The self-hosted workflow independently checks that `scope_gaps` is an empty array.
+
+Offline tests cover both incomplete-scope rejection and justified binary/image exclusions. **These new tests have not yet passed on the actual self-hosted Node 24/Docker runner.** The previous schema-4 PDF still describes the old scan and must not be used to claim current branch coverage.
+
+Do not upload raw unredacted reports, source credentials or external SMTP/Slack secrets to public PRs. The new scan must be run against the reviewed branch with a local Ollama model and synthetic test environment only.
+
 ## Workstream acceptance checks
 
 - [x] Separate code changes on a non-production branch based on PR #219.
