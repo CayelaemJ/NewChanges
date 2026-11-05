@@ -69,3 +69,10 @@ test('upgrade helper accepts actual Aiven successful upgrade-check task shape', 
   assert.match(scriptText, /Clusters are compatible/);
   assert.match(scriptText, /task_status", "DONE"/);
 });
+
+test('upgrade helper passes Bash parser before any Aiven command can run', () => {
+  const result = spawnSync('bash', ['-n', script], {
+    encoding: 'utf8', timeout: 5000,
+  });
+  assert.equal(result.status, 0, result.stderr);
+});
