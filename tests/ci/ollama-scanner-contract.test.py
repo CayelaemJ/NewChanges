@@ -31,7 +31,7 @@ class LocalOllamaContractTests(unittest.TestCase):
         self.assertEqual(["".join(combined[i]) for i in range(1, 5)], lines)
 
     def test_chunk_ranges_match_the_lines_they_actually_contain(self):
-        chunks = scanner.chunks_for("first\\n" + "x" * 4000 + "\\nlast")
+        chunks = scanner.chunks_for("\n".join(["first", "x" * 4000, "last"]))
         for first, last, content in chunks:
             line_numbers = [int(row.split(": ", 1)[0]) for row in content.splitlines()]
             self.assertEqual(first, min(line_numbers))
