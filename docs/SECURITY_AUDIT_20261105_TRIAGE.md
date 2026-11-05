@@ -197,6 +197,18 @@ The API adapter now calls `readPinnedSourceApiJson(url, token)` for every page a
 
 **Verification:** 12 live GitHub source/wiring invariants passed; no GitHub Actions run exists yet for the latest PR head. The actual database integration test and full Node 24 self-hosted Docker suite are **not executed**. The source-level assertions do not constitute production authorization assurance.
 
+## Superadministrator password-reset and deletion authorization (2026-11-05)
+
+**Source-confirmed high-impact defect:** `POST /api/users/:id/reset-password` previously called `requireAdmin` and then changed the target user's password without checking whether an ordinary `ADMIN` was targeting a `SUPERADMIN`. Ordinary admins were already prevented from editing or discovering superadmins through other user-management routes, but this write path omitted the privilege restriction. That exposed the privileged control plane to password replacement, despite MFA being separately enforced.
+
+**Related deletion race:** `DELETE /api/users/:id` inspected the target role before calling `deleteUserPermanently`; the service then separately looked up the user's inactive state and deleted by ID alone. A concurrent target promotion/reactivation could invalidate those earlier checks before deletion.
+
+**Draft fix:** Both routes now pass `{forbidSuperadminTarget: admin.role !== "SUPERADMIN"}` to the service layer. `resetPassword` uses a conditional `tx.user.updateMany` with target-role fencing and atomically revokes all old sessions only on a successful password write; a zero-row update fails and rolls back. `deleteUserPermanently` uses a conditional `user.deleteMany` requiring `active:false` and a non-superadmin target for ordinary admins. Database FK cascades handle dependent sessions on successful deletion. The existing route-level role checks remain as defense in depth.
+
+**Regression:** `scripts/ci/admin-permission-atomic-ci.mjs` tests normal-admin password-reset denial, unchanged target password and live session after denial, privileged reset success with session revocation, ordinary-admin delete denial and legitimate privileged deletion of a synthetic inactive superadmin. `tests/security/admin-permission-atomic-contract.test.mjs` binds the real routes to both database predicates. The prior password-reset source contract was updated for the conditional `updateMany` API.
+
+**Verification:** Nine read-only source/wiring checks passed. **No Node 24/physical PostgreSQL execution or live MFA regression has been demonstrated.** Release remains blocked, and this draft has not changed production account state.
+
 ## Workstream acceptance checks
 
 - [x] Separate code changes on a non-production branch based on PR #219.
