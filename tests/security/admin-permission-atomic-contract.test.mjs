@@ -64,6 +64,8 @@ test("all superadmin role retirements serialize and preserve the final active co
   assert.match(policy, /activeSuperadminCount <= 1/);
   assert.match(dbTest, /last active superadministrator cannot be retired/);
   assert.match(dbTest, /privileged retirement preserves another active superadministrator/);
+  assert.match(dbTest, /Promise\.allSettled/);
+  assert.match(dbTest, /concurrent superadministrator retirements preserve the last account/);
 });
 
 test("superadmin self-deactivation is denied at HTTP and database mutation boundaries", () => {
