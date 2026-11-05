@@ -30,3 +30,16 @@ test("Cloudflare Aiven production target requires explicit provider and approval
   assert.match(p,/the-fixer-postgres-cay-bed7/);
   assert.match(p,/pg_has_role\(r.oid,nr.oid,'MEMBER'\)/);
 });
+
+test("production Cloudflare is an active Aiven writer, never standby",()=>{
+  const p=readFileSync(new URL("./preflight.mjs",import.meta.url),"utf8");
+  const d=readFileSync(new URL("../../Dockerfile.cloudflare",import.meta.url),"utf8");
+  for(const gate of ["NEWCHANGES_ALLOW_WRITES", "NEWCHANGES_CLOUDFLARE_PRIMARY", "NEWCHANGES_SOURCE_WRITERS_FENCED", "NEWCHANGES_FINAL_SYNC_VERIFIED"]){
+    assert.ok(p.includes(gate),gate);
+  }
+  assert.match(p,/const active = process.env.STANDBY_MODE==="false"/);
+  assert.match(p,/if \(!validAiven/);
+  assert.match(d,/STANDBY_MODE=false TRAFFIC_SAVER_MODE=false/);
+  assert.match(d,/verify-database\.mjs/);
+  assert.doesNotMatch(d,/db:deploy|db:push|db:migrate/);
+});
