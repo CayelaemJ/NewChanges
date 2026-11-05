@@ -26,12 +26,16 @@ export function requestSecurityContext(input: any): RequestSecurityContext {
   // Trust Fastify's request.ip (which applies the configured proxy boundary),
   // never client-controlled X-Real-IP or X-Forwarded-For header values.
   const ipAddress = resolvedSecurityIp(input);
-  // Location is deliberately only accepted from an upstream provider. Railway
-  // edge region is infrastructure location, not the user's location, so it is
-  // never presented as user geography here.
-  const country = trim(headers["cf-ipcountry"] ?? headers["x-vercel-ip-country"] ?? headers["x-country-code"] ?? headers["x-geo-country"], 80);
-  const region = trim(headers["x-vercel-ip-country-region"] ?? headers["x-geo-region"], 120);
-  const city = trim(headers["x-vercel-ip-city"] ?? headers["x-geo-city"], 120);
+  // Forwarded geography headers are unauthenticated unless the trusted edge
+  // strips inbound spoofed headers and overwrites them itself. Keep off by
+  // default; enabling this requires a reviewed deployment proxy contract.
+  const trustEdgeGeography = process.env.TRUST_EDGE_GEO_HEADERS === "true";
+  const country = trustEdgeGeography
+    ? trim(headers["cf-ipcountry"] ?? headers["x-vercel-ip-country"], 80) : undefined;
+  const region = trustEdgeGeography
+    ? trim(headers["x-vercel-ip-country-region"], 120) : undefined;
+  const city = trustEdgeGeography
+    ? trim(headers["x-vercel-ip-city"], 120) : undefined;
   const ua = parseUserAgent(userAgent);
   const resolvedDeviceType = deviceType ?? ua.deviceType;
   const resolvedBrowser = browser ?? ua.browser;
