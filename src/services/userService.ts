@@ -175,6 +175,10 @@ export async function updateUser(userId: string, patch: {
   const revokeFields: Record<string, unknown> = {};
   if (patch.active === false) {
     revokeFields.revokedAt = new Date();
+    // A revoked account must lose pending setup/reset links too. Otherwise
+    // reactivation before token expiry could resurrect an old credential flow.
+    revokeFields.setupToken = null;
+    revokeFields.setupExpires = null;
     revokeFields.revokedReason = patch.revokedReason || "No reason given";
     revokeFields.revokedBy = patch.revokedBy || "admin";
   } else if (patch.active === true) {
@@ -199,7 +203,7 @@ export async function updateUser(userId: string, patch: {
 export async function deactivateSelf(userId: string, reason?: string) {
   const user = await prisma.user.update({
     where: { id: userId },
-    data: { active: false, revokedAt: new Date(), revokedReason: reason || "Deactivated by the user", revokedBy: "self" },
+    data: { active: false, setupToken: null, setupExpires: null, revokedAt: new Date(), revokedReason: reason || "Deactivated by the user", revokedBy: "self" },
   });
   await destroyAllSessionsForUser(userId);
   notifyAdmins({
