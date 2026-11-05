@@ -36,7 +36,7 @@ done
 if ! docker exec -i "$cid" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres < "$workdir/schema.sql" > "$workdir/restore.log" 2>&1; then
   echo 'FAIL: PostgreSQL 18 rejected the schema. No live databases changed.' >&2
   # Show only PostgreSQL ERROR/FATAL lines; never print SQL statements, connection strings or the full log.
-  grep -E '^psql:.*: (ERROR|FATAL):' "$workdir/restore.log" | sed -E 's/^psql:.*: (ERROR|FATAL): /\1: /' | head -n 15 >&2 || true
+  grep -E '(ERROR|FATAL):' "$workdir/restore.log" | sed -E 's/^.*(ERROR|FATAL):[[:space:]]*/\1: /' | head -n 15 >&2 || true
   echo 'Full temporary restore log was deleted during cleanup.' >&2
   exit 3
 fi
