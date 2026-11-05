@@ -209,6 +209,16 @@ The API adapter now calls `readPinnedSourceApiJson(url, token)` for every page a
 
 **Verification:** Nine read-only source/wiring checks passed. **No Node 24/physical PostgreSQL execution or live MFA regression has been demonstrated.** Release remains blocked, and this draft has not changed production account state.
 
+## Preserve the last active superadministrator (2026-11-05)
+
+**Verified control-plane availability gap:** The general self-deactivation route permitted an active `SUPERADMIN` to disable their own account. Privileged admin edits could also deactivate or demote the last active superadministrator, leaving the application with no active control-plane account. A naive count-only check would still be vulnerable if two administrators concurrently retired two different accounts after each observed a count of two.
+
+**Draft fix:** `updateUser` serializes all role and active-state changes inside the same Prisma transaction using PostgreSQL's transaction-scoped advisory lock `pg_advisory_xact_lock(761231, 20261105)`. While holding the lock, it reads the target's current role/active status, counts active superadministrators, and rejects any transition that removes the **last** active superadministrator. The update, employer link replacement and session revocation remain in that same transaction. `POST /api/users/me/deactivate` rejects superadministrators at the HTTP layer; the `deactivateSelf` service independently enforces `role != SUPERADMIN` in a conditional transactional update that atomically revokes sessions. This prevents direct-service invocation from bypassing the route check.
+
+**Tests:** `src/services/superadminAvailabilityPolicy.ts` exposes the pure availability invariant; `tests/security/superadmin-availability.test.ts` covers last-account denial, allowed retirement when another active superadmin exists, normal edits, promotions and inactive-role transitions. `tests/security/admin-permission-atomic-contract.test.mjs` requires advisory locking, the last-account count and dual-layer self-deactivation guard. The disposable PostgreSQL authorization suite checks denied superadmin self-deactivation, last-account denial when the fixture is the only active superadmin, and permitted retirement of an additional synthetic superadmin; the last-account DB check is explicitly skipped when other seeded active superadmins exist rather than mutating unrelated fixtures.
+
+**Executed:** An isolated strict TypeScript compilation and **7 Node 22 policy assertions** passed. The full Node 24 application build, real PostgreSQL advisory-lock concurrency scenarios, self-hosted Docker CI and MFA integration tests remain **unverified**. This does not replace an approved emergency-recovery procedure and the application should not be deployed until full staging checks pass.
+
 ## Workstream acceptance checks
 
 - [x] Separate code changes on a non-production branch based on PR #219.
