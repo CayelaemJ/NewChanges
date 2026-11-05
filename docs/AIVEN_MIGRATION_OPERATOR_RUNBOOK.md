@@ -150,3 +150,18 @@ AIVEN_SNAPSHOT_COPY_APPROVED=YES \
 bash scripts/aiven-stream-snapshot.sh --execute
 ```
 Do not set approval variables unless their conditions are met. If a write fails because of the 1GiB storage limit, do not upgrade or delete production; preserve Neon and investigate target restore state first.
+
+## Post-copy verification (2026-11-05)
+
+The point-in-time Aiven import completed with `SNAPSHOT COPIED: 57 public tables; current-source row-count differences=1`. The one mismatch is the actively written `DataAccessEvent` table. Live read-only checks confirmed 57 public tables, 232 indexes, 520 constraints on **both** Neon and Aiven. Fingerprints of sorted table names, index names and constraint definitions matched between providers. Those fingerprints verify structure, **not row-level equivalence**. Aiven monitoring after import reported disk usage of about 46.4% on its free 1GiB plan. Neon remains production.
+
+To run the richer read-only metadata and per-table count validator (no cloud writes):
+```sh
+cd ~/NewChanges
+git pull --ff-only
+npm run check:aiven-migration
+AIVEN_POINT_IN_TIME_TEST=YES npm run check:aiven-postcopy
+```
+It checks public tables, columns, indexes, constraints, sequences, non-extension views, and all 57 table counts. This command permits drift only in `DataAccessEvent` when explicitly enabled. If other tables receive writes after the snapshot, count differences may also be legitimate; investigate instead of overwriting Aiven.
+
+Do **not** rerun the one-shot import or change deployment secrets. To assess a future production cutover, first test an isolated application instance with all scheduled jobs and background writes disabled and identity/session continuity evaluated; a one-shot Aiven copy is not continuously updated. Preserve recovery archives and production Neon.
