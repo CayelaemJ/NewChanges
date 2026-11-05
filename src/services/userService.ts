@@ -8,6 +8,7 @@ import { randomBytes } from "node:crypto";
 import { prisma, hashPassword, destroyAllSessionsForUser, digestSetupToken } from "./authService.js";
 import { sendMail, portalBaseUrl } from "./reportScheduler.js";
 import { notifyAdmins } from "./automationService.js";
+import { assertSuperadminRetirementAllowed } from "./superadminAvailabilityPolicy.js";
 
 type Role = "ADMIN" | "SUPERADMIN" | "EMPLOYER_MANAGER" | "PORTFOLIO_MANAGER" | "VIEWER";
 
@@ -179,6 +180,21 @@ export async function updateUser(userId: string, patch: {
   }
 
   return prisma.$transaction(async tx => {
+    if (patch.role !== undefined || patch.active !== undefined) {
+      // Serialize *all* role/active-state changes in this account service.
+      // Without a transaction-wide lock, two concurrent demotions could each
+      // see two active superadmins and together remove the entire control plane.
+      // The query projects an integer, not PostgreSQL's unsupported void type.
+      await tx.$queryRaw`SELECT 1 AS locked FROM pg_advisory_xact_lock(761231, 20261105)`;
+      const current = await tx.user.findUnique({
+        where: { id: userId }, select: { role: true, active: true },
+      });
+      if (!current) throw new Error("user not found or no longer editable");
+      const activeSuperadmins = await tx.user.count({
+        where: { role: "SUPERADMIN", active: true },
+      });
+      assertSuperadminRetirementAllowed(current, patch, activeSuperadmins);
+    }
     let validEmployerIds: string[] | undefined;
     if (patch.employerIds !== undefined) {
       if (!Array.isArray(patch.employerIds) || patch.employerIds.length > 5000 ||
@@ -240,11 +256,24 @@ export async function updateUser(userId: string, patch: {
 // self-service: a user disables their own account. Ends their own session too,
 // since the deactivation should take effect immediately.
 export async function deactivateSelf(userId: string, reason?: string) {
-  const user = await prisma.user.update({
-    where: { id: userId },
-    data: { active: false, setupToken: null, setupExpires: null, revokedAt: new Date(), revokedReason: reason || "Deactivated by the user", revokedBy: "self" },
+  const now = new Date();
+  // A superadmin cannot retire their own control-plane access through the
+  // general user endpoint. Privileged account retirement requires another
+  // authorized admin and the final-superadmin availability check.
+  const user = await prisma.$transaction(async tx => {
+    const disabled = await tx.user.updateMany({
+      where: { id: userId, active: true, role: { not: "SUPERADMIN" } },
+      data: { active: false, setupToken: null, setupExpires: null, revokedAt: now,
+        revokedReason: reason || "Deactivated by the user", revokedBy: "self" },
+    });
+    if (disabled.count !== 1)
+      throw new Error("Account cannot self-deactivate; contact a superadministrator");
+    await tx.session.updateMany({
+      where: { userId, endedAt: null },
+      data: { endedAt: now, revokedAt: now, revokedBy: "self_deactivation" },
+    });
+    return tx.user.findUniqueOrThrow({ where: { id: userId } });
   });
-  await destroyAllSessionsForUser(userId);
   notifyAdmins({
     subject: "A user deactivated their own account",
     html: `<div style="font-family:Arial,sans-serif;color:#241536"><h2 style="color:#32217c">Self-deactivation</h2><p><b>${escapeHtml(user.name)}</b> (${escapeHtml(user.email)}) deactivated their own account.</p>${reason ? `<p>Reason given: "${escapeHtml(String(reason).slice(0, 300))}"</p>` : ""}<p style="color:#6b7280;font-size:13px">Reactivate from Past users if this wasn't intended.</p></div>`,
