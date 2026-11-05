@@ -133,6 +133,23 @@ Offline tests cover both incomplete-scope rejection and justified binary/image e
 
 Do not upload raw unredacted reports, source credentials or external SMTP/Slack secrets to public PRs. The new scan must be run against the reviewed branch with a local Ollama model and synthetic test environment only.
 
+## Source HTTPS DNS-rebinding boundary (2026-11-05, fifth iteration)
+
+**Verified implementation problem:** `src/services/sourceAdapter.ts` previously called `assertSafeApiBaseUrl` to resolve and reject unsafe IPs, then used an independent global `fetch(url, ...)` call. An attacker controlling the domain's DNS could answer with a public IP during validation and a blocked internal IP during the actual connection.
+
+**Draft fix:** `src/services/pinnedSourceHttps.ts` performs a fresh all-address DNS lookup, rejects the entire answer set if any IP is invalid, reserved, private, loopback, mapped or otherwise blocked, and passes the already-vetted addresses to Node's native `https.request` via an explicit lookup callback. This binds DNS approval to the actual TLS socket. The URL remains the original hostname so standard TLS hostname/SNI verification is preserved (`rejectUnauthorized: true`). Each page receives a new unpooled connection (`agent: false`), no redirects are followed, aborted requests retain the 60-second deadline, and the existing `readSourceJson` 8 MiB response budget is reused.
+
+The API adapter now calls `readPinnedSourceApiJson(url, token)` for every page and retains the existing URL/allowed-host preflight. The new transport also refuses content encoding other than identity rather than risking compressed response expansion beyond the byte budget.
+
+**Testing:**
+- `tests/pinned-source-https.test.ts`: all DNS answers public, mixed public/private rebinding, hostname pinning, family mismatch, direct IP literals, invalid URL schemes and credential-bearing URLs.
+- `tests/security/pinned-source-transport-contract.test.mjs`: the actual adapter must use this pinned transport, reject unpinned `fetch`, and preserve TLS/certificate, redirect and size limits.
+- Both tests run in `npm run check:source-sync-safety` within isolated self-hosted Docker CI.
+
+**Preliminary execution:** The new transport module passed an isolated **Node 22 TypeScript strict-check** and a smoke test with a synthetic DNS resolver. The full target application requires **Node 24** and its full build, integration, source API compatibility and CI tests are **not yet verified**. No real source API was contacted. The new transport intentionally only supports uncompressed bounded JSON over HTTPS/1.1, does not use HTTP proxies or connection pools and rejects HTTPS redirects; test against the actual source provider in staging before deployment.
+
+**Residual:** SQL connectors have separate network and TLS policies, and should be reviewed independently. Network-level outbound allowlists are still recommended as additional defense. Source destination address pinning removes the specific HTTP DNS lookup/connect race, not every possible SSRF variant.
+
 ## Workstream acceptance checks
 
 - [x] Separate code changes on a non-production branch based on PR #219.
