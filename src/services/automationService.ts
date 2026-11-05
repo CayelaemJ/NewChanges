@@ -14,6 +14,7 @@ import { destroyAllSessionsForUser } from "./authService.js";
 import { engagementSummary } from "./analyticsService.js";
 import { allowedSlackWebhookUrl } from "./slackWebhookPolicy.js";
 import { escapeNotificationHtml } from "./notificationTextSafety.js";
+import { shouldAutoDeactivateAccount } from "./staleAccountPolicy.js";
 
 async function config() {
   return prisma.systemEmailConfig.upsert({ where: { id: "default" }, create: { id: "default" }, update: {} });
@@ -63,32 +64,35 @@ export async function runStaleAccountCheck() {
   const cutoff = new Date(Date.now() - days * 864e5);
 
   const users = await prisma.user.findMany({
-    where: { active: true },
-    select: { id: true, name: true, email: true, createdAt: true, sessions: { orderBy: { createdAt: "desc" }, take: 1, select: { createdAt: true } } },
+    // Exclude protected superadministrators at query time; updateMany below
+    // repeats this condition atomically in case their role changes mid-run.
+    where: { active: true, role: { not: "SUPERADMIN" } },
+    select: { id: true, role: true, name: true, email: true, createdAt: true, sessions: { orderBy: { createdAt: "desc" }, take: 1, select: { createdAt: true } } },
   });
-  const stale = users.filter((u: any) => {
-    const last = u.sessions[0]?.createdAt || u.createdAt; // never logged in → measure from account creation
-    return new Date(last).getTime() < cutoff.getTime();
-  });
-
+  const stale = users.filter((u: any) => shouldAutoDeactivateAccount(u, cutoff));
+  const deactivated: typeof stale = [];
   for (const u of stale) {
-    await prisma.user.update({
-      where: { id: u.id },
+    // Atomic role/active fencing prevents an account promoted to SUPERADMIN
+    // during the sweep from being disabled by a stale earlier query result.
+    const updated = await prisma.user.updateMany({
+      where: { id: u.id, active: true, role: { not: "SUPERADMIN" } },
       data: { active: false, revokedAt: new Date(), revokedReason: `Auto-deactivated: no activity for ${days}+ days`, revokedBy: "system (auto)" },
     });
+    if (updated.count !== 1) continue;
+    deactivated.push(u);
     await destroyAllSessionsForUser(u.id);
   }
   await prisma.systemEmailConfig.update({ where: { id: "default" }, data: { lastStaleCheckAt: new Date() } as any });
 
-  if (stale.length) {
-    const rows = stale.map((u: any) => `<li>${escapeNotificationHtml(u.name)} — ${escapeNotificationHtml(u.email)}</li>`).join("");
+  if (deactivated.length) {
+    const rows = deactivated.map((u: any) => `<li>${escapeNotificationHtml(u.name)} — ${escapeNotificationHtml(u.email)}</li>`).join("");
     await notifyAdmins({
-      subject: `${stale.length} account(s) auto-deactivated for inactivity`,
+      subject: `${deactivated.length} account(s) auto-deactivated for inactivity`,
       html: `<div style="font-family:Arial,sans-serif;color:#241536"><h2 style="color:#32217c">Auto-deactivated for inactivity</h2><p>No sign-in for ${days}+ days:</p><ul>${rows}</ul><p style="color:#6b7280;font-size:13px">These are deactivated, not deleted — reactivate any of them from Past users.</p></div>`,
-      slackText: `:zzz: ${stale.length} account(s) auto-deactivated for ${days}+ days of inactivity.`,
+      slackText: `:zzz: ${deactivated.length} account(s) auto-deactivated for ${days}+ days of inactivity.`,
     });
   }
-  return { ran: true, deactivated: stale.length };
+  return { ran: true, deactivated: deactivated.length };
 }
 
 // ── weekly engagement digest ──
