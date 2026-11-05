@@ -167,5 +167,46 @@ class LocalOllamaContractTests(unittest.TestCase):
         self.assertEqual(len(prompts), 2)
         self.assertNotEqual(prompts[0], prompts[1])
 
+    def test_validated_rgba_fixture_is_not_a_source_code_chunk(self):
+        import base64
+        # Genuine RGBA image data is classified as an explicit binary-equivalent
+        # exclusion, rather than being passed to Ollama as hundreds of text chunks.
+        payload = json.dumps({"w": 16, "h": 16,
+            "data": base64.b64encode(bytes([1, 2, 3, 4]) * 256).decode()}).encode()
+        self.assertTrue(scanner.is_encoded_raster_fixture("tests/fixtures/image.json", payload))
+        self.assertFalse(scanner.is_encoded_raster_fixture("src/image.json", payload))
+        self.assertFalse(scanner.is_encoded_raster_fixture(
+            "tests/fixtures/image.json", json.dumps({"w": 16, "h": 16,
+              "data": "not base64 user input"}).encode()))
+        self.assertFalse(scanner.is_encoded_raster_fixture(
+            "tests/fixtures/image.json", json.dumps({"w": 16, "h": 16,
+              "data": base64.b64encode(b"x" * 1024).decode(), "eval": "suspicious"}).encode()))
+
+    def test_rgba_fixture_exclusion_is_audited_and_normal_json_is_scanned(self):
+        import base64
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            fixtures = root / "tests" / "fixtures"
+            fixtures.mkdir(parents=True)
+            png_json = "tests/fixtures/raster.json"
+            source_json = "tests/fixtures/config.json"
+            (root / png_json).write_text(json.dumps({"w": 16, "h": 16,
+              "data": base64.b64encode(bytes([1, 2, 3, 4]) * 256).decode()}))
+            (root / source_json).write_text('{"code":"this is meaningful nonimage fixture JSON"}')
+            with patch.object(scanner, "ROOT", root), \
+                 patch.object(scanner, "MAX_FILES", 0), \
+                 patch.object(scanner, "tracked_files", return_value=[png_json, source_json]):
+                selected, excluded = scanner.read_manifest()
+            self.assertEqual([name for name, _ in selected], [source_json])
+            self.assertIn({"file": png_json, "reason": "validated_rgba_image_fixture"}, excluded)
+
+    def test_failed_three_existing_pixel_fixtures_have_valid_rgba_shape(self):
+        root = Path(__file__).resolve().parents[2]
+        for name in ("mono_black.json", "navy_gold_aa.json", "pastel_mint.json"):
+            path = root / "tests" / "fixtures" / name
+            if path.exists():
+                self.assertTrue(scanner.is_encoded_raster_fixture(
+                    "tests/fixtures/" + name, path.read_bytes()), name)
+
 if __name__ == "__main__":
     unittest.main()
