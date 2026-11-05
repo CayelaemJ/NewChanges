@@ -29,3 +29,9 @@ test('Aiven compatibility trial deletes disposable local artifacts', () => {
   assert.match(script, /docker rm -f/);
   assert.match(script, /rm -rf "\$workdir"/);
 });
+
+
+test('portable dump scopes to public application schema, not Neon-managed auth', () => {
+  assert.match(script, /--schema=public/);
+  assert.match(script, /--exclude-extension=pg_session_jwt/);
+});
