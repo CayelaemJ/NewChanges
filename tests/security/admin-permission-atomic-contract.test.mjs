@@ -37,3 +37,21 @@ test("full Docker CI runs real disposable DB authorization rollback regression",
   assert.match(dbTest, /await assert\.rejects\(updateUser\(superadmin/);
   assert.match(dbTest, /Invalid employer references must NEVER wipe existing grants/);
 });
+
+test("password-reset and hard-delete routes enforce privileged-target guards at write time", () => {
+  assert.match(server, /resetPassword\(req\.params\.id, String\(req\.body\?\.password \?\? ""\), \{ forbidSuperadminTarget: admin\.role !== "SUPERADMIN" \}\)/);
+  assert.match(server, /deleteUserPermanently\(req\.params\.id, \{ forbidSuperadminTarget: admin\.role !== "SUPERADMIN" \}\)/);
+
+  const password = users.slice(users.indexOf("export async function resetPassword("),
+    users.indexOf("// set-password flow"));
+  const remove = users.slice(users.indexOf("export async function deleteUserPermanently("),
+    users.indexOf("export async function resetPassword("));
+  assert.match(password, /await tx\.user\.updateMany\(/);
+  assert.match(password, /options\.forbidSuperadminTarget \? \{ role: \{ not: "SUPERADMIN"/);
+  assert.match(password, /if \(updated\.count !== 1\) throw/);
+  assert.match(remove, /await prisma\.user\.deleteMany\(/);
+  assert.match(remove, /active: false/);
+  assert.match(remove, /options\.forbidSuperadminTarget \? \{ role: \{ not: "SUPERADMIN"/);
+  assert.match(dbTest, /superadmin password reset is privileged and transactional/);
+  assert.match(dbTest, /retired superadmin deletion requires privileged actor/);
+});
