@@ -55,3 +55,14 @@ test("deactivating accounts invalidates pending reset links even after future re
   assert.match(integration,/administrator deactivation permanently invalidates prior links/);
   assert.match(integration,/self-deactivation clears recovery\/reset links/);
 });
+
+test("forgot-password issuance cannot race administrative deactivation",()=>{
+  const start=users.indexOf("export async function requestPasswordReset(");
+  const end=users.indexOf("export async function listUsers()",start);
+  assert.ok(start>=0&&end>start);
+  const handler=users.slice(start,end);
+  assert.match(handler,/await prisma\.user\.updateMany\(/);
+  assert.match(handler,/where: \{ id: user\.id, active: true \}/);
+  assert.match(handler,/if \(issued\.count !== 1\) return \{ ok: true \}/);
+  assert.doesNotMatch(handler,/await prisma\.user\.update\(/);
+});
