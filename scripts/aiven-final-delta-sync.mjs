@@ -22,12 +22,12 @@ function connection(raw, side) {
   if(u.searchParams.has('channel_binding'))env.PGCHANNELBINDING=u.searchParams.get('channel_binding');
   return env;
 }
-function psql(env,sql,stage,maxBuffer=16*1024*1024){
+function psql(env,sql,stage,maxBuffer=16*1024*1024,raw=false){
   const r=spawnSync('psql',['-w','-X','-A','-t','-q','-v','ON_ERROR_STOP=1','-f','-'],{
     env,input:sql,encoding:'utf8',timeout:180000,maxBuffer
   });
   if(r.status!==0||r.error)throw Error('PostgreSQL query failed at '+stage+' (sensitive diagnostics withheld)');
-  return r.stdout.trim();
+  return raw ? r.stdout : r.stdout.trim();
 }
 function verify(){
   const r=spawnSync(process.execPath,['scripts/aiven-verify-content.mjs'],{
@@ -67,8 +67,8 @@ try{
   const auditSql='COPY (SELECT '+cols+' FROM public."DataAccessEvent" WHERE "createdAt">=TIMESTAMP '+lit(watermark)+
     ' ORDER BY "createdAt",id) TO STDOUT WITH (FORMAT csv, NULL '+lit('\\N')+');\n';
   const sessionSql='COPY (SELECT "id","lastSeenAt" FROM public."Session" ORDER BY "id") TO STDOUT WITH (FORMAT csv, NULL '+lit('\\N')+');\n';
-  writeFileSync(audit,psql(src,auditSql,'audit delta export',64*1024*1024),{mode:0o600,flag:'wx'});
-  writeFileSync(sessions,psql(src,sessionSql,'session activity export',4*1024*1024),{mode:0o600,flag:'wx'});
+  writeFileSync(audit,psql(src,auditSql,'audit delta export',64*1024*1024,true),{mode:0o600,flag:'wx'});
+  writeFileSync(sessions,psql(src,sessionSql,'session activity export',4*1024*1024,true),{mode:0o600,flag:'wx'});
   // All writes are atomic in a single destination transaction.
   const sql=[
     'BEGIN;',
@@ -83,7 +83,7 @@ try{
     ' IF EXISTS (SELECT 1 FROM audit_stage s JOIN public."DataAccessEvent" t ON t.id=s.id WHERE to_jsonb(s)<>to_jsonb(t))',
     " THEN RAISE EXCEPTION 'Existing audit history differs; refusing delta'; END IF;",
     'END $check$;',
-    'INSERT INTO public."DataAccessEvent" ('+cols+') SELECT '+cols+' FROM audit_stage ON CONFLICT ("id") DO NOTHING;',
+    'INSERT INTO public."DataAccessEvent" ('+cols+') SELECT '+cols+' FROM audit_stage WHERE true ON CONFLICT ("id") DO NOTHING;',
     'UPDATE public."Session" d SET "lastSeenAt"=s."lastSeenAt" FROM session_stage s',
     'WHERE d.id=s.id AND d."lastSeenAt" IS DISTINCT FROM s."lastSeenAt";',
     'COMMIT;'
