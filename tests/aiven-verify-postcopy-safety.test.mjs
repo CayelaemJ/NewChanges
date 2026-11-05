@@ -26,3 +26,13 @@ test('node parses validator',()=>{
   const p=spawnSync(process.execPath,['--check',new URL('../scripts/aiven-verify-postcopy.mjs',import.meta.url).pathname],{encoding:'utf8'});
   assert.equal(p.status,0,p.stderr);
 });
+
+test('connection URI is split into libpq settings without passing the password in argv',()=>{
+  assert.match(text,/env\.PGDATABASE = decodeURIComponent\(u\.pathname\.slice\(1\)\)/);
+  assert.match(text,/env\.PGPASSWORD = decodeURIComponent\(u\.password\)/);
+  assert.match(text,/PGCHANNELBINDING/);
+  assert.match(text,/spawnSync\('psql'/);
+  assert.match(text,/\['-w', '-X'/);
+  assert.match(text,/table count '/);
+  assert.match(text,/authentication failed/);
+});
