@@ -219,6 +219,16 @@ The API adapter now calls `readPinnedSourceApiJson(url, token)` for every page a
 
 **Executed:** An isolated strict TypeScript compilation and **7 Node 22 policy assertions** passed. The full Node 24 application build, real PostgreSQL advisory-lock concurrency scenarios, self-hosted Docker CI and MFA integration tests remain **unverified**. This does not replace an approved emergency-recovery procedure and the application should not be deployed until full staging checks pass.
 
+## Non-skippable last-superadmin race and production SQL transport (2026-11-05)
+
+**Mandatory concurrency evidence:** The disposable PostgreSQL admin-authorization suite previously skipped last-superadmin and concurrent-retirement checks whenever an unexpected active `SUPERADMIN` existed. It now requires exactly one active synthetic superadmin at both points and **fails** if that fixture invariant is violated. `tests/security/admin-permission-atomic-contract.test.mjs` enforces that neither test may silently skip. This makes test coverage more rigorous; the concurrent race still must actually pass in isolated Docker.
+
+**Source SQL transport security:** Production source connections in `src/services/sourceAdapter.ts` previously allowed `SOURCE_SQL_SSL=false` or `SOURCE_SQL_TRUST_SERVER_CERTIFICATE=true`, including through saved settings, for PostgreSQL, MySQL and MSSQL. This permitted cleartext DB credentials or unverified TLS peers when configured unsafely. The new `src/services/sourceSqlTlsPolicy.ts` rejects both conditions in `NODE_ENV=production`, immediately before connection creation. The same three factories are used for read replicas, so the policy covers both primary/replica paths. Test/development SQL fixtures remain permitted. Valid production configurations must encrypt connections and validate certificates with an approved CA/trust store.
+
+**Tests:** `tests/source-sql-tls-policy.test.ts` and `tests/security/source-sql-tls-contract.test.mjs` now run in `check:source-sync-safety`, which is part of the existing self-hosted Docker suite. **Actually executed:** isolated Node 22 strict TypeScript compilation and 15 no-network SQL TLS policy assertions, all passed. **Not yet executed:** full Node 24 build, provider TLS handshakes, actual PostgreSQL superadmin race, and complete Docker CI.
+
+**Compatibility:** The stricter policy will reject existing production SQL sources or replicas that rely on unencrypted connections or untrusted/self-signed certificates. Configure the required trusted CA and test each provider in staging before merging. No saved source settings or production connections were touched.
+
 ## Workstream acceptance checks
 
 - [x] Separate code changes on a non-production branch based on PR #219.
