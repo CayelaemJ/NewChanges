@@ -60,3 +60,14 @@ test('default no-credential run stops without changing any database',()=>{
     assert.match(result.stderr,/BLOCKED/);
   }
 });
+
+test('synthetic Docker rehearsal is isolated and never connects to production endpoints',()=>{
+  const rehearsal=readFileSync(new URL('../scripts/aiven-final-delta-docker-rehearsal.mjs',import.meta.url),'utf8');
+  assert.match(rehearsal,/--network','none/);
+  assert.match(rehearsal,/postgres:18-alpine/);
+  assert.match(rehearsal,/buildAivenDeltaSql/);
+  assert.match(rehearsal,/idempotent/);
+  assert.match(rehearsal,/Conflicting existing audit history must abort/);
+  assert.match(rehearsal,/docker',['rm','-f'/);
+  assert.doesNotMatch(rehearsal,/DR_SOURCE_DATABASE_URL|DR_TARGET_DATABASE_URL|neon\.tech|the-fixer-postgres-cay/);
+});
