@@ -29,7 +29,7 @@ function runWithService(plan, region = 'do-blr') {
       'echo "Unexpected Aiven command" >&2',
       'exit 71',
       '',
-    ].join('\\n'));
+    ].join('\n'));
     chmodSync(fakeAiven, 0o700);
     return spawnSync('bash', [script, '--check'], {
       env: { ...process.env, PATH: dir + ':' + (process.env.PATH || '') },
