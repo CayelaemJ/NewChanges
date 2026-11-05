@@ -16,7 +16,7 @@ from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-VERSION = 5
+VERSION = 6
 ROOT = Path(os.getenv("SCAN_ROOT", "/workspace")).resolve()
 REPORTS = Path(os.getenv("REPORT_DIR", "/workspace/test-reports/ai-security")).resolve()
 MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5-coder:7b")
@@ -137,22 +137,30 @@ def chunks_for(content):
     lines = content.splitlines()
     if not lines:
         return [(1, 1, "1: [empty file]")]
-    chunks, batch, count, start = [], [], 0, 1
+    chunks, batch, count, start, last_in_batch = [], [], 0, 1, 1
     for i, line in enumerate(lines, 1):
         # Split very long source lines into numbered fragments, no silent truncation.
         parts = [line[j:j+CHUNK_CHARS-120] for j in range(0, max(len(line), 1), CHUNK_CHARS-120)]
         for segment in parts:
             value = f"{i}: {segment}"
             if batch and count + len(value) + 1 > CHUNK_CHARS:
-                chunks.append((start, i, "\n".join(batch)))
+                chunks.append((start, last_in_batch, "\n".join(batch)))
                 batch, count, start = [], 0, i
             if not batch:
                 start = i
             batch.append(value)
+            last_in_batch = i
             count += len(value) + 1
     if batch:
         chunks.append((start, len(lines), "\n".join(batch)))
     return chunks
+
+def checkpoint_key(name, first, last, block):
+    # Changes in instructions or response schema must NEVER reuse stale AI findings.
+    contract = [VERSION, MODEL, PROMPT, FINDINGS_SCHEMA, CHUNK_CHARS,
+                name, first, last, block]
+    identity = json.dumps(contract, ensure_ascii=False, sort_keys=True)
+    return hashlib.sha256(identity.encode("utf-8")).hexdigest()
 
 def parse_answer(raw):
     if isinstance(raw, dict):
@@ -278,8 +286,7 @@ def scan():
     for file_index, (name, content) in enumerate(selected, 1):
         print(f"File {file_index}/{len(selected)}: {name}", flush=True)
         for first, last, block in chunks_for(content):
-            identity = json.dumps([VERSION, MODEL, name, first, last, block], ensure_ascii=False)
-            key = hashlib.sha256(identity.encode()).hexdigest()
+            key = checkpoint_key(name, first, last, block)
             checkpoint = CHECKPOINTS / (key + ".json")
             cached = False
             if checkpoint.exists():
