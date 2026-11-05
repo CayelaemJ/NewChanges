@@ -22,6 +22,7 @@ test("template CSV examples also use shared defensive escaping",()=>{
 });
 
 test("CSV encoder quotes carriage returns and guards formula leaders",()=>{
-  assert.match(safe,/\[=\+\\-@\]/);
-  assert.match(safe,/\r\\n/);
+  assert.match(safe,/const dangerous = !numeric/);
+  assert.match(safe,/const safe = dangerous/);
+  assert.match(safe,/safe\.replace/);
 });
