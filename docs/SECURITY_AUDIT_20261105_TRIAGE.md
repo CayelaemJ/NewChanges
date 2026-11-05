@@ -101,6 +101,16 @@ These were found by inspecting the implementation, not by trusting AI severity l
 
 **Verification is pending**: source inspection/wiring checks have passed, but there are no successful changed-commit Node 24 full-suite or physical MFA results. Do not set `TRUST_EDGE_GEO_HEADERS=true` until the proxy-header contract has been independently verified in the target environment.
 
+## Production SMTP transport hardening (2026-11-05, third iteration)
+
+**Verified risk:** The admin email settings schema exposed `smtpRequireTls` and `smtpRejectUnauthorized` flags. While both default to safe values in Prisma (`true`), previously the runtime accepted `false` for both. Such settings could permit cleartext SMTP or skip server certificate verification.
+
+**Draft change:** `src/services/smtpTlsPolicy.ts` refuses these insecure combinations whenever `NODE_ENV=production`. Implicit TLS (e.g. port 465) and mandatory STARTTLS (e.g. port 587) remain supported if the remote certificate is verified. Test/local environments may use isolated SMTP fixtures without external credentials. The rule runs when opening the actual SMTP transport, and when saving production TLS-setting changes.
+
+**Compatibility caution:** If a production SMTP provider depends on a self-signed certificate or currently has TLS-verification flags disabled, this change will prevent outbound SMTP until a valid trust chain or approved provider configuration is installed. Review SMTP settings and verify a **non-production test mail** before merging. No production SMTP settings were modified in this draft.
+
+**Coverage:** `tests/security/smtp-tls-policy.test.ts` plus the source-integration contract have been added to `check:security`; full npm/Docker execution on the changed branch is still pending.
+
 ## Workstream acceptance checks
 
 - [x] Separate code changes on a non-production branch based on PR #219.
