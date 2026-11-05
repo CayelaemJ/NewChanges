@@ -17,7 +17,7 @@ for tool in pg_dump pg_restore psql docker node grep; do
   command -v "$tool" >/dev/null || { echo "Missing command: $tool" >&2; exit 2; }
 done
 for tool in pg_dump pg_restore; do
-  "$tool" --version | grep -Eq 'PostgreSQL\\) 18\\.' || {
+  "$tool" --version | grep -Eq 'PostgreSQL\) 18\.' || {
     echo "BLOCKED: PostgreSQL 18 $tool required." >&2; exit 2;
   }
 done
@@ -78,7 +78,7 @@ if ! docker exec -i "$cid" pg_restore -U postgres -d postgres \
   < "$workdir/snapshot.dump" > "$workdir/restore.log" 2>&1; then
   echo 'FAIL: local full-data restore failed. No live databases changed.' >&2
   grep -E '(ERROR|FATAL):' "$workdir/restore.log" |
-    sed -E 's/^.*(ERROR|FATAL):[[:space:]]*/\\1: /' | head -n 15 >&2 || true
+    sed -E 's/^.*(ERROR|FATAL):[[:space:]]*/\1: /' | head -n 15 >&2 || true
   exit 3
 fi
 
