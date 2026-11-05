@@ -66,7 +66,7 @@ const MAX_UPLOAD_BYTES = Number(process.env.UPLOAD_MAX_BYTES ?? 50 * 1024 * 1024
 
 const app = Fastify({
   logger: {
-    redact: ["req.headers.authorization", "req.headers.cookie", "res.headers[\"set-cookie\"]"],
+    redact: ["req.headers.authorization", "req.headers.cookie", "req.headers.x-newchanges-edge-token", "res.headers[\"set-cookie\"]"],
     // Reset links and filters can contain sensitive values. Log route paths only.
     serializers: { req: (req) => ({ method: req.method, url: String(req.url || "").split("?", 1)[0], hostname: req.hostname, remoteAddress: req.ip }) },
   },
