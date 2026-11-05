@@ -20,6 +20,7 @@ COPY --from=build --chown=node:node /app/prisma.config.ts ./prisma.config.ts
 COPY --from=build --chown=node:node /app/scripts ./scripts
 COPY --from=build --chown=node:node /app/src/Migrations ./src/Migrations
 COPY --from=build --chown=node:node /app/cloudflare/main-app/preflight.mjs ./cloudflare/main-app/preflight.mjs
+COPY --from=build --chown=node:node /app/cloudflare/main-app/verify-database.mjs ./cloudflare/main-app/verify-database.mjs
 COPY --from=build --chown=node:node /app/package.json ./package.json
 USER node
 EXPOSE 3000
