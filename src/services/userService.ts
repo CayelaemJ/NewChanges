@@ -277,10 +277,11 @@ export async function completeSetup(token: string, newPassword: string) {
     const used = await tx.user.updateMany({
       where: {
         id: account.id,
+        active: true, // An old invitation/reset link must NEVER revive a revoked user.
         OR: [{ setupToken: digest }, { setupToken: token }],
         setupExpires: { gt: now },
       },
-      data: { passwordHash, setupToken: null, setupExpires: null, active: true },
+      data: { passwordHash, setupToken: null, setupExpires: null },
     });
     if (used.count !== 1) throw invalid();
     // Existing sessions cannot survive a password reset. Commit this
