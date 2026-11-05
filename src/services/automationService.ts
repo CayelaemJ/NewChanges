@@ -96,7 +96,7 @@ export async function runStaleAccountCheck() {
     const rows = deactivated.map((u: any) => `<li>${escapeNotificationHtml(u.name)} — ${escapeNotificationHtml(u.email)}</li>`).join("");
     await notifyAdmins({
       subject: `${deactivated.length} account(s) auto-deactivated for inactivity`,
-      html: `<div style="font-family:Arial,sans-serif;color:#241536"><h2 style="color:#32217c">Auto-deactivated for inactivity</h2><p>No sign-in for ${days}+ days:</p><ul>${rows}</ul><p style="color:#6b7280;font-size:13px">These are deactivated, not deleted — reactivate any of them from Past users.</p></div>`,
+      html: `<div style="font-family:Arial,sans-serif;color:#241536"><h2 style="color:#32217c">Auto-deactivated for inactivity</h2><p>No recorded account activity for ${days}+ days:</p><ul>${rows}</ul><p style="color:#6b7280;font-size:13px">These are deactivated, not deleted — reactivate any of them from Past users.</p></div>`,
       slackText: `:zzz: ${deactivated.length} account(s) auto-deactivated for ${days}+ days of inactivity.`,
     });
   }
