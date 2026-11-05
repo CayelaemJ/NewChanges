@@ -48,6 +48,7 @@ run npm run check:source-reconciliation
 run node scripts/security/rls-isolation-ci-probe.mjs
 run node scripts/prisma-upgrade-integration.mjs
 run node scripts/ci/password-token-replay-ci.mjs
+run node scripts/ci/admin-permission-atomic-ci.mjs
 run node scripts/ci/database-resilience-ci.mjs
 run node scripts/ci/import-failure-integration-ci.mjs
 run node scripts/ci/route-authorization-inventory-ci.mjs
