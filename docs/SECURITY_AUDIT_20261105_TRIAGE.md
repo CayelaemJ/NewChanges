@@ -267,7 +267,7 @@ The API adapter now calls `readPinnedSourceApiJson(url, token)` for every page a
 
 **Compatibility:** The schema supports **one shared persisted From address**, not separate durable SMTP and Resend addresses. Switching providers reuses the saved sender unless an environment override applies. This is disclosed in the UI. If independent persisted sender addresses become a requirement, introduce a separately reviewed migration rather than inventing a write to an unknown Prisma column.
 
-**Verification:** 7 source/schema/UI checks passed; **11 isolated Node 22 behaviour tests** and strict TypeScript compilation of the corrected resolver passed. End-to-end delivery and the full self-hosted Node 24 CI suite remain unverified.
+**Verification:** 7 source/schema/UI checks passed; **11 isolated Node 22 behaviour tests** and strict TypeScript compilation of the corrected resolver passed. The new `scripts/ci/email-provider-persistence-ci.mjs` physical regression, now wired immediately after synthetic Prisma schema setup in full Docker CI, saves a synthetic Resend provider key and two conflicting sender fields to the disposable localhost database, asserts the real persisted `fromEmail` and the public response's redacted key, then restores the previous configuration. It is protected by the exact disposable fixture DB URL, `CI=true`, `NODE_ENV=test`, and explicit CI approval flag. **This physical database regression has not yet executed.** End-to-end delivery and the full self-hosted Node 24 CI suite remain unverified.
 
 ## Inactivity sweep session consistency (2026-11-05)
 
