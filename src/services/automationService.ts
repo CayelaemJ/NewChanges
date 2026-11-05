@@ -75,7 +75,15 @@ export async function runStaleAccountCheck() {
     // Atomic role/active fencing prevents an account promoted to SUPERADMIN
     // during the sweep from being disabled by a stale earlier query result.
     const updated = await prisma.user.updateMany({
-      where: { id: u.id, active: true, role: { not: "SUPERADMIN" } },
+      where: {
+        id: u.id,
+        active: true,
+        role: { not: "SUPERADMIN" },
+        createdAt: { lt: cutoff },
+        // A new login or page request might occur after the candidate read.
+        // Re-check recent activity in the SAME conditional database write.
+        sessions: { none: { lastSeenAt: { gte: cutoff } } },
+      },
       data: { active: false, setupToken: null, setupExpires: null, revokedAt: new Date(), revokedReason: `Auto-deactivated: no activity for ${days}+ days`, revokedBy: "system (auto)" },
     });
     if (updated.count !== 1) continue;
