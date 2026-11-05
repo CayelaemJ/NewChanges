@@ -23,7 +23,13 @@ require_approval AIVEN_DISK_HEADROOM_VERIFIED
 require_approval AIVEN_BACKUP_VERIFIED
 require_approval AIVEN_EXTENSION_REVIEWED
 require_approval AIVEN_CROSS_BORDER_APPROVED
-require_approval AIVEN_WRITES_FROZEN
+# Test copies preserve live Neon writes; final cutovers require a separate freeze.
+if [[ "${AIVEN_POINT_IN_TIME_TEST:-}" == "YES" ]]; then
+  require_approval AIVEN_LIVE_SOURCE_DRIFT_ACCEPTED
+  echo 'MODE: point-in-time test; Neon writes remain enabled, counts may drift after the snapshot.'
+else
+  require_approval AIVEN_WRITES_FROZEN
+fi
 require_approval AIVEN_SNAPSHOT_COPY_APPROVED
 
 : "${DR_SOURCE_DATABASE_URL:?Missing source connection secret}"
@@ -141,8 +147,14 @@ while IFS= read -r table; do
 done <<< "$tables_to_check"
 [[ "$checked" == "$source_tables" ]] ||
   { echo "FAIL: checked table count differs from source table count." >&2; exit 3; }
-[[ "$mismatches" == 0 ]] ||
-  { echo "FAIL: $mismatches table counts do not match." >&2; exit 3; }
+if [[ "$mismatches" != 0 ]]; then
+  if [[ "${AIVEN_POINT_IN_TIME_TEST:-}" == YES ]]; then
+    echo "WARN: $mismatches source/live row count differences. Compare against snapshot-consistent counts before promoting Aiven." >&2
+  else
+    echo "FAIL: $mismatches table counts do not match." >&2
+    exit 3
+  fi
+fi
 
-echo "SNAPSHOT COPIED: $restored_tables public tables; counts matched."
+echo "SNAPSHOT COPIED: $restored_tables public tables; current-source row-count differences=$mismatches."
 echo 'PRODUCTION UNCHANGED. This is a point-in-time copy, NOT live replication or approved cutover.'
