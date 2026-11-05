@@ -17,7 +17,8 @@
     "NEWCHANGES_SOURCE_WRITERS_FENCED": "NO",
     "NEWCHANGES_FINAL_SYNC_VERIFIED": "NO",
     "NEWCHANGES_AIVEN_PRODUCTION_APPROVED": "NO",
-    "NEWCHANGES_CLOUDFLARE_PRIMARY": "NO"
+    "NEWCHANGES_CLOUDFLARE_PRIMARY": "NO",
+    "NEWCHANGES_KEEP_WARM_ENABLED": "false"
   },
   "containers": [
     {
@@ -44,5 +45,10 @@
   ],
   "observability": {
     "enabled": true
+  },
+  "triggers": {
+    "crons": [
+      "*/5 * * * *"
+    ]
   }
 }
