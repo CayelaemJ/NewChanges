@@ -9,6 +9,7 @@ assert.equal(process.env.CI_RLS_PROBE_APPROVED, "CI_DISPOSABLE_ONLY", "Disposabl
 assert.equal(process.env.DATABASE_URL, FIXTURE_DB, "Refusing non-disposable database");
 const { prisma } = await import("../../dist/services/database.js");
 const { completeSetup, resetPassword, updateUser, deactivateSelf } = await import("../../dist/services/userService.js");
+const { createSession, login, hashPassword } = await import("../../dist/services/authService.js");
 const tokenDigest = value => createHash("sha256").update(value).digest("hex");
 const nowPlus = ms => new Date(Date.now() + ms);
 const fixtures = [];
@@ -120,6 +121,72 @@ try {
   assert.equal(afterAdmin.setupToken, null);
   assert.ok((await prisma.session.findUniqueOrThrow({ where: { id: adminSession.id } })).endedAt);
   console.log("[password-reset] PASS admin password reset revokes existing sessions");
+
+  // Simulate a deactivation racing a login that already verified a password.
+  // The session insert must WAIT behind the user's row lock and then fail.
+  const guarded = await createFixture();
+  const initialPasswordHash = hashPassword("OriginalLogin123");
+  await prisma.user.update({
+    where: { id: guarded.userId },
+    data: { passwordHash: initialPasswordHash },
+  });
+  const activeSession = await createSession(guarded.userId, 7, {}, initialPasswordHash);
+  assert.ok(activeSession.sessionId);
+  let pendingDisabledLogin;
+  await prisma.$transaction(async tx => {
+    await tx.user.update({ where: { id: guarded.userId }, data: { active: false } });
+    pendingDisabledLogin = Promise.allSettled([
+      createSession(guarded.userId, 7, {}, initialPasswordHash),
+    ]);
+    await new Promise(resolve => setTimeout(resolve, 40));
+  });
+  const [disabledLoginResult] = await pendingDisabledLogin;
+  assert.equal(disabledLoginResult.status, "rejected");
+  assert.match(String(disabledLoginResult.reason), /no longer active/);
+  console.log("[password-reset] PASS concurrent deactivation blocks late session creation");
+
+  // A password reset racing session creation must reject the stale verified
+  // hash, rather than minting a token accepted after credential replacement.
+  const changedHash = hashPassword("ReplacementLogin123");
+  let pendingOldPassword;
+  await prisma.$transaction(async tx => {
+    await tx.user.update({
+      where: { id: guarded.userId },
+      data: { active: true, passwordHash: changedHash },
+    });
+    pendingOldPassword = Promise.allSettled([
+      createSession(guarded.userId, 7, {}, initialPasswordHash),
+    ]);
+    await new Promise(resolve => setTimeout(resolve, 40));
+  });
+  const [oldPasswordResult] = await pendingOldPassword;
+  assert.equal(oldPasswordResult.status, "rejected");
+  assert.match(String(oldPasswordResult.reason), /Credentials changed during sign-in/);
+  const current = await createSession(guarded.userId, 7, {}, changedHash);
+  assert.ok(current.sessionId);
+  console.log("[password-reset] PASS password-change race rejects old password sessions");
+
+  // The legacy hash upgrade path must remain usable but the stored hash is
+  // upgraded conditionally, not overwritten after a concurrent password reset.
+  const upgradedUser = await createFixture();
+  const oldSalt = randomBytes(16).toString("hex");
+  const { scryptSync } = await import("node:crypto");
+  const legacyPassword = "LegacyLoginPassword123";
+  const legacyHash = oldSalt + ":" +
+    scryptSync(legacyPassword, oldSalt, 64).toString("hex");
+  await prisma.user.update({
+    where: { id: upgradedUser.userId },
+    data: { passwordHash: legacyHash },
+  });
+  const signedIn = await login(
+    (await prisma.user.findUniqueOrThrow({ where: { id: upgradedUser.userId } })).email,
+    legacyPassword,
+  );
+  assert.ok(signedIn?.token);
+  assert.ok((await prisma.user.findUniqueOrThrow({
+    where: { id: upgradedUser.userId },
+  })).passwordHash.startsWith("v2$"));
+  console.log("[password-reset] PASS legacy password upgrade uses guarded session creation");
 } finally {
   if (fixtures.length) await prisma.user.deleteMany({ where: { id: { in: fixtures } } });
   await prisma.$disconnect();
