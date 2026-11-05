@@ -39,3 +39,19 @@ test("email notices escape account names and the HTML report fields",()=>{
   assert.match(scheduler,/safeEmailColor\(theme\?\.primaryColor/);
   assert.match(scheduler,/safePortalBaseUrl\(\(schedule as any\)\.portalBaseUrl\)/);
 });
+
+test("saved Resend API configuration is resolved without leaking secrets to the browser",()=>{
+  const provider=read("src/services/emailProviderConfig.ts");
+  const start=scheduler.indexOf("function withEnv(");
+  const end=scheduler.indexOf("export async function publicEmailConfig",start);
+  assert.ok(start>0 && end>start);
+  const resolver=scheduler.slice(start,end);
+  assert.match(resolver,/resolveEmailProviderConfig\(cfg, draft\)/);
+  assert.match(resolver,/\.\.\.provider/);
+  assert.doesNotMatch(resolver,/envString\("EMAIL_PROVIDER"\) \|\| "smtp"/);
+  assert.match(provider,/nonempty\(stored\.resendApiKey\)/);
+  assert.match(provider,/nonempty\(stored\.resendFromEmail\)/);
+  const publicResponse=scheduler.slice(end,scheduler.indexOf("export async function saveEmailConfig",end));
+  assert.match(publicResponse,/resendConfigured: Boolean/);
+  assert.doesNotMatch(publicResponse,/resendApiKey\s*:/);
+});
