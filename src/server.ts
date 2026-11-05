@@ -59,6 +59,7 @@ import { getBrandLearningProfile, learnFromBrandUpload, recordBrandCorrection } 
 
 import { browserSafeFailure } from "./services/browserErrorSafety.js";
 import { InMemoryRateLimiter } from "./services/inMemoryRateLimiter.js";
+import { escapeNotificationHtml, notificationPlainText } from "./services/notificationTextSafety.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = [join(__dirname, "public"), join(__dirname, "..", "public")]
@@ -1817,7 +1818,7 @@ app.post<{ Body: { kind: "stale" | "digest" | "test" } }>("/api/admin/automation
       return { ok: true, message: r.ran ? "Digest sent." : "Not sent: digest is disabled, or one was already sent in the last 7 days." };
     }
     if (kind === "test") {
-      const r = await notifyAdmins({ subject: "Test alert from The Fixer (Pty) Ltd Dashboard Portal", html: `<p>This is a test alert triggered by ${admin.name} (${admin.email}).</p>`, slackText: `:wave: Test alert triggered by ${admin.name}.` });
+      const r = await notifyAdmins({ subject: "Test alert from The Fixer (Pty) Ltd Dashboard Portal", html: `<p>This is a test alert triggered by ${escapeNotificationHtml(admin.name)} (${escapeNotificationHtml(admin.email)}).</p>`, slackText: `:wave: Test alert triggered by ${notificationPlainText(admin.name)}.` });
       return { ok: true, message: `Sent to ${r.emailed} email address(es)${r.slack ? " and Slack" : ""}. Set admin alert emails and/or a Slack webhook first if nothing arrived.` };
     }
     return reply.code(400).send({ error: "Unknown automation kind" });
