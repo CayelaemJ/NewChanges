@@ -29,13 +29,18 @@ test('source and destination identity, major version and capacity are gated', ()
   assert.match(script, /target_bytes.*50000000/);
 });
 
-test('snapshot streams exactly once without destructive operations or dumps on disk', () => {
-  assert.match(script, /pg_dump[\s\S]*\|[\s\S]*pg_restore/);
+test('snapshot is created once, TOC omits only public schema create, and restore is atomic', () => {
+  assert.match(script, /--file="\$workdir\/snapshot\.dump"/);
+  assert.match(script, /pg_restore --list/);
+  assert.match(script, /awk '!\/\^\[0-9\]\+;/);
+  assert.match(script, /--use-list="\$workdir\/restore\.toc"/);
   assert.match(script, /--format=custom/);
   assert.match(script, /--exclude-extension=pg_session_jwt/);
   assert.match(script, /--exit-on-error/);
   assert.match(script, /--single-transaction/);
-  assert.doesNotMatch(script, /--clean|--force-reset|DROP DATABASE|CREATE DATABASE|while true|--jobs=/);
+  assert.match(script, /trap cleanup EXIT/);
+  assert.match(script, /target_tables_now/);
+  assert.doesNotMatch(script, /--clean|--force-reset|DROP SCHEMA|DROP DATABASE|CREATE DATABASE|while true|--jobs=/);
   assert.doesNotMatch(script, /AVNS_[A-Za-z0-9]+|postgres:\/\/avnadmin:/);
 });
 
