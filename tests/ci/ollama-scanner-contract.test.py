@@ -208,5 +208,45 @@ class LocalOllamaContractTests(unittest.TestCase):
                 self.assertTrue(scanner.is_encoded_raster_fixture(
                     "tests/fixtures/" + name, path.read_bytes()), name)
 
+    def test_release_gate_fails_when_unreviewable_source_was_omitted(self):
+        # Never let MAX_FILES or oversized/unreadable source be mislabeled as
+        # a complete scan just because the selected subset passed.
+        for reason in ("file_limit", "exceeds_max_text_bytes",
+                       "unreadable_or_non_utf8", "not_regular_file"):
+            with self.subTest(reason=reason), tempfile.TemporaryDirectory() as temp:
+                reports = Path(temp) / "reports"
+                checkpoints = Path(temp) / "cache"
+                selected = [("src/server.ts", "const safe = true")]
+                excluded = [{"file": "src/unreviewed.ts", "reason": reason}]
+                with patch.object(scanner, "REPORTS", reports), \
+                     patch.object(scanner, "CHECKPOINTS", checkpoints), \
+                     patch.object(scanner, "require_local_gpu"), \
+                     patch.object(scanner, "read_manifest", return_value=(selected, excluded)), \
+                     patch.object(scanner, "ask_model", return_value=([], 1)):
+                    exit_code = scanner.scan()
+                report = json.loads((reports / "report.json").read_text())
+                self.assertEqual(exit_code, 2)
+                self.assertFalse(report["complete"])
+                self.assertEqual(report["scope_gaps"], excluded)
+
+    def test_intentionally_excluded_image_fixture_does_not_block_source_review(self):
+        with tempfile.TemporaryDirectory() as temp:
+            reports = Path(temp) / "reports"
+            checkpoints = Path(temp) / "cache"
+            selected = [("src/server.ts", "const safe = true")]
+            excluded = [{"file": "tests/fixtures/raster.json",
+                         "reason": "validated_rgba_image_fixture"}]
+            with patch.object(scanner, "REPORTS", reports), \
+                 patch.object(scanner, "CHECKPOINTS", checkpoints), \
+                 patch.object(scanner, "require_local_gpu"), \
+                 patch.object(scanner, "read_manifest", return_value=(selected, excluded)), \
+                 patch.object(scanner, "ask_model", return_value=([], 1)):
+                exit_code = scanner.scan()
+            report = json.loads((reports / "report.json").read_text())
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(report["complete"])
+            self.assertEqual(report["scope_gaps"], [])
+            self.assertFalse(report["all_tracked_included"])
+
 if __name__ == "__main__":
     unittest.main()
