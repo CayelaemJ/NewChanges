@@ -56,7 +56,7 @@ class PdfExportTests(unittest.TestCase):
             import re
             text = b"".join(
                 zlib.decompress(match.group(1))
-                for match in re.finditer(rb"\\nstream\\n(.*?)\\nendstream", payload, re.S)
+                for match in re.finditer(rb"\nstream\n(.*?)\nendstream", payload, re.S)
             )
             self.assertIn(b"Finding #1", text)
             self.assertIn(b"Finding #150", text)
