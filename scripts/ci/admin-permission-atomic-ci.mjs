@@ -9,7 +9,7 @@ assert.equal(process.env.CI_RLS_PROBE_APPROVED, "CI_DISPOSABLE_ONLY");
 assert.equal(process.env.DATABASE_URL, DB, "Refusing access to anything but disposable local CI PostgreSQL");
 
 const { prisma } = await import("../../dist/services/database.js");
-const { updateUser } = await import("../../dist/services/userService.js");
+const { updateUser, resetPassword, deleteUserPermanently } = await import("../../dist/services/userService.js");
 const digest = token => createHash("sha256").update(token).digest("hex");
 const employerIds = [];
 const userIds = [];
@@ -95,6 +95,43 @@ try {
     where: { id: superadmin },
   })).name, "Authorized superadmin update");
   console.log("[admin-access] PASS privileged admin updates remain functional");
+
+  // Ordinary administrators must not be able to reset passwords on the
+  // superadmin control plane, regardless of the submitted user ID.
+  await assert.rejects(
+    resetPassword(superadmin, "OrdinaryAdminAttempt123", { forbidSuperadminTarget: true }),
+    /no longer editable/,
+  );
+  assert.equal((await prisma.user.findUniqueOrThrow({
+    where: { id: superadmin },
+  })).passwordHash, null);
+  assert.equal((await prisma.session.findUniqueOrThrow({
+    where: { id: superadminSession.id },
+  })).endedAt, null);
+  await resetPassword(superadmin, "PrivilegedAdminReset123", {
+    forbidSuperadminTarget: false,
+  });
+  assert.ok((await prisma.user.findUniqueOrThrow({
+    where: { id: superadmin },
+  })).passwordHash);
+  assert.ok((await prisma.session.findUniqueOrThrow({
+    where: { id: superadminSession.id },
+  })).endedAt);
+  console.log("[admin-access] PASS superadmin password reset is privileged and transactional");
+
+  const retiredSuperadmin = await makeUser("SUPERADMIN");
+  await prisma.user.update({
+    where: { id: retiredSuperadmin },
+    data: { active: false },
+  });
+  await assert.rejects(
+    deleteUserPermanently(retiredSuperadmin, { forbidSuperadminTarget: true }),
+    /deactivated and editable/,
+  );
+  assert.ok(await prisma.user.findUnique({ where: { id: retiredSuperadmin } }));
+  await deleteUserPermanently(retiredSuperadmin, { forbidSuperadminTarget: false });
+  assert.equal(await prisma.user.findUnique({ where: { id: retiredSuperadmin } }), null);
+  console.log("[admin-access] PASS retired superadmin deletion requires privileged actor");
 } finally {
   if (userIds.length) await prisma.user.deleteMany({ where: { id: { in: userIds } } });
   if (employerIds.length) await prisma.employer.deleteMany({ where: { id: { in: employerIds } } });
