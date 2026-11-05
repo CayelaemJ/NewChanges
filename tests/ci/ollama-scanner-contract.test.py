@@ -115,5 +115,57 @@ class LocalOllamaContractTests(unittest.TestCase):
         self.assertEqual(findings, [])
         self.assertEqual(attempts, 2)
 
+    def test_retry_changes_prompt_after_invalid_source_line(self):
+        class FakeResponse:
+            def __init__(self, content): self.content = content
+            def __enter__(self): return self
+            def __exit__(self, *args): return False
+            def read(self): return self.content
+
+        invalid_finding = {"severity": "high", "line": 999, "title": "Example",
+                           "evidence": "Nonexistent source line",
+                           "recommendation": "Use real source evidence"}
+        responses = iter([
+            FakeResponse(json.dumps({"response": json.dumps({"findings": [invalid_finding]})}).encode()),
+            FakeResponse(json.dumps({"response": '{"findings":[]}'}).encode()),
+        ])
+        prompts = []
+        def fake_urlopen(request, timeout):
+            data = json.loads(request.data.decode())
+            prompts.append(data["prompt"])
+            return next(responses)
+
+        with patch.object(scanner, "urlopen", side_effect=fake_urlopen), \
+             patch.object(scanner.time, "sleep"):
+            findings, attempts = scanner.ask_model("sensitive.ts", 13, 13, "13: let x = 42")
+        self.assertEqual((findings, attempts), ([], 2))
+        self.assertEqual(len(prompts), 2)
+        self.assertNotIn("RETRY CONSTRAINT", prompts[0])
+        self.assertIn("RETRY CONSTRAINT", prompts[1])
+        self.assertIn("from 13 through 13", prompts[1])
+        self.assertIn("13: let x = 42", prompts[1])
+
+    def test_retry_changes_prompt_after_malformed_json(self):
+        class FakeResponse:
+            def __init__(self, content): self.content = content
+            def __enter__(self): return self
+            def __exit__(self, *args): return False
+            def read(self): return self.content
+
+        replies = iter([
+            FakeResponse(json.dumps({"response": "not json"}).encode()),
+            FakeResponse(json.dumps({"response": '{"findings":[]}'}).encode()),
+        ])
+        prompts = []
+        def fake_urlopen(request, timeout):
+            prompts.append(json.loads(request.data)["prompt"])
+            return next(replies)
+        with patch.object(scanner, "urlopen", side_effect=fake_urlopen), \
+             patch.object(scanner.time, "sleep"):
+            findings, attempts = scanner.ask_model("malformed.ts", 1, 1, "1: hello")
+        self.assertEqual((findings, attempts), ([], 2))
+        self.assertEqual(len(prompts), 2)
+        self.assertNotEqual(prompts[0], prompts[1])
+
 if __name__ == "__main__":
     unittest.main()
