@@ -48,17 +48,40 @@ const metadataQueries = {
 const quote = value => '"' + value.replaceAll('"', '""') + '"';
 const canonical = rows => JSON.stringify(rows);
 
-// Use an environment variable for the connection rather than passing passwords on the process command line.
-// PostgreSQL libpq accepts a PostgreSQL URI as the PGDATABASE connection value.
-function query(url, sql) {
-  const result = spawnSync('psql', ['-X', '-A', '-t', '-q', '-v', 'ON_ERROR_STOP=1', '-c', sql], {
-    env: { ...process.env, PGDATABASE: url, PGCONNECT_TIMEOUT: '15', PGOPTIONS: '-c default_transaction_read_only=on -c statement_timeout=120000' },
+// Parse the URI into libpq environment variables. PGDATABASE must contain the
+// database NAME, not a full connection URI. Never pass passwords as CLI args.
+function connectionEnv(raw) {
+  const u = new URL(raw);
+  const env = { ...process.env };
+  // Override inherited PG* defaults so they cannot silently redirect the query.
+  for (const name of ['PGHOST','PGPORT','PGUSER','PGPASSWORD','PGDATABASE','PGSSLMODE','PGCHANNELBINDING','PGSERVICE','PGSERVICEFILE','PGHOSTADDR']) delete env[name];
+  env.PGHOST = u.hostname;
+  env.PGPORT = u.port || '5432';
+  env.PGUSER = decodeURIComponent(u.username);
+  env.PGPASSWORD = decodeURIComponent(u.password);
+  env.PGDATABASE = decodeURIComponent(u.pathname.slice(1));
+  env.PGSSLMODE = u.searchParams.get('sslmode') || 'require';
+  if (u.searchParams.has('channel_binding')) env.PGCHANNELBINDING = u.searchParams.get('channel_binding');
+  env.PGCONNECT_TIMEOUT = '15';
+  env.PGOPTIONS = '-c default_transaction_read_only=on -c statement_timeout=120000';
+  return env;
+}
+function query(url, sql, step) {
+  const result = spawnSync('psql', ['-w', '-X', '-A', '-t', '-q', '-v', 'ON_ERROR_STOP=1', '-c', sql], {
+    env: connectionEnv(url),
     encoding: 'utf8',
     timeout: 130000,
     maxBuffer: 16 * 1024 * 1024,
   });
   if (result.error || result.status !== 0) {
-    throw new Error('PostgreSQL read-only query failed; verify credentials and connectivity.');
+    const stderr = result.stderr ?? '';
+    let category = 'SQL or client error';
+    if (/password authentication failed|no password supplied|fe_sendauth/i.test(stderr)) category = 'authentication failed';
+    else if (/could not translate host name|name or service not known/i.test(stderr)) category = 'DNS failed';
+    else if (/timeout|timed out|connection refused|could not connect/i.test(stderr)) category = 'connection failed';
+    else if (/ssl|certificate|channel binding/i.test(stderr)) category = 'TLS/channel-binding failed';
+    else if (/permission denied/i.test(stderr)) category = 'permission denied';
+    throw new Error('PostgreSQL read-only query failed (' + step + '; ' + category + ').');
   }
   return result.stdout.trim();
 }
@@ -67,13 +90,13 @@ function inspect(url) {
   const meta = {};
   for (const [kind, innerQuery] of Object.entries(metadataQueries)) {
     const sql = `SELECT COALESCE(json_agg(row_to_json(x)), '[]'::json)::text FROM (${innerQuery}) x`;
-    meta[kind] = JSON.parse(query(url, sql));
+    meta[kind] = JSON.parse(query(url, sql, 'metadata ' + kind));
   }
   const counts = {};
   for (const { name } of meta.tables) {
     // Table names originate from PostgreSQL metadata and are always quoted as identifiers.
-    const n = query(url, `SELECT count(*)::text FROM public.${quote(name)}`);
-    if (!/^\\d+$/.test(n)) throw new Error('Invalid table count.');
+    const n = query(url, `SELECT count(*)::text FROM public.${quote(name)}`, 'table count ' + name);
+    if (!/^\d+$/.test(n)) throw new Error('Invalid table count.');
     counts[name] = n;
   }
   return { meta, counts };
