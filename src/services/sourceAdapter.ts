@@ -11,6 +11,7 @@
 // ════════════════════════════════════════════════════════════════════
 
 import { readPinnedSourceApiJson } from "./pinnedSourceHttps.js";
+import { assertSecureSourceSqlTransport } from "./sourceSqlTlsPolicy.js";
 import { LOAD_ORDER, getFormat } from "./reportFormats.js";
 import { lookup } from "node:dns/promises";
 import { isBlockedSourceAddress as privateOrLocalAddress } from "./sourceAddressPolicy.js";
@@ -353,6 +354,7 @@ async function openPostgresExecutor(config: IntegrationSourceConfig): Promise<Sq
   const queryTimeout = intSetting(config.sqlQueryTimeoutMs, 60_000, 1_000, 600_000);
   const sslEnabled = boolEnv("SOURCE_SQL_SSL") ?? config.sqlSsl ?? true;
   const trust = boolEnv("SOURCE_SQL_TRUST_SERVER_CERTIFICATE") ?? config.sqlTrustServerCertificate ?? false;
+  assertSecureSourceSqlTransport(sslEnabled, trust, "PostgreSQL source");
   const client = new Client({
     host: config.sqlHost,
     port: intSetting(config.sqlPort, 5432, 1, 65535),
@@ -416,6 +418,7 @@ async function openMysqlExecutor(config: IntegrationSourceConfig): Promise<SqlEx
   const queryTimeout = intSetting(config.sqlQueryTimeoutMs, 60_000, 1_000, 600_000);
   const sslEnabled = boolEnv("SOURCE_SQL_SSL") ?? config.sqlSsl ?? true;
   const trust = boolEnv("SOURCE_SQL_TRUST_SERVER_CERTIFICATE") ?? config.sqlTrustServerCertificate ?? false;
+  assertSecureSourceSqlTransport(sslEnabled, trust, "MySQL source");
   const connection = await createConnection({
     host: config.sqlHost,
     port: intSetting(config.sqlPort, 3306, 1, 65535),
@@ -484,6 +487,7 @@ async function openMssqlExecutor(config: IntegrationSourceConfig): Promise<SqlEx
   const queryTimeout = intSetting(config.sqlQueryTimeoutMs, 60_000, 1_000, 600_000);
   const encrypt = boolEnv("SOURCE_SQL_SSL") ?? config.sqlSsl ?? true;
   const trust = boolEnv("SOURCE_SQL_TRUST_SERVER_CERTIFICATE") ?? config.sqlTrustServerCertificate ?? false;
+  assertSecureSourceSqlTransport(encrypt, trust, "SQL Server source");
   const pool = await new ConnectionPool({
     server: config.sqlHost,
     port: intSetting(config.sqlPort, 1433, 1, 65535),
