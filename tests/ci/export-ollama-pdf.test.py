@@ -11,7 +11,7 @@ exporter = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(exporter)
 
 class PdfExportTests(unittest.TestCase):
-    def test_pdf_is_valid_pdf_container_with_sources_private(self):
+    def test_pdf_is_valid_complete_local_audit(self):
         with tempfile.TemporaryDirectory() as tmp:
             dest = Path(tmp) / "test.pdf"
             sample = {
@@ -21,7 +21,7 @@ class PdfExportTests(unittest.TestCase):
                 "skipped_files": [{"file":"fixture.bin","reason":"binary"}],
                 "findings": [
                     {"file":"src/server.ts","line":9,"severity":"high",
-                     "title":"Mock sensitive test only", "evidence":"SECRET_TEST_PAYLOAD_SHOULD_NOT_APPEAR"},
+                     "title":"Mock sensitive test only", "evidence":"Synthetic evidence for PDF export"},
                     {"file":"tests/example.ts","line":11,"severity":"medium",
                      "title":"Mock test observation"}
                 ]
@@ -31,8 +31,37 @@ class PdfExportTests(unittest.TestCase):
             self.assertGreaterEqual(pages, 1)
             self.assertTrue(contents.startswith(b"%PDF-1.4"))
             self.assertIn(b"%%EOF", contents[-80:])
-            self.assertNotIn(b"SECRET_TEST_PAYLOAD_SHOULD_NOT_APPEAR", contents)
+            self.assertGreater(len(contents), 1000)
             self.assertIn(b"xref", contents)
+
+    def test_all_findings_included_without_cap(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            dest = Path(tmp) / "full.pdf"
+            sample = {
+                "complete": True, "eligible_files": 1, "reviewed_files": 1,
+                "total_chunks": 1, "completed_chunks": 1,
+                "errors": [], "skipped_files": [],
+                "findings": [
+                    {"file": "src/example.ts", "line": i, "severity": "medium",
+                     "title": f"Finding #{i}", "evidence": f"Evidence #{i}",
+                     "recommendation": f"Remediation #{i}"}
+                    for i in range(1, 151)
+                ]
+            }
+            pages = exporter.create_report(sample, dest)
+            self.assertGreater(pages, 5)
+            self.assertGreater(dest.stat().st_size, 10000)
+            import zlib
+            payload = dest.read_bytes()
+            streams = payload.split(b"stream\\n")
+            text = b"".join(
+                zlib.decompress(part.split(b"\\nendstream")[0])
+                for part in streams[1:]
+            )
+            self.assertIn(b"Finding #1", text)
+            self.assertIn(b"Finding #150", text)
+            self.assertIn(b"Evidence #150", text)
+            self.assertIn(b"Remediation #150", text)
 
     def test_pdf_string_escape(self):
         self.assertEqual(exporter.pdf_string("a(b)\\c"), r"a\(b\)\\c")
