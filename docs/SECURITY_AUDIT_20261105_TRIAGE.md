@@ -38,6 +38,46 @@ The scanner has a historical HIGH-severity prompt example. The 3,142 HIGH labels
 
 All 12 excluded tracked paths must be listed with reasons and reviewed for coverage relevance. Do not silently count excluded paths as scanned.
 
+## Detailed PDF and source-confirmed remediation update (2026-11-05)
+
+A subsequent 577-page detailed PDF, `The_Fixer_Full_Detailed_Security_Audit_20261105_102117.pdf`, confirms the *same underlying scan*: scanner schema 4, 500/505 reviewable files and 1,288/1,293 chunks. It provides every AI-authored observation but still has no source-level proof. Do not treat a later PDF export as a new complete scan.
+
+### Reviewed examples and dispositions
+
+| Original PDF finding | Source verification | Disposition |
+|---|---|---|
+| #15, SQL injection from a migration's foreign-key `userId` | Declarative SQL foreign key alone is not SQL string interpolation | Unsupported / false-positive mechanism |
+| #49, insecure strict-equality test assertion | `assert.equal` in Node strict assertion module is not insecure authorisation | Unsupported / false-positive mechanism |
+| #2096, case-sensitive `ADMIN` or `SUPERADMIN` check | Explicit server-side role allowlist is expected; no vulnerability demonstrated | Unsupported |
+| #2100 / #2101, alleged MFA bypass when MFA/recovery is missing | Inspected `src/server.ts` redirects administrators to `/mfa` and blocks protected API traffic | Not substantiated by inspected guard; still requires live tests |
+| #2102, contact email HTML injection | Contact template escapes supplied values with `escAttr` | Not substantiated at cited path |
+| #2156, unescaped admin name in test notification | Server interpolated account-controlled name and email directly into HTML email body | **Confirmed HTML-injection sink; patch added** |
+| #2209, unhandled Slack fetch exceptions | `notifyAdmins` already wraps fetch in `try/catch` | Unsupported |
+
+### Additional defects independently identified in GitHub code
+
+These were found by inspecting the implementation, not by trusting AI severity labels:
+
+- **Webhook credential disclosure**: `publicEmailConfig` returned the complete saved Slack incoming-webhook URL to the administrative browser. Incoming-webhook URLs are bearer credentials. Replace with `hasAlertSlackWebhook`, leave the input blank, explicitly preserve it on unrelated saves, and support an explicit removal checkbox. Admin role restrictions existed, so this is **not** an unauthenticated leak.
+- **Outbound notification destination restriction**: `notifyAdmins` fetched whatever URL an administrator had saved. Add a strict HTTPS allowlist for Slack incoming-webhook URLs, enforced both at save time and when sending using historical DB configuration. This is a boundary-hardening change, not proof an internal endpoint was contacted.
+- **HTML notification content**: Test alerts, inactivity reports and weekly digests interpolated names and event paths without consistent escaping. Encode values before insertion into HTML and remove special-control characters from plain Slack text.
+- **Configured email origin and HTML-safe report fields**: Validate portal-link base URLs before including them in account setup, reset and report emails. Normalize CSS brand colors and escape nonnumeric monetary values when rendering report HTML.
+
+### New regression coverage
+
+- `tests/security/slack-webhook-policy.test.ts`: allow valid Slack/GovSlack endpoints; reject HTTP, localhost, metadata IPs, lookalike hosts, alternate ports, userinfo, queries and fragments.
+- `tests/security/notification-text-safety.test.ts`: escape HTML, reject unsafe email-link schemes and invalid CSS colors.
+- `tests/security/notification-settings-contract.test.mjs`: ensure API does not serialize webhook secrets; enforce saved-secret preservation in UI; reject unchecked notification egress.
+- The existing `check:security` script now includes these tests. **No changed-commit Docker CI success has been confirmed yet.**
+
+### Remaining risks / release blockers
+
+- The source API's separate DNS lookup and `fetch` still permit an egress time-of-check/time-of-use race without pinned connections / network egress controls.
+- Slack webhook URLs are stored in the application database in plaintext. At-rest field encryption, access auditing, redaction during backup/export and key rotation should be evaluated before production.
+- Enforce the exact saved Slack webhook allowlist on existing configurations and rehearse a rotation of any previously displayed credentials. An existing non-Slack URL will no longer receive messages.
+- Validate app-specific CSP, CSRF, authorised cross-tenant access, MFA superadmin recovery, transactional rate-limit concurrency and scheduled jobs with live synthetic HTTP tests.
+- **Never claim the application is fully secure from AI observations alone. No PR merge, production toggle, cutover or deployment until approval.**
+
 ## Workstream acceptance checks
 
 - [x] Separate code changes on a non-production branch based on PR #219.
