@@ -150,6 +150,18 @@ The API adapter now calls `readPinnedSourceApiJson(url, token)` for every page a
 
 **Residual:** SQL connectors have separate network and TLS policies, and should be reviewed independently. Network-level outbound allowlists are still recommended as additional defense. Source destination address pinning removes the specific HTTP DNS lookup/connect race, not every possible SSRF variant.
 
+## CSV export and spreadsheet formula handling (2026-11-05, sixth iteration)
+
+**Source-confirmed issue:** `src/services/exportService.ts` used a local `csvEscape` implementation that only quoted CSV delimiters and newlines. Administrative exports (audit/user/security data), imported batch row exports and template CSV examples could contain attacker-influenced strings beginning with spreadsheet formula operators (`=`, `+`, `-`, `@`). The previous exporter also did not quote carriage-return characters.
+
+**Draft remediation:** Shared `src/services/csvSafety.ts` now prefixes a literal apostrophe for text values whose first significant character is a formula operator after spaces/control/invisible prefixes; properly quotes commas, double quotes, CR and LF; and preserves typed numeric cells (including negative numbers). `exportService.toCsv` and `templateGenerator.csvTemplate` use the same encoder. Fixed headers and data values use the shared helper, rather than one-off duplicated logic.
+
+**Compatibility:** Security-safe CSV exports deliberately modify suspicious text cells with a leading apostrophe so that spreadsheet applications treat them as text. Automated round-trip consumers that previously expected byte-identical raw data must be reviewed before rollout. This is a presentation/export safeguard, not a replacement for server-side CSV import validation. The XLSX template generator remains separate and should be assessed independently against string/formula cell types.
+
+**Tests:** `tests/security/csv-safety.test.ts` covers leading formula characters, spaces/tab/CR/LF/Unicode prefixes, carriage-return quoting, quoted text, typed numerics, dates and object JSON. `tests/security/csv-safety-contract.test.mjs` asserts adoption by both CSV output paths. Both are wired to `npm run check:security`.
+
+**Executed:** isolated strict TypeScript compilation and 16 synthetic CSV assertions passed on Node 22. **Not yet run:** full project build/Node 24, production export format compatibility or self-hosted Docker suite.
+
 ## Workstream acceptance checks
 
 - [x] Separate code changes on a non-production branch based on PR #219.
