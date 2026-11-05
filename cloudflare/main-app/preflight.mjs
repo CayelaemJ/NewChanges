@@ -23,8 +23,21 @@ async function run() {
     throw new Error("Unsafe migration role cannot be used");
   if (process.env.NEWCHANGES_CLOUDFLARE_RUNTIME!=="true")
     throw new Error("Wrong NewChanges runtime context");
-  if (process.env.STANDBY_MODE!=="true" && process.env.NEWCHANGES_ALLOW_WRITES!=="true")
-    throw new Error("Write-leading runtime not independently approved");
+  // Cloudflare is the authoritative primary only after source writers are fenced.
+  // Never allow an active Cloudflare instance against the old Neon endpoint.
+  const active = process.env.STANDBY_MODE==="false";
+  if (active) {
+    if (!validAiven ||
+        process.env.NEWCHANGES_ALLOW_WRITES!=="true" ||
+        process.env.NEWCHANGES_CLOUDFLARE_PRIMARY!=="YES" ||
+        process.env.NEWCHANGES_SOURCE_WRITERS_FENCED!=="YES" ||
+        process.env.NEWCHANGES_FINAL_SYNC_VERIFIED!=="YES")
+      throw new Error("Active Cloudflare primary not authorized: Aiven target, source fencing, final sync and write ownership required");
+  } else if (process.env.STANDBY_MODE!=="true") {
+    throw new Error("STANDBY_MODE must be explicitly true or false");
+  }
+  if (!active && process.env.NEWCHANGES_ALLOW_WRITES==="true")
+    throw new Error("Standby must not be configured as application writer");
   const connection = new pg.Client({connectionString:url,connectionTimeoutMillis:5000,ssl:{rejectUnauthorized:true}});
   try {
     await connection.connect();
@@ -59,7 +72,7 @@ async function run() {
             OR has_sequence_privilege(r.oid,c.oid,'UPDATE'))) AS can_use_or_update_public_sequence
       FROM pg_roles r WHERE r.rolname=current_user`);
     const check=verifyDatabaseIdentity(result.rows?.[0],{
-      allowWrites:process.env.NEWCHANGES_ALLOW_WRITES==="true",provider
+      allowWrites:active,provider
     });
     if (!check.ok) throw new Error("Database identity/permissions preflight failed");
   } finally {
