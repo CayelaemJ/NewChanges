@@ -16,7 +16,7 @@ cleanup() {
   rm -rf "$workdir"
 }
 trap cleanup EXIT
-PGCONNECT_TIMEOUT=12 pg_dump --dbname="$DR_SOURCE_DATABASE_URL" --schema-only --format=custom --exclude-extension=pg_session_jwt --exclude-extension=pg_stat_statements --no-owner --no-acl --file="$workdir/schema.dump"
+PGCONNECT_TIMEOUT=12 pg_dump --dbname="$DR_SOURCE_DATABASE_URL" --schema-only --schema=public --format=custom --exclude-extension=pg_session_jwt --exclude-extension=pg_stat_statements --no-owner --no-acl --file="$workdir/schema.dump"
 pg_restore --list "$workdir/schema.dump" > "$workdir/schema.toc"
 expected_tables="$(grep -Ec '^[0-9]+; [0-9]+ [0-9]+ TABLE public ' "$workdir/schema.toc" || true)"
 if [[ ! "$expected_tables" =~ ^[0-9]+$ ]] || (( expected_tables == 0 )); then
