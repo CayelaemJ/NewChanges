@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Export a local Ollama audit as a private, dependency-free PDF.
+"""Export a complete, private, dependency-free PDF from local Ollama audit.
 
-The PDF summarizes *unverified* observations. It does not include raw source,
-credentials, or model-evidence excerpts. Nothing is uploaded to GitHub.
+Contains every recorded observation, evidence, recommendation, failure and
+exclusion. Findings are UNVERIFIED. No upload or code modification occurs.
 """
 import argparse
 import collections
@@ -71,7 +71,7 @@ class Pdf:
                  f"1 0 0 1 {MARGIN+indent} {self.y:.1f} Tm ({safe}) Tj ET")
         self.y -= gap
 
-    def wrapped(self, text, width=102, indent=0, font="F1", size=9):
+    def wrapped(self, text, width=88, indent=0, font="F1", size=9):
         for segment in textwrap.wrap(printable(text), width=width,
                                      break_long_words=True, break_on_hyphens=False) or [""]:
             self.line(segment, font=font, size=size, indent=indent)
@@ -149,98 +149,118 @@ def group_for(path):
     return "CI and configuration"
 
 def create_report(data, destination):
+    """Render every observation from report.json, in source order, with no cap."""
     pdf = Pdf()
     date = datetime.now().strftime("%Y-%m-%d %H:%M")
     findings = data.get("findings", [])
     errors = data.get("errors", [])
     skipped = data.get("skipped_files", [])
-    severity = collections.Counter(str(item.get("severity", "unknown")).lower()
-                                   for item in findings)
-    categories = collections.Counter(group_for(str(item.get("file", "")))
-                                     for item in findings)
-    unique = []
-    duplicates = 0
-    seen = set()
-    for item in findings:
-        key = (str(item.get("file", "")), item.get("line"),
-               str(item.get("title", "")).casefold().strip())
-        if key in seen:
-            duplicates += 1
-            continue
-        seen.add(key)
-        unique.append(item)
-    pdf.line("Security audit overview", font="F2", size=16, gap=24)
-    pdf.wrapped("Generated: " + date)
-    pdf.wrapped("Source: local Ollama qwen2.5-coder:7b; source report held on this PC.")
+    severity = collections.Counter(str(x.get("severity", "unknown")).lower()
+                                   for x in findings)
+    categories = collections.Counter(group_for(str(x.get("file", "")))
+                                     for x in findings)
+    dup_keys = set()
+    duplicate_count = 0
+    for x in findings:
+        key = (str(x.get("file", "")), x.get("line"),
+               str(x.get("title", "")).casefold().strip())
+        if key in dup_keys:
+            duplicate_count += 1
+        dup_keys.add(key)
+
+    pdf.line("Comprehensive audit report", font="F2", size=16, gap=24)
+    pdf.wrapped("Generated locally: " + date)
+    pdf.wrapped("Model: " + str(data.get("model", "unspecified local Ollama model")))
+    pdf.wrapped("Scanner schema: " + str(data.get("schema_version", "unknown")))
+    pdf.wrapped("Report timestamp: " + str(data.get("created_at", "not recorded")))
     pdf.wrapped("STATUS: " + ("ALL REVIEWABLE CHUNKS PROCESSED" if data.get("complete")
-                             else "INCOMPLETE - REVIEW REQUIRED"),
-                font="F2")
-    pdf.section("Coverage")
-    for caption, value in [
-        ("Files reviewed", f"{data.get('reviewed_files', 0)}/{data.get('eligible_files', 0)}"),
-        ("Chunks processed", f"{data.get('completed_chunks', 0)}/{data.get('total_chunks', 0)}"),
-        ("Unresolved chunk failures", str(len(errors))),
-        ("Excluded tracked paths", str(len(skipped))),
-        ("Model observations (unverified)", str(len(findings))),
-        ("Repeated file/line/title observations", str(duplicates)),
-    ]:
-        pdf.line(f"{caption}: {value}")
-    pdf.section("Important limitations")
-    for paragraph in [
-        "Model-assigned severity is NOT confirmation of exploitability. Findings can be repetitive, inaccurate, or based on tests and documentation.",
-        "A previous version of this scanner used a HIGH-severity example, which may have inflated its findings. Historical severity totals need independent validation.",
-        "This PDF intentionally omits raw source snippets and model evidence. The full JSON report remains in the local test-reports/ai-security directory.",
-        "Do not auto-deploy or auto-merge findings. Validate suspected auth/MFA, access control, injection and tenant isolation defects against source code and deterministic regression tests.",
-    ]:
-        pdf.wrapped("- " + paragraph, width=106)
-        pdf.y -= 4
-    pdf.section("Model-assigned severity (unverified)")
+                             else "INCOMPLETE - REVIEW REQUIRED"), font="F2")
+    pdf.section("Scope and coverage")
+    for label, value in (
+        ("Total tracked files recorded", data.get("total_tracked_files", "unknown")),
+        ("Reviewable files", data.get("eligible_files", 0)),
+        ("Files completely reviewed", data.get("reviewed_files", 0)),
+        ("Total source chunks", data.get("total_chunks", 0)),
+        ("Chunks completed", data.get("completed_chunks", 0)),
+        ("Failed chunks", len(errors)),
+        ("Excluded tracked paths", len(skipped)),
+        ("Source segments truncated", len(data.get("truncated_files", []))),
+        ("Total AI observations", len(findings)),
+        ("Identical path/line/title observations", duplicate_count),
+        ("All tracked paths included", data.get("all_tracked_included", "unknown")),
+    ):
+        pdf.wrapped(f"{label}: {value}", width=90)
+
+    pdf.section("Interpretation and limitations")
+    for note in (
+        "Every finding in this report is an unverified AI claim, not a demonstrated exploit. The assigned severity is not a verified risk rating.",
+        "Earlier scanner prompts contained a HIGH-severity example that may have distorted the severity distribution. Retained older findings should be interpreted cautiously.",
+        "The PDF includes all recorded model evidence and recommendations. The evidence is model-authored, not independently verified source text.",
+        "The scanner may redact apparent credentials before sending text to Ollama, but filenames, evidence and model output can still be sensitive. Keep this PDF in private storage.",
+        "Do not automatically patch, deploy or merge based on these findings. Confirm vulnerable paths against real implementation and isolated regression tests.",
+    ):
+        pdf.wrapped("- " + note)
+        pdf.y -= 3
+
+    pdf.section("Model-labelled severity - NOT confirmed")
     for level in ("critical", "high", "medium", "low", "unknown"):
         pdf.line(f"{level.upper()}: {severity.get(level, 0)}")
-    pdf.section("Observations by code category")
-    for category, count in categories.most_common():
-        pdf.line(f"{category}: {count}")
-    pdf.section("Unresolved chunks")
+
+    pdf.section("Observations by file category")
+    for key, count in categories.most_common():
+        pdf.wrapped(f"{key}: {count}")
+
+    pdf.section("Observations by file - full index")
+    for name, count in sorted(collections.Counter(
+        str(x.get("file", "")) for x in findings).items()):
+        pdf.wrapped(f"{name}  |  {count} observations")
+
+    pdf.section(f"All {len(findings)} recorded observations - FULL DETAIL")
+    pdf.wrapped("Presented in original JSON report order. Exact repeats are retained; "
+                "no item count limit or severity-based omission.")
+    for number, item in enumerate(findings, 1):
+        pdf.section(f"Finding {number} of {len(findings)}  |  "
+                    f"{str(item.get('severity', 'unknown')).upper()} (UNVERIFIED)")
+        pdf.wrapped("File: " + str(item.get("file", "(not supplied)")))
+        pdf.wrapped("Line: " + str(item.get("line", "(not supplied)")))
+        pdf.wrapped("Category: " + group_for(str(item.get("file", ""))))
+        pdf.wrapped("Title: " + str(item.get("title", "(not supplied)")))
+        pdf.wrapped("Evidence (AI supplied): " + str(item.get("evidence", "(not supplied)")))
+        pdf.wrapped("Recommendation (AI supplied): " +
+                    str(item.get("recommendation", "(not supplied)")))
+        pdf.y -= 4
+
+    pdf.section(f"All {len(errors)} failed review chunks")
     if not errors:
-        pdf.line("No unresolved chunk errors were recorded.")
-    else:
-        for item in errors[:40]:
-            pdf.wrapped(f"- {item.get('file', '?')} lines {item.get('first', '?')}-"
-                        f"{item.get('last', '?')}: {item.get('error', 'unknown')}", width=106)
-    pdf.section("Most flagged files (counts, not confirmed vulnerabilities)")
-    files = collections.Counter(str(x.get("file", "")) for x in findings)
-    for path, count in files.most_common(35):
-        pdf.wrapped(f"{count:>4}  {path}", width=106)
-    pdf.section("Selected implementation observations - manual validation required")
-    app_findings = [
-        item for item in unique
-        if group_for(str(item.get("file", ""))) in ("Application", "Database")
-    ]
-    app_findings.sort(key=lambda x: (
-        ("critical", "high", "medium", "low").index(str(x.get("severity", "low")).lower())
-        if str(x.get("severity", "low")).lower() in ("critical", "high", "medium", "low")
-        else 4, str(x.get("file", "")), x.get("line", 0)
-    ))
-    for item in app_findings[:75]:
-        pdf.wrapped(
-            f"- [{str(item.get('severity','?')).upper()} - UNVERIFIED] "
-            f"{item.get('file','?')}:{item.get('line','?')} "
-            f"{item.get('title','(untitled)')}", width=100
-        )
-    if len(app_findings) > 75:
-        pdf.wrapped(
-            f"... {len(app_findings) - 75} additional unique application/database "
-            "observations remain in the local JSON report.", width=100
-        )
-    pdf.section("Review before deployment")
-    for item in [
-        "1. Resolve or explicitly account for missing chunks and unscanned material.",
-        "2. Reassess model-generated severity independently.",
-        "3. Verify any real security defect with source-level evidence and tests.",
-        "4. Re-run deterministic CI, MFA and tenant isolation checks in Docker.",
-        "5. Review PR #219 before merge; do not modify production from this PDF.",
-    ]:
-        pdf.wrapped(item, width=106)
+        pdf.wrapped("No unresolved chunk errors were recorded.")
+    for n, item in enumerate(errors, 1):
+        pdf.section(f"Failed chunk {n} of {len(errors)}")
+        for key in ("file", "first", "last", "error"):
+            pdf.wrapped(f"{key}: {item.get(key, 'not supplied')}")
+
+    pdf.section(f"All {len(skipped)} excluded tracked paths")
+    if not skipped:
+        pdf.wrapped("No excluded tracked paths were recorded.")
+    for number, item in enumerate(skipped, 1):
+        pdf.wrapped(f"{number}. {item.get('file', '(not supplied)')}  |  "
+                    f"{item.get('reason', '(no reason)')}")
+
+    truncated = data.get("truncated_files", [])
+    pdf.section(f"All {len(truncated)} reported truncations")
+    if not truncated:
+        pdf.wrapped("The report recorded no truncated source segments.")
+    for number, item in enumerate(truncated, 1):
+        pdf.wrapped(f"{number}. {item}")
+
+    pdf.section("Required validation before release")
+    for note in (
+        "1. Resolve, exclude with justification, or separately validate every failed/unreviewable input.",
+        "2. Deduplicate and verify individual findings, especially authentication, MFA, authorization, tenant isolation and SQL injection.",
+        "3. Validate suspected defects with reproducible tests in isolated Docker environments.",
+        "4. Review remediation changes and rerun deterministic security suites before merging.",
+        "5. Keep the report private: it can expose internal paths and security observations.",
+    ):
+        pdf.wrapped(note)
     destination.parent.mkdir(parents=True, exist_ok=True)
     pdf.save(destination)
     return len(pdf.pages)
