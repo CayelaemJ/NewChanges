@@ -170,9 +170,10 @@ jobs:
           reviewed=d.get("reviewed_files",0)
           eligible=d.get("eligible_files",0)
           complete=d.get("complete",False)
-          print(f"Pre-release AI reviewed {reviewed}/{eligible} eligible files; complete={complete}")
-          if not complete or reviewed != eligible:
-              print("FAIL: incomplete Ollama scan; do not treat this run as a completed audit")
+          scope_gaps=d.get("scope_gaps")
+          print(f"Pre-release AI reviewed {reviewed}/{eligible} eligible files; complete={complete}; source_scope_gaps={len(scope_gaps) if isinstance(scope_gaps,list) else 'unknown'}")
+          if not complete or reviewed != eligible or not isinstance(scope_gaps,list) or scope_gaps:
+              print("FAIL: incomplete Ollama scan or unreviewed source scope; do not approve release")
               raise SystemExit(1)
           PY
 
