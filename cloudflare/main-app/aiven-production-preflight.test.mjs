@@ -41,7 +41,7 @@ test("production Cloudflare is an active Aiven writer, never standby",()=>{
   assert.match(p,/if \(!validAiven/);
   assert.match(d,/STANDBY_MODE=false TRAFFIC_SAVER_MODE=false/);
   assert.match(d,/verify-database\.mjs/);
-  const runCommands=d.split("\\n").filter(line=>/^(RUN|CMD|ENTRYPOINT)\\s/.test(line)).join("\\n");
+  const runCommands=d.split("\n").filter(line=>/^(RUN|CMD|ENTRYPOINT)\s/.test(line)).join("\n");
   assert.doesNotMatch(runCommands,/db:deploy|db:push|db:migrate/);
 });
 
