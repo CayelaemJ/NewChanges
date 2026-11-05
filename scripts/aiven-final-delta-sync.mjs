@@ -5,6 +5,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { auditColumns, buildAivenDeltaSql } from './aiven-final-delta-plan.mjs';
 
 const mode=process.argv[2]||'--check';
 if (!['--check','--execute'].includes(mode)) { console.error('Usage: node scripts/aiven-final-delta-sync.mjs [--check|--execute]'); process.exit(2); }
@@ -37,8 +38,8 @@ function verify(){
   if(r.status!==0||r.error)throw Error('Content verification failed');
   return r.stdout;
 }
-const cols=['id','userId','actorEmail','method','route','resource','employerId','ipAddress','deviceKey','deviceType','statusCode','durationMs','createdAt'].map(x=>'"'+x+'"').join(', ');
-const lit=s=>"'"+s.replaceAll("'","''")+"'";
+const cols=auditColumns;
+const lit=value=>"'"+value.replaceAll("'","''")+"'";
 let dir;
 try{
   const src=connection(process.env.DR_SOURCE_DATABASE_URL,'source');
@@ -70,24 +71,7 @@ try{
   writeFileSync(audit,psql(src,auditSql,'audit delta export',64*1024*1024,true),{mode:0o600,flag:'wx'});
   writeFileSync(sessions,psql(src,sessionSql,'session activity export',4*1024*1024,true),{mode:0o600,flag:'wx'});
   // All writes are atomic in a single destination transaction.
-  const sql=[
-    'BEGIN;',
-    'CREATE TEMP TABLE audit_stage (LIKE public."DataAccessEvent" INCLUDING DEFAULTS) ON COMMIT DROP;',
-    'CREATE TEMP TABLE session_stage ("id" text PRIMARY KEY, "lastSeenAt" timestamp without time zone) ON COMMIT DROP;',
-    '\\copy audit_stage ('+cols+') FROM '+lit(audit)+" WITH (FORMAT csv, NULL '\\N')",
-    '\\copy session_stage ("id","lastSeenAt") FROM '+lit(sessions)+" WITH (FORMAT csv, NULL '\\N')",
-    'DO $check$ BEGIN',
-    ' IF (SELECT count(*) FROM session_stage) <> (SELECT count(*) FROM public."Session") OR',
-    ' EXISTS (SELECT 1 FROM public."Session" t WHERE NOT EXISTS (SELECT 1 FROM session_stage s WHERE s.id=t.id))',
-    " THEN RAISE EXCEPTION 'Session inventory changed; refusing delta'; END IF;",
-    ' IF EXISTS (SELECT 1 FROM audit_stage s JOIN public."DataAccessEvent" t ON t.id=s.id WHERE to_jsonb(s)<>to_jsonb(t))',
-    " THEN RAISE EXCEPTION 'Existing audit history differs; refusing delta'; END IF;",
-    'END $check$;',
-    'INSERT INTO public."DataAccessEvent" ('+cols+') SELECT '+cols+' FROM audit_stage WHERE true ON CONFLICT ("id") DO NOTHING;',
-    'UPDATE public."Session" d SET "lastSeenAt"=s."lastSeenAt" FROM session_stage s',
-    'WHERE d.id=s.id AND d."lastSeenAt" IS DISTINCT FROM s."lastSeenAt";',
-    'COMMIT;'
-  ].join('\n')+'\n';
+  const sql=buildAivenDeltaSql(audit,sessions);
   psql(dst,sql,'atomic Aiven delta');
   console.log('AIVEN TRANSACTION COMMITTED. Post-commit verification follows.');
   const after=verify();
