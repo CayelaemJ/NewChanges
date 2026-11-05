@@ -143,12 +143,6 @@ export async function saveEmailConfig(input: EmailDraft) {
     data.emailProvider = input.emailProvider;
   }
   if ("resendApiKey" in input && clean(input.resendApiKey)) data.resendApiKey = clean(input.resendApiKey);
-  if ("resendFromEmail" in input && clean(input.resendFromEmail) &&
-      (input.emailProvider ?? current.emailProvider) === "resend") {
-    // Prisma SystemEmailConfig has one persisted fromEmail column, not a
-    // separate resendFromEmail column. Reuse it for the selected provider.
-    data.fromEmail = clean(input.resendFromEmail);
-  }
   if ("smtpHost" in input) data.smtpHost = clean(input.smtpHost);
   if ("smtpPort" in input && input.smtpPort != null) data.smtpPort = Math.max(1, Math.min(65535, Number(input.smtpPort)));
   if ("smtpSecure" in input) data.smtpSecure = Boolean(input.smtpSecure);
@@ -158,6 +152,12 @@ export async function saveEmailConfig(input: EmailDraft) {
   if (clean(input.smtpPassword)) data.smtpPassword = clean(input.smtpPassword);
   if ("fromName" in input) data.fromName = clean(input.fromName) || "The Fixer (Pty) Ltd Dashboard Portal";
   if ("fromEmail" in input) data.fromEmail = clean(input.fromEmail);
+  if ("resendFromEmail" in input && clean(input.resendFromEmail) &&
+      (input.emailProvider ?? current.emailProvider) === "resend") {
+    // Prisma SystemEmailConfig has one persisted fromEmail column, not a
+    // separate resendFromEmail column. Reuse it for the selected provider.
+    data.fromEmail = clean(input.resendFromEmail);
+  }
   if ("replyTo" in input) data.replyTo = clean(input.replyTo);
   if ("defaultTimezone" in input) {
     const zone = clean(input.defaultTimezone) || "Africa/Johannesburg";
