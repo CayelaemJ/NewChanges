@@ -277,7 +277,7 @@ def main():
         if not destination_dir.is_dir():
             raise RuntimeError(f"Output directory does not exist: {destination_dir}")
         data = json.loads(args.report.read_text(encoding="utf-8"))
-        filename = "The_Fixer_Security_Audit_" + datetime.now().strftime("%Y%m%d_%H%M%S") + ".pdf"
+        filename = "The_Fixer_Full_Detailed_Security_Audit_" + datetime.now().strftime("%Y%m%d_%H%M%S") + ".pdf"
         output = destination_dir / filename
         pages = create_report(data, output)
         print(f"PDF created ({pages} pages): {output}")
