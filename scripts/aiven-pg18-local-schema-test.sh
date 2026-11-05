@@ -33,6 +33,9 @@ for _ in $(seq 1 30); do
   sleep 1
 done
 [[ "$ready" == 1 ]] || { echo 'Isolated PostgreSQL 18 did not start.' >&2; exit 2; }
+# PostgreSQL's standard template already contains public, while pg_dump emits CREATE SCHEMA public.
+# Drop only that empty schema in the disposable, network-isolated test container.
+docker exec "$cid" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres -c 'DROP SCHEMA IF EXISTS public CASCADE;' >/dev/null
 if ! docker exec -i "$cid" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres < "$workdir/schema.sql" > "$workdir/restore.log" 2>&1; then
   echo 'FAIL: PostgreSQL 18 rejected the schema. No live databases changed.' >&2
   # Show only PostgreSQL ERROR/FATAL lines; never print SQL statements, connection strings or the full log.
