@@ -72,3 +72,14 @@ test("Resend sender persists to a real Prisma field, with no phantom column",()=
   assert.ok(saving.indexOf('if ("fromEmail" in input)') < saving.indexOf('if ("resendFromEmail" in input'),
     "Resend field must override generic form field when the selected provider is Resend");
 });
+
+test("disposable database CI verifies real Resend save, readback and secret redaction",()=>{
+  const suite=read("scripts/ci/run-docker-ci-suite.sh");
+  const integration=read("scripts/ci/email-provider-persistence-ci.mjs");
+  assert.match(suite,/run node scripts\/ci\/email-provider-persistence-ci\.mjs/);
+  assert.match(integration,/process\.env\.DATABASE_URL, EXPECTED/);
+  assert.match(integration,/CI_RLS_PROBE_APPROVED/);
+  assert.match(integration,/assert\.equal\(persisted\.fromEmail, "resend@example\.invalid"\)/);
+  assert.match(integration,/assert\.equal\(persisted\.resendApiKey, apiKey\)/);
+  assert.match(integration,/!Object\.hasOwn\(response, "resendApiKey"\)/);
+});
