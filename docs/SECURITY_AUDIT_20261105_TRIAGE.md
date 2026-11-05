@@ -249,6 +249,16 @@ The API adapter now calls `readPinnedSourceApiJson(url, token)` for every page a
 
 **Verification:** 17 independent source/wiring invariants passed. **The actual PostgreSQL race tests are NOT yet executed** and the overall Node 24 build, MFA E2E, local Ollama scan and production transport compatibility remain blocked pending full self-hosted CI.
 
+## Audit detail credential-redaction boundary (2026-11-05)
+
+**Source-confirmed privacy/security weakness:** Some HTTP routes pre-redacted structured admin audit details, but `src/services/auditService.ts` accepted and persisted arbitrary `opts.detail` using `JSON.parse(JSON.stringify(opts.detail))` without its own redaction. New routes, helpers or source-cutover records could therefore store API keys, webhooks, login tokens or recovery material if a caller omitted manual sanitization.
+
+**Draft fix:** Added `src/services/auditRedaction.ts` and moved structured secret redaction into the common audit writer before JSON serialization. The single policy protects nested records, arrays, API keys, Slack webhooks, SMTP passwords, grants, recovery fields, cookies, tokens, authorization headers, private keys and connection strings. `src/server.ts` imports the same policy instead of maintaining an incomplete duplicate. Non-secret audit metadata remains available.
+
+**Tests:** `tests/security/audit-redaction.test.ts` verifies nested secret redaction, non-mutation and retained normal values; `tests/security/audit-redaction-contract.test.mjs` requires the actual persistence and HTTP paths to share the same helper. Both are included in `npm run check:security`.
+
+**Executed:** isolated Node.js v22 tests (13 assertions) and strict TypeScript compilation of the redaction policy passed. The full Node 24 build and self-hosted Docker CI have not run. Existing stored audit logs cannot be retroactively considered redacted; separately assess historic audit contents and retention without exporting raw credentials into public artifacts.
+
 ## Workstream acceptance checks
 
 - [x] Separate code changes on a non-production branch based on PR #219.
