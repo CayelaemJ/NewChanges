@@ -54,3 +54,14 @@ test("runtime role bootstrap is single-use and keeps passwords outside Git and C
   assert.match(p,/NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION/);
   assert.doesNotMatch(p,/DROP ROLE|ALTER ROLE|REVOKE|--password=/);
 });
+
+test("active Cloudflare container keep-warm is opt-in and cannot start before cutover",()=>{
+  const worker=readFileSync(new URL("./worker.mjs",import.meta.url),"utf8");
+  const config=JSON.parse(readFileSync(new URL("../../wrangler.newchanges-main.jsonc",import.meta.url),"utf8"));
+  assert.equal(config.vars.NEWCHANGES_KEEP_WARM_ENABLED,"false");
+  assert.deepEqual(config.triggers.crons,["*/5 * * * *"]);
+  assert.match(worker,/async scheduled\(_controller, env\)/);
+  assert.match(worker,/env.NEWCHANGES_KEEP_WARM_ENABLED !== "true"/);
+  assert.match(worker,/evaluateNewChangesPrimary\(env, host\)\.ready/);
+  assert.match(worker,/container\.fetch\(new Request/);
+});
