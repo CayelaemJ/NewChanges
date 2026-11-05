@@ -81,3 +81,12 @@ test('portable dump scopes to public application schema, not Neon-managed auth',
   assert.match(script, /--schema=public/);
   assert.match(script, /--exclude-extension=pg_session_jwt/);
 });
+
+test('point-in-time test mode retains source writes and flags live drift', () => {
+  assert.match(script, /AIVEN_POINT_IN_TIME_TEST/);
+  assert.match(script, /require_approval AIVEN_LIVE_SOURCE_DRIFT_ACCEPTED/);
+  assert.match(script, /require_approval AIVEN_WRITES_FROZEN/);
+  assert.match(script, /Compare against snapshot-consistent counts/);
+  assert.match(script, /AIVEN_CROSS_BORDER_APPROVED/);
+  assert.match(script, /AIVEN_DISK_HEADROOM_VERIFIED/);
+});
