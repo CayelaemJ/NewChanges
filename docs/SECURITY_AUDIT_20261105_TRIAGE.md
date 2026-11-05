@@ -229,6 +229,26 @@ The API adapter now calls `readPinnedSourceApiJson(url, token)` for every page a
 
 **Compatibility:** The stricter policy will reject existing production SQL sources or replicas that rely on unencrypted connections or untrusted/self-signed certificates. Configure the required trusted CA and test each provider in staging before merging. No saved source settings or production connections were touched.
 
+## Saved Resend configuration and login/session issuance race (2026-11-05)
+
+### Saved Resend provider ignored by email delivery
+
+**Source-confirmed functional/security-availability defect:** `reportScheduler.withEnv` treated `"smtp"` as a populated environment override whenever `EMAIL_PROVIDER` was unset, ignoring the administrator's persisted `emailProvider="resend"`. It also supplied `undefined` as the saved fallback for `resendApiKey` and `resendFromEmail`. This could break password-reset emails, onboarding links and security notifications even when the Resend service was correctly configured through the admin interface.
+
+**Draft fix:** `src/services/emailProviderConfig.ts` now resolves provider and Resend credentials using explicit draft override, configured environment override and saved configuration in that order. An absent `EMAIL_PROVIDER` no longer masks persisted choices, saved server-side keys and sender addresses are supported, and unsupported environment provider names fail with a clear error. `withEnv` uses the same helper; `publicEmailConfig` still returns only `resendConfigured` and never serializes the secret API key. This changes how correctly saved credentials are used; no credential is read, transmitted or rotated by the development work itself.
+
+**Tests:** `tests/security/email-provider-config.test.ts` covers saved values, environment/draft precedence, blank-key preservation, sender clearing and invalid provider values. `tests/security/notification-settings-contract.test.mjs` confirms the real scheduler uses the resolver without disclosing the saved API key. **Executed:** 10 isolated Node.js v22 tests and standalone strict TypeScript compilation passed. The target Node 24 full build and live email-delivery compatibility test remain pending.
+
+### Login/session race with revocation or password reset
+
+**Source-confirmed authorization timing defect:** `login` previously checked `user.active` and verified `user.passwordHash`, then called `createSession` without rechecking either value. A simultaneous account deactivation or password reset could occur after verification but before the session insertion; when the user was later legitimately reactivated, an incorrectly minted session could become usable. The legacy hash-upgrade code also performed an unconditional `user.update` after verification, which could overwrite a concurrent password-reset hash.
+
+**Draft fix:** `createSession` now uses an interactive Prisma transaction, locks the current user row with `SELECT "passwordHash" FROM "User" WHERE id=? AND active=true FOR UPDATE`, checks the expected password hash when provided and inserts the session **while holding the row lock**. Session creation and deactivation/password updates therefore serialize. `login` passes the hash used for verification and returns a normal failed login if the state changed. Legacy password-hash migration uses an `updateMany` matching the original hash and active status; a concurrent password reset makes it affect zero rows, preventing credential rollback.
+
+**Tests:** `scripts/ci/password-token-replay-ci.mjs` now includes disposable PostgreSQL row-lock scenarios with concurrent deactivation/session creation and password-change/session creation, plus a legacy password-hash upgrade success test. `tests/security/login-session-atomic-contract.test.mjs` requires the real hash/active guards, `FOR UPDATE`, transactional session insertion and CI wiring. The tests are wired to the existing `check:security` and full disposable Docker suite.
+
+**Verification:** 17 independent source/wiring invariants passed. **The actual PostgreSQL race tests are NOT yet executed** and the overall Node 24 build, MFA E2E, local Ollama scan and production transport compatibility remain blocked pending full self-hosted CI.
+
 ## Workstream acceptance checks
 
 - [x] Separate code changes on a non-production branch based on PR #219.
