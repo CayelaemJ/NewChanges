@@ -74,6 +74,22 @@ try {
   assert.equal((await prisma.session.findUniqueOrThrow({ where: { id: expiredSession.id } })).endedAt, null);
   console.log("[password-reset] PASS expired token causes no account/session mutation");
 
+  // A previously issued setup/reset token must never re-enable an account
+  // deactivated by its administrator after that token was issued.
+  const disabled = await createFixture();
+  await prisma.user.update({
+    where: { id: disabled.userId },
+    data: { active: false, revokedAt: new Date(),
+      revokedBy: "synthetic-ci-admin", revokedReason: "CI revocation boundary" },
+  });
+  await assert.rejects(completeSetup(disabled.token, "CannotReactivate123"),
+    /this setup link is invalid or has expired/);
+  const stillDisabled = await prisma.user.findUniqueOrThrow({ where: { id: disabled.userId } });
+  assert.equal(stillDisabled.active, false);
+  assert.equal(stillDisabled.passwordHash, null);
+  assert.ok(stillDisabled.setupToken, "A rejected token claim must not update the user");
+  console.log("[password-reset] PASS revoked accounts cannot self-reactivate with stale setup links");
+
   // Admin-issued password changes must also revoke sessions atomically.
   const admin = await createFixture();
   const adminSession = await createSession(admin.userId);
