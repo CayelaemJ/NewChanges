@@ -1,0 +1,61 @@
+# The Fixer: zero-new-cost Cloudflare + Render plan
+
+**Status: CANDIDATE ONLY. Not deployed; production still uses the existing host and Neon.**
+**Budget: no additional paid subscriptions.** This plan deliberately avoids Cloudflare Containers and all automatic resource creation.
+
+## Architecture
+
+```text
+Browser / mobile
+   -> Cloudflare Free Worker (public HTTPS entry, simple routing only)
+       -> Render Free web service (the original Node 24 Fastify/Prisma app)
+           -> Aiven free PostgreSQL 18 (dedicated restricted runtime role)
+           -> existing optional external MySQL / mail integrations
+```
+
+The Worker serves the original HTML, React build artifacts, REST APIs, admin console and login indirectly through the existing Fastify backend, preserving same-origin cookies and application routes. It does **not** split/duplicate assets or port the application to Workers. Cloudflare can handle incoming edge requests while the Render backend sleeps, but cannot make the sleeping backend process continuously available. The Worker returns HTTP 503 with Retry-After when Render is unavailable. This is a deliberate limited-availability compromise, not continuous 24/7 production.
+
+## Platform constraints verified 2026-11-05
+
+- Cloudflare Containers API explicitly rejected this account: Workers Paid required. No billable change was made.
+- Render documents that free web services sleep after 15 minutes idle, spin up in approximately a minute, have ephemeral local storage, can restart, and have limits on free hours, bandwidth, pipeline minutes, and service-initiated traffic. Not a durable always-on production guarantee. See https://render.com/docs/free.
+- Oracle Always Free compute is a possible later option, not provisioned. Region capacity and idle reclamation are material risks: https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic-Always_Free_Resources.htm.
+- Aiven's 1 GB free database is already populated with 57 public application tables; snapshot stale. The final delta-sync tests belong to PR #217, not this edge-only branch.
+
+## What's implemented (isolated GitHub branch)
+
+- `cloudflare/free-edge/worker.mjs`: restricted HTTPS `*.onrender.com` origin proxy, canonical hostname allowlist, spoofed forwarding-header removal, no caching, secure cookie forwarding, same-origin redirect rewriting, no external secrets or credentials, disabled by default. Does not create Cloudflare paid resources.
+- `wrangler.newchanges-free.jsonc`: **no public route or workers.dev subdomain**, no database secrets, `NEWCHANGES_FREE_EDGE_ENABLED=false`. This is deployment-ready configuration only after staging/approval.
+- `render.free-candidate.yaml`: separate Render Free backend candidate, no automatic deployment, `STANDBY_MODE=true` and no database secret value. The existing `render.yaml` standby configuration remains unchanged.
+- `tests/cloudflare-free-render-edge.test.mjs`: offline request-routing and security regression tests.
+- `.github/workflows/free-edge-manual.yml`: manual GitHub Actions workflow targeting **self-hosted Linux runner** only, with offline tests and Docker build. Never accesses Neon/Aiven or deploys anything.
+
+## Safe execution order
+
+1. Run `node --test tests/cloudflare-free-render-edge.test.mjs` on the new branch. Build the unchanged backend with `docker build -f Dockerfile -t newchanges-free-backend:preflight .`.
+2. Select the intended Render workspace, check its current free allocation, and confirm whether another free app would exhaust its 750 included monthly hours. No new service was created. Only after checking available capacity, manually create a separate candidate via `render.free-candidate.yaml`. Render Blueprints generally use `render.yaml` by default: select/point explicitly to this separate file instead of modifying the existing standby configuration.
+3. Test with a **disposable synthetic database**, without live Neon or Aiven credentials. `STANDBY_MODE=true` is not a security boundary, and cannot alone guarantee read-only staging behavior. Add controlled auth / MFA / tenant E2E and check startup, backend assets, database pooling, SMTP, MySQL, and file persistence. Deploy credentials using Render protected environment settings only.
+4. Before attaching the public Cloudflare custom domain, verify the free Worker can route to the candidate through a protected non-production hostname and handles cold starts, login cookies, redirects and streaming. No Cloudflare route has been created by this PR.
+5. Read the separate guarded Aiven synchronization runbook in PR #217. Arrange a maintenance window, stop **every** source writer/job/ingester, take a verified independent encrypted backup, run only reviewed final delta on the frozen database, and compare all rows to the checkpoint.
+6. Configure the Render production runtime with the restricted Aiven database user, required encryption secrets, and verified environment variables. A test with the same DB is only permissible after single-writer fences are established. Install health/error monitoring. Ensure retention, cross-border transfer authority, MFA and authorization have passed.
+7. Switch Cloudflare entrypoint to the **one** active Render backend, open the public route, and make the original application read-only/offline. Confirm production is writing **only** to Aiven. Rollback requires reverse reconciliation of post-cutover writes.
+8. Use Cloudflare Free monitoring and local self-hosted CI; do not promise reliable scheduled jobs on a sleeping Render Free web service. Promote backend to continuously running **only** after a genuinely available R0-capable VM with tested monitoring, storage and backups is in place.
+
+## Local verification
+
+```sh
+git fetch origin
+git worktree add ~/NewChanges-free-edge origin/feat/free-cloudflare-render-primary-20261105
+cd ~/NewChanges-free-edge
+node --test tests/cloudflare-free-render-edge.test.mjs
+node --check cloudflare/free-edge/worker.mjs
+docker build -f Dockerfile -t newchanges-free-backend:preflight .
+```
+
+No `DATABASE_URL` or live production credentials are needed for these static/synthetic steps. If a worktree of that name exists, do **not** overwrite it.
+
+## Explicit go-live sign-off
+
+Cloudflare free frontend success is NOT the same as entire application success. Mark production complete only when the end-to-end full application, Aiven sole-writer state, MFA, tenants, MySQL/email dependencies, backup restore, error monitoring, availability expectations, and rollback have all been verified.
+
+Do **not** delete Neon, enable paid Workers Containers, migrate secrets into public Pages assets, or merge/deploy this branch blindly.
