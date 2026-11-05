@@ -78,6 +78,29 @@ These were found by inspecting the implementation, not by trusting AI severity l
 - Validate app-specific CSP, CSRF, authorised cross-tenant access, MFA superadmin recovery, transactional rate-limit concurrency and scheduled jobs with live synthetic HTTP tests.
 - **Never claim the application is fully secure from AI observations alone. No PR merge, production toggle, cutover or deployment until approval.**
 
+## Additional code-level security hardening (2026-11-05, second iteration)
+
+### Forged security-event IP provenance
+
+**Verified source pattern:** `src/services/securityService.ts` prioritized raw `X-Real-IP`, and even `X-Forwarded-For`, over Fastify's `req.ip`. A client-provided header may contaminate access-event IP attribution when the proxy does not sanitize it. This was *not* a proven rate-limit bypass: rate limiting elsewhere already uses Fastify `req.ip`.
+
+**Remediation:** `src/services/securityNetworkPolicy.ts` now resolves the client address from Fastify's configured proxy-trust boundary, with a socket fallback only when a valid IP is supplied. It rejects non-public/reserved/malformed addresses before optional IP geolocation. `securityService.ts` requires explicit `TRUST_EDGE_GEO_HEADERS=true` to accept Cloudflare/Vercel geography headers, which must be enabled **only when the fronting edge strips and overwrites any incoming client-supplied geography headers**. When disabled, no origin-provided geography headers are trusted; optional external location lookup remains separately opt-in.
+
+### Inactivity automation cannot disable superadministrators
+
+**Verified source pattern:** `runStaleAccountCheck()` fetched all active users and deactivated every account past the age threshold without excluding `SUPERADMIN`. It could disable all control-plane administrators if the configured threshold caught them.
+
+**Remediation:** The sweep now excludes `SUPERADMIN` both during candidate selection and atomically during its `updateMany` write. The role is reevaluated at update time to guard against promotions during the sweep. Only successfully deactivated accounts get session revocation and notification counts. The pure decision policy rejects invalid timestamps. This does not change deliberate superadmin deactivation or recovery routes.
+
+### Tests and limits
+
+- `tests/security/security-network-policy.test.ts` verifies spoofed forwarding-header data cannot override Fastify-resolved IPs and private/reserved IPs cannot be geo-enriched.
+- `tests/security/stale-account-policy.test.ts` verifies superadmin protection, ordinary-user inactivity handling and invalid date rejection.
+- `tests/security/security-boundaries-contract.test.mjs` verifies integration with real telemetry and write-path guards.
+- All new tests are wired to `npm run check:security` within the existing isolated CI script.
+
+**Verification is pending**: source inspection/wiring checks have passed, but there are no successful changed-commit Node 24 full-suite or physical MFA results. Do not set `TRUST_EDGE_GEO_HEADERS=true` until the proxy-header contract has been independently verified in the target environment.
+
 ## Workstream acceptance checks
 
 - [x] Separate code changes on a non-production branch based on PR #219.
