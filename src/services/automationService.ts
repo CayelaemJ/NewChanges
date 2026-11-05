@@ -12,6 +12,8 @@ import { prisma } from "./authService.js";
 import { sendMail } from "./reportScheduler.js";
 import { destroyAllSessionsForUser } from "./authService.js";
 import { engagementSummary } from "./analyticsService.js";
+import { allowedSlackWebhookUrl } from "./slackWebhookPolicy.js";
+import { escapeNotificationHtml } from "./notificationTextSafety.js";
 
 async function config() {
   return prisma.systemEmailConfig.upsert({ where: { id: "default" }, create: { id: "default" }, update: {} });
@@ -34,7 +36,9 @@ export async function notifyAdmins(opts: { subject: string; html: string; slackT
       catch { /* best-effort per recipient */ }
     }
   }
-  if (cfg.alertSlackWebhookUrl) {
+  // Old saved configuration may predate strict validation. Never fetch an
+  // arbitrary historical URL, even if a privileged user saved it earlier.
+  if (allowedSlackWebhookUrl(cfg.alertSlackWebhookUrl)) {
     try {
       const response = await fetch(cfg.alertSlackWebhookUrl, {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -77,7 +81,7 @@ export async function runStaleAccountCheck() {
   await prisma.systemEmailConfig.update({ where: { id: "default" }, data: { lastStaleCheckAt: new Date() } as any });
 
   if (stale.length) {
-    const rows = stale.map((u: any) => `<li>${u.name} — ${u.email}</li>`).join("");
+    const rows = stale.map((u: any) => `<li>${escapeNotificationHtml(u.name)} — ${escapeNotificationHtml(u.email)}</li>`).join("");
     await notifyAdmins({
       subject: `${stale.length} account(s) auto-deactivated for inactivity`,
       html: `<div style="font-family:Arial,sans-serif;color:#241536"><h2 style="color:#32217c">Auto-deactivated for inactivity</h2><p>No sign-in for ${days}+ days:</p><ul>${rows}</ul><p style="color:#6b7280;font-size:13px">These are deactivated, not deleted — reactivate any of them from Past users.</p></div>`,
@@ -96,8 +100,8 @@ export async function runWeeklyDigestIfDue() {
 
   const s = await engagementSummary(7);
   const fmtDuration = (sec: number | null) => sec == null ? "—" : sec < 60 ? `${sec}s` : `${Math.round(sec / 60)}m`;
-  const topPages = s.topPages.slice(0, 5).map((p: any) => `<li>${p.path} — ${p.views} view(s)</li>`).join("") || "<li>No pageviews this week.</li>";
-  const topUsers = s.byUser.slice(0, 5).map((u: any) => `<li>${u.name} — ${u.logins} login(s), ${u.pageviews} pageview(s)</li>`).join("") || "<li>No activity this week.</li>";
+  const topPages = s.topPages.slice(0, 5).map((p: any) => `<li>${escapeNotificationHtml(p.path)} — ${Number(p.views) || 0} view(s)</li>`).join("") || "<li>No pageviews this week.</li>";
+  const topUsers = s.byUser.slice(0, 5).map((u: any) => `<li>${escapeNotificationHtml(u.name)} — ${Number(u.logins) || 0} login(s), ${Number(u.pageviews) || 0} pageview(s)</li>`).join("") || "<li>No activity this week.</li>";
 
   await notifyAdmins({
     subject: "Weekly engagement digest",
