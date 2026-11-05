@@ -160,29 +160,14 @@ export async function listUsers() {
 export async function updateUser(userId: string, patch: {
   name?: string; role?: Role; active?: boolean; employerIds?: string[]; partnerId?: string | null;
   revokedReason?: string; revokedBy?: string;
-}) {
-  // Invalidate every session before modifying authorisation scope. This fails
-  // closed even if a later database write fails partway through the update.
-  // Affected users must authenticate again after their permissions change.
+}, options: { forbidSuperadminTarget?: boolean } = {}) {
   const accessChanged = patch.role !== undefined ||
     patch.active !== undefined ||
     patch.employerIds !== undefined ||
     Object.prototype.hasOwnProperty.call(patch, "partnerId");
-  if (accessChanged) await destroyAllSessionsForUser(userId);
-  if (patch.employerIds) {
-    // replace links wholesale
-    await prisma.userEmployer.deleteMany({ where: { userId } });
-    const valid = await prisma.employer.findMany({ where: { id: { in: patch.employerIds } }, select: { id: true } });
-    await prisma.userEmployer.createMany({ data: valid.map((e: any) => ({ userId, employerId: e.id })), skipDuplicates: true });
-  }
-  // `active` transitions carry a revocation audit trail: who revoked access and
-  // why, kept even after re-enabling so history isn't lost. Cleared once the
-  // account is reactivated (a fresh deactivation writes a fresh reason).
   const revokeFields: Record<string, unknown> = {};
   if (patch.active === false) {
     revokeFields.revokedAt = new Date();
-    // A revoked account must lose pending setup/reset links too. Otherwise
-    // reactivation before token expiry could resurrect an old credential flow.
     revokeFields.setupToken = null;
     revokeFields.setupExpires = null;
     revokeFields.revokedReason = patch.revokedReason || "No reason given";
@@ -192,16 +177,64 @@ export async function updateUser(userId: string, patch: {
     revokeFields.revokedReason = null;
     revokeFields.revokedBy = null;
   }
-  const user = await prisma.user.update({
-    where: { id: userId },
-    data: {
-      name: patch.name, role: patch.role as any, active: patch.active,
-      ...("partnerId" in patch ? { partnerId: patch.partnerId || null } : {}),
-      ...revokeFields,
-    },
-    include: { links: { include: { employer: { select: { id: true, name: true } } } } },
+
+  return prisma.$transaction(async tx => {
+    let validEmployerIds: string[] | undefined;
+    if (patch.employerIds !== undefined) {
+      if (!Array.isArray(patch.employerIds) || patch.employerIds.length > 5000 ||
+        patch.employerIds.some(id => typeof id !== "string" || !id || id.length > 128))
+        throw new Error("Invalid employerIds");
+      const requested = [...new Set(patch.employerIds)];
+      const existing = await tx.employer.findMany({
+        where: { id: { in: requested } }, select: { id: true },
+      });
+      if (existing.length !== requested.length)
+        throw new Error("One or more employer IDs do not exist");
+      validEmployerIds = requested;
+    }
+
+    // This role predicate is enforced by the same database write that applies
+    // the change. A pre-request role lookup may become stale under concurrent
+    // promotion; an ordinary admin may never edit a SUPERADMIN target.
+    const updated = await tx.user.updateMany({
+      where: {
+        id: userId,
+        ...(options.forbidSuperadminTarget ? { role: { not: "SUPERADMIN" as const } } : {}),
+      },
+      data: {
+        name: patch.name, role: patch.role as any, active: patch.active,
+        ...("partnerId" in patch ? { partnerId: patch.partnerId || null } : {}),
+        ...revokeFields,
+      },
+    });
+    if (updated.count !== 1) throw new Error("user not found or no longer editable");
+
+    if (validEmployerIds !== undefined) {
+      await tx.userEmployer.deleteMany({ where: { userId } });
+      if (validEmployerIds.length) {
+        await tx.userEmployer.createMany({
+          data: validEmployerIds.map(employerId => ({ userId, employerId })),
+          skipDuplicates: true,
+        });
+      }
+    }
+
+    if (accessChanged) {
+      const now = new Date();
+      await tx.session.updateMany({
+        where: { userId, endedAt: null },
+        data: {
+          endedAt: now, revokedAt: now, revokedBy: "admin_permission_changed",
+        },
+      });
+    }
+
+    const user = await tx.user.findUniqueOrThrow({
+      where: { id: userId },
+      include: { links: { include: { employer: { select: { id: true, name: true } } } } },
+    });
+    return sanitize(user);
   });
-  return sanitize(user);
 }
 
 // self-service: a user disables their own account. Ends their own session too,
