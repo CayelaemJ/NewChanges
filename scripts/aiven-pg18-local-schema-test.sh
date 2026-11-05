@@ -35,6 +35,9 @@ done
 [[ "$ready" == 1 ]] || { echo 'Isolated PostgreSQL 18 did not start.' >&2; exit 2; }
 if ! docker exec -i "$cid" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres < "$workdir/schema.sql" > "$workdir/restore.log" 2>&1; then
   echo 'FAIL: PostgreSQL 18 rejected the schema. No live databases changed.' >&2
+  # Show only PostgreSQL ERROR/FATAL lines; never print SQL statements, connection strings or the full log.
+  grep -E '^psql:.*: (ERROR|FATAL):' "$workdir/restore.log" | sed -E 's/^psql:.*: (ERROR|FATAL): /\1: /' | head -n 15 >&2 || true
+  echo 'Full temporary restore log was deleted during cleanup.' >&2
   exit 3
 fi
 tables="$(docker exec "$cid" psql -XAtqc "SELECT count(*) FROM pg_tables WHERE schemaname='public'" -U postgres -d postgres)"
