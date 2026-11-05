@@ -33,7 +33,9 @@ const metadataQueries = {
   tables: `SELECT tablename AS name FROM pg_tables WHERE schemaname='public' ORDER BY tablename`,
   columns: `SELECT table_name, column_name, ordinal_position, data_type, udt_schema, udt_name, is_nullable,
     COALESCE(column_default,'') AS column_default, COALESCE(is_identity,'') AS is_identity
-    FROM information_schema.columns WHERE table_schema='public' ORDER BY table_name, ordinal_position`,
+    FROM information_schema.columns WHERE table_schema='public'
+    AND table_name IN (SELECT tablename FROM pg_tables WHERE schemaname='public')
+    ORDER BY table_name, ordinal_position`,
   indexes: `SELECT tablename, indexname, indexdef FROM pg_indexes WHERE schemaname='public' ORDER BY tablename,indexname`,
   constraints: `SELECT c.conrelid::regclass::text AS table_name, c.conname, c.contype,
     pg_get_constraintdef(c.oid) AS definition FROM pg_constraint c
