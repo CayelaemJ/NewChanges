@@ -4,7 +4,11 @@ import {evaluateNewChangesPrimary,allowWriteLeadership} from "../cloudflare/main
 import {verifyDatabaseIdentity} from "../cloudflare/main-app/verify-database.mjs";
 const mainHost="newchanges.example.org";
 const base={NEWCHANGES_CANONICAL_HOST:mainHost,NEWCHANGES_BACKEND_ENABLED:"true",
-  NEWCHANGES_NEON_DATABASE_URL:"synthetic-secret-never-used",NEWCHANGES_MAIN:{getByName(){return {fetch(){}}}}};
+  NEWCHANGES_AIVEN_DATABASE_URL:"synthetic-secret-never-used",NEWCHANGES_MAIN:{getByName(){return {fetch(){}}}},
+  NEWCHANGES_WRITE_LEADER_ENABLED:"true", NEWCHANGES_CUTOVER_APPROVED:"true",
+  NEWCHANGES_DATABASE_PERMISSIONS_VERIFIED:"true", NEWCHANGES_TENANT_E2E_VERIFIED:"true",
+  NEWCHANGES_SOURCE_WRITERS_FENCED:"YES", NEWCHANGES_FINAL_SYNC_VERIFIED:"YES",
+  NEWCHANGES_AIVEN_PRODUCTION_APPROVED:"YES"};
 const verified={database_name:"newchanges",role_name:"newchanges_application_reader",is_superuser:false,can_create_database:false,
  can_create_roles:false,bypasses_rls:false,member_superuser:false,member_privileged_role:false,member_application_owner:false,
  can_create_database_objects:false,can_create_public_objects:false,can_read_session:true,can_read_employer:true,
@@ -12,7 +16,7 @@ const verified={database_name:"newchanges",role_name:"newchanges_application_rea
 
 test("disabled backend cannot start container traffic",()=>{
  for(const delta of [{NEWCHANGES_BACKEND_ENABLED:"false"},{NEWCHANGES_CANONICAL_HOST:""},
- {NEWCHANGES_NEON_DATABASE_URL:""},{NEWCHANGES_MAIN:null}]){
+ {NEWCHANGES_AIVEN_DATABASE_URL:""},{NEWCHANGES_MAIN:null}]){
    assert.equal(evaluateNewChangesPrimary({...base,...delta},mainHost).ready,false,JSON.stringify(delta));
  }
 });
@@ -22,13 +26,14 @@ test("NewChanges only accepts exact explicitly bound domain, not unrelated brand
    assert.equal(evaluateNewChangesPrimary(base,hostname).ready,false);
  }
 });
-test("ingest and report write leadership requires four independent flags",()=>{
- assert.equal(allowWriteLeadership(base),false);
+test("active Cloudflare Aiven leadership requires all cutover, fencing and data gates",()=>{
+ assert.equal(allowWriteLeadership({...base,NEWCHANGES_FINAL_SYNC_VERIFIED:"NO"}),false);
  const all={...base,NEWCHANGES_WRITE_LEADER_ENABLED:"true",NEWCHANGES_CUTOVER_APPROVED:"true",
   NEWCHANGES_DATABASE_PERMISSIONS_VERIFIED:"true",NEWCHANGES_TENANT_E2E_VERIFIED:"true"};
  assert.equal(allowWriteLeadership(all),true);
  for(const key of ["NEWCHANGES_WRITE_LEADER_ENABLED","NEWCHANGES_CUTOVER_APPROVED",
- "NEWCHANGES_DATABASE_PERMISSIONS_VERIFIED","NEWCHANGES_TENANT_E2E_VERIFIED"]){
+ "NEWCHANGES_DATABASE_PERMISSIONS_VERIFIED","NEWCHANGES_TENANT_E2E_VERIFIED",
+ "NEWCHANGES_SOURCE_WRITERS_FENCED","NEWCHANGES_FINAL_SYNC_VERIFIED","NEWCHANGES_AIVEN_PRODUCTION_APPROVED"]){
    assert.equal(allowWriteLeadership({...all,[key]:"false"}),false,key);
  }
 });
