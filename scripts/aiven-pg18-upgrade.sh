@@ -108,7 +108,7 @@ if str(task.get("source_pg_version")) != "17" or str(task.get("target_pg_version
 if "Clusters are compatible" not in str(task.get("result", "")):
     raise SystemExit(2)
 # The Aiven API rejects stale upgrade-check results when updating the service.
-# Some CLI task responses omit create_time; don't reject solely for this.
+# Some CLI task responses omit create_time; reject only invalid timestamps.
 created = task.get("create_time")
 if created:
     try:
