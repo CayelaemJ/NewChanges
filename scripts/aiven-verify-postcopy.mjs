@@ -63,12 +63,14 @@ function connectionEnv(raw) {
   env.PGSSLMODE = u.searchParams.get('sslmode') || 'require';
   if (u.searchParams.has('channel_binding')) env.PGCHANNELBINDING = u.searchParams.get('channel_binding');
   env.PGCONNECT_TIMEOUT = '15';
-  env.PGOPTIONS = '-c default_transaction_read_only=on -c statement_timeout=120000';
+  // Do not send PGOPTIONS during pooled connection startup.
+  delete env.PGOPTIONS;
   return env;
 }
 function query(url, sql, step, side) {
-  const result = spawnSync('psql', ['-w', '-X', '-A', '-t', '-q', '-v', 'ON_ERROR_STOP=1', '-c', sql], {
+  const result = spawnSync('psql', ['-w', '-X', '-A', '-t', '-q', '-v', 'ON_ERROR_STOP=1', '-f', '-'], {
     env: connectionEnv(url),
+    input: `BEGIN TRANSACTION READ ONLY;\nSET LOCAL statement_timeout = '120s';\n${sql};\nCOMMIT;\n`,
     encoding: 'utf8',
     timeout: 130000,
     maxBuffer: 16 * 1024 * 1024,
