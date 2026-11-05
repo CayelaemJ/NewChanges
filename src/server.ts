@@ -1040,7 +1040,7 @@ app.patch<{ Params: { id: string }; Body: any }>("/api/users/:id", async (req, r
 app.post<{ Params: { id: string }; Body: { password: string } }>("/api/users/:id/reset-password", async (req, reply) => {
   const admin = await requireAdmin(req, reply); if (!admin) return;
   try {
-    const result = await resetPassword(req.params.id, String(req.body?.password ?? ""));
+    const result = await resetPassword(req.params.id, String(req.body?.password ?? ""), { forbidSuperadminTarget: admin.role !== "SUPERADMIN" });
     logAdminAction(admin, "user.reset_password", `Reset password for user ${req.params.id}`, { targetType: "User", targetId: req.params.id, impactCount: 1, context: requestSecurityContext(req) });
     return result;
   } catch (e: any) { return reply.code(400).send({ error: e?.message || "could not reset password" }); }
@@ -1064,7 +1064,7 @@ app.delete<{ Params: { id: string } }>("/api/users/:id", async (req, reply) => {
   if (!target) return reply.code(404).send({ error: "user not found" });
   if (admin.role !== "SUPERADMIN" && target.role === "SUPERADMIN") return reply.code(404).send({ error: "user not found" });
   try {
-    const result = await deleteUserPermanently(req.params.id);
+    const result = await deleteUserPermanently(req.params.id, { forbidSuperadminTarget: admin.role !== "SUPERADMIN" });
     logAdminAction(admin, "user.delete", `Permanently deleted user ${req.params.id}`, { targetType: "User", targetId: req.params.id, impactCount: 1, context: requestSecurityContext(req) });
     return result;
   }
