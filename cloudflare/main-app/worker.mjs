@@ -1,0 +1,81 @@
+import { Container } from "@cloudflare/containers";
+import { env as secrets } from "cloudflare:workers";
+import { evaluateNewChangesPrimary, allowWriteLeadership } from "./gate.mjs";
+
+// Run the *existing* Fastify/Prisma app from NewChanges main, not a React
+// rewrite or a proxy to Render/Railway. All routes remain with the actual app.
+export class NewChangesMainContainer extends Container {
+  defaultPort = 3000;
+  sleepAfter = "20m";
+  envVars = {
+    PORT: "3000",
+    NODE_ENV: "production",
+    TRUST_PROXY: "true",
+    COOKIE_SECURE: "true",
+    PUBLIC_BASE_URL: secrets.NEWCHANGES_CANONICAL_HOST ? "https://" + secrets.NEWCHANGES_CANONICAL_HOST : "",
+    DATABASE_URL: secrets.NEWCHANGES_AIVEN_DATABASE_URL,
+    NEWCHANGES_DATABASE_PROVIDER: "aiven",
+    NEWCHANGES_AIVEN_PRODUCTION_APPROVED: secrets.NEWCHANGES_AIVEN_PRODUCTION_APPROVED,
+    NEWCHANGES_CLOUDFLARE_PRIMARY: allowWriteLeadership(secrets) ? "YES" : "NO",
+    NEWCHANGES_SOURCE_WRITERS_FENCED: secrets.NEWCHANGES_SOURCE_WRITERS_FENCED,
+    NEWCHANGES_FINAL_SYNC_VERIFIED: secrets.NEWCHANGES_FINAL_SYNC_VERIFIED,
+    STANDBY_MODE: "false",
+    TRAFFIC_SAVER_MODE: "false",
+    ENABLE_AUTHORITATIVE_INCREMENTAL_SCHEDULER: "false",
+    ENABLE_SEMANTIC_SHADOW_WORKER: "false",
+    ENABLE_SEMANTIC_SHADOW_ENQUEUE: "false",
+    ENABLE_SEMANTIC_OBJECT_PUBLISH: "false",
+    NEWCHANGES_CLOUDFLARE_RUNTIME: "true",
+    NEWCHANGES_ALLOW_WRITES: allowWriteLeadership(secrets) ? "true" : "false"
+  };
+}
+
+const headers = {
+  "Cache-Control": "no-store",
+  "Content-Type": "application/json; charset=utf-8",
+  "X-Content-Type-Options": "nosniff",
+  "X-Robots-Tag": "noindex, nofollow"
+};
+export default {
+  // Optional health heartbeat for the active primary. It is disabled until
+  // the user approves Cloudflare Containers runtime charges and final cutover.
+  // This is availability support, NOT a durable job scheduler.
+  async scheduled(_controller, env) {
+    if (env.NEWCHANGES_KEEP_WARM_ENABLED !== "true") return;
+    const host = String(env.NEWCHANGES_CANONICAL_HOST || "");
+    if (!evaluateNewChangesPrimary(env, host).ready) return;
+    try {
+      const container = env.NEWCHANGES_MAIN.getByName("authoritative-app");
+      const r = await container.fetch(new Request("https://" + host + "/ready", { method: "GET" }));
+      if (!r.ok) console.error("NewChanges active-primary readiness heartbeat failed");
+    } catch {
+      console.error("NewChanges active-primary heartbeat unavailable");
+    }
+  },
+  async fetch(request, env) {
+    const host = new URL(request.url).hostname;
+    const gate = evaluateNewChangesPrimary(env, host);
+    if (new URL(request.url).pathname === "/__migration/status") {
+      // No credentials, connection strings, or account identifier are returned.
+      return new Response(JSON.stringify({
+        application: "NewChanges",
+        sourceRepository: "CayelaemJ/NewChanges",
+        backendAvailable: gate.ready,
+        writeLeader: gate.ready && allowWriteLeadership(env),
+        stage: gate.ready ? "primary" : "disabled"
+      }), { status: 200, headers });
+    }
+    if (!gate.ready)
+      return new Response(JSON.stringify({error:"NewChanges primary backend is not yet enabled"}), {
+        status:503, headers
+      });
+    try {
+      const container = env.NEWCHANGES_MAIN.getByName("authoritative-app");
+      return await container.fetch(request);
+    } catch {
+      return new Response(JSON.stringify({error:"NewChanges primary backend unavailable"}), {
+        status:503, headers
+      });
+    }
+  }
+};

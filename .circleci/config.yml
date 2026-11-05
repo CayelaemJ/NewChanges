@@ -299,6 +299,48 @@ jobs:
           path: test-results
           when: always
 
+  cloudflare_main_backend_container_candidate:
+    docker:
+      - image: cimg/node:24.22
+    resource_class: small
+    working_directory: ~/newchanges
+    steps:
+      - checkout
+      - run:
+          name: Verify full Fastify application migration safety contracts
+          command: |
+            set -euo pipefail
+            test "$CIRCLE_BRANCH" = "feat/cloudflare-main-app-container-20261029"
+            test -s Dockerfile.cloudflare
+            test -s src/server.ts
+            test -s prisma/schema.prisma
+            test -s cloudflare/main-app/preflight.mjs
+            node --check cloudflare/main-app/preflight.mjs
+            node --check cloudflare/main-app/worker.mjs
+            node --test tests/cloudflare-main-app-container.test.mjs
+      - run:
+          name: Compile full NewChanges production server from original repository
+          command: |
+            set -euo pipefail
+            npm ci --no-audit --no-fund
+            npm run build
+            test -s dist/server.js
+            test -s public/dashboard.html
+            test -s public/admin.html
+            test -s public/login.html
+          no_output_timeout: 10m
+      - run:
+          name: Validate Cloudflare Containers edge bundle without deploying image
+          command: |
+            set -euo pipefail
+            npm ci --prefix cloudflare/main-app --no-audit --no-fund
+            cloudflare/main-app/node_modules/.bin/wrangler deploy --dry-run --containers-rollout=none --config wrangler.newchanges-main.jsonc --outdir cloudflare-output/main-app
+            test -s cloudflare-output/main-app/worker.js
+          no_output_timeout: 10m
+      - store_artifacts:
+          path: cloudflare-output/main-app
+          destination: newchanges-full-fastify-cloudflare-container-candidate
+
   source_quality:
     docker:
       - image: cimg/node:24.22
@@ -440,6 +482,12 @@ jobs:
           when: always
 
 workflows:
+  cloudflare_newchanges_real_backend_migration:
+    jobs:
+      - cloudflare_main_backend_container_candidate:
+          filters:
+            branches:
+              only: feat/cloudflare-main-app-container-20261029
   semantic_context_readiness_check:
     when: << pipeline.parameters.semantic_context_readiness >>
     jobs:
