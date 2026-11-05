@@ -5,8 +5,9 @@ import test from 'node:test';
 
 const verifier = readFileSync(new URL('../scripts/aiven-verify-content.mjs',import.meta.url),'utf8');
 const delta = readFileSync(new URL('../scripts/aiven-final-delta-sync.mjs',import.meta.url),'utf8');
+const plan = readFileSync(new URL('../scripts/aiven-final-delta-plan.mjs',import.meta.url),'utf8');
 
-for (const path of ['../scripts/aiven-verify-content.mjs','../scripts/aiven-final-delta-sync.mjs']) {
+for (const path of ['../scripts/aiven-verify-content.mjs','../scripts/aiven-final-delta-sync.mjs','../scripts/aiven-final-delta-plan.mjs']) {
   test('node parses '+path,()=>{
     const p=spawnSync(process.execPath,['--check',new URL(path,import.meta.url).pathname],{encoding:'utf8'});
     assert.equal(p.status,0,p.stderr);
@@ -30,14 +31,17 @@ test('final synchronization is check-only unless explicitly executed',()=>{
   assert.match(delta,/const after=verify\(\)/);
 });
 test('Aiven write transaction is narrowly scoped and keeps prior audit rows',()=>{
-  assert.match(delta,/CREATE TEMP TABLE audit_stage/);
-  assert.match(delta,/CREATE TEMP TABLE session_stage/);
-  assert.match(delta,/ON CONFLICT \("id"\) DO NOTHING/);
-  assert.match(delta,/FROM audit_stage WHERE true/);
-  assert.match(delta,/UPDATE public\."Session" d SET "lastSeenAt"/);
-  assert.match(delta,/IF EXISTS \(SELECT 1 FROM audit_stage/);
-  assert.match(delta,/COMMIT;/);
-  assert.doesNotMatch(delta,/DROP TABLE|TRUNCATE|DELETE FROM|ALTER TABLE|db:push|db:deploy/);
+  assert.match(plan,/CREATE TEMP TABLE audit_stage/);
+  assert.match(plan,/CREATE TEMP TABLE session_stage/);
+  assert.match(plan,/ON CONFLICT \("id"\) DO NOTHING/);
+  assert.match(plan,/FROM audit_stage WHERE true/);
+  assert.match(plan,/UPDATE public\."Session" d SET "lastSeenAt"/);
+  assert.match(plan,/IF EXISTS \(SELECT 1 FROM audit_stage/);
+  assert.match(plan,/COMMIT;/);
+  assert.doesNotMatch(plan,/DROP TABLE|TRUNCATE|DELETE FROM|ALTER TABLE|db:push|db:deploy/);
+});
+test('driver imports the reviewed SQL plan, without generating independent write queries',()=>{
+  assert.match(delta,/buildAivenDeltaSql\(audit,sessions\)/);
 });
 test('connection info is passed by process environment rather than in argv',()=>{
   for(const src of [verifier,delta]){
