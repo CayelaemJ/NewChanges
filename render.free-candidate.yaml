@@ -1,0 +1,32 @@
+# Zero-cost migration candidate, not production and not a 24/7 uptime guarantee.
+# Existing render.yaml standby is unchanged. Create this service separately.
+# Free services sleep after inactivity, lose local files, and have usage limits.
+services:
+  - type: web
+    name: newchanges-free-backend-candidate
+    runtime: docker
+    repo: https://github.com/CayelaemJ/NewChanges
+    branch: feat/free-cloudflare-render-primary-20261105
+    region: frankfurt
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /ready
+    autoDeployTrigger: off
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: STANDBY_MODE
+        value: "true"
+      - key: TRAFFIC_SAVER_MODE
+        value: "true"
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: TRUST_PROXY
+        value: "true"
+      - key: DATABASE_URL
+        sync: false
+      - key: PUBLIC_BASE_URL
+        sync: false
+# Do not supply live Neon/Aiven credentials to this publicly accessible
+# candidate until authentication, read-only isolation and write fencing are
+# independently validated. STANDBY_MODE is NOT a database read-only role.
