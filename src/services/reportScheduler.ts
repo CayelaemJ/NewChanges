@@ -3,6 +3,7 @@ import nodemailer from "nodemailer";
 import { DateTime } from "luxon";
 import { prisma, getDashboardPayload } from "./snapshotBuilder.js";
 import { themeForEmployer } from "./partnerService.js";
+import { allowedSlackWebhookUrl } from "./slackWebhookPolicy.js";
 
 export type ReportFilters = {
   period?: string;
@@ -121,7 +122,8 @@ export async function publicEmailConfig() {
     updatedAt: cfg.updatedAt,
     // automations — not secret, safe to return as-is
     alertEmails: (cfg as any).alertEmails,
-    alertSlackWebhookUrl: (cfg as any).alertSlackWebhookUrl,
+    // Webhook URLs are bearer credentials. Never echo them back to the browser.
+    hasAlertSlackWebhook: Boolean((cfg as any).alertSlackWebhookUrl),
     digestEnabled: (cfg as any).digestEnabled,
     lastDigestSentAt: (cfg as any).lastDigestSentAt,
     staleDeactivateDays: (cfg as any).staleDeactivateDays,
@@ -157,7 +159,12 @@ export async function saveEmailConfig(input: EmailDraft) {
   }
   if ("portalBaseUrl" in input) data.portalBaseUrl = clean(input.portalBaseUrl);
   if ("alertEmails" in input) data.alertEmails = clean(input.alertEmails);
-  if ("alertSlackWebhookUrl" in input) data.alertSlackWebhookUrl = clean(input.alertSlackWebhookUrl);
+  if ("alertSlackWebhookUrl" in input) {
+    const webhook = input.alertSlackWebhookUrl;
+    if (webhook == null || webhook === "") data.alertSlackWebhookUrl = null;
+    else if (!allowedSlackWebhookUrl(webhook)) throw new Error("Slack webhook must be an HTTPS Slack incoming-webhook URL");
+    else data.alertSlackWebhookUrl = webhook;
+  }
   if ("digestEnabled" in input) data.digestEnabled = Boolean(input.digestEnabled);
   if ("staleDeactivateDays" in input) {
     const n = input.staleDeactivateDays;
