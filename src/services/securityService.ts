@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { createHash } from "node:crypto";
 import { prisma } from "./authService.js";
+import { resolvedSecurityIp, isPublicSecurityIp } from "./securityNetworkPolicy.js";
 
 export interface RequestSecurityContext {
   ipAddress?: string;
@@ -22,17 +23,9 @@ export function requestSecurityContext(input: any): RequestSecurityContext {
   const deviceType = trim(headers["x-device-type"], 32);
   const browser = trim(headers["x-browser"], 64);
   const operatingSystem = trim(headers["x-operating-system"], 64);
-  const first = (v: unknown) => typeof v === "string" ? v.split(",")[0]?.trim() : undefined;
-  // Railway supplies the originating client address at the proxy boundary.
-  // Prefer that trusted edge header before Fastify's resolved socket value so
-  // telemetry does not fall back to the Railway proxy address.
-  const ipAddress = trim(
-    first(headers["x-real-ip"]) ??
-    input?.ip ??
-    first(headers["x-forwarded-for"]) ??
-    input?.raw?.socket?.remoteAddress,
-    64,
-  );
+  // Trust Fastify's request.ip (which applies the configured proxy boundary),
+  // never client-controlled X-Real-IP or X-Forwarded-For header values.
+  const ipAddress = resolvedSecurityIp(input);
   // Location is deliberately only accepted from an upstream provider. Railway
   // edge region is infrastructure location, not the user's location, so it is
   // never presented as user geography here.
@@ -72,16 +65,8 @@ function ipSafeDeviceKey(deviceType?: string, browser?: string, operatingSystem?
     .slice(0, 32);
 }
 
-function isPublicIp(ip?: string) {
-  if (!ip) return false;
-  const value = ip.replace(/^::ffff:/i, "");
-  if (value === "::1" || value === "127.0.0.1" || value === "0.0.0.0") return false;
-  if (/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[0-1])\.)/.test(value)) return false;
-  return true;
-}
-
 async function resolveIpGeography(ip?: string): Promise<{ country?: string; region?: string; city?: string }> {
-  if (!isPublicIp(ip)) return {};
+  if (!isPublicSecurityIp(ip)) return {};
   // External IP geolocation is a cross-border processing activity. It is disabled
   // by default until the organisation has documented and approved the POPIA s72
   // transfer basis and vendor/operator controls. Upstream same-request geography
