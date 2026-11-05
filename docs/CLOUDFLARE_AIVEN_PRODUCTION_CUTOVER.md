@@ -62,3 +62,24 @@ None of these checks deploys the image, enables billing, configures customer tra
 Operator ran `scripts/provision-aiven-cloudflare-runtime.sh` successfully and independently confirmed `newchanges_app_runtime` exists, can log in, and has neither CREATEDB nor CREATEROLE. Subsequent credential-free verification via Aiven's SQL interface confirmed: no SUPERUSER, BYPASSRLS, database/schema CREATE privileges, no `avnadmin` inheritance or other role memberships, SELECT and INSERT on the required Session table, SELECT on Employer, and complete SELECT/INSERT/UPDATE/DELETE grants on all 57 public application tables. Zero public tables have this role's TRUNCATE, REFERENCES or TRIGGER privileges.
 
 **Operator-confirmed 2026-11-05:** a direct psql connection using the newly created role and password succeeded. **Still unverified:** Cloudflare-to-Aiven TLS connectivity, operational application permissions and Auth/MFA/tenant E2E. These results do not authorize enabling write leadership or setting final-sync flags.
+
+
+## Read-only content comparison and guarded final delta (2026-11-05)
+
+Further read-only checks against live Neon and the Aiven snapshot found that **55 of 56 non-audit tables match byte-normalized row-content fingerprints**. The `Session` table has the same 153 session IDs on both sides with identical `token` fields. Exactly **one `lastSeenAt` value differs**; all other session fields match. The 61,449 pre-existing Aiven `DataAccessEvent` rows matched the corresponding 61,449 oldest Neon audit rows by aggregate content fingerprint. Later Neon audit entries continue to increase.
+
+The safe operator rehearsal is now:
+
+```sh
+cd ~/NewChanges-cloudflare
+git fetch origin
+# Apply the current PR 217 commits in this worktree if needed; do not discard local edits.
+node --test tests/aiven-final-sync-safety.test.mjs
+node scripts/aiven-final-delta-sync.mjs --check
+```
+
+`--check` compares **all 56 other tables** by content (normalizing only `Session.lastSeenAt`), validates all 57 table names, and compares the pre-existing audit prefix; it does not copy or alter data. Table content comparisons can be expensive, so do not run continuously against production.
+
+`--execute` is **NOT APPROVED** merely because the user selected Aiven as their target. Do not execute until: (1) legacy writers, jobs and ingestion are demonstrably fenced, (2) an independent recovery backup was tested, (3) full-app backend and auth/MFA/tenant checks are staged successfully, and (4) the operator explicitly authorizes the short maintenance-window data write. The guarded command requires `AIVEN_SOURCE_WRITERS_FENCED=YES`, `AIVEN_FINAL_DATA_SYNC_APPROVED=YES`, `AIVEN_RECOVERY_BACKUP_VERIFIED=YES`, and an interactive confirmation.
+
+The implementation only stages new audit rows at/after the last Aiven audit timestamp and the `Session.lastSeenAt` values. Aiven changes are in one SQL transaction; existing audit rows cannot be overwritten, existing conflicts are checked, sessions must preserve their ID inventory, and the full content verifier runs before and after. A mismatch blocks the Cloudflare release. **This code has not yet undergone a live migration test**, so first exercise the flow against disposable local PostgreSQL instances with synthetic data. Under no circumstances test execution against an unfenced Neon source.
