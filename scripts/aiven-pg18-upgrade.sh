@@ -13,7 +13,7 @@ if [[ "${1:-}" != "--check" && "${1:-}" != "--upgrade" ]]; then
 Aiven PostgreSQL 18 version alignment:
   1. Install Aiven CLI and sign in locally with: avn user login
   2. Run: bash scripts/aiven-pg18-upgrade.sh --check
-  3. Copy the returned task ID. Confirm the result is DONE and successful:
+  3. Copy the returned task ID. Confirm the result reports success=true and compatible clusters:
        avn service task-get --task-id TASK_ID --project cay-bed7 the-fixer-postgres
   4. Verify the service is still free-1-1gb in do-blr. Then run:
        AIVEN_PG18_CHECK_TASK_ID=TASK_ID AIVEN_PG18_UPGRADE_APPROVED=YES bash scripts/aiven-pg18-upgrade.sh --upgrade
@@ -96,9 +96,16 @@ visit(payload)
 if len(matches) != 1:
     raise SystemExit(2)
 task = matches[0]
-if task.get("success") is not True or task.get("task_status") != "DONE":
+if task.get("success") is not True:
     raise SystemExit(2)
-if "upgrade_check" not in str(task.get("task_type", "")).lower():
+# Aiven CLI returns pg_upgrade_check without a task_status field when complete.
+if task.get("task_status", "DONE") != "DONE":
+    raise SystemExit(2)
+if task.get("task_type") not in ("pg_upgrade_check", "upgrade_check"):
+    raise SystemExit(2)
+if str(task.get("source_pg_version")) != "17" or str(task.get("target_pg_version")) != "18":
+    raise SystemExit(2)
+if "Clusters are compatible" not in str(task.get("result", "")):
     raise SystemExit(2)
 # The Aiven API rejects stale upgrade-check results when updating the service.
 # Some CLI task responses omit create_time; don't reject solely for this.
