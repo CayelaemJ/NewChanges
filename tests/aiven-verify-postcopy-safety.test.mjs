@@ -6,7 +6,7 @@ const text = readFileSync(new URL('../scripts/aiven-verify-postcopy.mjs',import.
 test('validator is read-only and scoped to known source/target endpoints',()=>{
   assert.match(text,/\.neon\.tech\|newchanges/);
   assert.match(text,/the-fixer-postgres-cay-bed7\.b\.aivencloud\.com\|defaultdb/);
-  assert.match(text,/REPEATABLE READ READ ONLY/);
+  assert.match(text,/default_transaction_read_only=on/);
   assert.doesNotMatch(text,/DROP TABLE|CREATE TABLE|INSERT INTO|UPDATE public|DELETE FROM|pg_restore|pg_dump/);
 });
 test('validator checks table, column, index, constraint, sequence and view structure and all counts',()=>{
