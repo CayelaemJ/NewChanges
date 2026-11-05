@@ -8,15 +8,11 @@
 
 import * as XLSX from "xlsx";
 import { ReportFormat } from "./reportFormats.js";
+import { csvEscape } from "./csvSafety.js";
 
 export function csvTemplate(format: ReportFormat): string {
-  const header = format.fields.map((f) => f.name).join(",");
-  const example = format.fields
-    .map((f) => {
-      const value = f.example ?? "";
-      return /[",\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
-    })
-    .join(",");
+  const header = format.fields.map((f) => csvEscape(f.name)).join(",");
+  const example = format.fields.map((f) => csvEscape(f.example ?? "")).join(",");
   return `${header}\n${example}\n`;
 }
 
