@@ -8,7 +8,7 @@ assert.equal(process.env.CI, "true", "CI-only approval required");
 assert.equal(process.env.CI_RLS_PROBE_APPROVED, "CI_DISPOSABLE_ONLY", "Disposable DB proof required");
 assert.equal(process.env.DATABASE_URL, FIXTURE_DB, "Refusing non-disposable database");
 const { prisma } = await import("../../dist/services/database.js");
-const { completeSetup, resetPassword } = await import("../../dist/services/userService.js");
+const { completeSetup, resetPassword, updateUser, deactivateSelf } = await import("../../dist/services/userService.js");
 const tokenDigest = value => createHash("sha256").update(value).digest("hex");
 const nowPlus = ms => new Date(Date.now() + ms);
 const fixtures = [];
@@ -89,6 +89,27 @@ try {
   assert.equal(stillDisabled.passwordHash, null);
   assert.ok(stillDisabled.setupToken, "A rejected token claim must not update the user");
   console.log("[password-reset] PASS revoked accounts cannot self-reactivate with stale setup links");
+
+  // Normal administrative deactivation must also DESTROY any pending token,
+  // so a later administrator reactivation cannot make the old link valid again.
+  const adminDisabled = await createFixture();
+  await updateUser(adminDisabled.userId, { active: false, revokedReason: "Synthetic CI account revocation" });
+  const afterDisable = await prisma.user.findUniqueOrThrow({ where: { id: adminDisabled.userId } });
+  assert.equal(afterDisable.active, false);
+  assert.equal(afterDisable.setupToken, null);
+  assert.equal(afterDisable.setupExpires, null);
+  await updateUser(adminDisabled.userId, { active: true });
+  await assert.rejects(completeSetup(adminDisabled.token, "CannotReuseReset123"),
+    /this setup link is invalid or has expired/);
+  console.log("[password-reset] PASS administrator deactivation permanently invalidates prior links");
+
+  // Self-deactivation also clears outstanding password reset tokens.
+  const selfDisabled = await createFixture();
+  await deactivateSelf(selfDisabled.userId, "Synthetic CI self-deactivation");
+  const afterSelfDisable = await prisma.user.findUniqueOrThrow({ where: { id: selfDisabled.userId } });
+  assert.equal(afterSelfDisable.setupToken, null);
+  assert.equal(afterSelfDisable.setupExpires, null);
+  console.log("[password-reset] PASS self-deactivation clears recovery/reset links");
 
   // Admin-issued password changes must also revoke sessions atomically.
   const admin = await createFixture();
