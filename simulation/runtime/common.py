@@ -37,7 +37,8 @@ def connection_config(role="writer"):
         raise RuntimeError("Verified TLS CA required for non-local MySQL connections")
     kwargs = dict(host=host, port=positive_int(os.environ.get(prefix + "PORT", "3306"), "port", 65535),
                   user=user, password=password, database=target_db, autocommit=False,
-                  connect_timeout=5, read_timeout=15, write_timeout=15, charset="utf8mb4")
+                  connect_timeout=5, read_timeout=15, write_timeout=15, charset="utf8mb4",
+                  init_command="SET time_zone = '+00:00'")
     if not local:
         kwargs.update(ssl={"ca": ca}, ssl_verify_cert=True, ssl_verify_identity=True)
     return kwargs
