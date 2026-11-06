@@ -220,14 +220,14 @@ git merge --ff-only origin/feat/free-cloudflare-render-primary-20261105
 node --test tests/production-encrypted-backup.test.mjs
 bash -n scripts/verify-encrypted-backup-restore.sh
 umask 077
-mkdir -p "$HOME/fixer-recovery-private"
-chmod 700 "$HOME/fixer-recovery-private"
+mkdir -p "$HOME/fixer-recovery-keys" "$HOME/fixer-recovery-archives"
+chmod 700 "$HOME/fixer-recovery-keys" "$HOME/fixer-recovery-archives"
 # Generate a new age identity locally ONLY if the operator has no existing recipient/key.
 # The identity file is SECRET; keep a separately protected recovery copy.
-age-keygen -o "$HOME/fixer-recovery-private/age-identity.txt"
-export AGE_RECIPIENT="$(age-keygen -y "$HOME/fixer-recovery-private/age-identity.txt")"
-export AGE_IDENTITY_FILE="$HOME/fixer-recovery-private/age-identity.txt"
-export NEWCHANGES_BACKUP_DIR="$HOME/fixer-recovery-private"
+age-keygen -o "$HOME/fixer-recovery-keys/age-identity.txt"
+export AGE_RECIPIENT="$(age-keygen -y "$HOME/fixer-recovery-keys/age-identity.txt")"
+export AGE_IDENTITY_FILE="$HOME/fixer-recovery-keys/age-identity.txt"
+export NEWCHANGES_BACKUP_DIR="$HOME/fixer-recovery-archives"
 node scripts/production-encrypted-backup.mjs source --preflight
 node scripts/production-encrypted-backup.mjs target --preflight
 # Both of the following are read-only on the DB but write encrypted local backup files:
@@ -238,9 +238,9 @@ node scripts/production-encrypted-backup.mjs target --backup
 **Important:** Preserve the encrypted `.pgdump.age` file paths and SHA-256 values from the output. For each file, run:
 
 ```bash
-AGE_IDENTITY_FILE="$HOME/fixer-recovery-private/age-identity.txt" \
+AGE_IDENTITY_FILE="$HOME/fixer-recovery-keys/age-identity.txt" \
   bash scripts/verify-encrypted-backup-restore.sh \
-  "$HOME/fixer-recovery-private/<ACTUAL_ARCHIVE_FILENAME>.pgdump.age"
+  "$HOME/fixer-recovery-archives/<ACTUAL_ARCHIVE_FILENAME>.pgdump.age"
 ```
 
 Use the actual filenames printed by the backup script. Save a **separate encrypted copy** and record its matching hash. Do not invent backup evidence or mark `offsiteCopy`, `restoreTested`, `sha256` or `verified` in the cutover manifest before checks finish. Local storage alone is not an independent recovery location. The local backup tool intentionally does not upload archives to cloud services.
