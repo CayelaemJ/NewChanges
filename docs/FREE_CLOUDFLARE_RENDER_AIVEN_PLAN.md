@@ -460,3 +460,23 @@ node scripts/aiven-final-delta-sync.mjs --check
 ```
 
 Do **not** run `--execute` until existing Neon writers are fenced and all separate production cutover evidence is truly verified. Do **not** install unreviewed private credentials, enable Cloudflare Worker routes, or set Render `STANDBY_MODE=false` based on metadata parity alone.
+
+
+## 2026-11-06 release evidence scope hardening and next operator commands
+
+The production cutover evidence checker previously treated `restoreTested=true` and a syntactically valid backup hash as sufficient, even if the evidence described only the 57-table `--portable-backup` Neon archive. **That archive intentionally excludes `pg_session_jwt` and non-public schemas and cannot prove a full source recovery.** The checker now additionally requires each backup to declare `scope: "full_database"`, `extensionCompatibilityVerified: true`, `authenticationRecoveryVerified: true`, and the source's `recoveryMethod: "neon_compatible_full_restore"` (the target uses `"isolated_postgresql18_full_restore"`). Synthetic tests enforce that portable-only Neon evidence fails. This still validates user declarations, not independent real-world proof.
+
+Live **read-only** target inspection found Aiven PostgreSQL 18.6, 57 public tables, 198 MB database size and 14 active server connections against a 20-connection plan. The runtime login currently has read/write privileges across all application tables, and public PostgreSQL RLS was not enabled on any table. Consequently, functional tenant-isolation, authorization and MFA checks must happen before the origin goes live. The Aiven service currently permits public client IP ranges; tightening access requires confirming Render egress and operational access first, not blindly changing the firewall.
+
+After fetching the branch, the user can run these safe commands in WSL with the existing **private** `DR_SOURCE_DATABASE_URL` and `DR_TARGET_DATABASE_URL` set:
+```bash
+cd ~/NewChanges-free-edge
+git fetch origin
+git merge --ff-only origin/feat/free-cloudflare-render-primary-20261105
+node --test tests/production-cutover-evidence-check.test.mjs tests/aiven-security-parity.test.mjs
+node scripts/aiven-security-parity.mjs
+node scripts/aiven-verify-content.mjs
+node scripts/aiven-final-delta-sync.mjs --check
+```
+
+These checks run **without mutating either production database**, but only the local operator machine has the Neon source credential needed to complete both-end comparisons. Record only redacted summary/exit status. Failures must block cutover and be diagnosed, not bypassed with environment approval flags. There is no authorization to fence Neon, execute the final Aiven write delta, insert real Render DB credentials, or enable Cloudflare routes yet.
