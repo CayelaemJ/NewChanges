@@ -522,24 +522,39 @@ async function sendSchedule(scheduleId: string, triggeredBy: "scheduled" | "manu
   // A dashboard refresh can take time. Recheck immediately before external
   // delivery so role changes during report generation cannot go unnoticed.
   await assertScheduleDeliveryAuthorized(schedule, triggeredBy);
+  // Only transport failures are eligible for a retry. Once the provider
+  // accepts the email, a later database/audit failure must never resend it.
   try {
     await sendEmail({ to: recipients, subject, html });
-    await prisma.reportDeliveryLog.create({ data: { scheduleId: schedule.id, triggeredBy, status: "SENT", recipients: recipients as any, subject, filters: filters as any } });
-    await prisma.reportSchedule.update({ where: { id: schedule.id }, data: { lastSentAt: new Date(), lastStatus: "SENT", lastError: null, consecutiveFailures: 0 } });
-    return { ok: true, subject, recipients };
   } catch (error: unknown) {
     // Delivery records may be visible to report owners. Persist only safe,
     // classified errors, never raw provider responses or SMTP banners.
     const message = safeEmailDeliveryFailure(error);
-    await prisma.reportDeliveryLog.create({ data: { scheduleId: schedule.id, triggeredBy, status: "FAILED", recipients: recipients as any, subject, filters: filters as any, error: message } });
     const failed = schedule.consecutiveFailures + 1;
     // Only an automatic scheduled delivery may move the persisted next-run time
     // into the retry window. A user clicking “Send now” must never alter the
     // schedule they originally configured.
     const retry = triggeredBy === "scheduled" && failed <= 3 ? new Date(Date.now() + 30 * 60 * 1000) : undefined;
+    try {
+      await prisma.reportDeliveryLog.create({ data: { scheduleId: schedule.id, triggeredBy, status: "FAILED", recipients: recipients as any, subject, filters: filters as any, error: message } });
+    } catch {
+      // The transport has already failed. Try the schedule update regardless.
+    }
     await prisma.reportSchedule.update({ where: { id: schedule.id }, data: { lastStatus: "FAILED", lastError: message, consecutiveFailures: failed, ...(retry ? { active: true, nextRunAt: retry } : {}) } });
     throw new Error(message);
   }
+  let trackingWarning = false;
+  try {
+    await prisma.reportDeliveryLog.create({ data: { scheduleId: schedule.id, triggeredBy, status: "SENT", recipients: recipients as any, subject, filters: filters as any } });
+  } catch { trackingWarning = true; }
+  try {
+    await prisma.reportSchedule.update({ where: { id: schedule.id }, data: { lastSentAt: new Date(), lastStatus: "SENT", lastError: null, consecutiveFailures: 0 } });
+  } catch { trackingWarning = true; }
+  if (trackingWarning) {
+    // Do not log raw DB exceptions or mark a successfully sent email as FAILED.
+    console.error("Report email accepted but delivery tracking could not be fully persisted", { scheduleId: schedule.id });
+  }
+  return { ok: true, subject, recipients, trackingWarning };
 }
 
 export async function sendReportNow(user: any, id: string) {
