@@ -39,6 +39,7 @@ test("corrupt, missing and excessive recipient lists fail closed", () => {
   const admin = owner({ role: "ADMIN" });
   for (const recipients of [null, {}, [], "owner@example.invalid", [42],
     ["not an email"], ["owner@example.invalid\nBcc: outsider@example.invalid"],
+    ["owner\u0000@example.invalid"], ["owner\u200B@example.invalid"],
     Array.from({ length: 11 }, (_, i) => `recipient${i}@example.invalid`)]) {
     assert.equal(reportDeliveryAllowed(admin, "employer-a", recipients), false, String(recipients));
   }
