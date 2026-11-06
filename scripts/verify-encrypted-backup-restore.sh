@@ -37,6 +37,13 @@ if [[ "$ready" != true ]]; then
   echo "BLOCKED: isolated restore PostgreSQL failed to start" >&2
   exit 2
 fi
+# PostgreSQL 18 initializes a public schema in each fresh database. pg_dump's
+# portable archive also contains CREATE SCHEMA public; remove ONLY the empty
+# schema inside this newly created --network none disposable container so
+# pg_restore can recreate it from the archive without a duplicate-object error.
+# Never run this command against Neon, Aiven, or any other existing database.
+docker exec "$CONTAINER" psql -X -v ON_ERROR_STOP=1 -U postgres -d restorecheck \
+  -c 'DROP SCHEMA public RESTRICT;'
 echo "Restoring encrypted archive into disposable offline PostgreSQL 18..."
 # pipefail ensures a decrypt failure or pg_restore failure cannot be treated as success.
 age -d -i "$AGE_IDENTITY_FILE" "$1" | \
