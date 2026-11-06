@@ -289,7 +289,7 @@ def run(max_events=None, max_seconds=None):
             only_schemas=["fixer_sim"],only_tables=["customers","products","orders","order_items","payments","financial_transactions"],
             only_events=[WriteRowsEvent,UpdateRowsEvent,DeleteRowsEvent],
             blocking=False,resume_stream=True,log_file=file,log_pos=int(pos),
-            freeze_schema=True,fail_on_table_metadata_unavailable=True)
+            freeze_schema=True)
         for evt in stream:
             if time.monotonic()-started > max_seconds or row_count >= max_events:break
             if evt.schema != "fixer_sim":raise RuntimeError("Unexpected CDC schema")
