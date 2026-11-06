@@ -56,6 +56,7 @@ import { getBrandLearningProfile, learnFromBrandUpload, recordBrandCorrection } 
 
 import { browserSafeFailure } from "./services/browserErrorSafety.js";
 import { InMemoryRateLimiter } from "./services/inMemoryRateLimiter.js";
+import { cloudflareOriginAccessAllowed } from "./services/cloudflareOriginGuard.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = [join(__dirname, "public"), join(__dirname, "..", "public")]
@@ -65,7 +66,7 @@ const MAX_UPLOAD_BYTES = Number(process.env.UPLOAD_MAX_BYTES ?? 50 * 1024 * 1024
 
 const app = Fastify({
   logger: {
-    redact: ["req.headers.authorization", "req.headers.cookie", "res.headers[\"set-cookie\"]"],
+    redact: ["req.headers.authorization", "req.headers.cookie", "req.headers.x-newchanges-edge-token", "res.headers[\"set-cookie\"]"],
     // Reset links and filters can contain sensitive values. Log route paths only.
     serializers: { req: (req) => ({ method: req.method, url: String(req.url || "").split("?", 1)[0], hostname: req.hostname, remoteAddress: req.ip }) },
   },
@@ -154,6 +155,14 @@ app.addHook("onSend", async (_req, reply, payload) => {
 app.addHook("onRequest", async (req, reply) => {
   applySecurityHeaders(reply);
   const path = req.url.split("?", 1)[0];
+  // When the free Cloudflare edge becomes the production front door, reject
+  // direct requests to the public Render origin without its private token.
+  // Only /health is public for Render liveness probes. /ready reveals DB
+  // availability and requires the Cloudflare origin token when protected.
+  if (path !== "/health" &&
+      !cloudflareOriginAccessAllowed(req.headers, process.env)) {
+    return reply.code(403).send({ error: "forbidden" });
+  }
   // HTML must go through its authorised route, never the public asset server.
   // Source maps and dotfiles are not production assets.
   let assetPath: string;

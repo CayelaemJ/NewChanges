@@ -1,0 +1,56 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+const path=new URL('../scripts/aiven-security-parity.mjs',import.meta.url).pathname;
+const src=readFileSync(path,'utf8');
+test('security parity command parses and rejects no-credential run',()=>{
+ const check=spawnSync(process.execPath,['--check',path],{encoding:'utf8'});
+ assert.equal(check.status,0,check.stderr);
+ const r=spawnSync(process.execPath,[path],{
+  encoding:'utf8',timeout:10000,env:{PATH:process.env.PATH||''}
+ });
+ assert.equal(r.status,2,r.stderr);
+ assert.match(r.stderr,/BLOCKED: Missing source private database URL/);
+});
+test('security metadata comparison uses read-only transaction and endpoint pinning',()=>{
+ assert.match(src,/BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY/);
+ assert.match(src,/default_transaction_read_only=on/);
+ assert.match(src,/\.neon\.tech/);
+ assert.match(src,/the-fixer-postgres-cay-bed7\.b\.aivencloud\.com/);
+ assert.match(src,/57/);
+ assert.match(src,/pg_policies/);
+ assert.match(src,/pg_get_triggerdef/);
+ assert.match(src,/pg_get_functiondef/);
+ assert.match(src,/relrowsecurity/);
+ assert.match(src,/relforcerowsecurity/);
+ assert.doesNotMatch(src,/\bINSERT INTO\b|\bUPDATE public\b|\bDELETE FROM\b|\bDROP TABLE\b/);
+});
+test('reported parity output contains only counts and status, not definitions',()=>{
+ assert.match(src,/SECURITY PARITY SUMMARY:/);
+ assert.match(src,/different_definitions/);
+ assert.match(src,/SCOPE: metadata only/);
+ assert.doesNotMatch(src,/console\.log\(.*PGPASSWORD/);
+});
+
+test('missing Neon functions are categorized as app-owned versus extension-owned and never auto-ignored',()=>{
+ assert.match(src,/dep\.deptype='e'/);
+ assert.match(src,/pg_extension ext/);
+ assert.match(src,/extension_function/);
+ assert.match(src,/MISSING FUNCTION SIGNATURES/);
+ assert.match(src,/JSON\.stringify\(absentFunctions\.slice\(0,20\)\)/);
+ assert.match(src,/if\(a\.table!==57 \|\| b\.table!==57 \|\| missing \|\| mismatch \|\| extra \|\|/);
+});
+
+test('known Neon monitoring differences are exact extension-owned signatures only',()=>{
+ assert.match(src,/OPTIONAL_NEON_MONITORING_SIGNATURES = new Set/);
+ assert.match(src,/extension_function:pg_stat_statements\(boolean\)/);
+ assert.match(src,/extension_function:pg_stat_statements_info\(\)/);
+ assert.match(src,/extension_function:pg_stat_statements_reset\(oid,oid,bigint,boolean\)/);
+ assert.match(src,/row\?\.detail\?\.startsWith\('pg_stat_statements\|'\)/);
+ assert.match(src,/if\(optionalMonitoringDifference\(key,row\)\) optionalMonitoring\+\+/);
+ assert.match(src,/a\.extension_dependency \|\| b\.extension_dependency/);
+ assert.match(src,/SELECT 'extension_dependency'/);
+ assert.match(src,/JOIN pg_depend member/);
+ assert.doesNotMatch(src,/if\(row\.category==='extension_function'\) continue/);
+});
