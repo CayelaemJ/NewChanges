@@ -10,6 +10,7 @@ RUN python -c "import pymysql; import cryptography; from cryptography.hazmat.pri
 COPY runtime/ runtime/
 COPY ops/setup_local.py ops/setup_local.py
 COPY ops/local_bootstrap_probe.py ops/local_bootstrap_probe.py
+COPY ops/ingest_stage_readonly_audit.sql ops/ingest_stage_readonly_audit.sql
 COPY tests/ tests/
 # Contract tests verify the same Dockerfile used for this image build.
 COPY Dockerfile.test Dockerfile.test
