@@ -33,3 +33,31 @@ test("MySQL replica health probes enforce TLS before creating any credentialed c
   assert.match(health, /const replicaTrustServerCertificate = effective\.sqlReplicaTrustServerCertificate \?\? false/);
   assert.match(health, /ssl: replicaSslEnabled \? \{ rejectUnauthorized: !replicaTrustServerCertificate \} : undefined/);
 });
+
+test("source factories consume the resolved credentials and TLS settings, not primary env overrides", () => {
+  const start = source.indexOf("async function openPostgresExecutor(");
+  const end = source.indexOf("function effectiveReplicaEnabled(", start);
+  assert.ok(start >= 0 && end > start);
+  const factories = source.slice(start, end);
+  assert.doesNotMatch(factories, /process\.env\.SOURCE_SQL_PASSWORD/);
+  assert.doesNotMatch(factories, /boolEnv\("SOURCE_SQL_SSL"\)/);
+  assert.doesNotMatch(factories, /boolEnv\("SOURCE_SQL_TRUST_SERVER_CERTIFICATE"\)/);
+  assert.equal(factories.split("password: config.sqlPassword").length - 1, 3,
+    "all three SQL drivers must use the selected effective password");
+  assert.equal(factories.split("config.sqlSsl ?? true").length - 1, 3);
+  assert.equal(factories.split("config.sqlTrustServerCertificate ?? false").length - 1, 3);
+  assert.match(source, /const token = config\.authToken \|\| null/);
+});
+
+test("replica selection never substitutes primary credentials or overrides saved enablement", () => {
+  const start = source.indexOf("function effectiveReplicaEnabled(");
+  const end = source.indexOf("function sqlDialect(", start);
+  assert.ok(start >= 0 && end > start);
+  const health = source.slice(start, end);
+  assert.match(health, /return config\.sqlReplicaEnabled === true/);
+  assert.match(health, /password: effective\.sqlReplicaPassword/);
+  assert.doesNotMatch(health, /process\.env\.SOURCE_SQL_REPLICA_PASSWORD/);
+  const adapter = source.slice(source.indexOf("async function createSqlAdapter("));
+  assert.match(adapter, /sqlPassword: config\.sqlReplicaPassword/);
+  assert.match(adapter, /if \(!replicaConfig\.sqlHost \|\| !replicaConfig\.sqlUsername \|\| !replicaConfig\.sqlPassword\)/);
+});
