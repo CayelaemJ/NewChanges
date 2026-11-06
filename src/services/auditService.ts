@@ -7,7 +7,7 @@
 
 import { prisma } from "./authService.js";
 import { classifyAdminRisk, type RequestSecurityContext } from "./securityService.js";
-import { redactAuditDetail } from "./auditRedaction.js";
+import { redactAuditDetail, redactAuditText } from "./auditRedaction.js";
 
 export async function logAdminAction(
   actor: { email: string; name: string },
@@ -16,6 +16,7 @@ export async function logAdminAction(
   opts: { targetType?: string; targetId?: string; detail?: unknown; context?: RequestSecurityContext; impactCount?: number } = {},
 ) {
   try {
+    const safeSummary = redactAuditText(summary);
     const riskLevel = classifyAdminRisk(action, opts.impactCount);
     const recentCutoff = new Date(Date.now() - 10 * 60 * 1000);
     const recentCount = await prisma.adminAuditLog.count({ where: { actorEmail: actor.email, createdAt: { gte: recentCutoff } } });
@@ -24,14 +25,14 @@ export async function logAdminAction(
     const row = await prisma.adminAuditLog.create({
       data: {
         actorEmail: actor.email,
-        actorName: actor.name,
+        actorName: redactAuditText(actor.name),
         action,
-        summary,
+        summary: safeSummary,
         targetType: opts.targetType,
-        targetId: opts.targetId,
+        targetId: opts.targetId == null ? undefined : redactAuditText(opts.targetId),
         detail: opts.detail == null ? undefined : JSON.parse(JSON.stringify(redactAuditDetail(opts.detail))),
         ipAddress: opts.context?.ipAddress,
-        userAgent: opts.context?.userAgent,
+        userAgent: opts.context?.userAgent == null ? undefined : redactAuditText(opts.context.userAgent),
         deviceType: opts.context?.deviceType,
         country: opts.context?.country,
         region: opts.context?.region,
@@ -50,7 +51,7 @@ export async function logAdminAction(
           title: recentCount >= 20 ? "Unusually high admin activity" : "High-impact admin action detected",
           summary: recentCount >= 20
             ? actor.email + " performed " + (recentCount + 1) + " recorded admin changes in 10 minutes."
-            : summary,
+            : safeSummary,
           detail: { auditId: row.id, action, targetType: opts.targetType, targetId: opts.targetId, impactCount: opts.impactCount, recentCount: recentCount + 1 },
           impactCount: opts.impactCount ?? (recentCount + 1),
         },
