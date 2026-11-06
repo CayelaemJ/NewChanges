@@ -109,3 +109,18 @@ test('archive catalog inspection cannot SIGPIPE with pipefail when grep matches 
  assert.match(script,/grep -Eq .*<<< "\$archive_catalog"/);
  assert.doesNotMatch(script,/printf .*\$archive_catalog.*\| grep -Eq/);
 });
+
+test('catalog probe drains the authenticated age stream after pg_restore --list',()=>{
+ const script=readFileSync(new URL('../scripts/verify-encrypted-backup-restore.sh',import.meta.url),'utf8');
+ assert.match(script,/archive_catalog="\$\(age -d -i "\$AGE_IDENTITY_FILE" "\$1" \| \{/);
+ assert.match(script,/pg_restore --list\n  cat > \/dev\/null\n\}\)"/);
+ assert.doesNotMatch(script,/set \+o pipefail/);
+});
+test('early catalog reader with remaining pipe drained exits zero under pipefail',()=>{
+ const r=spawnSync('bash',['-c',[
+  'set -Eeuo pipefail',
+  "catalog=\"$(node -e 'process.stdout.write(\"X\".repeat(2000000))' | { head -c 120; cat > /dev/null; })\"",
+  'test "${#catalog}" -eq 120'
+ ].join('; ')],{encoding:'utf8',timeout:10000});
+ assert.equal(r.status,0,r.stderr);
+});
