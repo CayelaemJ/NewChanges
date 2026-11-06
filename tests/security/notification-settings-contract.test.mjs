@@ -132,3 +132,14 @@ test("disposable database CI verifies real Resend save, readback and secret reda
   assert.match(integration,/assert\.equal\(persisted\.resendApiKey, apiKey\)/);
   assert.match(integration,/!Object\.hasOwn\(response, "resendApiKey"\)/);
 });
+
+
+// The same safe sender name must be used by SMTP and the Resend formatted From.
+test("sender display name is normalized for both providers", () => {
+  const safety=read("src/services/notificationTextSafety.ts");
+  assert.match(safety,/export function safeSenderDisplayName\(/);
+  assert.match(safety,/\\p\{Cc\}/);
+  assert.match(safety,/\\p\{Cf\}/);
+  assert.match(scheduler,/from: `\$\{safeSenderDisplayName\(cfg\.fromName\)\} <\$\{fromEmail\}>`/);
+  assert.match(scheduler,/from: \{ name: safeSenderDisplayName\(cfg\.fromName\), address: cfg\.fromEmail! \}/);
+});
