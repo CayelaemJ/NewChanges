@@ -103,3 +103,9 @@ test('restore selects schema handling by archive catalog (Neon creates public, A
  assert.match(script,/keeping default empty schema/);
  assert.ok(script.indexOf('pg_restore --list') < script.indexOf('DROP SCHEMA public RESTRICT'));
 });
+
+test('archive catalog inspection cannot SIGPIPE with pipefail when grep matches early',()=>{
+ const script=readFileSync(new URL('../scripts/verify-encrypted-backup-restore.sh',import.meta.url),'utf8');
+ assert.match(script,/grep -Eq .*<<< "\$archive_catalog"/);
+ assert.doesNotMatch(script,/printf .*\$archive_catalog.*\| grep -Eq/);
+});
