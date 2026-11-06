@@ -458,10 +458,12 @@ function reportHtml(payload: any, schedule: any, theme: any) {
 async function assertDashboardPublishable() {
   const state = await prisma.integrationConfig.findUnique({
     where: { id: "default" },
-    select: { lastSyncStatus: true, lastSyncNote: true },
+    select: { lastSyncStatus: true },
   });
   if (["REBUILDING", "PARTIAL", "FAILED", "FULL_REFRESH_FAILED", "FULL_REFRESH_PRECHECK_FAILED"].includes(String(state?.lastSyncStatus || ""))) {
-    throw new Error(`Dashboard source state is ${state?.lastSyncStatus}; scheduled/manual report delivery is deferred until a complete successful source sync publishes consistent data. ${state?.lastSyncNote || ""}`.trim());
+    // The free-text sync note can contain upstream database/HTTP diagnostics.
+    // Do not reflect it into report delivery responses or error logs.
+    throw new Error("Dashboard source is not ready; report delivery is deferred until a successful sync.");
   }
   return state;
 }
@@ -486,8 +488,10 @@ async function sendSchedule(scheduleId: string, triggeredBy: "scheduled" | "manu
     await prisma.reportDeliveryLog.create({ data: { scheduleId: schedule.id, triggeredBy, status: "SENT", recipients: recipients as any, subject, filters: filters as any } });
     await prisma.reportSchedule.update({ where: { id: schedule.id }, data: { lastSentAt: new Date(), lastStatus: "SENT", lastError: null, consecutiveFailures: 0 } });
     return { ok: true, subject, recipients };
-  } catch (error: any) {
-    const message = String(error?.message || error).slice(0, 1000);
+  } catch (error: unknown) {
+    // Delivery records may be visible to report owners. Persist only safe,
+    // classified errors, never raw provider responses or SMTP banners.
+    const message = safeEmailDeliveryFailure(error);
     await prisma.reportDeliveryLog.create({ data: { scheduleId: schedule.id, triggeredBy, status: "FAILED", recipients: recipients as any, subject, filters: filters as any, error: message } });
     const failed = schedule.consecutiveFailures + 1;
     // Only an automatic scheduled delivery may move the persisted next-run time
@@ -495,7 +499,7 @@ async function sendSchedule(scheduleId: string, triggeredBy: "scheduled" | "manu
     // schedule they originally configured.
     const retry = triggeredBy === "scheduled" && failed <= 3 ? new Date(Date.now() + 30 * 60 * 1000) : undefined;
     await prisma.reportSchedule.update({ where: { id: schedule.id }, data: { lastStatus: "FAILED", lastError: message, consecutiveFailures: failed, ...(retry ? { active: true, nextRunAt: retry } : {}) } });
-    throw error;
+    throw new Error(message);
   }
 }
 
