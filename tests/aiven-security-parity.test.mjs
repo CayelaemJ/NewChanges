@@ -32,3 +32,12 @@ test('reported parity output contains only counts and status, not definitions',(
  assert.match(src,/SCOPE: metadata only/);
  assert.doesNotMatch(src,/console\.log\(.*PGPASSWORD/);
 });
+
+test('missing Neon functions are categorized as app-owned versus extension-owned and never auto-ignored',()=>{
+ assert.match(src,/dep\.deptype='e'/);
+ assert.match(src,/pg_extension ext/);
+ assert.match(src,/extension_function/);
+ assert.match(src,/MISSING FUNCTION SIGNATURES/);
+ assert.match(src,/JSON\.stringify\(absentFunctions\.slice\(0,20\)\)/);
+ assert.match(src,/if\(a\.table!==57 \|\| b\.table!==57 \|\| missing \|\| mismatch \|\| extra\)/);
+});
