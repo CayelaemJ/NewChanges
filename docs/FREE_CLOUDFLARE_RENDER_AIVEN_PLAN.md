@@ -536,3 +536,10 @@ echo "MFA source gate exit: $?"
 ```
 
 The synthetic tests should PASS. The standalone release gate should currently print BLOCKED and return 2, by design. Next engineering step is a reviewed integration of PR #219's working MFA implementation into the production candidate, resolving conflicts and rerunning tests. Do not copy only one route or set MFA enforcement false to bypass the gate; do not run production migrations automatically.
+
+
+### Cross-branch MFA integration scope (observed before merge)
+
+GitHub comparison of release branch `feat/free-cloudflare-render-primary-20261105` against `chore/manual-self-hosted-docker-ci-20261029` reports **diverged history (400 commits ahead, 115 behind, 113 files touched in compare)**. The MFA branch includes roughly 184 added lines in `src/server.ts`, 119 additions to `prisma/schema.prisma`, multiple Prisma MFA migrations, `src/services/adminMfaRoutes.ts`, supplementary MFA service modules, browser enrollment/recovery UI, dependency changes, and isolated tests. A blind merge/cherry-pick or copying only the UI is unsafe: it may accidentally introduce unrelated staging deployment configuration, test runners, or competing infrastructure changes. No branch merge or production migration was attempted.
+
+A reviewed MFA integration should preserve both sets of application changes; port the MFA service/schema/migrations, non-staging server route guards, and all required dependency lockfile entries; exclude unrelated Render staging configuration and infrastructure switches; then prove compiler, unit/HTTP E2E, tenant authorization, new-user and existing-admin enrollment, session revocation, recovery, recovery-key issuance, and direct-origin protections in an isolated disposable environment. The new source gate currently returns exit 2 on PR #234 by design. Full browser and API authorization behavior cannot be inferred from static presence.
