@@ -106,6 +106,21 @@ without any error message, credentials, or connection URL. Do not bypass
 bootstrap safety guards to make tests pass. The local Compose test project
 uses randomly generated credentials and fresh ephemeral storage every run.
 
+## Local MySQL 8.4 integration validation, 6 November
+
+The operator's disposable MySQL 8.4 log now confirms the RSA dependency,
+writer/replication/sink authentication, stopped-and-empty source checks,
+`ROW`/`FULL` binlog configuration, binlog access, and initial empty-source
+checkpoint bootstrap **PASS**. Three CDC data-layer integration tests and
+the isolated generator idempotency test also passed.
+
+The remaining two failures in that run were test-image packaging
+(`/app/Dockerfile.test` absent) and a removed constructor parameter
+(`fail_on_table_metadata_unavailable`) in the installed
+`mysql-replication==1.0.17` reader. Both are fixed in the branch, with a new
+test inspecting `BinLogStreamReader` against the installed API. The complete
+live row-binlog integration test must still be rerun to prove success.
+
 ## Approval gates before **any** AWS schema creation
 
 1. Verify actual MySQL schema inventory and classify sensitive data. No connection to live RDS was attempted from this package.
