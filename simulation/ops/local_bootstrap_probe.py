@@ -43,6 +43,22 @@ def main():
             and os.environ.get("SIM_CDC_HOST") == "mysql"):
         raise SystemExit("Local-only bootstrap probe refused")
 
+    def sha2_dependency_check():
+        # MySQL 8.4 defaults to caching_sha2_password. Newly created accounts
+        # need PyMySQL's RSA backend on the isolated (non-TLS) Docker network.
+        # Check this once rather than reporting five misleading connection errors.
+        from cryptography.hazmat.primitives.asymmetric import padding
+        return {"sha2_auth_backend_available": True}
+
+    def writer_check():
+        db = connect("writer")
+        try:
+            if _query(db, "SELECT 1") != ((1,),):
+                raise RuntimeError("Writer query unexpectedly failed")
+            return {"writer_authenticated": True}
+        finally:
+            db.close()
+
     def source_check():
         db = connect("replica")
         try:
@@ -96,7 +112,12 @@ def main():
         finally:
             db.close()
 
+    if not _stage("mysql_sha2_auth_backend", sha2_dependency_check):
+        print(json.dumps({"local_cdc_preflight": "FAIL"}), flush=True)
+        return 1
+
     result = all(([
+        _stage("writer_authentication", writer_check),
         _stage("replica_connection_and_stop", source_check),
         _stage("source_empty", empty_check),
         _stage("row_binlog_configuration", binlog_check),
