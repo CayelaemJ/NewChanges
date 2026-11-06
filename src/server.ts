@@ -1,3 +1,5 @@
+import { registerAdminMfaRoutes, hasFreshAdminMfa, hasIssuedAdminRecoveryKey } from "./services/adminMfaRoutes.js";
+import { requiresAdminMfaStepUp } from "./services/adminMfaRouteScope.js";
 import { createDashboardPublicationStream } from "./services/dashboardPublicationStream.js";
 import { inspectReplacementDependencies } from "./services/datasetReplacementDependencies.js";
 import { previewDatasetReplacement } from "./services/datasetReplacementPreview.js";
@@ -180,6 +182,16 @@ app.addHook("onRequest", async (req, reply) => {
   if (!rateLimit(reply, `api:${ip}`, RATE_LIMIT, RATE_WINDOW_MS)) return;
   const authPath = /^\/api\/auth\/(?:login|forgot-password|set-password)(?:\/|$)/.test(path);
   if (authPath && !rateLimit(reply, `auth:${ip}`, AUTH_RATE_LIMIT, AUTH_WINDOW_MS)) return;
+  // Keep restrictive per-IP budgets for proof/verification calls, but do
+  // not let routine status refresh or authenticator app onboarding consume
+  // the WebAuthn ceremony budget for colleagues behind the same NAT.
+  // TOTP also has a persistent per-account failed-attempt lockout.
+  if (path.startsWith("/api/auth/mfa/")) {
+    const bucket = path === "/api/auth/mfa/status" ? "mfa-status" :
+      path.startsWith("/api/auth/mfa/totp/") ? "mfa-totp" : "mfa-passkey";
+    const limit = bucket === "mfa-status" ? 60 : 16;
+    if (!rateLimit(reply, `${bucket}:${ip}`, limit, 5 * 60_000)) return;
+  }
   if (path === "/api/contact" && !rateLimit(reply, `contact:${ip}`, 6, 10 * 60_000)) return;
   if (/\/(?:upload|import|batch|sync|staging|dataset)(?:s|\/|-|$)/.test(path) &&
       !rateLimit(reply, `bulk:${ip}`, 20, 10 * 60_000)) return;
@@ -360,8 +372,60 @@ async function requireAdmin(req: FastifyRequest, reply: FastifyReply): Promise<A
   const user = await requireUser(req, reply);
   if (!user) return null;
   if (user.role !== "ADMIN" && user.role !== "SUPERADMIN") { reply.code(403).send({ error: "admin only" }); return null; }
+  if (MFA_ENFORCE && !await hasFreshAdminMfa(req, user.id)) { reply.code(403).send({error:"Fresh passkey verification required",code:"MFA_REQUIRED"}); return null; }
   return user;
 }
+// Rollout switch is OFF by default. Set only after locked dependency, migration,
+// enrollment and recovery have all passed staging acceptance.
+const MFA_ENFORCE = process.env.ADMIN_MFA_ENFORCE === "true";
+// This is the migration-candidate binary, not the existing Neon production.
+// Refuse a writable production startup if the required MFA rollout is disabled.
+if (process.env.NODE_ENV === "production" && process.env.STANDBY_MODE === "false") {
+  if (!MFA_ENFORCE) throw new Error("Writable production candidate requires admin MFA enforcement");
+  if (process.env.ADMIN_MFA_TOTP_ENABLED !== "true" ||
+      !/^[A-Za-z0-9_-]{43}$/.test(process.env.ADMIN_MFA_TOTP_ENCRYPTION_KEY ?? ""))
+    throw new Error("Writable production candidate requires configured encrypted TOTP MFA");
+}
+if (MFA_ENFORCE) {
+  const rpID = String(process.env.MFA_RP_ID || "").trim();
+  const expectedOrigin = String(process.env.MFA_EXPECTED_ORIGIN || "").trim();
+  let validConfig = false;
+  try {
+    const parsed = new URL(expectedOrigin);
+    validConfig = Boolean(rpID) && parsed.origin === expectedOrigin &&
+      (parsed.protocol === "https:" || parsed.hostname === "localhost") &&
+      (parsed.hostname === rpID || parsed.hostname.endsWith("." + rpID));
+  } catch { /* invalid configuration */ }
+  if (!validConfig) throw new Error("Administrator MFA enforcement requires a valid MFA_RP_ID and MFA_EXPECTED_ORIGIN");
+}
+app.addHook("preHandler", async (req, reply) => {
+  if (!MFA_ENFORCE) return;
+  const scope = requiresAdminMfaStepUp(req.method, req.url);
+  // Password-only admin sessions must not read protected business records
+  // through GET APIs while the dashboard page redirects them to enrollment.
+  // Public contact, authentication/MFA ceremonies and public theme metadata
+  // remain accessible before enrollment; non-admin roles are unchanged.
+  const path = req.url.split("?", 1)[0];
+  const protectedAdminRead = path.startsWith("/api/") &&
+    !path.startsWith("/api/auth/") &&
+    path !== "/api/contact" &&
+    !path.startsWith("/api/public/") &&
+    !path.startsWith("/api/partner-theme/");
+  if (!scope.adminOnly && !scope.adminMutation && !protectedAdminRead) return;
+  const user = await currentUser(req);
+  // Normal signed-in users can still use their own account features. Admins
+  // must prove a fresh passkey before ANY non-auth API mutation, even when the
+  // route is not under /api/admin/ (for example, /api/users and reports).
+  if (!user || !isAdminRole(user)) {
+    if (scope.adminOnly) return reply.code(403).send({error:"Administrator session required"});
+    return;
+  }
+  if (!await hasFreshAdminMfa(req, user.id))
+    return reply.code(403).send({error:"Fresh administrator passkey verification required", code:"MFA_REQUIRED"});
+  if (user.role === "SUPERADMIN" && !await hasIssuedAdminRecoveryKey(user.id))
+    return reply.code(403).send({error:"Save your account recovery key before continuing",code:"RECOVERY_KEY_REQUIRED"});
+});
+registerAdminMfaRoutes(app);
 function redactAuditDetail(value: unknown): unknown {
   if (!value || typeof value !== "object") return value;
   if (Array.isArray(value)) return value.map(redactAuditDetail);
@@ -380,6 +444,11 @@ app.get("/react/", async (req, reply) => {
   const user = await currentUser(req);
   if (!user) return reply.redirect("/login");
   if (!canAccessModule(user, "dashboard")) return reply.code(403).send({ error: "no dashboard access" });
+  if (MFA_ENFORCE && isAdminRole(user) && !await hasFreshAdminMfa(req, user.id))
+    return reply.redirect("/mfa");
+  if (MFA_ENFORCE && user.role === "SUPERADMIN" &&
+      !await hasIssuedAdminRecoveryKey(user.id))
+    return reply.redirect("/mfa");
   try {
     const html = await readFile(join(PUBLIC_DIR, "react", "index.html"), "utf-8");
     return reply.type("text/html; charset=utf-8").header("Cache-Control", "no-store").send(html);
@@ -391,6 +460,9 @@ app.get("/react/admin", async (req, reply) => {
   const user = await currentUser(req);
   if (!user) return reply.redirect("/login");
   if (!canAccessModule(user, "admin")) return reply.code(403).send({ error: "admin only" });
+  if (MFA_ENFORCE && !await hasFreshAdminMfa(req, user.id)) return reply.redirect("/mfa");
+  if (MFA_ENFORCE && user.role === "SUPERADMIN" &&
+      !await hasIssuedAdminRecoveryKey(user.id)) return reply.redirect("/mfa");
   try {
     const html = await readFile(join(PUBLIC_DIR, "react", "index.html"), "utf-8");
     return reply.type("text/html; charset=utf-8").header("Cache-Control", "no-store").send(html);
@@ -402,6 +474,11 @@ app.get("/react/dashboard", async (req, reply) => {
   const user = await currentUser(req);
   if (!user) return reply.redirect("/login");
   if (!canAccessModule(user, "dashboard")) return reply.code(403).send({ error: "no dashboard access" });
+  if (MFA_ENFORCE && isAdminRole(user) && !await hasFreshAdminMfa(req, user.id))
+    return reply.redirect("/mfa");
+  if (MFA_ENFORCE && user.role === "SUPERADMIN" &&
+      !await hasIssuedAdminRecoveryKey(user.id))
+    return reply.redirect("/mfa");
   try {
     const html = await readFile(join(PUBLIC_DIR, "react", "index.html"), "utf-8");
     return reply.type("text/html; charset=utf-8").header("Cache-Control", "no-store").send(html);
@@ -463,10 +540,32 @@ app.post<{ Body: { name?: unknown; email?: unknown; organisation?: unknown; mess
 });
 app.get("/", async (req, reply) => {
   const user = await currentUser(req);
-  if (user && canAccessModule(user, "dashboard")) return reply.redirect("/dashboard");
+  if (user && canAccessModule(user, "dashboard")) {
+    if (MFA_ENFORCE && isAdminRole(user) && !await hasFreshAdminMfa(req, user.id))
+      return reply.redirect("/mfa");
+    return reply.redirect("/dashboard");
+  }
   return serveHtml(reply, "home.html");
 });
 app.get("/login", async (_req, reply) => serveHtml(reply, "login.html"));
+app.get("/mfa", async (req, reply) => {
+  const user = await currentUser(req);
+  if (!user || !isAdminRole(user)) return reply.redirect("/login");
+  // This is a second-factor step, not a landing page. After successful
+  // authentication there is no reason to present enrollment again.
+  if (MFA_ENFORCE && await hasFreshAdminMfa(req, user.id) &&
+      (user.role !== "SUPERADMIN" || await hasIssuedAdminRecoveryKey(user.id)))
+    return reply.redirect("/dashboard");
+  return serveHtml(reply, "admin-mfa.html");
+});
+// Authenticated method management: never serve enrollment controls to a
+// password-only session. Existing verified factors can authorize adding another.
+app.get("/mfa/manage", async (req, reply) => {
+  const user = await currentUser(req);
+  if (!user || !isAdminRole(user)) return reply.redirect("/login");
+  if (!await hasFreshAdminMfa(req, user.id)) return reply.redirect("/mfa");
+  return serveHtml(reply, "admin-mfa.html");
+});
 app.get("/set-password", async (_req, reply) => serveHtml(reply, "set-password.html"));
 app.get("/privacy", async (_req, reply) => serveHtml(reply, "privacy.html"));
 app.get("/terms", async (_req, reply) => serveHtml(reply, "terms.html"));
@@ -477,6 +576,11 @@ app.get("/dashboard", async (req, reply) => {
   const user = await currentUser(req);
   if (!user) return reply.redirect("/login");
   if (!canAccessModule(user, "dashboard")) return reply.redirect("/login");
+  if (MFA_ENFORCE && isAdminRole(user) && !await hasFreshAdminMfa(req, user.id))
+    return reply.redirect("/mfa");
+  if (MFA_ENFORCE && user.role === "SUPERADMIN" &&
+      !await hasIssuedAdminRecoveryKey(user.id))
+    return reply.redirect("/mfa");
   // Keep the canonical dashboard route on the original production dashboard.
   // The React frontend remains available separately at /react/dashboard while
   // the original dashboard remains the visual source of truth for /dashboard.
@@ -486,11 +590,17 @@ app.get("/admin", async (req, reply) => {
   const user = await currentUser(req);
   if (!user) return reply.redirect("/login");
   if (!canAccessModule(user, "admin")) return reply.code(403).type("text/html").send("<h2 style='font-family:sans-serif;padding:40px'>Admins only. <a href='/dashboard'>Go to dashboard</a></h2>");
+  if (MFA_ENFORCE && !await hasFreshAdminMfa(req, user.id)) return reply.redirect("/mfa");
+  if (MFA_ENFORCE && user.role === "SUPERADMIN" &&
+      !await hasIssuedAdminRecoveryKey(user.id)) return reply.redirect("/mfa");
   return serveHtml(reply, "admin.html");
 });
 app.get("/users", async (req, reply) => {
   const user = await currentUser(req);
   if (!user || (user.role !== "ADMIN" && user.role !== "SUPERADMIN")) return reply.redirect("/login");
+  if (MFA_ENFORCE && !await hasFreshAdminMfa(req, user.id)) return reply.redirect("/mfa");
+  if (MFA_ENFORCE && user.role === "SUPERADMIN" &&
+      !await hasIssuedAdminRecoveryKey(user.id)) return reply.redirect("/mfa");
   return serveHtml(reply, "users.html");
 });
 
@@ -532,7 +642,11 @@ app.post<{ Body: { email: string; password: string; remember?: boolean } }>("/ap
   });
   if (!result) return reply.code(401).send({ error: "invalid email or password" });
   reply.setCookie("session", result.token, remember ? { ...REMEMBER_COOKIE, expires: result.expiresAt } : COOKIE);
-  return { ok: true, user: { name: result.user.name, role: result.user.role } };
+  // A password login has no passkey freshness. The client should guide
+  // administrator accounts to enrollment/verification before their dashboard.
+  // The server also protects direct page navigation and privileged APIs.
+  return { ok: true, user: { name: result.user.name, role: result.user.role },
+    mfaRequired: MFA_ENFORCE && isAdminRole(result.user), next: MFA_ENFORCE && isAdminRole(result.user) ? "/mfa" : undefined };
 });
 
 app.post("/api/auth/logout", async (req, reply) => {
@@ -545,6 +659,20 @@ app.post("/api/auth/logout", async (req, reply) => {
 app.get("/api/auth/me", async (req, reply) => {
   const user = await currentUser(req);
   if (!user) return reply.code(401).send({ error: "not signed in" });
+  if (MFA_ENFORCE && isAdminRole(user)) {
+    const verified=await hasFreshAdminMfa(req,user.id);
+    const recoveryKeyRequired=verified && user.role==="SUPERADMIN" &&
+      !await hasIssuedAdminRecoveryKey(user.id);
+    if (!verified || recoveryKeyRequired) {
+      // Do not reveal employer records or module entitlements while the
+      // administrator still needs MFA or mandatory recovery-key setup.
+      reply.header("Cache-Control","no-store");
+      return {name:user.name,role:user.role,mfaRequired:!verified,
+        recoveryKeyRequired,
+        modules:{admin:false,dashboard:false,portfolio:false,users:false},
+        sections:[],employers:[]};
+    }
+  }
   const ids = allowedEmployerIds(user);
   const syncStatus = await dashboardSyncState(req);
   const publishedFallback = dashboardUsesPublishedSnapshot(syncStatus);
