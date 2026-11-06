@@ -166,7 +166,7 @@ SELECT v.TABLE_NAME,
       ELSE 'NO_OBVIOUS_DYNAMIC_CLOCK'
  END AS source_updated_at_semantics_review
 FROM information_schema.VIEWS v
-WHERE v.TABLE_SCHEMA='ingest_stage' AND v.TABLE_NAME LIKE 'v\\_%'
+WHERE v.TABLE_SCHEMA='ingest_stage' AND LEFT(v.TABLE_NAME,2)='v_'
 ORDER BY v.TABLE_NAME;
 
 -- 6. Time zones only, no modifications.
