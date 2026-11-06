@@ -84,3 +84,12 @@ test('portable mode is deliberately source-only and excludes Neon JWT extension'
  const r=invoke(['target','--portable-backup'],{DR_TARGET_DATABASE_URL:''});
  assert.equal(r.status,2);
 });
+
+test('disposable PG18 restore avoids duplicate public schema without touching any live database',()=>{
+ const script=readFileSync(new URL('../scripts/verify-encrypted-backup-restore.sh',import.meta.url),'utf8');
+ assert.match(script,/--network none/);
+ assert.match(script,/docker exec "\$CONTAINER" psql -X -v ON_ERROR_STOP=1 -U postgres -d restorecheck/);
+ assert.match(script,/DROP SCHEMA public RESTRICT/);
+ assert.ok(script.indexOf('DROP SCHEMA public RESTRICT')<script.indexOf('pg_restore --exit-on-error'));
+ assert.doesNotMatch(script,/DROP SCHEMA public CASCADE|psql.*DATABASE_URL/);
+});
