@@ -338,7 +338,7 @@ function normalizeRecipients(input: unknown, fallbackEmail: string, allowAdditio
   const unique = [...new Set(recipients)];
   if (unique.length > 10) throw new Error("a report can be sent to a maximum of 10 recipients");
   const invalid = unique.find((email) => !emailOk(email));
-  if (invalid) throw new Error(`invalid recipient email: ${invalid}`);
+  if (invalid) throw new Error("invalid recipient email");
   return unique;
 }
 
