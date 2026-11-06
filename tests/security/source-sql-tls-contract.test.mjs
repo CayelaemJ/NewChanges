@@ -61,3 +61,16 @@ test("replica selection never substitutes primary credentials or overrides saved
   assert.match(adapter, /sqlPassword: config\.sqlReplicaPassword/);
   assert.match(adapter, /if \(!replicaConfig\.sqlHost \|\| !replicaConfig\.sqlUsername \|\| !replicaConfig\.sqlPassword\)/);
 });
+
+test("Prisma analytics replica settings are normalized before credentialed connections", () => {
+  const schema = readFileSync(new URL("../../prisma/schema.prisma", import.meta.url), "utf8");
+  const fields = ["Enabled", "Host", "Port", "Database", "Schema", "Username",
+    "Password", "Ssl", "TrustServerCertificate", "MaxLagSeconds"];
+  for (const suffix of fields) {
+    const column = "sourceAnalyticsReplica" + suffix;
+    const adapterField = "sqlReplica" + suffix;
+    assert.match(schema, new RegExp("\\b" + column + "\\s+"));
+    assert.ok(source.includes("config." + adapterField + " ?? config." + column),
+      column + " must be available through the normalized adapter field");
+  }
+});
