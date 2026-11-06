@@ -199,3 +199,50 @@ The minimal manifest schema, excluding all secrets:
 ```
 
 Keep actual production evidence manifest on the operator's local encrypted storage, **not GitHub**, and never populate booleans true based only on intention. The first real backup and restoration checks still need to be performed. The application must remain disconnected from Aiven while the existing Neon writer is active.
+
+
+## Encrypted backup and actual offline restore drill (2026-11-06)
+
+The scripts below were added to the **active free-hosting branch**. They have not yet been executed against live Neon or Aiven. Do not mark a recovery point verified until there are successful dump, checksum, **actual offline restoration**, and independent protected copy results. This section is a procedure, not evidence of a completed backup.
+
+- `scripts/production-encrypted-backup.mjs`: read-only `pg_dump` using private `DR_SOURCE_DATABASE_URL` or `DR_TARGET_DATABASE_URL` from process environment (never in CLI args). Pinned Neon source (`newchanges`) and Aiven destination (`defaultdb`). Emits a custom-format PostgreSQL archive directly into `age` public-key encryption; **does not store the unencrypted dump**. Enforces TLS, outputs encrypted archive SHA-256. Restricted local destination directory, no connection to Render/Cloudflare, no schema changes.
+- `scripts/verify-encrypted-backup-restore.sh`: decrypts a selected backup into a disposable networkless `postgres:18-alpine` container and runs `pg_restore --exit-on-error`, verifying the 57 public tables plus Session/Audit table queries. Deletes the container on exit, does not touch production. **A successful dry-restore is required, but it does not guarantee application-level fidelity or prove an offsite copy exists.**
+- `tests/production-encrypted-backup.test.mjs`: offline tests for URL pinning, fail-closed behavior and encrypted streaming/restore isolation. Added to manual self-hosted CI; no live credentials in CI.
+
+### Operator's WSL Ubuntu backup procedure
+
+Prepare `age`, PostgreSQL **18** client tools, Docker and an independent backup location on encrypted storage. Install tooling with the OS package manager as needed. Never paste secret connection URLs, private age identity, passwords, or database contents into chat, terminal command arguments, GitHub Actions or repository files. Use the existing private `DR_SOURCE_DATABASE_URL` and `DR_TARGET_DATABASE_URL` environment variables, provided in the operator's secure shell session. Avoid `set -x` and `env` dumps.
+
+```bash
+cd ~/NewChanges-free-edge
+git fetch origin
+git merge --ff-only origin/feat/free-cloudflare-render-primary-20261105
+node --test tests/production-encrypted-backup.test.mjs
+bash -n scripts/verify-encrypted-backup-restore.sh
+umask 077
+mkdir -p "$HOME/fixer-recovery-private"
+chmod 700 "$HOME/fixer-recovery-private"
+# Generate a new age identity locally ONLY if the operator has no existing recipient/key.
+# The identity file is SECRET; keep a separately protected recovery copy.
+age-keygen -o "$HOME/fixer-recovery-private/age-identity.txt"
+export AGE_RECIPIENT="$(age-keygen -y "$HOME/fixer-recovery-private/age-identity.txt")"
+export AGE_IDENTITY_FILE="$HOME/fixer-recovery-private/age-identity.txt"
+export NEWCHANGES_BACKUP_DIR="$HOME/fixer-recovery-private"
+node scripts/production-encrypted-backup.mjs source --preflight
+node scripts/production-encrypted-backup.mjs target --preflight
+# Both of the following are read-only on the DB but write encrypted local backup files:
+node scripts/production-encrypted-backup.mjs source --backup
+node scripts/production-encrypted-backup.mjs target --backup
+```
+
+**Important:** Preserve the encrypted `.pgdump.age` file paths and SHA-256 values from the output. For each file, run:
+
+```bash
+AGE_IDENTITY_FILE="$HOME/fixer-recovery-private/age-identity.txt" \
+  bash scripts/verify-encrypted-backup-restore.sh \
+  "$HOME/fixer-recovery-private/<ACTUAL_ARCHIVE_FILENAME>.pgdump.age"
+```
+
+Use the actual filenames printed by the backup script. Save a **separate encrypted copy** and record its matching hash. Do not invent backup evidence or mark `offsiteCopy`, `restoreTested`, `sha256` or `verified` in the cutover manifest before checks finish. Local storage alone is not an independent recovery location. The local backup tool intentionally does not upload archives to cloud services.
+
+**Security/compatibility limits:** `pg_dump` needs PostgreSQL 18 client compatibility and sufficient SELECT access to all backed-up objects. Neon-managed nonportable schemas or restricted permissions may make an attempted full restore fail; do not silently exclude them to turn a failed drill green. Aiven Free does not provide a substitute for these independent recovery copies. This procedure is read-only on production but may impose temporary load and increase transfer/egress consumption. Its generated archives contain sensitive production data, encrypted only as long as the private age identity remains protected.
