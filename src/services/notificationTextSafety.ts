@@ -35,7 +35,7 @@ export function notificationPlainText(value: unknown): string {
 // performs its own header encoding, but Resend receives a formatted From value.
 export function safeSenderDisplayName(value: unknown): string {
   const name = String(value ?? "")
-    .replace(/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}<>]/gu, " ")
+    .replace(/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}<>"',;\\]/gu, " ")
     .replace(/\s+/gu, " ")
     .trim()
     .slice(0, 120);
