@@ -37,7 +37,10 @@ test("administrator reset also invalidates sessions in the same database transac
 });
 
 test("physical DB replay test runs after schema deployment on isolated CI database",()=>{
-  assert.match(suite,/run node scripts\/prisma-upgrade-integration\.mjs\nrun node scripts\/ci\/password-token-replay-ci\.mjs/);
+  const commands = suite.split(/\r?\n/);
+  const schemaIndex = commands.indexOf("run node scripts/prisma-upgrade-integration.mjs");
+  const replayIndex = commands.indexOf("run node scripts/ci/password-token-replay-ci.mjs");
+  assert.ok(schemaIndex >= 0 && replayIndex > schemaIndex, "replay suite must run after schema initialization");
   assert.match(integration,/assert\.equal\(process\.env\.DATABASE_URL, FIXTURE_DB/);
   assert.match(integration,/assert\.equal\(process\.env\.CI_RLS_PROBE_APPROVED, "CI_DISPOSABLE_ONLY"/);
   assert.match(integration,/Promise\.allSettled/);
@@ -52,7 +55,7 @@ test("deactivating accounts invalidates pending reset links even after future re
   assert.match(users,/data: \{ active: false, setupToken: null, setupExpires: null/);
   const sweep=automation.slice(automation.indexOf("export async function runStaleAccountCheck"),
     automation.indexOf("export async function runWeeklyDigestIfDue"));
-  assert.match(sweep,/data: \{ active: false, setupToken: null, setupExpires: null/);
+  assert.match(sweep,/data:\s*\{\s*active: false, setupToken: null, setupExpires: null/);
   assert.match(integration,/administrator deactivation permanently invalidates prior links/);
   assert.match(integration,/self-deactivation clears recovery\/reset links/);
 });

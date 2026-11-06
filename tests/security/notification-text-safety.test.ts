@@ -10,7 +10,7 @@ test("account names and telemetry cannot inject HTML markup into notifications",
 
 test("unsafe origins cannot become password-reset or report links", () => {
   for (const value of ["javascript:alert(1)", "data:text/html,evil",
-    "https://safe.example/\" onclick=\"alert(1)", "https://user:pass@safe.example/",
+    'https://safe.example/" onclick="alert(1)', "https://user:pass@safe.example/",
     "https://safe.example/?token=bad", "https://safe.example/#fragment",
     "https://safe.example/other/path"]) {
     assert.equal(safePortalBaseUrl(value),null,String(value));
@@ -19,7 +19,7 @@ test("unsafe origins cannot become password-reset or report links", () => {
 });
 
 test("unsafe theme colors cannot inject email CSS or markup", () => {
-  assert.equal(safeEmailColor('fff\" onmouseover=\"oops','32217C'),"#32217C");
+  assert.equal(safeEmailColor('fff" onmouseover="oops','32217C'),"#32217C");
   assert.equal(safeEmailColor("aabbcc","32217C"),"#aabbcc");
 });
 

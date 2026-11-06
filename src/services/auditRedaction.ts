@@ -5,7 +5,7 @@ const SENSITIVE_AUDIT_KEY =
   /password|passphrase|api[_-]?key|secret|token|authorization|cookie|webhook|smtp|private[_-]?key|recovery[_-]?(?:key|code)|grant[_-]?code|connection[_-]?string|dsn|credential/i;
 
 const SENSITIVE_AUDIT_TEXT =
-  /(?:https:\/\/hooks\.slack(?:-gov)?\.com\/services\/[^\s"'<>]+)|(?:[a-z][a-z0-9+.-]*:\/\/[^\s/@:]+:[^\s/@]+@)|(?:-----BEGIN [A-Z ]*PRIVATE KEY-----)|(?:\b(?:bearer|basic)\s+[a-z0-9._~+\/-]{8,})|(?:\b(?:password|passphrase|api[_-]?key|secret|access[_-]?token|auth[_-]?token|authorization|cookie|smtp[_-]?password|connection[_-]?string|dsn|credential)\s*[:=]\s*\S+)/i;
+  /(?:https:\/\/hooks\.slack(?:-gov)?\.com\/services\/[^\s"'<>]+)|(?:[a-z][a-z0-9+.-]*:\/\/[^\s/@:]+:[^\s/@]+@)|(?:-----BEGIN [A-Z ]*PRIVATE KEY-----)|(?:\b(?:bearer|basic)\s+[a-z0-9._~+/-]{8,})|(?:\b(?:password|passphrase|api[_-]?key|secret|access[_-]?token|auth[_-]?token|authorization|cookie|smtp[_-]?password|connection[_-]?string|dsn|credential)\s*[:=]\s*\S+)/i;
 
 export function redactAuditText(value: unknown): string {
   const text = String(value ?? "");

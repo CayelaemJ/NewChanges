@@ -662,6 +662,8 @@ async function createSqlAdapter(config: IntegrationSourceConfig): Promise<Source
     // Driver errors may include connection URLs, SQL text, credentials and
     // private hostnames. Never send raw errors or attach them as API causes.
     const reason = safeSourceConnectionFailure(error);
+    // Raw provider/driver causes may contain credentials; expose only the classified message.
+    // eslint-disable-next-line preserve-caught-error
     throw new Error(`Could not open ${dialect} source connection. ${reason}`);
   }
 

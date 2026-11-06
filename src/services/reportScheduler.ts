@@ -306,6 +306,8 @@ export async function testEmailConnection(draft: EmailDraft & { recipient?: stri
       // Preserve the classified transport failure and never log raw DB errors.
       console.error("Email test failure status could not be persisted");
     }
+    // Raw provider/driver causes may contain credentials; expose only the classified message.
+    // eslint-disable-next-line preserve-caught-error
     throw new Error(safeMessage);
   }
   let trackingWarning = false;
@@ -611,6 +613,8 @@ async function sendSchedule(scheduleId: string, triggeredBy: "scheduled" | "manu
     } catch {
       throw new Error("Email delivery failed; retry status could not be persisted");
     }
+    // Raw provider/driver causes may contain credentials; expose only the classified message.
+    // eslint-disable-next-line preserve-caught-error
     throw new Error(message);
   }
   let trackingWarning = false;

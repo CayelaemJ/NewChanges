@@ -61,7 +61,6 @@ test("pinned lookup cannot silently switch to a different hostname or address fa
 test("direct IP destinations are validated without bypassing DNS policy", async () => {
   const neverResolve = async () => {
     throw new Error("unexpected DNS for IP literal");
-    return [] as { address: string; family: 4 | 6 }[];
   };
   assert.deepEqual(await resolvePublicSourceAddresses("8.8.8.8", neverResolve),
     [{ address: "8.8.8.8", family: 4 }]);

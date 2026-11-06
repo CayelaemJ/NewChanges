@@ -7,7 +7,7 @@ const service=read("src/services/auditService.ts");
 const server=read("src/server.ts");
 
 test("every structured admin audit detail is redacted at the database writer",()=>{
-  assert.match(service,/import \{ redactAuditDetail \} from "\.\/auditRedaction\.js"/);
+  assert.match(service,/import \{ redactAuditDetail, redactAuditText \} from "\.\/auditRedaction\.js"/);
   assert.match(service,/JSON\.parse\(JSON\.stringify\(redactAuditDetail\(opts\.detail\)\)\)/);
   assert.doesNotMatch(service,/JSON\.stringify\(opts\.detail\)/);
 });
