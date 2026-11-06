@@ -56,6 +56,7 @@ run sh scripts/ci/run-circleci-verify-parity.sh
 run npm run quality:e2e
 run node scripts/console-ux-browser-check.mjs
 run node scripts/header-responsive-check.mjs
+run node scripts/ci/mobile-ui-regression-ci.mjs
 run node scripts/admin-browser-smoke.mjs
 run node scripts/admin-mfa-browser-smoke.mjs
 run node scripts/ci/visual-regression-ci.mjs
