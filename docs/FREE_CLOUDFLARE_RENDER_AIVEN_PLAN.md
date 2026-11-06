@@ -68,3 +68,12 @@ The Render URL is reachable directly, bypassing any Cloudflare WAF rules. To red
 Do **not** commit the actual token, embed it in Wrangler `vars`, copy it into build arguments or paste it into chat. Configure it through protected environment settings on Render and an encrypted Cloudflare secret. The original application's production environment is unaffected while the guard is not enabled there.
 
 This addresses direct-origin requests but is not a replacement for proper user MFA, per-user authorization, tenant isolation, CSRF protections or application rate limits.
+
+
+## Confirmed Render workspace inventory and billing gate (2026-11-06)
+
+Operator explicitly confirmed workspace `My Workspace`. Read-only Render API inventory found **13 web services, all on the Free compute plan**. The Fixer already owns `newchanges-mfa-isolated-staging` (Free, Dockerfile.mfa-staging, manual deploys, separate MFA role) and `newchanges-standby` (Free, main branch, auto-deploy). Neither was changed. Do not repurpose the MFA staging service without its tests and isolated data safeguards; do not change standby's branch or live database credentials.
+
+Render's published limit is **750 Free instance hours per workspace per calendar month**, pooled across all running Free web services; sleeping services consume no hours. Exhaustion suspends **all** Free web services in the workspace, not just this candidate. Outbound bandwidth and build-pipeline overages can cause billing when a payment method is present. See https://render.com/docs/free. The connector exposes service inventory and performance metrics but **not the workspace Billing → Monthly Included Usage balance or payment-method/spend-limit settings**. Therefore do **not** create or deploy another Free service until the operator verifies the remaining monthly instance hours, outbound bandwidth, pipeline minutes and applicable zero-spend limit. Creating a service with empty database credentials would only produce a broken publicly reachable backend and consume resources.
+
+Next safe gate: operator checks Render dashboard Billing → Monthly Included Usage and account spend settings. Run any remaining tests locally, with no extra Render service until capacity is confirmed. Actual public staging deployment stays blocked pending isolated disposable database availability and origin secret provisioned in the protected stores; no use of Neon production credentials for public staging.
