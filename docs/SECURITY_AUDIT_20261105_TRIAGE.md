@@ -370,3 +370,11 @@ Do not merge, deploy, migrate, modify production flags, or move customer records
 **Source-confirmed hardening opportunity:** The Resend path constructed its formatted `From` string directly from the configured sender display name, whereas SMTP passed the name to Nodemailer's structured address encoder. Added `safeSenderDisplayName` to normalize control characters, invisible format controls, line/paragraph separators, angle-bracket mailbox delimiters, excess whitespace and length. Both transports now use the same helper, with a stable fallback for empty names. This is defense in depth, not evidence of an exploited header-injection vulnerability.
 
 Added focused behavioral tests in `tests/security/sender-display-name.test.ts`, included in `npm run check:security`, and source-adoption assertions in `tests/security/notification-settings-contract.test.mjs`. **Verification not yet completed:** current-head Node 24 test execution, Docker/full security gates, mail-provider integration and full AI scan. Keep draft; no merge, deployment, credentials, real delivery or database changes.
+
+### Administrator alert destination validation (2026-11-06)
+
+**Confirmed source gap:** The administrator's comma-separated `alertEmails` value was persisted without address validation or recipient-count limits. Notification automation expanded this string and attempted one delivery per entry. Although the common sender validated each final address, invalid saved settings were accepted and oversized lists caused unnecessary provider attempts.
+
+Added `parseAlertEmailRecipients` to reject malformed, duplicate or overlength addresses and enforce a maximum of 10 recipients. The save path validates before persistence; the automatic notification path fails closed on invalid historical persisted values. A blank value clears the list. Two pure behavioral tests and a source-adoption contract were added to `check:security`.
+
+**Compatibility:** Existing saved lists with duplicate, malformed or over-limit addresses will now be ignored by alert delivery until an administrator corrects them. This requires explicit staging review to avoid silently losing operational alerts. **Not yet verified:** current-head Node 24/complete Docker suite, real email delivery or operational notification monitoring. CI failures remain blockers; no merge/deploy/production changes.
