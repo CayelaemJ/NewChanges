@@ -107,3 +107,14 @@ A non-deploying Render Blueprint planning call completed successfully (outcome `
 - Requires operator to supply protected manual environment settings: `NEWCHANGES_EDGE_ORIGIN_SHARED_SECRET`, `DATABASE_URL`, `PUBLIC_BASE_URL`. Do not insert empty values or copy production credentials to bypass this gate.
 
 **Status: PLAN ONLY, not approved.** Applying a Blueprint requires review and explicit operator approval. Before approval, establish a disposable *independent* PostgreSQL database and a staging domain. The existing MFA database is not shared by default. Aiven free might offer additional databases within a service, but sharing a production database server requires separate role and database isolation, safety review, capacity check and explicit consent. A nonworking production-like public service is not a valuable smoke test. No Cloudflare paid plan or live traffic change is intended.
+
+
+## Read-only Aiven runtime capacity observation (2026-11-06)
+
+Aiven service `the-fixer-postgres` was confirmed `RUNNING` on free-1-1gb, PostgreSQL 18.6. A read-only query returned `pg_database_size('defaultdb') = 198 MB`, `active_connections=14`, and `max_connections=20` at the observation time. Connection count is a fluctuating snapshot, not a guarantee of six spare slots. **Do not** attach a second live/staging application, create a staging role, run synthetic DDL, raise pool sizes, or provision a second database on this production-targeted free Aiven instance as a workaround. It could exhaust its limited 20-connection budget.
+
+## Privacy-hardened readiness (2026-11-06)
+
+The free-candidate Render health check now uses public `/health` only. When the optional private Cloudflare origin guard is enabled, the database-revealing `/ready` endpoint requires the shared token, just like login and dashboard requests. The synthetic Docker smoke test verifies `/health=200`, direct `/ready=403`, token-authenticated `/ready=200`, direct `/version=403`, and token-authenticated `/version=200`. These new assertions still need to be rerun after updating the local worktree; older passing results do not verify this specific hardening revision.
+
+The Render Blueprint plan has been refreshed successfully using the current free-hosting branch and continues to propose one Free web service, `healthCheckPath=/health`, no automatic deploys, and three manually supplied protected env settings. **Plan only, not approved or deployed.**
