@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 from runtime.logic import allowed_table, choose_historical_time, encode, event_id, schedule_counts
 from runtime.common import connection_config, positive_int
-from runtime.simulator import run
+from runtime.simulator import run, _execute_event
 
 
 class Helpers(unittest.TestCase):
@@ -41,6 +41,26 @@ class Helpers(unittest.TestCase):
         with patch.dict('os.environ',{'SIM_ENV':'local','SIM_DB_HOST':'mysql','SIM_DB_USER':'testwriter',
           'SIM_DB_PASSWORD':'fake-local-password','SIM_DB_DATABASE':'production'},clear=True):
             with self.assertRaises(RuntimeError):connection_config()
+
+    def test_mid_run_emergency_stop_blocks_next_event(self):
+        from unittest.mock import Mock
+        conn = Mock()
+        with patch('runtime.simulator._rows', return_value=[(0,)]), patch('runtime.simulator._once') as once:
+            callback = Mock()
+            with self.assertRaisesRegex(RuntimeError, 'Emergency stop'):
+                _execute_event(conn,'test:blocked','INSERT',datetime(2026,11,6),callback)
+            callback.assert_not_called()
+            once.assert_not_called()
+            conn.rollback.assert_called_once()
+            conn.commit.assert_not_called()
+
+    def test_mid_run_missing_control_row_fails_closed(self):
+        from unittest.mock import Mock
+        conn = Mock()
+        with patch('runtime.simulator._rows', return_value=[]):
+            with self.assertRaisesRegex(RuntimeError, 'Emergency stop'):
+                _execute_event(conn,'test:blocked2','INSERT',datetime(2026,11,6),Mock())
+            conn.rollback.assert_called_once()
 
     def test_production_tls_cannot_be_disabled(self):
         with patch.dict('os.environ',{'SIM_ENV':'aws','SIM_DB_HOST':'example.com','SIM_DB_USER':'testwriter',
