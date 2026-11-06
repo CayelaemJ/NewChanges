@@ -378,6 +378,14 @@ async function requireAdmin(req: FastifyRequest, reply: FastifyReply): Promise<A
 // Rollout switch is OFF by default. Set only after locked dependency, migration,
 // enrollment and recovery have all passed staging acceptance.
 const MFA_ENFORCE = process.env.ADMIN_MFA_ENFORCE === "true";
+// This is the migration-candidate binary, not the existing Neon production.
+// Refuse a writable production startup if the required MFA rollout is disabled.
+if (process.env.NODE_ENV === "production" && process.env.STANDBY_MODE === "false") {
+  if (!MFA_ENFORCE) throw new Error("Writable production candidate requires admin MFA enforcement");
+  if (process.env.ADMIN_MFA_TOTP_ENABLED !== "true" ||
+      !/^[A-Za-z0-9_-]{43}$/.test(process.env.ADMIN_MFA_TOTP_ENCRYPTION_KEY ?? ""))
+    throw new Error("Writable production candidate requires configured encrypted TOTP MFA");
+}
 if (MFA_ENFORCE) {
   const rpID = String(process.env.MFA_RP_ID || "").trim();
   const expectedOrigin = String(process.env.MFA_EXPECTED_ORIGIN || "").trim();
