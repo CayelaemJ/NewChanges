@@ -19,12 +19,32 @@ for binary in docker age; do
   fi
 done
 docker image inspect postgres:18-alpine >/dev/null
-CONTAINER="fixer-backup-restore-$$"
+CONTAINER="fixer-backup-restore-$"
+# Keep the stopped container available until error diagnostics are captured.
+# All operations remain local to this temporary, network-disabled container.
+RESTORE_STAGE="container startup"
+diagnostics() {
+  local rc="$?"
+  trap - ERR
+  echo "BLOCKED: isolated PostgreSQL 18 restore failed at stage: $RESTORE_STAGE (exit=$rc)." >&2
+  if docker container inspect "$CONTAINER" >/dev/null 2>&1; then
+    docker inspect --format 'Container status={{.State.Status}} exit={{.State.ExitCode}} oom_killed={{.State.OOMKilled}} error={{.State.Error}}' "$CONTAINER" >&2 || true
+    echo "Recent isolated PostgreSQL container logs (may contain internal SQL details, redact before sharing):" >&2
+    docker logs --tail 30 "$CONTAINER" >&2 || true
+  else
+    echo "Docker container unavailable for inspection; check Docker Desktop / WSL resources." >&2
+  fi
+  exit "$rc"
+}
 cleanup() { docker rm -f "$CONTAINER" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
-docker run -d --rm --network none --name "$CONTAINER" --memory 768m \
+trap diagnostics ERR
+# Avoid the prior 768 MB cap, which can kill PostgreSQL during index rebuilds.
+# Enforce a bounded, local-only 2 GiB maximum. This does not change Aiven limits.
+docker run -d --network none --name "$CONTAINER" --memory 2g --shm-size 256m \
   --env POSTGRES_PASSWORD=synthetic-restore-only \
   --env POSTGRES_DB=restorecheck postgres:18-alpine >/dev/null
+RESTORE_STAGE="PostgreSQL readiness"
 ready=false
 for i in $(seq 1 50); do
   if docker exec "$CONTAINER" pg_isready -q -U postgres -d restorecheck; then
@@ -46,6 +66,7 @@ fi
 # complete authenticated decryption instead of dying with SIGPIPE (141).
 # Keep pipefail enabled: an incorrect key, corrupt archive or pg_restore failure
 # must still stop the drill. No plaintext archive is written to disk.
+RESTORE_STAGE="encrypted archive catalog inspection"
 echo "Inspecting encrypted archive catalog in disposable PG18 (streamed; no local plaintext)..."
 archive_catalog="$(age -d -i "$AGE_IDENTITY_FILE" "$1" | {
   docker exec -i "$CONTAINER" pg_restore --list
@@ -59,11 +80,13 @@ else
   echo "Archive does not define public schema; keeping default empty schema."
 fi
 unset archive_catalog
+RESTORE_STAGE="pg_restore data/index reconstruction"
 echo "Restoring encrypted archive into disposable offline PostgreSQL 18..."
 # pipefail ensures a decrypt failure or pg_restore failure cannot be treated as success.
 age -d -i "$AGE_IDENTITY_FILE" "$1" | \
   docker exec -i "$CONTAINER" pg_restore --exit-on-error --no-owner --no-acl \
     -U postgres -d restorecheck
+RESTORE_STAGE="restored schema and application-table checks"
 table_count=$(docker exec "$CONTAINER" psql -X -q -A -t -U postgres -d restorecheck \
   -c "SELECT count(*) FROM pg_tables WHERE schemaname='public'")
 if [[ "$table_count" != 57 ]]; then
