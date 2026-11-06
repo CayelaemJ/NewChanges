@@ -557,9 +557,14 @@ export async function checkMysqlReadReplica(config: IntegrationSourceConfig): Pr
     return { configured: false, reachable: false, readOnly: null, lagSeconds: null, lagWithinThreshold: null, host: effective.sqlReplicaHost ?? null, database: effective.sqlReplicaDatabase ?? effective.sqlDatabase ?? null, note: "No read replica is configured." };
   }
   if (sqlDialect(effective) !== "MYSQL") return { configured: true, reachable: false, readOnly: null, lagSeconds: null, lagWithinThreshold: null, host: effective.sqlReplicaHost, database: effective.sqlReplicaDatabase ?? effective.sqlDatabase ?? null, note: "Replica health currently supports MySQL source replicas only." };
+  // Health probes authenticate with the same source credentials as ingestion.
+  // Do not let this secondary connection bypass the production TLS policy.
+  const replicaSslEnabled = effective.sqlReplicaSsl ?? true;
+  const replicaTrustServerCertificate = effective.sqlReplicaTrustServerCertificate ?? false;
+  assertSecureSourceSqlTransport(replicaSslEnabled, replicaTrustServerCertificate, "MySQL read-replica health");
   const mysql: any = await import("mysql2/promise");
   const createConnection = mysql.createConnection ?? mysql.default?.createConnection;
-  const connection = await createConnection({ host: effective.sqlReplicaHost, port: intSetting(effective.sqlReplicaPort, 3306, 1, 65535), database: effective.sqlReplicaDatabase ?? effective.sqlDatabase, user: effective.sqlReplicaUsername, password: process.env.SOURCE_SQL_REPLICA_PASSWORD || effective.sqlReplicaPassword, connectTimeout: 15000, ssl: (effective.sqlReplicaSsl ?? true) ? { rejectUnauthorized: !(effective.sqlReplicaTrustServerCertificate ?? false) } : undefined });
+  const connection = await createConnection({ host: effective.sqlReplicaHost, port: intSetting(effective.sqlReplicaPort, 3306, 1, 65535), database: effective.sqlReplicaDatabase ?? effective.sqlDatabase, user: effective.sqlReplicaUsername, password: process.env.SOURCE_SQL_REPLICA_PASSWORD || effective.sqlReplicaPassword, connectTimeout: 15000, ssl: replicaSslEnabled ? { rejectUnauthorized: !replicaTrustServerCertificate } : undefined });
   try {
     await connection.query("SELECT 1");
     const [vars]: any = await connection.query("SHOW VARIABLES WHERE Variable_name IN ('read_only','super_read_only')");
