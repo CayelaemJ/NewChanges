@@ -42,6 +42,17 @@ class LocalMySQL(unittest.TestCase):
         try:
             self.assertGreater(query(sink,"SELECT COUNT(*) FROM bronze_changes WHERE entity='orders'")[0][0],0)
             self.assertGreater(query(sink,"SELECT COUNT(*) FROM gold_daily_sales")[0][0],0)
+            # Real DELETE events must arrive from the binlog, not only the
+            # synthetic apply_change fixture in a separate unit test.
+            self.assertGreater(query(sink,"SELECT COUNT(*) FROM bronze_changes WHERE entity='financial_transactions' AND operation='DELETE'")[0][0],0)
+            checkpoint_before = query(sink, "SELECT log_file,log_pos FROM cdc_checkpoint WHERE consumer_name='fixer-sim-v1'")[0]
+            # Replaying without fresh changes must never double-count Bronze.
+            bronze_before = query(sink,"SELECT COUNT(*) FROM bronze_changes")[0][0]
+            replay = consume_cdc(max_events=1000,max_seconds=30)
+            self.assertEqual(replay['status'],'SUCCEEDED')
+            self.assertEqual(query(sink,"SELECT COUNT(*) FROM bronze_changes")[0][0],bronze_before)
+            checkpoint_after = query(sink, "SELECT log_file,log_pos FROM cdc_checkpoint WHERE consumer_name='fixer-sim-v1'")[0]
+            self.assertEqual(checkpoint_before,checkpoint_after)
         finally:sink.close()
 
     def test_cdc_bronze_dedupe(self):
