@@ -86,3 +86,8 @@ test("dates remain useful in serialized audit details", () => {
   assert.deepEqual(redactAuditDetail({ when: new Date("2026-11-06T00:00:00.000Z") }),
     { when: "2026-11-06T00:00:00.000Z" });
 });
+
+test("credentials in object property names cannot leak into audit JSON", () => {
+  assert.deepEqual(redactAuditDetail({ "Authorization: Bearer abcdefghijklmnop": "test" }),
+    { "[REDACTED_KEY]": "[REDACTED]" });
+});
