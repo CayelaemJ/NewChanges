@@ -52,7 +52,7 @@ export async function logAdminAction(
           summary: recentCount >= 20
             ? actor.email + " performed " + (recentCount + 1) + " recorded admin changes in 10 minutes."
             : safeSummary,
-          detail: { auditId: row.id, action, targetType: opts.targetType, targetId: opts.targetId, impactCount: opts.impactCount, recentCount: recentCount + 1 },
+          detail: { auditId: row.id, action: redactAuditText(action), targetType: opts.targetType, targetId: opts.targetId == null ? undefined : redactAuditText(opts.targetId), impactCount: opts.impactCount, recentCount: recentCount + 1 },
           impactCount: opts.impactCount ?? (recentCount + 1),
         },
       });
