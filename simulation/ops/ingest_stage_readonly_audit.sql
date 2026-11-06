@@ -171,5 +171,5 @@ ORDER BY v.TABLE_NAME;
 
 -- 6. Time zones only, no modifications.
 SELECT @@SESSION.time_zone AS session_timezone,
-       CURRENT_TIMESTAMP(6) AS session_time,
-       UTC_TIMESTAMP(6) AS utc_time;
+       CURRENT_TIMESTAMP(6) AS session_datetime,
+       UTC_TIMESTAMP(6) AS current_utc_datetime;
