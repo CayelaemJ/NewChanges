@@ -49,7 +49,7 @@ export function publicReportScheduleFailure(error: unknown): ReportSchedulePubli
   if (FORBIDDEN.has(message)) return { statusCode: 403, message };
   if (message === "Dashboard source is not ready; report delivery is deferred until a successful sync.")
     return { statusCode: 503, message };
-  if (DELIVERY_FAILURES.has(message) || /^Resend request failed \\(HTTP [1-5][0-9]{2}\\)$/.test(message))
+  if (DELIVERY_FAILURES.has(message) || /^Resend request failed \(HTTP [1-5][0-9]{2}\)$/.test(message))
     return { statusCode: 502, message };
   // Do not reflect untrusted error text even when it looks like a validation
   // error, or when a database driver returns a familiar-looking code.
