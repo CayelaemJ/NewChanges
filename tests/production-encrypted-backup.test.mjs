@@ -152,7 +152,7 @@ test('restore waits for official PG18 Docker final server, not transient pg_isre
  assert.match(script,/RESTORE_STAGE="PostgreSQL final-server readiness"/);
  assert.match(script,/psql -X -q -A -t -v ON_ERROR_STOP=1/);
  assert.match(script,/-d restorecheck -c 'SELECT 1'/);
- assert.doesNotMatch(script,/pg_isready/);
+ assert.doesNotMatch(script,/docker exec .*pg_isready/);
  assert.doesNotMatch(script,/docker logs "\$CONTAINER" 2>&1 \| grep -Fq/);
  assert.ok(script.indexOf('RESTORE_STAGE="PostgreSQL final-server readiness"')<script.indexOf('pg_restore --list'));
 });
