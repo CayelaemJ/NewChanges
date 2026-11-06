@@ -372,7 +372,12 @@ async function openPostgresExecutor(config: IntegrationSourceConfig): Promise<Sq
     statement_timeout: queryTimeout,
     application_name: "empower-fin-dashboard-source",
   });
-  await client.connect();
+  try { await client.connect(); }
+  catch (error) {
+    // The driver may have allocated a socket before authentication failed.
+    await Promise.allSettled([client.end()]);
+    throw error;
+  }
 
   return {
     dialect: "POSTGRESQL",
@@ -496,7 +501,7 @@ async function openMssqlExecutor(config: IntegrationSourceConfig): Promise<SqlEx
   const encrypt = config.sqlSsl ?? true;
   const trust = config.sqlTrustServerCertificate ?? false;
   assertSecureSourceSqlTransport(encrypt, trust, "SQL Server source");
-  const pool = await new ConnectionPool({
+  const pool = new ConnectionPool({
     server: config.sqlHost,
     port: intSetting(config.sqlPort, 1433, 1, 65535),
     database: config.sqlDatabase,
@@ -506,7 +511,13 @@ async function openMssqlExecutor(config: IntegrationSourceConfig): Promise<SqlEx
     requestTimeout: queryTimeout,
     pool: { max: 3, min: 0, idleTimeoutMillis: 30_000 },
     options: { encrypt, trustServerCertificate: trust, enableArithAbort: true, useUTC: true },
-  }).connect();
+  });
+  try { await pool.connect(); }
+  catch (error) {
+    // Close a partially initialized pool before surfacing a sanitized error.
+    await Promise.allSettled([pool.close()]);
+    throw error;
+  }
 
   let snapshot:any=null;
   return {
