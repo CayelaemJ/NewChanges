@@ -665,7 +665,7 @@ export async function runDueReports(logger?: { info?: Function; error?: Function
         data: { lastRunAt: now, nextRunAt: next },
       });
       if (!claim.count) continue;
-      logger?.info?.({ scheduleId: row.id, name: row.name }, "sending scheduled report");
+      logger?.info?.({ scheduleId: row.id }, "sending scheduled report");
       await sendSchedule(row.id, "scheduled");
     } catch {
       // A scheduled send may fail in Prisma, SMTP, a source adapter or email
