@@ -27,6 +27,18 @@ function config(raw, side) {
     PGOPTIONS:'-c default_transaction_read_only=on'});
   return env;
 }
+// Only these three known Neon pg_stat_statements monitoring functions may be
+// absent on Aiven. Ownership must be verified against pg_depend/pg_extension.
+const OPTIONAL_NEON_MONITORING_SIGNATURES = new Set([
+  'extension_function:pg_stat_statements(boolean)',
+  'extension_function:pg_stat_statements_info()',
+  'extension_function:pg_stat_statements_reset(oid,oid,bigint,boolean)'
+]);
+function optionalMonitoringDifference(key,row) {
+  return OPTIONAL_NEON_MONITORING_SIGNATURES.has(key) &&
+    row?.category==='extension_function' &&
+    row?.detail?.startsWith('pg_stat_statements|');
+}
 const sql=`
 BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY;
 SET LOCAL statement_timeout='30s';
@@ -57,6 +69,20 @@ WITH inventory AS (
     AND dep.refclassid='pg_extension'::regclass
   LEFT JOIN pg_extension ext ON ext.oid=dep.refobjid
   WHERE n.nspname='public' AND p.prokind IN ('f','p')
+  UNION ALL
+  -- Explicit normal dependencies from application-defined public functions
+  -- onto functions owned by extensions. Exemptions must not hide dependencies.
+  SELECT 'extension_dependency', p.oid::regprocedure::text || ' -> ' ||
+    referenced.oid::regprocedure::text, extension.extname
+  FROM pg_depend d
+  JOIN pg_proc p ON d.classid='pg_proc'::regclass AND d.objid=p.oid
+  JOIN pg_namespace pn ON pn.oid=p.pronamespace AND pn.nspname='public'
+  JOIN pg_proc referenced ON d.refclassid='pg_proc'::regclass AND d.refobjid=referenced.oid
+  JOIN pg_depend member ON member.classid='pg_proc'::regclass
+    AND member.objid=referenced.oid AND member.deptype='e'
+    AND member.refclassid='pg_extension'::regclass
+  JOIN pg_extension extension ON extension.oid=member.refobjid
+  WHERE d.deptype='n'
 )
 SELECT coalesce(json_agg(json_build_object('category',category,'object',object,
   'detail',detail) ORDER BY category,object),'[]'::json)::text FROM inventory;
@@ -75,7 +101,10 @@ function inventory(env, label) {
     const key=String(row.category)+':'+String(row.object);
     if(records.has(key)) throw Error('Duplicate inventory key');
     const digest=createHash('sha256').update(String(row.detail??'')).digest('hex');
-    records.set(key,{category:row.category,hash:digest});
+    records.set(key,{category:row.category,hash:digest,
+      // The extension name is not sensitive and is used ONLY to check
+      // exact known pg_stat_statements membership, never copied to output.
+      detail:row.category==='extension_function'?String(row.detail??''):null});
   }
   return records;
 }
@@ -83,7 +112,7 @@ try {
   const src=inventory(config(process.env.DR_SOURCE_DATABASE_URL,'source'),'Neon');
   const dst=inventory(config(process.env.DR_TARGET_DATABASE_URL,'target'),'Aiven');
   const counts=map=>{
-    const result={table:0,policy:0,trigger:0,function:0,extension_function:0};
+    const result={table:0,policy:0,trigger:0,function:0,extension_function:0,extension_dependency:0};
     for(const row of map.values()) if(row.category in result) result[row.category]++;
     return result;
   };
@@ -92,10 +121,13 @@ try {
     ', policies='+a.policy+'/'+b.policy+', user_triggers='+a.trigger+'/'+b.trigger+
     ', public_functions='+a.function+'/'+b.function+
     ', extension_functions='+a.extension_function+'/'+b.extension_function);
-  let mismatch=0, missing=0, extra=0;
+  let mismatch=0, missing=0, extra=0, optionalMonitoring=0;
   for(const [key,row] of src) {
     const candidate=dst.get(key);
-    if(!candidate) missing++;
+    if(!candidate) {
+      if(optionalMonitoringDifference(key,row)) optionalMonitoring++;
+      else missing++;
+    }
     else if(candidate.hash!==row.hash) mismatch++;
   }
   for(const key of dst.keys()) if(!src.has(key)) extra++;
@@ -107,10 +139,12 @@ try {
   if(absentFunctions.length) console.log('MISSING FUNCTION SIGNATURES (metadata only): '+
     JSON.stringify(absentFunctions.slice(0,20)));
   console.log('SECURITY PARITY SUMMARY: missing_on_target='+missing+
-    '; different_definitions='+mismatch+'; extra_on_target='+extra);
-  if(a.table!==57 || b.table!==57 || missing || mismatch || extra)
+    '; different_definitions='+mismatch+'; extra_on_target='+extra+
+    '; accepted_neon_monitoring_only='+optionalMonitoring);
+  if(a.table!==57 || b.table!==57 || missing || mismatch || extra ||
+     a.extension_dependency || b.extension_dependency)
     throw Error('Security schema parity not confirmed. Review differences privately before cutover.');
-  console.log('PASS: public-schema table flags, policies, triggers and functions match by definitions.');
+  console.log('PASS: application security schema parity; only known Neon pg_stat_statements extension monitoring functions may differ.');
   console.log('SCOPE: metadata only; application login/MFA and tenant-isolation tests remain mandatory.');
 } catch(err) {
   console.error('BLOCKED:',err instanceof Error?err.message:'Schema parity preflight error');
