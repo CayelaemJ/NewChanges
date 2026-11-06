@@ -14,6 +14,7 @@ import { sendMail } from "./reportScheduler.js";
 import { engagementSummary } from "./analyticsService.js";
 import { allowedSlackWebhookUrl } from "./slackWebhookPolicy.js";
 import { escapeNotificationHtml, notificationPlainText } from "./notificationTextSafety.js";
+import { parseAlertEmailRecipients } from "./alertEmailRecipients.js";
 import { shouldAutoDeactivateAccount } from "./staleAccountPolicy.js";
 
 async function config() {
@@ -21,7 +22,8 @@ async function config() {
 }
 
 function alertEmailList(cfg: any): string[] {
-  return String(cfg.alertEmails || "").split(",").map((s: string) => s.trim()).filter(Boolean);
+  try { return parseAlertEmailRecipients(cfg.alertEmails); }
+  catch { return []; } // Fail closed if older persisted configuration is invalid.
 }
 
 // sends to configured admin alert emails + a Slack webhook, if either is set.
