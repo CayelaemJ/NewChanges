@@ -23,7 +23,9 @@ export function redactAuditDetail(value: unknown): unknown {
     const result: unknown = Array.isArray(current)
       ? current.map(item => walk(item, depth + 1))
       : Object.fromEntries(Object.entries(current).map(([key, nested]) => [
-          key, SENSITIVE_AUDIT_KEY.test(key) ? "[REDACTED]" : walk(nested, depth + 1),
+          // Property names themselves may contain bearer tokens or URLs.
+          redactAuditText(key) === "[REDACTED]" ? "[REDACTED_KEY]" : key,
+          SENSITIVE_AUDIT_KEY.test(key) ? "[REDACTED]" : walk(nested, depth + 1),
         ]));
     seen.delete(current);
     return result;
