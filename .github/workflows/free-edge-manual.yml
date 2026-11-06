@@ -25,6 +25,8 @@ jobs:
         run: node --test tests/aiven-final-sync-safety.test.mjs
       - name: Verify production cutover evidence gate fails closed (offline only)
         run: node --test tests/production-cutover-evidence-check.test.mjs
+      - name: Verify encrypted backup utility fails closed (no production access)
+        run: node --test tests/production-encrypted-backup.test.mjs
       - name: Verify full original application Dockerfile exists
         run: test -s Dockerfile
       - name: Build backend image with local Docker
