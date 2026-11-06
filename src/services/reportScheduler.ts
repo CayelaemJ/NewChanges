@@ -4,7 +4,8 @@ import { DateTime } from "luxon";
 import { prisma, getDashboardPayload } from "./snapshotBuilder.js";
 import { themeForEmployer } from "./partnerService.js";
 import { allowedSlackWebhookUrl } from "./slackWebhookPolicy.js";
-import { safeEmailColor, safePortalBaseUrl } from "./notificationTextSafety.js";
+import { notificationPlainText, safeEmailColor, safePortalBaseUrl } from "./notificationTextSafety.js";
+import { reportDeliveryAllowed } from "./reportDeliveryPolicy.js";
 import { assertSecureSmtpTls } from "./smtpTlsPolicy.js";
 import { resolveEmailProviderConfig } from "./emailProviderConfig.js";
 import { safeEmailDeliveryFailure } from "./emailDeliveryFailure.js";
@@ -404,9 +405,14 @@ export async function listReportSchedules(user: any, all = false) {
 export async function updateReportSchedule(user: any, id: string, patch: any) {
   const current = await prisma.reportSchedule.findUnique({ where: { id }, include: { user: { select: { email: true } } } });
   if (!current) throw new Error("schedule not found");
-  if (user.role !== "ADMIN" && current.userId !== user.id) throw new Error("you cannot edit this schedule");
-  if (Object.keys(patch || {}).every((key) => ["active"].includes(key))) {
-    return prisma.reportSchedule.update({ where: { id }, data: { active: Boolean(patch.active) } });
+  if (!isAdminRole(user) && current.userId !== user.id) throw new Error("you cannot edit this schedule");
+  if (patch && Object.keys(patch).length === 1 && typeof patch.active === "boolean") {
+    if (patch.active) {
+      const owner = await currentReportOwner(current.userId);
+      if (!reportDeliveryAllowed(owner, current.employerId, current.recipients))
+        throw new Error("Cannot reactivate a report whose owner lacks access or has invalid recipients");
+    }
+    return prisma.reportSchedule.update({ where: { id }, data: { active: patch.active } });
   }
   throw new Error("To change report filters or frequency, delete the schedule and create a new one.");
 }
@@ -414,7 +420,7 @@ export async function updateReportSchedule(user: any, id: string, patch: any) {
 export async function deleteReportSchedule(user: any, id: string) {
   const current = await prisma.reportSchedule.findUnique({ where: { id } });
   if (!current) return { deleted: true };
-  if (user.role !== "ADMIN" && current.userId !== user.id) throw new Error("you cannot delete this schedule");
+  if (!isAdminRole(user) && current.userId !== user.id) throw new Error("you cannot delete this schedule");
   await prisma.reportSchedule.delete({ where: { id } });
   return { deleted: true };
 }
@@ -468,12 +474,42 @@ async function assertDashboardPublishable() {
   return state;
 }
 
+const REPORT_DELIVERY_BLOCKED = "Report delivery blocked: owner access or recipient settings have changed.";
+
+async function currentReportOwner(userId: string) {
+  // A stored schedule is not an authorization grant. Always re-read current
+  // active status, role and employer links, including after a role downgrade.
+  return prisma.user.findUnique({
+    where: { id: userId },
+    select: { active: true, role: true, email: true, links: { select: { employerId: true } } },
+  });
+}
+
+async function assertScheduleDeliveryAuthorized(
+  schedule: { id: string; userId: string; employerId: string; recipients: unknown },
+  triggeredBy: "scheduled" | "manual",
+) {
+  const owner = await currentReportOwner(schedule.userId);
+  if (reportDeliveryAllowed(owner, schedule.employerId, schedule.recipients)) return;
+  // Pause permanently rather than repeatedly attempting an unauthorized
+  // delivery. Do not persist old external recipients in the blocked audit row.
+  await prisma.reportSchedule.update({
+    where: { id: schedule.id },
+    data: { active: false, lastStatus: "BLOCKED", lastError: REPORT_DELIVERY_BLOCKED },
+  });
+  await prisma.reportDeliveryLog.create({
+    data: { scheduleId: schedule.id, triggeredBy, status: "BLOCKED", recipients: [], error: REPORT_DELIVERY_BLOCKED },
+  });
+  throw new Error(REPORT_DELIVERY_BLOCKED);
+}
+
 async function sendSchedule(scheduleId: string, triggeredBy: "scheduled" | "manual") {
   const schedule = await prisma.reportSchedule.findUnique({
     where: { id: scheduleId },
     include: { employer: { select: { id: true, name: true } }, user: { select: { id: true, email: true, name: true } } },
   });
   if (!schedule) throw new Error("schedule not found");
+  await assertScheduleDeliveryAuthorized(schedule, triggeredBy);
   await assertDashboardPublishable();
   const filters = (schedule.filters || {}) as ReportFilters;
   const payload = await getDashboardPayload(schedule.employerId, filters as any);
@@ -481,8 +517,11 @@ async function sendSchedule(scheduleId: string, triggeredBy: "scheduled" | "manu
   const saved = await getEmailConfig();
   const cfg = withEnv(saved);
   const recipients = (Array.isArray(schedule.recipients) ? schedule.recipients : [schedule.user.email]).map(String);
-  const subject = `${schedule.employer.name} — ${payload.filterContext?.label || "Financial Wellbeing Report"}`;
+  const subject = notificationPlainText(`${schedule.employer.name} — ${payload.filterContext?.label || "Financial Wellbeing Report"}`);
   const html = reportHtml(payload, { ...schedule, portalBaseUrl: cfg.portalBaseUrl }, theme);
+  // A dashboard refresh can take time. Recheck immediately before external
+  // delivery so role changes during report generation cannot go unnoticed.
+  await assertScheduleDeliveryAuthorized(schedule, triggeredBy);
   try {
     await sendEmail({ to: recipients, subject, html });
     await prisma.reportDeliveryLog.create({ data: { scheduleId: schedule.id, triggeredBy, status: "SENT", recipients: recipients as any, subject, filters: filters as any } });
@@ -506,7 +545,7 @@ async function sendSchedule(scheduleId: string, triggeredBy: "scheduled" | "manu
 export async function sendReportNow(user: any, id: string) {
   const schedule = await prisma.reportSchedule.findUnique({ where: { id } });
   if (!schedule) throw new Error("schedule not found");
-  if (user.role !== "ADMIN" && schedule.userId !== user.id) throw new Error("you cannot send this schedule");
+  if (!isAdminRole(user) && schedule.userId !== user.id) throw new Error("you cannot send this schedule");
   return sendSchedule(id, "manual");
 }
 
