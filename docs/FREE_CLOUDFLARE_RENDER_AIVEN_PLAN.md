@@ -347,3 +347,22 @@ AGE_IDENTITY_FILE="$HOME/fixer-recovery-keys/age-identity.txt" bash scripts/veri
 ```
 
 Only if this standalone archive restore succeeds, retry the two-sided recovery orchestrator `bash scripts/production-recovery-drill.sh` to produce and independently restore the Aiven target archive. Full Neon disaster recovery, offsite duplication, MFA/Neon Auth parity, live delta, and cutover remain separate gates.
+
+
+## 2026-11-06 operator-confirmed portable Neon restore; Aiven archive schema mismatch
+
+Operator reran the 11 offline backup checks (all passed), and restored `source-portable-public-2026-11-06T12-02-52-739Z.pgdump.age` successfully: 57 public application tables present. A subsequent full read-only recovery drill created and restored another encrypted portable Neon source archive successfully (`source-portable-public-2026-11-06T12-07-11-563Z.pgdump.age`). It also created an encrypted Aiven `target-full-2026-11-06T12-08-35-902Z.pgdump.age` with locally logged SHA-256 `b61f07cfac508fae306d40c349deb116d2d1ae67fa1c451e860853346b090c49`. **The Aiven archive was not yet restore-verified**: isolated PG18 restore failed at `CREATE TYPE public."AdvanceStatus"` because the archived Aiven dump did not include a `CREATE SCHEMA public` entry and the previous restore helper always dropped the preexisting empty public schema.
+
+The helper now decrypts **only into a stream** passed to `pg_restore --list` inside its disposable networkless PostgreSQL 18 container. If archive contents declare a `SCHEMA - public` entry, it drops the default empty schema with `RESTRICT` before restoration. Otherwise it keeps the initialized empty public schema. The fix affects **only local isolated restore**, never Neon/Aiven production databases. Regression test committed. Restore outcome on this latest implementation awaits a user-run attempt.
+
+Run the existing encrypted Aiven backup directly, without another database snapshot or cutover:
+```bash
+cd ~/NewChanges-free-edge
+git fetch origin
+git merge --ff-only origin/feat/free-cloudflare-render-primary-20261105
+node --test tests/production-encrypted-backup.test.mjs
+bash -n scripts/verify-encrypted-backup-restore.sh
+AGE_IDENTITY_FILE="$HOME/fixer-recovery-keys/age-identity.txt" bash scripts/verify-encrypted-backup-restore.sh "$HOME/fixer-recovery-archives/target-full-2026-11-06T12-08-35-902Z.pgdump.age"
+```
+
+Do not treat a portable Neon public-schema restore as a full Neon disaster recovery rehearsal. Do not mark the cutover cleared until a separate protected copy is verified, full source recovery path and functional authentication/RLS/MFA compatibility are proven, Neon writers fenced, and the controlled final delta and 57-table comparison pass.
