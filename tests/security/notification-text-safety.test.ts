@@ -25,4 +25,5 @@ test("unsafe theme colors cannot inject email CSS or markup", () => {
 
 test("Slack text does not accept control characters or HTML delimiters",()=>{
   assert.equal(notificationPlainText("Alice\n<@U123>\r"),"Alice  @U123");
+  assert.equal(notificationPlainText("X\u0085Y\u001bZ"),"X Y Z");
 });
