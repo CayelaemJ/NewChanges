@@ -9,6 +9,7 @@ import { prisma, hashPassword, digestSetupToken } from "./authService.js";
 import { sendMail, portalBaseUrl } from "./reportScheduler.js";
 import { notifyAdmins } from "./automationService.js";
 import { assertSuperadminRetirementAllowed } from "./superadminAvailabilityPolicy.js";
+import { safeEmailDeliveryFailure } from "./emailDeliveryFailure.js";
 
 type Role = "ADMIN" | "SUPERADMIN" | "EMPLOYER_MANAGER" | "PORTFOLIO_MANAGER" | "VIEWER";
 
@@ -86,7 +87,9 @@ export async function createUser(opts: {
       });
       emailSent = true;
     } catch (e: any) {
-      emailError = String(e?.message || e).slice(0, 300);
+      // Invite-link delivery failures are returned to the admin UI. Never
+      // surface SMTP banners, transport credentials, or remote API bodies.
+      emailError = safeEmailDeliveryFailure(e);
     }
   }
 
