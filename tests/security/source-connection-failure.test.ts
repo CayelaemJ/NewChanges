@@ -36,3 +36,12 @@ test("unknown errors, credentials and arbitrary provider codes are never reflect
       "Source connection or validation failed. Check configuration and server diagnostics.");
   }
 });
+
+test("safe adapter wrappers preserve actionable categories across HTTP layers", () => {
+  assert.equal(safeSourceConnectionFailure(new Error("Could not open MYSQL source connection. Source SQL connection requires TLS in production.")),
+    "Source SQL connection requires TLS in production.");
+  assert.equal(safeSourceConnectionFailure(new Error("Could not open POSTGRESQL source connection. Source database rejected the credentials.")),
+    "Source database rejected the credentials.");
+  assert.equal(safeSourceConnectionFailure(new Error("Could not open MYSQL source connection. password=private")),
+    "Source connection or validation failed. Check configuration and server diagnostics.");
+});
