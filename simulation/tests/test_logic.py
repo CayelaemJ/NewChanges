@@ -92,6 +92,21 @@ class Helpers(unittest.TestCase):
         self.assertGreaterEqual(ddl.count('ON UPDATE CURRENT_TIMESTAMP(6)'),8)
         self.assertIn('v_source_freshness',ddl)
 
+    def test_source_ddl_has_no_duplicate_index_names(self):
+        import re
+        from pathlib import Path
+        schema=Path(__file__).resolve().parents[1] / 'schema' / '001_source.sql'
+        if not schema.exists():
+            self.skipTest('schema DDL not mounted in this environment')
+        ddl=schema.read_text(encoding='utf-8')
+        create_tables=re.findall(r'CREATE TABLE IF NOT EXISTS (\\w+)\\s*\\((.*?)\\) ENGINE=InnoDB;',ddl,re.S)
+        self.assertGreaterEqual(len(create_tables),8)
+        for table, body in create_tables:
+            names=re.findall(r'\\bINDEX\\s+(\\w+)\\s*\\(',body)
+            with self.subTest(table=table):
+                self.assertEqual(len(names),len(set(names)),
+                                 f'Duplicate MySQL index in {table}: {names}')
+
     def test_production_tls_cannot_be_disabled(self):
         with patch.dict('os.environ',{'SIM_ENV':'aws','SIM_DB_HOST':'example.com','SIM_DB_USER':'testwriter',
           'SIM_DB_PASSWORD':'fake-local-password','SIM_DB_DATABASE':'fixer_sim'},clear=True):
