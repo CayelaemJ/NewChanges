@@ -45,3 +45,18 @@ test('offline restore drill cannot connect to external databases or networks',()
  assert.match(script,/trap cleanup EXIT/);
  assert.match(script,/table_count.*57|table_count.*!= 57/);
 });
+
+test('recovery orchestrator fails closed with no private credentials or key',()=>{
+ const script=new URL('../scripts/production-recovery-drill.sh',import.meta.url).pathname;
+ const r=spawnSync('bash',[script],{encoding:'utf8',env:{PATH:process.env.PATH||''}});
+ assert.equal(r.status,2);
+ assert.match(r.stderr,/BLOCKED/);
+});
+test('recovery orchestrator keeps both DB operations read-only and performs two actual restore drills',()=>{
+ const script=readFileSync(new URL('../scripts/production-recovery-drill.sh',import.meta.url),'utf8');
+ assert.match(script,/for side in source target/);
+ assert.match(script,/production-encrypted-backup\.mjs "\$side" --backup/);
+ assert.match(script,/verify-encrypted-backup-restore\.sh "\$archive"/);
+ assert.match(script,/sha256sum "\$archive"/);
+ assert.doesNotMatch(script,/aiven-final-delta-sync|db:push|pg_restore.*onrender/);
+});
