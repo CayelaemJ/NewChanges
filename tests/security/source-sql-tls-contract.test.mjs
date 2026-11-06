@@ -20,3 +20,16 @@ test("read replica execution reuses the same protected connection factories", ()
   assert.match(source,/else if \(dialect === "POSTGRESQL"\) replicaExecutor = await openPostgresExecutor\(replicaConfig\)/);
   assert.match(source,/else replicaExecutor = await openMssqlExecutor\(replicaConfig\)/);
 });
+
+test("MySQL replica health probes enforce TLS before creating any credentialed connection", () => {
+  const start = source.indexOf("export async function checkMysqlReadReplica(");
+  const end = source.indexOf("function sqlDialect(", start);
+  assert.ok(start >= 0 && end > start);
+  const health = source.slice(start, end);
+  const policyCall = health.indexOf('assertSecureSourceSqlTransport(replicaSslEnabled, replicaTrustServerCertificate, "MySQL read-replica health")');
+  const connection = health.indexOf("await createConnection(");
+  assert.ok(policyCall >= 0 && connection > policyCall, "TLS must be checked before opening the replica health socket");
+  assert.match(health, /const replicaSslEnabled = effective\.sqlReplicaSsl \?\? true/);
+  assert.match(health, /const replicaTrustServerCertificate = effective\.sqlReplicaTrustServerCertificate \?\? false/);
+  assert.match(health, /ssl: replicaSslEnabled \? \{ rejectUnauthorized: !replicaTrustServerCertificate \} : undefined/);
+});
