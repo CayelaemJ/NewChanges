@@ -75,3 +75,9 @@ test("scheduled report job logs no raw provider or database exception", () => {
   assert.doesNotMatch(job, /\{\s*err(?:or)?:\s*error/);
   assert.doesNotMatch(job, /logger\?\.error\?\.\(\{[^\n]*error\b/);
 });
+
+test("scheduled report operational logs do not include user-supplied report titles", () => {
+  const worker = scheduler.slice(scheduler.indexOf("export async function runDueReports("));
+  assert.match(worker, /logger\?\.info\?\.\(\{ scheduleId: row\.id \}, "sending scheduled report"\)/);
+  assert.doesNotMatch(worker, /logger\?\.info\?\.\(\{[^\n]*name: row\.name/);
+});
