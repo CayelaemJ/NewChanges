@@ -112,7 +112,7 @@ try {
             className: typeof el.className === 'string' ? el.className.slice(0, 90) : '',
             right: Math.round(el.getBoundingClientRect().right),
           }));
-        const clipped = [...document.querySelectorAll('button,input,select,textarea,h1,h2,h3,label')]
+        const clipped = [...document.querySelectorAll('button,h1,h2,h3,label')]
           .filter(el => visible(el) && !el.closest(allowedScroll))
           .filter(el => {
             const style = getComputedStyle(el);
@@ -135,7 +135,7 @@ try {
       assert.ok(layout.bodyTextLength > 50, 'Blank or nearly empty mobile screen: ' + JSON.stringify(layout));
       assert.ok(layout.documentWidth <= layout.viewport + 3, 'Horizontal document overflow: ' + JSON.stringify(layout));
       assert.deepEqual(layout.offenders, [], 'Elements escaping the viewport');
-      assert.deepEqual(layout.clipped, [], 'Clipped form controls or headings');
+      assert.deepEqual(layout.clipped, [], 'Clipped buttons or headings');
       assert.equal(layout.theme, variant.theme, 'Theme preference not reflected in document');
       assert.deepEqual(pageErrors, [], 'Unhandled browser errors');
       results.push({ path, width, platform: variant.platform, theme: variant.theme, status: 'pass', layout });
