@@ -57,6 +57,7 @@ import { ensureSectionDefaults, listSections, updateSection, grantUserSection, r
 import { publicEmailConfig, saveEmailConfig, testEmailConnection, createReportSchedule, listReportSchedules, updateReportSchedule, deleteReportSchedule, sendReportNow, recentReportDeliveries, runDueReports } from "./services/reportScheduler.js";
 import type { ScheduleInput } from "./services/reportScheduler.js";
 import { publicReportScheduleFailure } from "./services/reportScheduleFailure.js";
+import { publicEmailSettingsFailure } from "./services/emailSettingsFailure.js";
 import { runMLOpsAssessment, getMLOpsPortfolioAssessment, recordMLOpsFeedback, listMLOpsModels, registerMLOpsModel, promoteMLOpsModel, rollbackMLOpsModel, listMLOpsEvents } from "./services/mlopsService.js";
 import { getBrandLearningProfile, learnFromBrandUpload, recordBrandCorrection } from "./services/brandLearningService.js";
 
@@ -1791,12 +1792,12 @@ app.post<{ Body: any }>("/api/admin/email-settings", async (req, reply) => {
     logAdminAction(admin, "email_settings.update", `Updated email/automation settings (${keys})`, { targetType: "SystemEmailConfig" });
     return result;
   }
-  catch (e: any) { return reply.code(400).send({ error: e?.message || "Could not save email settings" }); }
+  catch (e: unknown) { const safe = publicEmailSettingsFailure(e); return reply.code(safe.statusCode).send({ error: safe.message }); }
 });
 app.post<{ Body: any }>("/api/admin/email-settings/test", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
   try { return await testEmailConnection(req.body || {}); }
-  catch (e: any) { return reply.code(400).send({ error: e?.message || "Email test failed" }); }
+  catch (e: unknown) { const safe = publicEmailSettingsFailure(e); return reply.code(safe.statusCode).send({ error: safe.message }); }
 });
 // manual "run now" for automations — lets an admin verify config without waiting for the hourly tick
 app.post<{ Body: { kind: "stale" | "digest" | "test" } }>("/api/admin/automations/run", async (req, reply) => {
