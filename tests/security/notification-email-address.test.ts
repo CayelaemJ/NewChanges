@@ -40,7 +40,7 @@ test("malformed domains and local parts fail closed", () => {
     "user@@example.invalid", "user@example.123",
     "a".repeat(65) + "@example.invalid",
     "a@" + "b".repeat(64) + ".invalid",
-    "a@" + "b".repeat(63) + "." + "c".repeat(63) + "." + "d".repeat(63) + ".invalid",
+    "a@" + ["b", "c", "d", "e"].map(letter => letter.repeat(63)).join(".") + ".invalid",
   ]) assert.equal(validNotificationEmailAddress(email), false, email.slice(0, 90));
 });
 
