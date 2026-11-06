@@ -363,7 +363,6 @@ jobs:
       - store_artifacts:
           path: test-results/security/semgrep-findings.json
           destination: security/semgrep-findings.json
-          when: always
 
 
   credential_exposure_scan:
