@@ -67,3 +67,11 @@ test("report policy tests are included in the Docker security suite", () => {
   assert.match(suite, /tests\/security\/report-delivery-policy\.test\.ts/);
   assert.match(suite, /tests\/security\/report-delivery-authorization-contract\.test\.mjs/);
 });
+
+test("scheduled report job logs no raw provider or database exception", () => {
+  const job = scheduler.slice(scheduler.indexOf("export async function runDueReports("));
+  assert.match(job, /reason: "SCHEDULE_DELIVERY_FAILED"/);
+  assert.match(job, /logger\?\.error\?\.\(\{ scheduleId: row\.id, reason:/);
+  assert.doesNotMatch(job, /\{\s*err(?:or)?:\s*error/);
+  assert.doesNotMatch(job, /logger\?\.error\?\.\(\{[^\n]*error\b/);
+});
