@@ -13,6 +13,7 @@ COPY ops/local_bootstrap_probe.py ops/local_bootstrap_probe.py
 COPY tests/ tests/
 # Contract tests verify the same Dockerfile used for this image build.
 COPY Dockerfile.test Dockerfile.test
+COPY schema/001_source.sql schema/001_source.sql
 RUN useradd --create-home --uid 10001 testuser && chown -R testuser:testuser /app
 USER testuser
 CMD ["python","-m","unittest","discover","-s","tests","-v"]
