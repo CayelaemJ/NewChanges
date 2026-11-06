@@ -145,3 +145,14 @@ test('offline restore container name expands to a valid Docker identifier',()=>{
  assert.equal(probe.status,0,probe.stderr);
  assert.match(probe.stdout,/^fixer-backup-restore-[0-9]+$/);
 });
+
+test('restore waits for official PG18 Docker final server, not transient pg_isready',()=>{
+ const script=readFileSync(new URL('../scripts/verify-encrypted-backup-restore.sh',import.meta.url),'utf8');
+ assert.match(script,/PostgreSQL init process complete; ready for start up\./);
+ assert.match(script,/RESTORE_STAGE="PostgreSQL final-server readiness"/);
+ assert.match(script,/psql -X -q -A -t -v ON_ERROR_STOP=1/);
+ assert.match(script,/-d restorecheck -c 'SELECT 1'/);
+ assert.doesNotMatch(script,/pg_isready/);
+ assert.doesNotMatch(script,/docker logs "\$CONTAINER" 2>&1 \| grep -Fq/);
+ assert.ok(script.indexOf('RESTORE_STAGE="PostgreSQL final-server readiness"')<script.indexOf('pg_restore --list'));
+});
