@@ -17,3 +17,14 @@ test("administrative routes share the same redaction policy as audit persistence
   assert.doesNotMatch(server,/function redactAuditDetail\(/);
   assert.match(server,/detail: redactAuditDetail\(body\)/);
 });
+
+test("audit and security-alert summaries use the shared free-text secret filter",()=>{
+  assert.match(service,/import \{ redactAuditDetail, redactAuditText \} from "\.\/auditRedaction\.js"/);
+  assert.match(service,/const safeSummary = redactAuditText\(summary\)/);
+  assert.match(service,/summary: safeSummary/);
+  assert.match(service,/:\s*safeSummary,/);
+  assert.match(service,/actorName: redactAuditText\(actor\.name\)/);
+  assert.match(service,/targetId: opts\.targetId == null \? undefined : redactAuditText\(opts\.targetId\)/);
+  assert.match(service,/userAgent: opts\.context\?\.userAgent == null \? undefined : redactAuditText\(opts\.context\.userAgent\)/);
+  assert.doesNotMatch(service,/^\s*summary,\s*$/m);
+});
