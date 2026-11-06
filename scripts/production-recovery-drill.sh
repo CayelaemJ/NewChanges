@@ -31,7 +31,12 @@ node scripts/production-encrypted-backup.mjs target --preflight
 bash -n scripts/verify-encrypted-backup-restore.sh
 echo "BACKUP START: read-only encrypted copies of source and target. No live writes."
 for side in source target; do
-  output="$(node scripts/production-encrypted-backup.mjs "$side" --backup)"
+  if [[ "$side" == source ]]; then
+    echo "SOURCE PORTABLE DRILL: restoring public application schema only, not Neon-managed extensions or other schemas."
+    output="$(node scripts/production-encrypted-backup.mjs source --portable-backup)"
+  else
+    output="$(node scripts/production-encrypted-backup.mjs target --backup)"
+  fi
   printf '%s\n' "$output"
   archive="$(printf '%s\n' "$output" | sed -n 's/^LOCAL PATH: //p')"
   if [[ -z "$archive" || ! -f "$archive" ]]; then
@@ -41,5 +46,7 @@ for side in source target; do
   AGE_IDENTITY_FILE="$AGE_IDENTITY_FILE" bash scripts/verify-encrypted-backup-restore.sh "$archive"
   echo "PASS: $side recovery archive restored locally. Archive remains encrypted in $NEWCHANGES_BACKUP_DIR."
 done
-echo "LOCAL RECOVERY DRILL COMPLETE: copies are NOT offsite until you securely duplicate them outside this host."
+echo "LOCAL PORTABLE APPLICATION RESTORE DRILL COMPLETE: Neon public schema and full Aiven snapshots restored offline."
+echo "Neon FULL disaster recovery remains separately dependent on pg_session_jwt extension availability; the initial full archive is preserved."
+echo "Copies are NOT offsite until independently and securely duplicated outside this host."
 echo "NOT CUTOVER AUTHORIZATION: legacy writers, final sync, MFA, Cloudflare and Render DB secrets unchanged."
