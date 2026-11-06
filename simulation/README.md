@@ -55,6 +55,20 @@ A successful pure test suite is **not** proof the Docker/CDC integration passed.
 
 For the existing self-hosted `newchanges-ci` GitHub runner, copy these files under `NewChanges/simulation/` and copy `repo-integration/.github/workflows/aws-sim-docker-ci.yml` to the repository's `.github/workflows/`. Dispatch that workflow manually. It does not use GitHub-hosted runners and does not deploy.
 
+## MySQL 8.4 SHA-2 authentication (local Docker)
+
+MySQL 8.4 defaults to `caching_sha2_password`. Fresh Docker test accounts
+require PyMySQL RSA authentication support when using the isolated, non-TLS
+Docker network. The test image installs `PyMySQL[rsa]` and pins `cryptography`.
+The Docker build verifies these imports, and the preflight checks the backend
+and all three restricted account connections **before** CDC bootstrap.
+
+The previous symptom was five `RuntimeError` preflight failures immediately
+after local role creation. This was consistent with PyMySQL's missing
+`cryptography` dependency, not five independent schema failures. Re-test
+against fresh containers; do not disable SHA-2 authentication, weaken
+production TLS, or bypass the kill switch.
+
 ## Troubleshooting Docker CDC bootstrap (local only)
 
 Before calling `runtime.cdc bootstrap`, Docker runs a **read-only, local-only**
