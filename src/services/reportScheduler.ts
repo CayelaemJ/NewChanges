@@ -9,6 +9,7 @@ import { reportDeliveryAllowed } from "./reportDeliveryPolicy.js";
 import { assertSecureSmtpTls } from "./smtpTlsPolicy.js";
 import { resolveEmailProviderConfig } from "./emailProviderConfig.js";
 import { safeEmailDeliveryFailure } from "./emailDeliveryFailure.js";
+import { validNotificationEmailAddress } from "./notificationEmailAddress.js";
 
 export type ReportFilters = {
   period?: string;
@@ -60,7 +61,6 @@ const boolEnv = (name: string): boolean | undefined => {
   return !["0", "false", "no", "off"].includes(raw.toLowerCase());
 };
 const clean = (value: unknown) => typeof value === "string" && value.trim() ? value.trim() : null;
-const emailOk = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 const escapeHtml = (value: unknown) => String(value ?? "")
   .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 
@@ -185,9 +185,9 @@ export async function saveEmailConfig(input: EmailDraft) {
   }
   if ("scoreChangeAlertsEnabled" in input) data.scoreChangeAlertsEnabled = Boolean(input.scoreChangeAlertsEnabled);
   if ("syntheticDataMode" in input) data.syntheticDataMode = Boolean(input.syntheticDataMode);
-  if (data.fromEmail && !emailOk(data.fromEmail)) throw new Error("from email is not valid");
-  if (data.replyTo && !emailOk(data.replyTo)) throw new Error("reply-to email is not valid");
-  if (data.resendFromEmail && !emailOk(data.resendFromEmail)) throw new Error("Resend From email is not valid");
+  if (data.fromEmail && !validNotificationEmailAddress(data.fromEmail)) throw new Error("from email is not valid");
+  if (data.replyTo && !validNotificationEmailAddress(data.replyTo)) throw new Error("reply-to email is not valid");
+  if (data.resendFromEmail && !validNotificationEmailAddress(data.resendFromEmail)) throw new Error("Resend From email is not valid");
   if (process.env.NODE_ENV === "production" &&
       ["smtpSecure", "smtpRequireTls", "smtpRejectUnauthorized"].some(key => key in data)) {
     assertSecureSmtpTls(withEnv({ ...current, ...data }));
@@ -202,7 +202,7 @@ async function smtpTransport(draft: EmailDraft = {}) {
   assertSecureSmtpTls(cfg);
   if (!cfg.smtpHost) throw new Error("SMTP host is required");
   if (!cfg.smtpPort) throw new Error("SMTP port is required");
-  if (!cfg.fromEmail || !emailOk(cfg.fromEmail)) throw new Error("A valid From email is required");
+  if (!cfg.fromEmail || !validNotificationEmailAddress(cfg.fromEmail)) throw new Error("A valid From email is required");
   if (cfg.smtpUsername && !cfg.smtpPassword) throw new Error("SMTP password is required when an SMTP username is supplied");
   const transporter = nodemailer.createTransport({
     host: cfg.smtpHost,
@@ -219,12 +219,21 @@ async function smtpTransport(draft: EmailDraft = {}) {
 }
 
 async function sendEmail(opts: { to: string | string[]; subject: string; html: string; replyTo?: string }, draft: EmailDraft = {}) {
+  // Every delivery path, including transactional emails and legacy persisted
+  // schedules, must validate addresses before invoking SMTP or Resend.
+  const addresses = Array.isArray(opts.to) ? opts.to : [opts.to];
+  if (!addresses.length || addresses.some(address => !validNotificationEmailAddress(address)))
+    throw new Error("invalid recipient email");
   const saved = await getEmailConfig();
   const cfg = withEnv(saved, draft);
   const fromEmail = cfg.resendFromEmail || cfg.fromEmail;
+  if (opts.replyTo && !validNotificationEmailAddress(opts.replyTo))
+    throw new Error("reply-to email is not valid");
+  if (cfg.replyTo && !validNotificationEmailAddress(cfg.replyTo))
+    throw new Error("reply-to email is not valid");
   if (cfg.emailProvider === "resend") {
     if (!cfg.resendApiKey) throw new Error("RESEND_API_KEY is required when EMAIL_PROVIDER=resend");
-    if (!fromEmail || !emailOk(fromEmail)) throw new Error("A valid Resend From email is required");
+    if (!validNotificationEmailAddress(fromEmail)) throw new Error("A valid Resend From email is required");
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       redirect: "error",
@@ -270,7 +279,7 @@ export async function portalBaseUrl(): Promise<string | null> {
 
 export async function testEmailConnection(draft: EmailDraft & { recipient?: string | null }) {
   const recipient = clean(draft.recipient);
-  if (!recipient || !emailOk(recipient)) throw new Error("Enter a valid test recipient email");
+  if (!recipient || !validNotificationEmailAddress(recipient)) throw new Error("Enter a valid test recipient email");
   const now = new Date();
   try {
     const saved = await getEmailConfig();
@@ -339,7 +348,7 @@ function normalizeRecipients(input: unknown, fallbackEmail: string, allowAdditio
   if (!recipients.length) recipients.push(fallbackEmail.toLowerCase());
   const unique = [...new Set(recipients)];
   if (unique.length > 10) throw new Error("a report can be sent to a maximum of 10 recipients");
-  const invalid = unique.find((email) => !emailOk(email));
+  const invalid = unique.find((email) => !validNotificationEmailAddress(email));
   if (invalid) throw new Error("invalid recipient email");
   return unique;
 }
