@@ -10,7 +10,7 @@ services:
     region: frankfurt
     plan: free
     dockerfilePath: ./Dockerfile
-    healthCheckPath: /ready
+    healthCheckPath: /health
     autoDeployTrigger: off
     envVars:
       - key: NODE_ENV
@@ -37,4 +37,4 @@ services:
 
 # Share exactly one independently generated >=32-character token between
 # Render's private env and the Cloudflare Worker's encrypted secret store.
-# Without this token, direct Render requests other than /health and /ready fail.
+# Without this token, direct Render requests other than /health fail.
