@@ -1,0 +1,64 @@
+#!/bin/sh
+# Run inside the isolated NewChanges Compose 'tests' container only.
+set -eu
+: "${CI:?CI must be set}"
+: "${DATABASE_URL:?A disposable PostgreSQL DATABASE_URL is required}"
+case "$DATABASE_URL" in
+  postgresql://ci_fixture:ci_fixture@127.0.0.1:5432/newchanges_ci) ;;
+  *) echo "Refusing non-disposable database URL" >&2; exit 2 ;;
+esac
+[ "${CI_RLS_PROBE_APPROVED:-}" = "CI_DISPOSABLE_ONLY" ] || { echo "Missing disposable RLS guard" >&2; exit 2; }
+[ "${ENABLE_SEMANTIC_OBJECT_PUBLISH:-}" = "false" ] || exit 2
+[ "${ENABLE_SEMANTIC_SHADOW_WORKER:-}" = "false" ] || exit 2
+run() { echo ">>> RUN $1"; "$@"; echo "<<< PASS $1"; }
+run node scripts/ci/network-isolation-ci.mjs
+run npm run quality:lint
+run node scripts/password-form-contract-check.mjs
+run npm run quality:types
+run npm run quality:unit
+run npm run db:generate
+run ./node_modules/.bin/tsc
+run npm run build --prefix frontend
+run npm run check:production
+run npm run check:security
+run node --test tests/security/admin-mfa-policy.test.mjs tests/security/admin-mfa-schema.test.mjs tests/security/admin-mfa-challenge.test.mjs tests/security/admin-mfa-consume.test.mjs tests/security/admin-mfa-completion.test.mjs tests/security/admin-mfa-webauthn-verifier.test.mjs tests/security/admin-mfa-rollout.test.mjs tests/security/admin-mfa-authenticate.test.mjs tests/security/admin-mfa-readiness.test.mjs tests/security/admin-mfa-signed-roundtrip.test.mjs tests/security/admin-mfa-browser-compat.test.mjs
+run node --test tests/security/admin-mfa-ui-state.test.mjs
+run node --import tsx --test tests/security/admin-mfa-route-scope.test.ts
+run node --test tests/security/admin-mfa-recovery-contract.test.mjs
+run node --test tests/security/admin-mfa-server-enrollment-contract.test.mjs
+run node --test tests/security/admin-mfa-recovery-key-contract.test.mjs
+run node --test tests/security/admin-mfa-bootstrap-contract.test.mjs
+run node --import tsx --test tests/security/mfa-staging-gate.test.ts
+run node --import tsx --test tests/security/mfa-staging-access.test.ts
+run node --test tests/security/mfa-staging-blueprint.test.mjs
+run node --test tests/security/mfa-login-navigation.test.mjs
+run node --import tsx --test tests/security/admin-totp.test.ts
+run npm run check:security-identity
+run npm run check:security-operations
+run npm run check:security-governance
+run npm run check:source-sync-safety
+run node --import tsx --test tests/ci/ingestion-faults.test.ts tests/ci/adversarial-import-inputs.test.ts
+run npm run check:accessibility
+run npm run check:performance
+run npm run check:semantic-planner
+run npm run check:semantic-storage
+run npm run check:source-vault
+run npm run check:source-continuity
+run npm run check:source-reconciliation
+run node scripts/security/rls-isolation-ci-probe.mjs
+run node scripts/prisma-upgrade-integration.mjs
+run node scripts/ci/database-resilience-ci.mjs
+run node scripts/ci/import-failure-integration-ci.mjs
+run node scripts/ci/route-authorization-inventory-ci.mjs
+run node scripts/admin-mfa-live-http-e2e.mjs
+run node scripts/ci/local-http-load-ci.mjs
+run sh scripts/ci/run-circleci-verify-parity.sh
+run npm run quality:e2e
+run node scripts/console-ux-browser-check.mjs
+run node scripts/header-responsive-check.mjs
+run node scripts/ci/mobile-ui-regression-ci.mjs
+run node scripts/ci/dashboard-chart-theme-ci.mjs
+run node scripts/admin-browser-smoke.mjs
+run node scripts/admin-mfa-browser-smoke.mjs
+run node scripts/ci/visual-regression-ci.mjs
+echo "All configured Docker CI groups passed."

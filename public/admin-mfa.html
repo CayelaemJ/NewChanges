@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Administrator Security · The Fixer</title>
+<link rel="icon" href="/favicon.ico">
+<meta name="description" content="Secure administrator passkey enrollment and verification for The Fixer (Pty) Ltd Dashboard Portal.">
+<meta name="robots" content="noindex,nofollow">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="The Fixer (Pty) Ltd Dashboard Portal">
+<meta property="og:title" content="Administrator Security | The Fixer (Pty) Ltd">
+<meta property="og:description" content="Secure administrator passkey enrollment and verification for The Fixer (Pty) Ltd Dashboard Portal.">
+<meta property="og:image" content="{{BASE_URL}}/static/og-image.png">
+<meta property="og:image:alt" content="The Fixer (Pty) Ltd Dashboard Portal brand image.">
+<meta name="theme-color" content="#2b1b68">
+<style>
+:root{font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#1b1532;background:#f7f5fb}
+*{box-sizing:border-box}body{margin:0}header{background:#2b1b68;color:white;padding:21px max(5vw,24px);display:flex;justify-content:space-between;align-items:center;gap:20px}
+header a{color:white;text-decoration:none;font-size:14px}main{max-width:820px;margin:52px auto;padding:0 20px}
+article{background:white;border:1px solid #e2d9ef;border-radius:18px;padding:clamp(24px,5vw,38px);box-shadow:0 14px 40px #29125317}
+h1{font-size:clamp(25px,4vw,36px);margin:0 0 9px}h2{font-size:19px;margin:0 0 8px}p{color:#514964;line-height:1.6}
+.state{border-left:4px solid #7742ae;padding:13px 16px;background:#f2edfa;border-radius:5px;margin:22px 0;color:#42216d}
+.actions{display:grid;gap:15px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.panel{border:1px solid #e2d9ef;padding:20px;border-radius:13px}
+label{display:block;margin-top:14px;font-size:14px;font-weight:600}
+input{width:100%;padding:13px;border:1px solid #aa9bc2;border-radius:8px;margin:8px 0 14px;font:inherit}
+button{width:100%;border:0;border-radius:9px;padding:13px;background:#65349e;color:white;font:inherit;font-weight:650;cursor:pointer}
+button:disabled{opacity:.55;cursor:wait}
+.checkbox-line{display:flex;align-items:center;gap:10px;line-height:1.4}
+.checkbox-line input[type=checkbox]{width:20px;height:20px;min-height:0;margin:0;flex:none;padding:0;accent-color:#65349e}button:focus-visible,input:focus-visible{outline:3px solid #b48ae6;outline-offset:2px}
+small{line-height:1.5;color:#625773;display:block;margin-top:12px}
+footer{font-size:13px;margin:20px 3px;color:#625773}
+
+/* Focused, responsive MFA journey. No authentication state is stored in the browser. */
+:root{color-scheme:light}
+body{background:radial-gradient(circle at 88% 6%,#e8ddf9 0,transparent 32%),#f7f5fb}
+main{max-width:900px;margin:clamp(20px,5vw,52px) auto}
+article{box-shadow:0 18px 56px rgba(41,18,83,.10)}
+.panel{background:#fdfcff;transition:border-color .2s,box-shadow .2s}
+.panel:focus-within{border-color:#7742ae;box-shadow:0 0 0 3px rgba(119,66,174,.10)}
+.panel p{font-size:14px}
+.actions{margin-top:16px}
+h1{letter-spacing:-.025em}
+button{min-height:46px;transition:background .2s,transform .2s}
+button:hover:not(:disabled){background:#49227c}
+button:active:not(:disabled){transform:translateY(1px)}
+input{min-height:46px;background:#fff}
+input:focus{border-color:#65349e}
+#totp-code,#totp-confirm-code{font-size:23px;letter-spacing:.28em;text-align:center;font-variant-numeric:tabular-nums}
+.state{line-height:1.55;overflow-wrap:anywhere}
+[hidden]{display:none!important}
+#totp-panel{background:#fff}
+#recovery{margin-top:26px}
+#recovery .panel{background:#fffaf5}
+#mfa-success{border-left-color:#187a4d;background:#e7f5ee;color:#155c3e}
+#mfa-success p{color:#155c3e}
+@media(max-width:600px){header{padding:16px 20px}header a{font-size:12px}main{padding:0 12px}article{padding:20px;border-radius:14px}.actions{grid-template-columns:1fr}.panel{padding:16px}h1{font-size:27px}}
+@media(prefers-reduced-motion:reduce){button,.panel{transition:none}}
+</style></head>
+<body><header><strong>THE FIXER · ADMIN SECURITY</strong><a href="/dashboard">Back to dashboard</a></header>
+<main><article><h1>Protect your administrator account</h1>
+<p>Choose either a device passkey (Windows Hello, Face ID, Touch ID or security key) or a one-time authenticator QR setup. Once enrolled, future sign-ins use your saved passkey or a fresh six-digit authenticator code — not another setup grant.</p>
+<div role="status" aria-live="polite" class="state" id="status">Checking your account security…</div>
+<div id="mfa-success" class="state" hidden>
+ <strong id="mfa-success-title">Authenticator verified successfully.</strong>
+ <p id="mfa-success-note">Your MFA setup is complete. You can continue to the dashboard now. When you next sign in, use a fresh six-digit code.</p>
+ <a href="/dashboard" id="mfa-continue" style="display:inline-block;background:#65349e;color:white;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:9px">Continue to dashboard</a>
+ <a href="/mfa/manage" id="mfa-manage-link" style="display:inline-block;margin-left:12px;color:#65349e;font-weight:700">Manage authentication methods</a>
+</div>
+<section id="mfa-backup-key" class="panel" hidden style="border:2px solid #b66f18;background:#fffaf1;margin-top:18px">
+<h2>Save your account recovery key</h2>
+<p><strong>This key is shown only once.</strong> Copy it into a trusted password manager or write it down and store it somewhere secure. Do not share it, email it, save it in a screenshot, or keep it on the same phone as your authenticator.</p>
+<code id="mfa-backup-value" style="display:block;overflow-wrap:anywhere;font-size:15px;padding:15px;border-radius:9px;background:white;border:1px solid #d7b37e;user-select:all"></code>
+<button type="button" id="mfa-backup-copy" style="margin-top:14px">Copy recovery key</button>
+<label class="checkbox-line"><input id="mfa-backup-confirm" type="checkbox"> I have securely saved my one-time recovery key</label>
+<button type="button" id="mfa-backup-dismiss" disabled>I've saved my recovery key</button>
+<small>The Fixer stores only a hash and cannot display this key again. If you lose your MFA device, this key supports the identity-verified recovery process. It does not reveal the server's encryption key.</small>
+</section>
+<section id="mfa-existing-recovery-key" class="panel" hidden style="margin-top:18px">
+<h2>Complete your account recovery setup</h2>
+<p>Your MFA method is already active, but you have not received a recovery key. Generate one now and save it in a trusted password manager or another secure place. It will be shown only once.</p>
+<button id="mfa-existing-recovery-issue" type="button">Generate my one-time recovery key</button>
+</section>
+<section id="mfa-manage-banner" class="panel" hidden><h2>Manage your authentication methods</h2><p>Your administrator session is verified. Add a device passkey or an authenticator app without repeating first-time grant enrollment. Existing methods cannot be silently replaced.</p></section>
+<section id="mfa-approval-panel" class="panel" hidden style="margin:18px 0">
+<h2>First-time security setup</h2>
+<p>The Fixer handles enrollment authorization securely. Request approval and have two independently verified security administrators confirm your identity. You will not need to create or enter a 43-character code.</p>
+<button type="button" id="mfa-approval-request">Request MFA setup approval</button>
+<button type="button" id="mfa-approval-check" style="margin-top:10px;background:#e9e0f4;color:#42216d" hidden>Check approval status</button>
+<p id="mfa-approval-state" role="status" aria-live="polite">No approval requested yet.</p>
+<details id="mfa-legacy-details"><summary>Approved recovery or initial security bootstrap only</summary>
+<p>Only use this if your security administrator has specifically given you a one-time bootstrap or recovery grant. Ordinary onboarding does not use this field.</p>
+<label for="mfa-legacy-grant">One-time bootstrap or recovery grant</label>
+<input id="mfa-legacy-grant" type="password" maxlength="128" autocomplete="off" spellcheck="false" placeholder="Approved recovery or bootstrap grant">
+<button type="button" id="mfa-legacy-apply">Use approved one-time grant</button>
+</details>
+</section>
+<div class="actions" id="mfa-passkey-actions"><section class="panel" id="mfa-passkey-verify-panel"><h2>Verify your passkey</h2>
+<p>Verify again when accessing sensitive administrative controls.</p>
+<button id="verify" type="button">Verify passkey</button></section>
+<section class="panel" id="mfa-passkey-enroll-panel"><h2>Set up Windows Hello, Face ID or a security key</h2><p>Use a passkey secured by your device: Windows Hello PIN or biometrics, Apple Face ID/Touch ID, or a compatible FIDO2 security key. Your device selects the available verification method; The Fixer never receives your PIN or biometric data. First-time enrollment requires approval by your organization's security administrators. The Fixer manages authorization internally.</p>
+<label for="grant" hidden>Approved bootstrap or recovery grant</label><input id="grant" type="password" autocomplete="off" spellcheck="false" hidden>
+<button id="enroll" type="button">Set up device passkey</button><small>Adding a second passkey requires recent verification or another approved grant.</small>
+</section></div>
+<section class="panel" id="totp-panel" hidden aria-labelledby="totp-title" style="margin-top:22px">
+<h2 id="totp-title">Set up your authenticator app with a QR code</h2>
+<p id="totp-instructions">First time only: request your personal QR code, open Google Authenticator or Microsoft Authenticator, tap Add account and scan the QR. Enter one code to activate the saved account.</p>
+<p id="totp-state">Authenticator setup is available after identity-verified approval. The Fixer handles enrollment authorization.</p>
+<label for="totp-grant" hidden>Approved bootstrap or recovery grant</label>
+<input id="totp-grant" type="password" maxlength="128" autocomplete="off" spellcheck="false" hidden>
+<button id="totp-start" type="button">Generate my one-time setup QR code</button>
+<div id="totp-setup" hidden>
+<p><strong>1. Scan this QR code once</strong> with your authenticator app's <em>Add account → Scan QR code</em> option.</p>
+<img id="totp-qr" alt="Private authenticator setup QR code. Keep this code secret." width="240" height="240" style="display:block;max-width:100%;height:auto;margin:16px auto;background:white;padding:12px;border:1px solid #e2d9ef;border-radius:12px">
+<p>If scanning isn't possible, enter this setup key manually in the app:</p>
+<code id="totp-manual-key" style="display:block;overflow-wrap:anywhere;background:#f2edfa;padding:12px;border-radius:8px;user-select:all"></code>
+<label for="totp-confirm-code">2. Enter the six-digit code from the app</label>
+<input id="totp-confirm-code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="000000">
+<button id="totp-confirm" type="button">Confirm and activate authenticator</button>
+<small>This QR and key are secret. They expire after 10 minutes; never share or screenshot them.</small>
+</div>
+<div id="totp-verify-panel" hidden>
+<label for="totp-code">Authenticator code</label>
+<input id="totp-code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="000000">
+<button type="button" id="totp-verify">Verify authenticator code</button>
+<small>Your authenticator app keeps The Fixer account after setup. You do not need another QR or enrollment grant for routine sign-ins. Each accepted code works only once. If you lose your device, use the approved administrator recovery process.</small>
+</div>
+</section>
+<section id="mfa-approval-admin" hidden class="panel" aria-labelledby="mfa-approval-admin-title" style="margin-top:24px">
+<h2 id="mfa-approval-admin-title">Approve a first-time MFA enrollment</h2>
+<p>Verify the administrator's identity through a separate trusted channel before approving. Two different superadmins must each verify with a passkey.</p>
+<label for="mfa-approval-id">Enrollment request ID</label>
+<input id="mfa-approval-id" autocomplete="off" maxlength="128" spellcheck="false" placeholder="Request ID from the administrator">
+<label class="checkbox-line"><input id="mfa-approval-confirm-identity" type="checkbox"> I independently confirmed this person's identity</label>
+<button type="button" id="mfa-approval-approve">Approve verified enrollment</button>
+<p id="mfa-approval-admin-status" role="status" aria-live="polite"></p>
+</section>
+<section id="recovery" hidden aria-labelledby="recovery-heading" style="margin-top:30px;border-top:1px solid #e2d9ef;padding-top:26px">
+<h2 id="recovery-heading">Superadministrator account recovery</h2>
+<p>Requires two distinct, recently passkey-verified superadministrators. Before approving, verify the affected administrator's identity through a separate trusted channel.</p>
+<div class="actions">
+<div class="panel"><h2>1 · Request recovery</h2>
+<label for="recovery-target">Target administrator user ID</label>
+<input id="recovery-target" autocomplete="off" maxlength="128" spellcheck="false" placeholder="User ID from the admin console">
+<button type="button" id="recovery-request">Create recovery request</button>
+<small>Requests expire after 15 minutes. You cannot recover your own account.</small>
+</div>
+<div class="panel"><h2>2 · Independently approve</h2>
+<label for="recovery-request-id">Recovery request ID</label>
+<input id="recovery-request-id" autocomplete="off" maxlength="128" spellcheck="false" placeholder="ID from the first superadministrator">
+<button type="button" id="recovery-approve">Approve verified recovery</button>
+<small>The second approver must be a different superadministrator. Deliver the one-time grant through an identity-verified secure channel.</small>
+</div></div>
+<div class="state" role="status" aria-live="polite" id="recovery-result" style="white-space:pre-wrap">No recovery action has been submitted.</div>
+</section>
+<footer>Lost access? Contact your designated security administrators. Password resets do not bypass passkey verification.</footer>
+</article></main>
+<script src="/static/admin-mfa.js" defer></script></body></html>

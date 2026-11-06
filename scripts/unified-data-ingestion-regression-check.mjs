@@ -1,10 +1,13 @@
 import { readFileSync } from "node:fs";
 
-const admin = readFileSync("public/admin.html", "utf8");
-const server = readFileSync("src/server.ts", "utf8");
-const importer = readFileSync("src/services/importService.ts", "utf8");
-const formats = readFileSync("src/services/reportFormats.ts", "utf8");
-const sync = readFileSync("src/services/syncService.ts", "utf8");
+// Source contract checks must behave identically on Windows CRLF and Linux LF.
+const readSource = (path) => readFileSync(path, "utf8").replace(/\r\n/g, "\n");
+
+const admin = readSource("public/admin.html");
+const server = readSource("src/server.ts");
+const importer = readSource("src/services/importService.ts");
+const formats = readSource("src/services/reportFormats.ts");
+const sync = readSource("src/services/syncService.ts");
 
 const expectedLoadOrder = [
   "employers",

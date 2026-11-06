@@ -1,0 +1,24 @@
+FROM node:24-slim
+
+RUN apt-get update -y \
+    && apt-get install -y --no-install-recommends openssl git curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit --no-fund
+COPY frontend/package.json frontend/package-lock.json ./frontend/
+RUN npm ci --prefix frontend --no-audit --no-fund
+
+# Install browser binaries in a shared directory readable by the non-root user.
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+RUN npx playwright install --with-deps chromium
+
+COPY . .
+RUN npm run db:generate && npm run build \
+    && mkdir -p /app/test-results \
+    && chown -R node:node /app /ms-playwright
+
+# The test process must not retain root privileges.
+USER node
+CMD ["sh", "scripts/ci/run-docker-ci-suite.sh"]

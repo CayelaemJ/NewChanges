@@ -1,0 +1,55 @@
+# EXPLICITLY MANUAL. Do not run a Blueprint sync until verifying that Render
+# will update existing service srv-dbib5261egvs73e466a0 and will not create
+# a duplicate. Keep Auto Sync OFF and review the diff in Render first.
+#
+# This blueprint references an EXISTING standalone free PostgreSQL database.
+# It intentionally does NOT define a new database and contains NO secrets.
+# It must NEVER be substituted for the production/root render.yaml.
+services:
+  - type: web
+    name: newchanges-mfa-isolated-staging
+    runtime: docker
+    repo: https://github.com/CayelaemJ/NewChanges
+    branch: chore/manual-self-hosted-docker-ci-20261029
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./Dockerfile.mfa-staging
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeployTrigger: off
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: STANDBY_MODE
+        value: "true"
+      - key: TRAFFIC_SAVER_MODE
+        value: "true"
+      - key: MFA_STAGING_ONLY
+        value: "true"
+      - key: MFA_STAGING_SYNTHETIC_ONLY
+        value: "true"
+      - key: MFA_STAGING_BOOTSTRAP_FIXTURES
+        value: "true"
+      - key: MFA_STAGING_LOCAL_EPHEMERAL_DB
+        value: "false"
+      - key: MFA_STAGING_MANAGED_DB
+        value: "true"
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: MFA_RP_ID
+        value: newchanges-mfa-isolated-staging.onrender.com
+      - key: MFA_EXPECTED_ORIGIN
+        value: https://newchanges-mfa-isolated-staging.onrender.com
+      - key: ADMIN_MFA_ENFORCE
+        value: "true"
+      - key: MFA_STAGING_ENFORCEMENT_APPROVED
+        value: "true"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: newchanges-mfa-synthetic-staging-db
+          property: connectionString
+
+# Critical: existing sensitive MFA_STAGING_GATE_PASSWORD, synthetic account
+# passwords and enrollment grants must remain in the EXISTING staging service's
+# Render environment. Render preserves existing env vars not listed here when
+# a Blueprint adopts that service. Never check them into git or copy to chat.
