@@ -217,7 +217,7 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
       !await hasFreshAdminMfa(req,session.userId,'PASSKEY'))
       return reply.code(403).send({error:'Fresh passkey-verified superadministrator required'});
     if(req.body?.identityConfirmed!==true)
-      return reply.code(400).send({error:'Independently verify the requester's identity before approval'});
+      return reply.code(400).send({error:"Independently verify the requester's identity before approval"});
     const id=req.params.id;
     if(typeof id!=='string'||id.length>128||id.length<8)
       return reply.code(400).send({error:'Invalid enrollment request'});
