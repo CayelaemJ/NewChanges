@@ -13,7 +13,7 @@ import { sendMail } from "./reportScheduler.js";
 
 import { engagementSummary } from "./analyticsService.js";
 import { allowedSlackWebhookUrl } from "./slackWebhookPolicy.js";
-import { escapeNotificationHtml } from "./notificationTextSafety.js";
+import { escapeNotificationHtml, notificationPlainText } from "./notificationTextSafety.js";
 import { shouldAutoDeactivateAccount } from "./staleAccountPolicy.js";
 
 async function config() {
@@ -171,11 +171,11 @@ export async function notifyScoreChangeIfCurrentPeriod(employerId: string, perio
     try {
       await sendMail({
         to: r.email,
-        subject: `${employer?.name || "Your employer"}'s Optimise Score ${direction} ${arrow}`,
+        subject: `${notificationPlainText(employer?.name || "Your employer")}'s Optimise Score ${direction} ${arrow}`,
         html: `<div style="font-family:Arial,sans-serif;color:#241536;max-width:560px">
           <h2 style="color:#32217c">Score ${direction}</h2>
-          <p>Hi ${r.name || ""},</p>
-          <p>${employer?.name || "Your employer"}'s Optimise Score for ${period} is <b>${latest.optimiseScore}</b> (previously ${previous.optimiseScore} in ${previous.period}) — a change of <b>${delta > 0 ? "+" : ""}${delta}</b>.</p>
+          <p>Hi ${escapeNotificationHtml(r.name || "")},</p>
+          <p>${escapeNotificationHtml(employer?.name || "Your employer")}'s Optimise Score for ${escapeNotificationHtml(period)} is <b>${latest.optimiseScore}</b> (previously ${previous.optimiseScore} in ${escapeNotificationHtml(previous.period)}) — a change of <b>${delta > 0 ? "+" : ""}${delta}</b>.</p>
           <p style="color:#6b7280;font-size:13px">Sign in to the Dashboard Portal for the full breakdown.</p>
         </div>`,
       });
