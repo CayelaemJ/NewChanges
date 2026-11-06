@@ -363,3 +363,10 @@ Do not merge, deploy, migrate, modify production flags, or move customer records
 **Admin JSON input validation:** Saved SMTP/automation settings no longer use `Boolean(value)` or `Number(value)` coercion, silent clamping or rounding. Booleans require JSON booleans, SMTP ports require integers 1..65535, and inactivity thresholds require 0/null (off) or whole days 7..3650. This prevents values like `"false"` enabling synthetic-data mode and avoids storing invalid numeric settings. The admin UI already sends typed checkbox booleans and parsed numeric values; unknown or malformed API clients now receive safe 400 validation errors.
 
 **Verification:** Isolated strict TypeScript compilation and 8/8 local behavioral test groups passed for the shared email-address/report policy and typed admin settings. The new regression files and static adoption contracts are wired into `check:security`. The full Node 24 self-hosted Docker suite, Prisma integration, provider tests and external CI checks are still outstanding. No production deployment or merge.
+
+
+### Notification sender display-name boundary (2026-11-06)
+
+**Source-confirmed hardening opportunity:** The Resend path constructed its formatted `From` string directly from the configured sender display name, whereas SMTP passed the name to Nodemailer's structured address encoder. Added `safeSenderDisplayName` to normalize control characters, invisible format controls, line/paragraph separators, angle-bracket mailbox delimiters, excess whitespace and length. Both transports now use the same helper, with a stable fallback for empty names. This is defense in depth, not evidence of an exploited header-injection vulnerability.
+
+Added focused behavioral tests in `tests/security/sender-display-name.test.ts`, included in `npm run check:security`, and source-adoption assertions in `tests/security/notification-settings-contract.test.mjs`. **Verification not yet completed:** current-head Node 24 test execution, Docker/full security gates, mail-provider integration and full AI scan. Keep draft; no merge, deployment, credentials, real delivery or database changes.
