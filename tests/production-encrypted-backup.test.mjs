@@ -124,3 +124,15 @@ test('early catalog reader with remaining pipe drained exits zero under pipefail
  ].join('; ')],{encoding:'utf8',timeout:10000});
  assert.equal(r.status,0,r.stderr);
 });
+
+test('local PG18 restore uses a bounded 2GiB cap and reports container shutdown evidence before cleanup',()=>{
+ const script=readFileSync(new URL('../scripts/verify-encrypted-backup-restore.sh',import.meta.url),'utf8');
+ assert.match(script,/--memory 2g --shm-size 256m/);
+ assert.doesNotMatch(script,/--memory 768m/);
+ assert.match(script,/trap diagnostics ERR/);
+ assert.match(script,/trap cleanup EXIT/);
+ assert.match(script,/\.State\.OOMKilled/);
+ assert.match(script,/docker logs --tail 30/);
+ assert.match(script,/RESTORE_STAGE="pg_restore data\/index reconstruction"/);
+ assert.doesNotMatch(script,/docker run -d --rm/);
+});
