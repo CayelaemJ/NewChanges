@@ -540,7 +540,11 @@ async function sendSchedule(scheduleId: string, triggeredBy: "scheduled" | "manu
     } catch {
       // The transport has already failed. Try the schedule update regardless.
     }
-    await prisma.reportSchedule.update({ where: { id: schedule.id }, data: { lastStatus: "FAILED", lastError: message, consecutiveFailures: failed, ...(retry ? { active: true, nextRunAt: retry } : {}) } });
+    try {
+      await prisma.reportSchedule.update({ where: { id: schedule.id }, data: { lastStatus: "FAILED", lastError: message, consecutiveFailures: failed, ...(retry ? { active: true, nextRunAt: retry } : {}) } });
+    } catch {
+      throw new Error("Email delivery failed; retry status could not be persisted");
+    }
     throw new Error(message);
   }
   let trackingWarning = false;
