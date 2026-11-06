@@ -31,6 +31,8 @@ jobs:
         run: |
           bash -n scripts/verify-encrypted-backup-restore.sh
           bash -n scripts/production-recovery-drill.sh
+      - name: Validate Render Aiven secure connection policy without any live secrets
+        run: node --test tests/verify-render-aiven-config.test.mjs
       - name: Verify full original application Dockerfile exists
         run: test -s Dockerfile
       - name: Build backend image with local Docker
