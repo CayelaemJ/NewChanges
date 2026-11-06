@@ -55,6 +55,26 @@ A successful pure test suite is **not** proof the Docker/CDC integration passed.
 
 For the existing self-hosted `newchanges-ci` GitHub runner, copy these files under `NewChanges/simulation/` and copy `repo-integration/.github/workflows/aws-sim-docker-ci.yml` to the repository's `.github/workflows/`. Dispatch that workflow manually. It does not use GitHub-hosted runners and does not deploy.
 
+## Troubleshooting Docker CDC bootstrap (local only)
+
+A failed bootstrap writes a JSON object to stderr containing a fixed `error_code`
+rather than printing database driver details. This is intentional: connection
+exceptions may include sensitive SQL or host/account details.
+
+| Code | Meaning |
+|---|---|
+| `CDC_APPROVAL_REQUIRED` | The bootstrap approval environment variable is missing |
+| `CDC_SIMULATION_NOT_STOPPED` | The DB kill switch is enabled or missing |
+| `CDC_SOURCE_NOT_EMPTY` | At least one synthetic source table contains data; use an approved snapshot hand-off |
+| `CDC_LOG_CONFIG_UNSUPPORTED` | Server is not running with binary logging + ROW/FULL images |
+| `CDC_BINLOG_STATUS_EMPTY` | The server did not return an active binary-log position |
+| `CDC_CHECKPOINT_ALREADY_EXISTS` | A checkpoint already exists; never reset it automatically |
+
+For a local PyMySQL error, output also includes a numeric `mysql_errno`
+without any error message, credentials, or connection URL. Do not bypass
+bootstrap safety guards to make tests pass. The local Compose test project
+uses randomly generated credentials and fresh ephemeral storage every run.
+
 ## Approval gates before **any** AWS schema creation
 
 1. Verify actual MySQL schema inventory and classify sensitive data. No connection to live RDS was attempted from this package.
