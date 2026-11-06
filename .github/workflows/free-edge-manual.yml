@@ -23,6 +23,8 @@ jobs:
         run: node --test tests/cloudflare-free-render-edge.test.mjs
       - name: Verify Aiven final synchronization guardrails (no database credentials)
         run: node --test tests/aiven-final-sync-safety.test.mjs
+      - name: Verify production cutover evidence gate fails closed (offline only)
+        run: node --test tests/production-cutover-evidence-check.test.mjs
       - name: Verify full original application Dockerfile exists
         run: test -s Dockerfile
       - name: Build backend image with local Docker
