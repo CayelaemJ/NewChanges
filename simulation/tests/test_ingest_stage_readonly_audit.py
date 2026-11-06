@@ -38,6 +38,18 @@ class IngestStageReadOnlyContract(unittest.TestCase):
         self.assertIn("information_schema.KEY_COLUMN_USAGE", raw)
         self.assertIn("information_schema.VIEWS", raw)
 
+    def test_mysql84_reserved_timestamp_aliases_are_not_used(self):
+        # UTC_TIME and UTC_TIMESTAMP are reserved keywords in MySQL 8.4.
+        # Do not confuse a valid UTC_TIMESTAMP(6) call with an invalid alias.
+        paths = [AUDIT, ROOT / "ops" / "preflight.sql"]
+        for path in paths:
+            sql = path.read_text(encoding="utf-8")
+            with self.subTest(path=str(path)):
+                self.assertNotRegex(
+                    sql, r"(?im)\\bAS\\s+(?:utc_time|utc_date|utc_timestamp)\\b"
+                )
+                self.assertIn("AS current_utc_datetime", sql)
+
     def test_expected_canonical_views_match_ten_feed_names(self):
         raw, _ = query_statements()
         first_cte = raw.split("-- 2. Missing required canonical columns")[0]
