@@ -17,6 +17,8 @@ jobs:
         run: |
           node --version
           node -e "if(process.versions.node.split('.')[0]!=='24')process.exit(1)"
+      - name: Validate fail-closed direct-production release configuration
+        run: node --test tests/free-production-cutover-contract.test.mjs
       - name: Offline free-edge safety and routing tests
         run: node --test tests/cloudflare-free-render-edge.test.mjs
       - name: Verify full original application Dockerfile exists
