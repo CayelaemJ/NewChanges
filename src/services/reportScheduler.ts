@@ -10,6 +10,7 @@ import { assertSecureSmtpTls } from "./smtpTlsPolicy.js";
 import { resolveEmailProviderConfig } from "./emailProviderConfig.js";
 import { safeEmailDeliveryFailure } from "./emailDeliveryFailure.js";
 import { validNotificationEmailAddress } from "./notificationEmailAddress.js";
+import { parseAlertEmailRecipients } from "./alertEmailRecipients.js";
 import { strictEmailSettingBoolean, strictSmtpPort, strictStaleDeactivateDays } from "./emailSettingsInputPolicy.js";
 
 export type ReportFilters = {
@@ -172,7 +173,10 @@ export async function saveEmailConfig(input: EmailDraft) {
     if (base && !safePortalBaseUrl(base)) throw new Error("Portal base URL must be a secure HTTPS origin");
     data.portalBaseUrl = base;
   }
-  if ("alertEmails" in input) data.alertEmails = clean(input.alertEmails);
+  if ("alertEmails" in input) {
+    const recipients = parseAlertEmailRecipients(input.alertEmails);
+    data.alertEmails = recipients.length ? recipients.join(",") : null;
+  }
   if ("alertSlackWebhookUrl" in input) {
     const webhook = input.alertSlackWebhookUrl;
     if (webhook == null || webhook === "") data.alertSlackWebhookUrl = null;
