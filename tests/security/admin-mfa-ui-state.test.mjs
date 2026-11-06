@@ -14,7 +14,10 @@ for(const id of ['mfa-passkey-verify-panel','mfa-passkey-enroll-panel','mfa-pass
 async function check(state,pathname='/mfa'){
   const nodes=new Map();
   const getElementById=id=>{
-    if(!nodes.has(id))nodes.set(id,{hidden:false,value:'',textContent:'',disabled:false,addEventListener(){},removeAttribute(){}});
+    if(!nodes.has(id)){
+      const tag=html.match(new RegExp('<[^>]+\\bid="'+id+'"[^>]*>'))?.[0]||'';
+      nodes.set(id,{hidden:/\bhidden(?:\s|>|=)/.test(tag),value:'',textContent:'',disabled:false,addEventListener(){},removeAttribute(){}});
+    }
     return nodes.get(id);
   };
   const document={getElementById,querySelector(){return {hidden:false}}};

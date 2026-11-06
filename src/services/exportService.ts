@@ -5,15 +5,10 @@
 
 import { prisma } from "./authService.js";
 import { getFormat } from "./reportFormats.js";
-
-function csvEscape(value: unknown): string {
-  if (value == null) return "";
-  const s = value instanceof Date ? value.toISOString() : typeof value === "object" ? JSON.stringify(value) : String(value);
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-}
+import { csvEscape } from "./csvSafety.js";
 
 export function toCsv(rows: Record<string, unknown>[], columns: string[]): string {
-  const header = columns.join(",");
+  const header = columns.map(csvEscape).join(",");
   const body = rows.map((r) => columns.map((c) => csvEscape(r[c])).join(",")).join("\n");
   return header + "\n" + body + (body ? "\n" : "");
 }

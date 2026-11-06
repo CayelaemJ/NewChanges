@@ -82,19 +82,38 @@ export interface SessionContext {
   deviceKey?: string;
 }
 
-export async function createSession(userId: string, days: number = SESSION_DAYS, context: SessionContext = {}) {
+export async function createSession(
+  userId: string,
+  days: number = SESSION_DAYS,
+  context: SessionContext = {},
+  expectedPasswordHash?: string,
+) {
   const token = randomBytes(32).toString("hex");
   const expiresAt = new Date(Date.now() + days * 864e5);
-  const session = await prisma.session.create({
-    data: {
-      userId,
-      token: digestSession(token),
-      expiresAt,
-      lastSeenAt: new Date(),
-      ...context,
-    },
+  return prisma.$transaction(async tx => {
+    // Lock the account row so a concurrent deactivation/password reset must
+    // happen before or after session creation, never between validation and
+    // insertion. Revocation after insertion sees and ends the new session.
+    const accounts = await tx.$queryRaw<Array<{ passwordHash: string | null }>>`
+      SELECT "passwordHash" FROM "User"
+      WHERE "id" = ${userId} AND "active" = true
+      FOR UPDATE
+    `;
+    if (accounts.length !== 1)
+      throw new Error("Account is no longer active");
+    if (expectedPasswordHash && accounts[0].passwordHash !== expectedPasswordHash)
+      throw new Error("Credentials changed during sign-in");
+    const session = await tx.session.create({
+      data: {
+        userId,
+        token: digestSession(token),
+        expiresAt,
+        lastSeenAt: new Date(),
+        ...context,
+      },
+    });
+    return { token, expiresAt, sessionId: session.id };
   });
-  return { token, expiresAt, sessionId: session.id };
 }
 
 export async function resolveSession(token?: string) {
@@ -147,11 +166,31 @@ export async function login(email: string, password: string, remember: boolean =
     return null;
   }
   if (!verifyPassword(password, user.passwordHash)) return null;
+  let expectedPasswordHash = user.passwordHash;
   if (!user.passwordHash.startsWith("v2$")) {
-    await prisma.user.update({ where: { id: user.id }, data: { passwordHash: hashPassword(password) } });
+    // Upgrading an older hash must never overwrite a password that was reset
+    // or an account deactivated after our initial password verification.
+    const upgradedHash = hashPassword(password);
+    const upgraded = await prisma.user.updateMany({
+      where: { id: user.id, active: true, passwordHash: user.passwordHash },
+      data: { passwordHash: upgradedHash },
+    });
+    if (upgraded.count !== 1) return null;
+    expectedPasswordHash = upgradedHash;
   }
-  const { token, expiresAt, sessionId } = await createSession(user.id, remember ? SESSION_DAYS_REMEMBER : SESSION_DAYS, context);
-  return { user, token, expiresAt, sessionId };
+  try {
+    const { token, expiresAt, sessionId } = await createSession(
+      user.id, remember ? SESSION_DAYS_REMEMBER : SESSION_DAYS, context, expectedPasswordHash,
+    );
+    return { user, token, expiresAt, sessionId };
+  } catch (error) {
+    // Fail the login without issuing a token when account state changes
+    // concurrently. Other DB errors should remain observable to monitoring.
+    if (error instanceof Error &&
+        (error.message === "Account is no longer active" ||
+         error.message === "Credentials changed during sign-in")) return null;
+    throw error;
+  }
 }
 
 // ── access helpers ──

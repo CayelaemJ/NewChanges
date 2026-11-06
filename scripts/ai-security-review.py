@@ -4,6 +4,8 @@
 A completed scan requires every reviewable chunk to succeed. Network/model failures
 are retained as failures, never turned into clean passes. Reports remain local.
 """
+import base64
+import binascii
 import hashlib
 import json
 import os
@@ -16,7 +18,7 @@ from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-VERSION = 5
+VERSION = 6
 ROOT = Path(os.getenv("SCAN_ROOT", "/workspace")).resolve()
 REPORTS = Path(os.getenv("REPORT_DIR", "/workspace/test-reports/ai-security")).resolve()
 MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5-coder:7b")
@@ -96,6 +98,26 @@ def tracked_files():
     )
     return [os.fsdecode(p) for p in raw.split(b"\0") if p]
 
+def is_encoded_raster_fixture(name, raw):
+    # These test fixtures are RGBA bytes encoded into JSON as Base64, not code.
+    # Only exclude after validating the full declared pixel payload.
+    if not name.startswith("tests/fixtures/") or not name.endswith(".json"):
+        return False
+    try:
+        obj = json.loads(raw.decode("utf-8"))
+        if not isinstance(obj, dict) or set(obj) != {"w", "h", "data"}:
+            return False
+        width, height, data = obj["w"], obj["h"], obj["data"]
+        if (type(width) is not int or type(height) is not int
+                or width < 1 or height < 1 or width * height > 1_000_000
+                or not isinstance(data, str) or len(data) < 1024):
+            return False
+        pixels = base64.b64decode(data, validate=True)
+        return len(pixels) == width * height * 4
+    except (ValueError, TypeError, UnicodeError, binascii.Error):
+        return False
+
+
 def read_manifest():
     selected, excluded = [], []
     for name in tracked_files():
@@ -119,6 +141,9 @@ def read_manifest():
             if b"\0" in data[:8192]:
                 excluded.append({"file": name, "reason": "binary"})
                 continue
+            if is_encoded_raster_fixture(name, data):
+                excluded.append({"file": name, "reason": "validated_rgba_image_fixture"})
+                continue
             raw = data.decode("utf-8")
         except (OSError, UnicodeError):
             excluded.append({"file": name, "reason": "unreadable_or_non_utf8"})
@@ -137,22 +162,30 @@ def chunks_for(content):
     lines = content.splitlines()
     if not lines:
         return [(1, 1, "1: [empty file]")]
-    chunks, batch, count, start = [], [], 0, 1
+    chunks, batch, count, start, last_in_batch = [], [], 0, 1, 1
     for i, line in enumerate(lines, 1):
         # Split very long source lines into numbered fragments, no silent truncation.
         parts = [line[j:j+CHUNK_CHARS-120] for j in range(0, max(len(line), 1), CHUNK_CHARS-120)]
         for segment in parts:
             value = f"{i}: {segment}"
             if batch and count + len(value) + 1 > CHUNK_CHARS:
-                chunks.append((start, i, "\n".join(batch)))
+                chunks.append((start, last_in_batch, "\n".join(batch)))
                 batch, count, start = [], 0, i
             if not batch:
                 start = i
             batch.append(value)
+            last_in_batch = i
             count += len(value) + 1
     if batch:
         chunks.append((start, len(lines), "\n".join(batch)))
     return chunks
+
+def checkpoint_key(name, first, last, block):
+    # Changes in instructions or response schema must NEVER reuse stale AI findings.
+    contract = [VERSION, MODEL, PROMPT, FINDINGS_SCHEMA, CHUNK_CHARS,
+                name, first, last, block]
+    identity = json.dumps(contract, ensure_ascii=False, sort_keys=True)
+    return hashlib.sha256(identity.encode("utf-8")).hexdigest()
 
 def parse_answer(raw):
     if isinstance(raw, dict):
@@ -173,16 +206,21 @@ def parse_answer(raw):
     return obj["findings"]
 
 def ask_model(name, start, end, block):
-    payload = json.dumps({
-        "model": MODEL,
-        "prompt": f"{PROMPT}\nPATH: {name}\nLINES: {start}-{end}\nSOURCE:\n{block}",
-        "stream": False, "format": FINDINGS_SCHEMA, "keep_alive": "30m",
-        "options": {"temperature": 0, "num_predict": 2048, "num_ctx": 8192}
-    }).encode()
-    req = Request(URL + "/api/generate", data=payload,
-                  headers={"Content-Type": "application/json"}, method="POST")
+    source_prompt = f"{PROMPT}\nPATH: {name}\nLINES: {start}-{end}\nSOURCE:\n{block}"
     last = "unknown"
+    retry_guidance = ""
     for attempt in range(1, RETRIES+1):
+        # Malformed JSON or out-of-range evidence should NOT be retried with
+        # an identical deterministic prompt: the model often repeats it.
+        # Feedback stays bounded to validation metadata, never model output.
+        prompt = source_prompt + retry_guidance
+        payload = json.dumps({
+            "model": MODEL, "prompt": prompt,
+            "stream": False, "format": FINDINGS_SCHEMA, "keep_alive": "30m",
+            "options": {"temperature": 0, "num_predict": 2048, "num_ctx": 8192}
+        }).encode()
+        req = Request(URL + "/api/generate", data=payload,
+                      headers={"Content-Type": "application/json"}, method="POST")
         try:
             with urlopen(req, timeout=TIMEOUT) as resp:
                 envelope = json.load(resp)
@@ -212,6 +250,18 @@ def ask_model(name, start, end, block):
         except (HTTPError, URLError, TimeoutError, OSError, ValueError, KeyError,
                 json.JSONDecodeError) as exc:
             last = f"HTTP_{exc.code}" if isinstance(exc, HTTPError) else f"{type(exc).__name__}: {str(exc)[:110]}"
+            if isinstance(exc, (ValueError, KeyError, json.JSONDecodeError)):
+                retry_guidance = (
+                    "\nRETRY CONSTRAINT: Your previous output failed strict JSON or "
+                    "source-line validation. Return one valid JSON object with a "
+                    "findings array. Every finding must cite a real integer line "
+                    f"from {start} through {end}, not a line from another chunk. "
+                    "If there is no independently defensible defect in these "
+                    "source lines, use an empty findings array. "
+                    "Do not repeat unsupported claims or invent evidence."
+                )
+            else:
+                retry_guidance = ""
             print(f"Retry {attempt}/{RETRIES}: {name}:{start}-{end} ({last})", flush=True)
             if attempt < RETRIES:
                 time.sleep(min(20, 2 ** attempt))
@@ -278,8 +328,7 @@ def scan():
     for file_index, (name, content) in enumerate(selected, 1):
         print(f"File {file_index}/{len(selected)}: {name}", flush=True)
         for first, last, block in chunks_for(content):
-            identity = json.dumps([VERSION, MODEL, name, first, last, block], ensure_ascii=False)
-            key = hashlib.sha256(identity.encode()).hexdigest()
+            key = checkpoint_key(name, first, last, block)
             checkpoint = CHECKPOINTS / (key + ".json")
             cached = False
             if checkpoint.exists():
@@ -319,14 +368,20 @@ def scan():
     for failure in failed:
         covered_files[failure["file"]] = False
     completed_files = sum(covered_files.values())
-    complete = done == total_chunks and not failed
+    # Explicit binary assets/keys are not reviewable source. But omitting code
+    # because of max-file limits, size, unreadability or symlinks must BLOCK a
+    # full-coverage release claim even if every selected chunk was reviewed.
+    incomplete_reasons = {"file_limit", "exceeds_max_text_bytes",
+                          "unreadable_or_non_utf8", "not_regular_file"}
+    scope_gaps = [item for item in excluded if item["reason"] in incomplete_reasons]
+    complete = done == total_chunks and not failed and not scope_gaps
     report = {
         "schema_version": VERSION, "model": MODEL, "created_at": now(),
         "eligible_files": len(selected), "selected_files": len(selected),
         "reviewed_files": completed_files,
         "total_tracked_files": len(selected) + len(excluded),
         "total_chunks": total_chunks, "completed_chunks": done,
-        "skipped_files": excluded, "truncated_files": [],
+        "skipped_files": excluded, "scope_gaps": scope_gaps, "truncated_files": [],
         "errors": failed, "findings": all_findings,
         "complete": complete, "all_tracked_included": not excluded,
         "attempt_count": attempt_count,
@@ -338,6 +393,7 @@ def scan():
         f"Reviewed files: {completed_files}/{len(selected)} reviewable tracked text files",
         f"Completed chunks: {done}/{total_chunks}",
         f"Excluded tracked paths: {len(excluded)}",
+        f"Unreviewed source scope gaps: {len(scope_gaps)}",
         f"Failed chunks: {len(failed)}",
         f"AI findings (unverified): {len(all_findings)}",
         f"All reviewable text complete: {complete}",
@@ -349,6 +405,8 @@ def scan():
             f"File: {finding['file']} line {finding['line']}",
             f"Evidence: {finding['evidence']}",
             f"Recommendation: {finding['recommendation']}", ""])
+    if scope_gaps:
+        lines.extend(["## Blocking unreviewed source scope"] + [f"- {i['file']}: {i['reason']}" for i in scope_gaps])
     if failed:
         lines.extend(["## Failed chunks"] + [f"- {f['file']}:{f['first']}-{f['last']} — {f['error']}" for f in failed])
     if excluded:

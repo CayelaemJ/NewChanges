@@ -10,15 +10,20 @@
 
 import { prisma } from "./authService.js";
 import { sendMail } from "./reportScheduler.js";
-import { destroyAllSessionsForUser } from "./authService.js";
+
 import { engagementSummary } from "./analyticsService.js";
+import { allowedSlackWebhookUrl } from "./slackWebhookPolicy.js";
+import { escapeNotificationHtml, notificationPlainText } from "./notificationTextSafety.js";
+import { parseAlertEmailRecipients } from "./alertEmailRecipients.js";
+import { shouldAutoDeactivateAccount } from "./staleAccountPolicy.js";
 
 async function config() {
   return prisma.systemEmailConfig.upsert({ where: { id: "default" }, create: { id: "default" }, update: {} });
 }
 
 function alertEmailList(cfg: any): string[] {
-  return String(cfg.alertEmails || "").split(",").map((s: string) => s.trim()).filter(Boolean);
+  try { return parseAlertEmailRecipients(cfg.alertEmails); }
+  catch { return []; } // Fail closed if older persisted configuration is invalid.
 }
 
 // sends to configured admin alert emails + a Slack webhook, if either is set.
@@ -34,7 +39,9 @@ export async function notifyAdmins(opts: { subject: string; html: string; slackT
       catch { /* best-effort per recipient */ }
     }
   }
-  if (cfg.alertSlackWebhookUrl) {
+  // Old saved configuration may predate strict validation. Never fetch an
+  // arbitrary historical URL, even if a privileged user saved it earlier.
+  if (allowedSlackWebhookUrl(cfg.alertSlackWebhookUrl)) {
     try {
       const response = await fetch(cfg.alertSlackWebhookUrl, {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -59,32 +66,56 @@ export async function runStaleAccountCheck() {
   const cutoff = new Date(Date.now() - days * 864e5);
 
   const users = await prisma.user.findMany({
-    where: { active: true },
-    select: { id: true, name: true, email: true, createdAt: true, sessions: { orderBy: { createdAt: "desc" }, take: 1, select: { createdAt: true } } },
+    // Exclude protected superadministrators at query time; updateMany below
+    // repeats this condition atomically in case their role changes mid-run.
+    where: { active: true, role: { not: "SUPERADMIN" } },
+    select: { id: true, role: true, name: true, email: true, createdAt: true, sessions: { orderBy: { lastSeenAt: "desc" }, take: 1, select: { createdAt: true, lastSeenAt: true } } },
   });
-  const stale = users.filter((u: any) => {
-    const last = u.sessions[0]?.createdAt || u.createdAt; // never logged in → measure from account creation
-    return new Date(last).getTime() < cutoff.getTime();
-  });
-
+  const stale = users.filter((u: any) => shouldAutoDeactivateAccount(u, cutoff));
+  const deactivated: typeof stale = [];
   for (const u of stale) {
-    await prisma.user.update({
-      where: { id: u.id },
-      data: { active: false, revokedAt: new Date(), revokedReason: `Auto-deactivated: no activity for ${days}+ days`, revokedBy: "system (auto)" },
+    // Atomic role/active fencing prevents an account promoted to SUPERADMIN
+    // during the sweep from being disabled by a stale earlier query result.
+    const updated = await prisma.$transaction(async tx => {
+      const changed = await tx.user.updateMany({
+        where: {
+          id: u.id,
+          active: true,
+          role: { not: "SUPERADMIN" },
+          createdAt: { lt: cutoff },
+          // Fence concurrent logins and activity updates at the actual write.
+          sessions: { none: { lastSeenAt: { gte: cutoff } } },
+        },
+        data: {
+          active: false, setupToken: null, setupExpires: null,
+          revokedAt: new Date(),
+          revokedReason: `Auto-deactivated: no activity for ${days}+ days`,
+          revokedBy: "system (auto)",
+        },
+      });
+      if (changed.count === 1) {
+        const now = new Date();
+        await tx.session.updateMany({
+          where: { userId: u.id, endedAt: null },
+          data: { endedAt: now, revokedAt: now, revokedBy: "system_auto_deactivation" },
+        });
+      }
+      return changed;
     });
-    await destroyAllSessionsForUser(u.id);
+    if (updated.count !== 1) continue;
+    deactivated.push(u);
   }
   await prisma.systemEmailConfig.update({ where: { id: "default" }, data: { lastStaleCheckAt: new Date() } as any });
 
-  if (stale.length) {
-    const rows = stale.map((u: any) => `<li>${u.name} — ${u.email}</li>`).join("");
+  if (deactivated.length) {
+    const rows = deactivated.map((u: any) => `<li>${escapeNotificationHtml(u.name)} — ${escapeNotificationHtml(u.email)}</li>`).join("");
     await notifyAdmins({
-      subject: `${stale.length} account(s) auto-deactivated for inactivity`,
-      html: `<div style="font-family:Arial,sans-serif;color:#241536"><h2 style="color:#32217c">Auto-deactivated for inactivity</h2><p>No sign-in for ${days}+ days:</p><ul>${rows}</ul><p style="color:#6b7280;font-size:13px">These are deactivated, not deleted — reactivate any of them from Past users.</p></div>`,
-      slackText: `:zzz: ${stale.length} account(s) auto-deactivated for ${days}+ days of inactivity.`,
+      subject: `${deactivated.length} account(s) auto-deactivated for inactivity`,
+      html: `<div style="font-family:Arial,sans-serif;color:#241536"><h2 style="color:#32217c">Auto-deactivated for inactivity</h2><p>No recorded account activity for ${days}+ days:</p><ul>${rows}</ul><p style="color:#6b7280;font-size:13px">These are deactivated, not deleted — reactivate any of them from Past users.</p></div>`,
+      slackText: `:zzz: ${deactivated.length} account(s) auto-deactivated for ${days}+ days of inactivity.`,
     });
   }
-  return { ran: true, deactivated: stale.length };
+  return { ran: true, deactivated: deactivated.length };
 }
 
 // ── weekly engagement digest ──
@@ -96,8 +127,8 @@ export async function runWeeklyDigestIfDue() {
 
   const s = await engagementSummary(7);
   const fmtDuration = (sec: number | null) => sec == null ? "—" : sec < 60 ? `${sec}s` : `${Math.round(sec / 60)}m`;
-  const topPages = s.topPages.slice(0, 5).map((p: any) => `<li>${p.path} — ${p.views} view(s)</li>`).join("") || "<li>No pageviews this week.</li>";
-  const topUsers = s.byUser.slice(0, 5).map((u: any) => `<li>${u.name} — ${u.logins} login(s), ${u.pageviews} pageview(s)</li>`).join("") || "<li>No activity this week.</li>";
+  const topPages = s.topPages.slice(0, 5).map((p: any) => `<li>${escapeNotificationHtml(p.path)} — ${Number(p.views) || 0} view(s)</li>`).join("") || "<li>No pageviews this week.</li>";
+  const topUsers = s.byUser.slice(0, 5).map((u: any) => `<li>${escapeNotificationHtml(u.name)} — ${Number(u.logins) || 0} login(s), ${Number(u.pageviews) || 0} pageview(s)</li>`).join("") || "<li>No activity this week.</li>";
 
   await notifyAdmins({
     subject: "Weekly engagement digest",
@@ -142,11 +173,11 @@ export async function notifyScoreChangeIfCurrentPeriod(employerId: string, perio
     try {
       await sendMail({
         to: r.email,
-        subject: `${employer?.name || "Your employer"}'s Optimise Score ${direction} ${arrow}`,
+        subject: `${notificationPlainText(employer?.name || "Your employer")}'s Optimise Score ${direction} ${arrow}`,
         html: `<div style="font-family:Arial,sans-serif;color:#241536;max-width:560px">
           <h2 style="color:#32217c">Score ${direction}</h2>
-          <p>Hi ${r.name || ""},</p>
-          <p>${employer?.name || "Your employer"}'s Optimise Score for ${period} is <b>${latest.optimiseScore}</b> (previously ${previous.optimiseScore} in ${previous.period}) — a change of <b>${delta > 0 ? "+" : ""}${delta}</b>.</p>
+          <p>Hi ${escapeNotificationHtml(r.name || "")},</p>
+          <p>${escapeNotificationHtml(employer?.name || "Your employer")}'s Optimise Score for ${escapeNotificationHtml(period)} is <b>${latest.optimiseScore}</b> (previously ${previous.optimiseScore} in ${escapeNotificationHtml(previous.period)}) — a change of <b>${delta > 0 ? "+" : ""}${delta}</b>.</p>
           <p style="color:#6b7280;font-size:13px">Sign in to the Dashboard Portal for the full breakdown.</p>
         </div>`,
       });
