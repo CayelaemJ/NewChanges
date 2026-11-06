@@ -7,7 +7,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { createReadStream, createWriteStream, mkdirSync, chmodSync, rmSync, renameSync, statSync } from 'node:fs';
 import { once } from 'node:events';
-import { resolve, join } from 'node:path';
+import { resolve, join, isAbsolute } from 'node:path';
 import process from 'node:process';
 
 const side=process.argv[2];
@@ -61,7 +61,7 @@ async function main() {
   if (typeof recipient!=='string'||!recipient.startsWith('age1')||!/^[a-z0-9]+$/.test(recipient))
     throw Error('AGE_RECIPIENT must contain a valid-looking age public recipient (never provide private key)');
   const folder=env.NEWCHANGES_BACKUP_DIR;
-  if (!folder || !resolve(folder).startsWith('/')) throw Error('NEWCHANGES_BACKUP_DIR must be an absolute local directory');
+  if (!folder || !isAbsolute(folder)) throw Error('NEWCHANGES_BACKUP_DIR must be an absolute local directory');
   console.log('PREFLIGHT PASS: side='+side+' TLS='+pg.PGSSLMODE+'; streaming pg_dump to age, no plaintext archive.');
   if (mode==='--preflight') return;
   mkdirSync(folder,{recursive:true,mode:0o700});
