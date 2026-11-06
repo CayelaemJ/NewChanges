@@ -99,10 +99,10 @@ class Helpers(unittest.TestCase):
         if not schema.exists():
             self.skipTest('schema DDL not mounted in this environment')
         ddl=schema.read_text(encoding='utf-8')
-        create_tables=re.findall(r'CREATE TABLE IF NOT EXISTS (\\w+)\\s*\\((.*?)\\) ENGINE=InnoDB;',ddl,re.S)
+        create_tables=re.findall(r'CREATE TABLE IF NOT EXISTS (\w+)\s*\((.*?)\) ENGINE=InnoDB;',ddl,re.S)
         self.assertGreaterEqual(len(create_tables),8)
         for table, body in create_tables:
-            names=re.findall(r'\\bINDEX\\s+(\\w+)\\s*\\(',body)
+            names=re.findall(r'\bINDEX\s+(\w+)\s*\(',body)
             with self.subTest(table=table):
                 self.assertEqual(len(names),len(set(names)),
                                  f'Duplicate MySQL index in {table}: {names}')
