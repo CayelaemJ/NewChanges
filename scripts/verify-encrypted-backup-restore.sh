@@ -41,8 +41,15 @@ fi
 # CREATE SCHEMA public entry (portable Neon); others omit it (full Aiven).
 # Inspect the encrypted archive's table-of-contents first, without ever
 # materializing a plaintext archive on disk or connecting to production.
-archive_catalog="$(age -d -i "$AGE_IDENTITY_FILE" "$1" | \
-  docker exec -i "$CONTAINER" pg_restore --list)"
+# pg_restore --list only consumes the archive header/catalog and exits early.
+# Drain the rest of age's decrypted stream after pg_restore exits so age can
+# complete authenticated decryption instead of dying with SIGPIPE (141).
+# Keep pipefail enabled: an incorrect key, corrupt archive or pg_restore failure
+# must still stop the drill. No plaintext archive is written to disk.
+archive_catalog="$(age -d -i "$AGE_IDENTITY_FILE" "$1" | {
+  docker exec -i "$CONTAINER" pg_restore --list
+  cat > /dev/null
+})"
 if grep -Eq '^[[:space:]]*[0-9]+;.*[[:space:]]SCHEMA - public([[:space:]]|$)' <<< "$archive_catalog"; then
   echo "Archive defines public schema; removing only empty default schema in disposable database."
   docker exec "$CONTAINER" psql -X -v ON_ERROR_STOP=1 -U postgres -d restorecheck \
