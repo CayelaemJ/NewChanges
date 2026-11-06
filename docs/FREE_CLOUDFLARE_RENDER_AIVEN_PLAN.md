@@ -517,3 +517,22 @@ node scripts/aiven-security-parity.mjs
 echo "Parity exit code: $?"
 ```
 Expected only if there are no additional source or target differences: `missing_on_target=0`, `different_definitions=0`, `extra_on_target=0`, `accepted_neon_monitoring_only=3`, followed by PASS and exit 0. The final copy is still prohibited until independent recovery/authorization evidence, writer freeze, and after-freeze audit/session delta are verified.
+
+
+## 2026-11-06 critical release-branch authentication mismatch: MFA exists in PR #219, not #234
+
+Inspected the migration branch's actual `src/server.ts`, `src/services/authService.ts` and `prisma/schema.prisma`. In PR #234 the password login route issues a session cookie directly after successful password authentication, and the source lacks admin MFA routes, TOTP/passkey enrollment models and session MFA step-up. Contrast: the separate still-open PR #219 (`chore/manual-self-hosted-docker-ci-20261029`) contains `registerAdminMfaRoutes(app)`, `requiresAdminMfaStepUp`, `hasFreshAdminMfa`, `hasIssuedAdminRecoveryKey` and Prisma AdminMfaTotp/AdminMfaCredential/AdminMfaChallenge models. **The presence of MFA on another branch does not protect the migration branch's deployment.** Both PRs target different release work and PR #219 remains unmerged; never claim MFA is active on the candidate merely because isolated MFA tests were green elsewhere.
+
+Added `scripts/production-auth-cutover-gate.mjs`, a local-only source-presence checker with a nonzero exit when the migration release lacks MFA route registration, sensitive action step-up, enrollment and recovery gating, or persistence schema. Added synthetic fixtures covering complete/absent/partial source wiring; included offline test suite in the self-hosted CI workflow. **A green source-presence gate after integration is not evidence that MFA works**. Separate end-to-end authenticated tests with disposable Postgres, role matrix, negative tenant access, first login enrollment, password+second factor, TOTP and passkey recovery, and session invalidation must pass. The candidate must not start writing to Aiven or receive Cloudflare traffic until those results are reviewed.
+
+To inspect current release readiness without any database credentials:
+```bash
+cd ~/NewChanges-free-edge
+git fetch origin
+git merge --ff-only origin/feat/free-cloudflare-render-primary-20261105
+node --test tests/production-auth-cutover-gate.test.mjs
+node scripts/production-auth-cutover-gate.mjs
+echo "MFA source gate exit: $?"
+```
+
+The synthetic tests should PASS. The standalone release gate should currently print BLOCKED and return 2, by design. Next engineering step is a reviewed integration of PR #219's working MFA implementation into the production candidate, resolving conflicts and rerunning tests. Do not copy only one route or set MFA enforcement false to bypass the gate; do not run production migrations automatically.
