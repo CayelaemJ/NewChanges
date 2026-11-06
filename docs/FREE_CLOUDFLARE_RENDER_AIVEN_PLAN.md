@@ -274,3 +274,33 @@ This tool has been committed and unit-level checks added to manual CI, but **no 
 The backup command now enforces PostgreSQL `sslmode=require`, `verify-ca` or `verify-full`, refusing `prefer`, `allow` and `disable` before any backup subprocess can run. It also resolves symlinks for the backup directory and the Git checkout and rejects destinations inside the repository **even when the backup utility is executed directly**, not only through the convenience shell script. Both guards have new offline regression tests.
 
 These code changes **do not** attest a live database backup or restore. No Neon/Aiven writes, DNS changes, traffic changes or credentials were configured. Operator must run the offline tests and the actual recovery drill with private credentials before the cutover gate can be satisfied. The automation environment lacks a local Docker daemon and PostgreSQL/age binaries, so an actual isolated archive restore was not executable here.
+
+
+## 2026-11-06 Cloudflare + Render share the Aiven-backed application
+
+**Chosen deployment topology:** Cloudflare Workers Free is the public HTTPS edge proxy, Render Free runs the original Fastify/Prisma application and holds **the only** PostgreSQL connection pool, and Aiven PostgreSQL 18 `the-fixer-postgres/defaultdb` is the intended single primary application database. Cloudflare's Worker does **not** hold a second `DATABASE_URL`, connect via Hyperdrive, replicate records or become another writer. Browser requests sent to Cloudflare reach the Aiven-backed application through Render after approved cutover.
+
+The disabled Worker config `wrangler.newchanges-free.jsonc` now pins `NEWCHANGES_RENDER_ORIGIN=https://newchanges-free-production.onrender.com`, matching the deployed Render service; `NEWCHANGES_FREE_EDGE_ENABLED=false` and `workers_dev=false` are unchanged. No public Worker route, DNS change, production database connection or secret insertion occurred. Confirm the final canonical hostname before configuring Cloudflare routing.
+
+Added offline `scripts/verify-render-aiven-config.mjs` and tests. The checker validates the *private* Render `DATABASE_URL` without connecting: approved Aiven hostname/port/database; `newchanges_app_runtime` least-privilege username; explicit secure `sslmode`; `connection_limit=2` to bound the existing PrismaPg connection pool; Cloudflare origin guard; secure cookies/trusted reverse proxy; schedulers disabled; and explicit standby state. It does **not** authenticate the actual credentials, check backups, stop old writers, change hosting resources or authorize cutover.
+
+**At authorized cutover only**, install via Render's protected environment UI:
+- `DATABASE_URL`: restricted Aiven runtime URL with `?sslmode=require&connection_limit=2` (or `&connection_limit=2` if `sslmode` is already specified). Prefer `verify-full` with the trusted CA when operationally supported. **No URLs or passwords in Git**.
+- `NEWCHANGES_EDGE_ORIGIN_SHARED_SECRET`: a new random private value of at least 32 characters; store the *same value* only as an encrypted Cloudflare Worker secret, not in Wrangler `vars`.
+- `PUBLIC_BASE_URL`: the chosen canonical HTTPS production URL.
+- `STANDBY_MODE`: keep `true` until source writes are fenced and final delta is verified; set `false` only once the sole-writer transition is genuinely approved. Keep `ENABLE_AUTHORITATIVE_INCREMENTAL_SCHEDULER=false` on sleeping Render Free.
+- `NEWCHANGES_EDGE_ORIGIN_GUARD_ENABLED=true`, `TRUST_PROXY=true`, `COOKIE_SECURE=true`.
+
+After prerequisites are verified, populate Cloudflare Worker `NEWCHANGES_CANONICAL_HOST` with the approved hostname (no protocol), enable `NEWCHANGES_FREE_EDGE_ENABLED=true` during the routing cutover, install the encrypted origin token, and attach only the reviewed route. Do **not** configure a second direct Aiven database connection in Cloudflare. Direct requests to Render except `/health` must still be rejected without the edge token.
+
+To check branch code without production credentials:
+```bash
+node --test tests/cloudflare-free-render-edge.test.mjs tests/free-production-cutover-contract.test.mjs tests/verify-render-aiven-config.test.mjs
+```
+
+To preflight *locally* with private Render variables that have already been securely obtained, without connecting or printing secrets:
+```bash
+node scripts/verify-render-aiven-config.mjs
+```
+
+**Current state:** Render container deploy previously reported Live but standby/fenced; Aiven service previously reported RUNNING with 57 tables and 14/20 connections at inspection; actual production Render database URL and matching Cloudflare origin token are **not** installed; live Neon is unchanged. Skip persistent staging but **never** skip backup/restore, final-sync reconciliation, MFA checks or sole-writer transition.
