@@ -375,7 +375,7 @@ async function openPostgresExecutor(config: IntegrationSourceConfig): Promise<Sq
   try { await client.connect(); }
   catch (error) {
     // The driver may have allocated a socket before authentication failed.
-    await Promise.allSettled([client.end()]);
+    await Promise.allSettled([Promise.resolve().then(() => client.end())]);
     throw error;
   }
 
@@ -515,7 +515,7 @@ async function openMssqlExecutor(config: IntegrationSourceConfig): Promise<SqlEx
   try { await pool.connect(); }
   catch (error) {
     // Close a partially initialized pool before surfacing a sanitized error.
-    await Promise.allSettled([pool.close()]);
+    await Promise.allSettled([Promise.resolve().then(() => pool.close())]);
     throw error;
   }
 
