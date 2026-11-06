@@ -13,6 +13,7 @@
 import { readPinnedSourceApiJson } from "./pinnedSourceHttps.js";
 import { assertSecureSourceSqlTransport } from "./sourceSqlTlsPolicy.js";
 import { safeSourceConnectionFailure } from "./sourceConnectionFailure.js";
+import { closeSourceConnections } from "./sourceConnectionCleanup.js";
 import { LOAD_ORDER, getFormat } from "./reportFormats.js";
 import { lookup } from "node:dns/promises";
 import { isBlockedSourceAddress as privateOrLocalAddress } from "./sourceAddressPolicy.js";
@@ -612,11 +613,13 @@ async function createSqlAdapter(config: IntegrationSourceConfig): Promise<Source
   // 20k bulk chunks.
   const extractionPageSize = Math.min(5000, intSetting(config.sqlMaxRowsPerReport, 5000, 1000, 250_000));
   let executor: SqlExecutor;
+  let openedPrimary: SqlExecutor | null = null;
   let replicaExecutor: SqlExecutor | null = null;
   try {
     if (dialect === "POSTGRESQL") executor = await openPostgresExecutor(config);
     else if (dialect === "MYSQL") executor = await openMysqlExecutor(config);
     else executor = await openMssqlExecutor(config);
+    openedPrimary = executor;
 
     if (effectiveReplicaEnabled(config)) {
       const replicaConfig: IntegrationSourceConfig = {
@@ -638,6 +641,9 @@ async function createSqlAdapter(config: IntegrationSourceConfig): Promise<Source
       else replicaExecutor = await openMssqlExecutor(replicaConfig);
     }
   } catch (error: unknown) {
+    // Replica setup can fail after the primary authenticated successfully.
+    // Always release any opened handles before returning the sanitized error.
+    await closeSourceConnections(openedPrimary, replicaExecutor, true);
     // Driver errors may include connection URLs, SQL text, credentials and
     // private hostnames. Never send raw errors or attach them as API causes.
     const reason = safeSourceConnectionFailure(error);
@@ -723,7 +729,7 @@ async function createSqlAdapter(config: IntegrationSourceConfig): Promise<Source
         details,
       };
     },
-    async close() { await executor.close(); if (replicaExecutor) await replicaExecutor.close(); },
+    async close() { await closeSourceConnections(executor, replicaExecutor); },
   };
 }
 
