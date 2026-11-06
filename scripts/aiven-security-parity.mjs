@@ -46,9 +46,16 @@ WITH inventory AS (
     JOIN pg_namespace n ON n.oid=c.relnamespace
   WHERE n.nspname='public' AND NOT t.tgisinternal
   UNION ALL
-  SELECT 'function',p.oid::regprocedure::text,
-    pg_get_functiondef(p.oid)
+  SELECT CASE WHEN ext.extname IS NULL THEN 'function'
+         ELSE 'extension_function' END,
+    p.oid::regprocedure::text,
+    concat_ws('|',coalesce(ext.extname,'application'),
+      pg_get_functiondef(p.oid))
   FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+  LEFT JOIN pg_depend dep ON dep.classid='pg_proc'::regclass
+    AND dep.objid=p.oid AND dep.deptype='e'
+    AND dep.refclassid='pg_extension'::regclass
+  LEFT JOIN pg_extension ext ON ext.oid=dep.refobjid
   WHERE n.nspname='public' AND p.prokind IN ('f','p')
 )
 SELECT coalesce(json_agg(json_build_object('category',category,'object',object,
@@ -76,14 +83,15 @@ try {
   const src=inventory(config(process.env.DR_SOURCE_DATABASE_URL,'source'),'Neon');
   const dst=inventory(config(process.env.DR_TARGET_DATABASE_URL,'target'),'Aiven');
   const counts=map=>{
-    const result={table:0,policy:0,trigger:0,function:0};
+    const result={table:0,policy:0,trigger:0,function:0,extension_function:0};
     for(const row of map.values()) if(row.category in result) result[row.category]++;
     return result;
   };
   const a=counts(src),b=counts(dst);
   console.log('SECURITY PARITY COUNTS (Neon/Aiven): tables='+a.table+'/'+b.table+
     ', policies='+a.policy+'/'+b.policy+', user_triggers='+a.trigger+'/'+b.trigger+
-    ', public_functions='+a.function+'/'+b.function);
+    ', public_functions='+a.function+'/'+b.function+
+    ', extension_functions='+a.extension_function+'/'+b.extension_function);
   let mismatch=0, missing=0, extra=0;
   for(const [key,row] of src) {
     const candidate=dst.get(key);
@@ -91,6 +99,13 @@ try {
     else if(candidate.hash!==row.hash) mismatch++;
   }
   for(const key of dst.keys()) if(!src.has(key)) extra++;
+  // Function signatures are schema metadata, unlike function bodies or rows.
+  // Display their identifiers so a missing application routine cannot be
+  // mistaken for a Neon-managed extension. Never auto-exempt extension code.
+  const absentFunctions=[...src.keys()].filter(key=>
+    (key.startsWith('function:')||key.startsWith('extension_function:'))&&!dst.has(key));
+  if(absentFunctions.length) console.log('MISSING FUNCTION SIGNATURES (metadata only): '+
+    JSON.stringify(absentFunctions.slice(0,20)));
   console.log('SECURITY PARITY SUMMARY: missing_on_target='+missing+
     '; different_definitions='+mismatch+'; extra_on_target='+extra);
   if(a.table!==57 || b.table!==57 || missing || mismatch || extra)
