@@ -4,7 +4,8 @@ import assert from 'node:assert/strict';
 import { readFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { chromium } from '@playwright/test';
 
-const root = 'frontend/dist';
+// Vite writes the built app into public/react (see frontend/vite.config.ts).
+const root = 'public/react';
 assert.ok(existsSync(root + '/index.html'), 'Build frontend before dashboard chart audit');
 const inventory = [
   'Workforce Financial Wellness Score',
@@ -64,7 +65,7 @@ try {
         return route.fulfill({ contentType: 'application/json', body: JSON.stringify(response) });
       }
       const file = u.pathname.startsWith('/static/') ? 'public/' + u.pathname.slice(8)
-        : u.pathname.startsWith('/assets/') ? root + u.pathname
+        : u.pathname.startsWith('/react/assets/') ? root + u.pathname.slice('/react'.length)
         : null;
       if (file && !file.includes('..') && existsSync(file)) {
         const contentType = file.endsWith('.js') ? 'application/javascript' : file.endsWith('.css') ? 'text/css'
