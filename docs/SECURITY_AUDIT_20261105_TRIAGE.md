@@ -306,3 +306,11 @@ The API adapter now calls `readPinnedSourceApiJson(url, token)` for every page a
 ## Operational constraints
 
 Do not merge, deploy, migrate, modify production flags, or move customer records based on this audit or on AI-only claims. Use only the dedicated self-hosted runner and disposable test databases. PR #219 remains an unmerged draft and production MFA is not certified by this audit.
+
+### Verification contract repair and score-change email safety (2026-11-06)
+
+- Updated `scripts/security-regression-check.mjs` to require transactional user/permission updates and session revocation in the same Prisma transaction, replacing assertions for the removed, non-atomic `destroyAllSessionsForUser` sequence. The guard still requires role-change revocation, employer-scope revocation, and attribution.
+- Replaced the obsolete `redirect: "error"` fetch assertion with stronger requirements: source API reads must use `readPinnedSourceApiJson`, TLS must use `pinnedSourceLookup` with prevalidated DNS answers, certificate verification must remain enabled, and only HTTPS source URLs are accepted.
+- Hardened score-change notification emails: escape recipient/employer names and period strings in HTML, and strip control characters from employer names used in the email subject. Added a read-only notification contract test to prevent regressions.
+- Read-only checks against the connected branch passed 28 targeted source invariants, including the new atomicity, pinned HTTPS, proxy, CSRF and authorization assertions. These are source-level checks, **not** a successful full Node 24, Docker, PostgreSQL or Semgrep run.
+- The previous commit's CircleCI `verify`, `source_quality` and `semgrep_security` failures cannot be fully diagnosed without job logs. The two obsolete `verify` assertions above are confirmed failures on the previous code; do not assume other CI failures are fixed. Recheck the latest commit's CI results before merge.
