@@ -40,6 +40,23 @@ test("email notices escape account names and the HTML report fields",()=>{
   assert.match(scheduler,/safePortalBaseUrl\(\(schedule as any\)\.portalBaseUrl\)/);
 });
 
+test("email delivery failures never persist or return untrusted provider details",()=>{
+  const testStart=scheduler.indexOf("export async function testEmailConnection(");
+  const testEnd=scheduler.indexOf("function parseTime(",testStart);
+  assert.ok(testStart>=0 && testEnd>testStart);
+  const delivery=scheduler.slice(testStart,testEnd);
+  assert.match(delivery,/safeEmailDeliveryFailure\(error\)/);
+  assert.match(delivery,/lastTestNote: safeMessage/);
+  assert.match(delivery,/throw new Error\(safeMessage\)/);
+  assert.doesNotMatch(delivery,/lastTestNote:\s*String\(error/);
+  const sendStart=scheduler.indexOf("async function sendEmail(");
+  const sendEnd=scheduler.indexOf("export async function sendMail(",sendStart);
+  assert.ok(sendStart>=0 && sendEnd>sendStart);
+  const sender=scheduler.slice(sendStart,sendEnd);
+  assert.match(sender,/Resend request failed \(HTTP/);
+  assert.doesNotMatch(sender,/response\.text\(\)/);
+});
+
 test("saved Resend API configuration is resolved without leaking secrets to the browser",()=>{
   const provider=read("src/services/emailProviderConfig.ts");
   const start=scheduler.indexOf("function withEnv(");
