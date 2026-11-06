@@ -94,3 +94,16 @@ bash scripts/free-backend-runtime-smoke.sh
 ```
 
 The manual-only self-hosted Linux runner workflow also invokes this script after building the Docker image. No Render deployment, Neon/Aiven access or DNS switch is required.
+
+
+## Render planning result (2026-11-06)
+
+Operator reports approximately 725/750 remaining monthly shared Free instance-hours. The workspace already contains **one Free Render PostgreSQL 18 instance**, `newchanges-mfa-synthetic-staging-db`, expiring 2026-11-29. Render only allows one Free PostgreSQL database per workspace. Do **not** create a second database, repurpose the MFA test database, or point a public staging web service at production Neon/Aiven.
+
+A non-deploying Render Blueprint planning call completed successfully (outcome `planned`, no resources applied):
+- Blueprint `exs-dbmnv961egvs73d5i6t0`, `autoSync=false`, `create_new`
+- Proposed **Free** web service `newchanges-free-backend-candidate-zaws`, Frankfurt, Dockerfile, manual deploys only
+- Plan: https://dashboard.render.com/blueprint/exs-dbmnv961egvs73d5i6t0/sync/exe-dbmnv9m1egvs73d5i7t0
+- Requires operator to supply protected manual environment settings: `NEWCHANGES_EDGE_ORIGIN_SHARED_SECRET`, `DATABASE_URL`, `PUBLIC_BASE_URL`. Do not insert empty values or copy production credentials to bypass this gate.
+
+**Status: PLAN ONLY, not approved.** Applying a Blueprint requires review and explicit operator approval. Before approval, establish a disposable *independent* PostgreSQL database and a staging domain. The existing MFA database is not shared by default. Aiven free might offer additional databases within a service, but sharing a production database server requires separate role and database isolation, safety review, capacity check and explicit consent. A nonworking production-like public service is not a valuable smoke test. No Cloudflare paid plan or live traffic change is intended.
