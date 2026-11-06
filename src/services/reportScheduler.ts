@@ -493,13 +493,22 @@ async function assertScheduleDeliveryAuthorized(
   if (reportDeliveryAllowed(owner, schedule.employerId, schedule.recipients)) return;
   // Pause permanently rather than repeatedly attempting an unauthorized
   // delivery. Do not persist old external recipients in the blocked audit row.
-  await prisma.reportSchedule.update({
-    where: { id: schedule.id },
-    data: { active: false, lastStatus: "BLOCKED", lastError: REPORT_DELIVERY_BLOCKED },
-  });
-  await prisma.reportDeliveryLog.create({
-    data: { scheduleId: schedule.id, triggeredBy, status: "BLOCKED", recipients: [], error: REPORT_DELIVERY_BLOCKED },
-  });
+  try {
+    await prisma.reportSchedule.update({
+      where: { id: schedule.id },
+      data: { active: false, lastStatus: "BLOCKED", lastError: REPORT_DELIVERY_BLOCKED },
+    });
+  } catch {
+    // A failed pause must not expose DB diagnostics or allow a send.
+    throw new Error(REPORT_DELIVERY_BLOCKED);
+  }
+  try {
+    await prisma.reportDeliveryLog.create({
+      data: { scheduleId: schedule.id, triggeredBy, status: "BLOCKED", recipients: [], error: REPORT_DELIVERY_BLOCKED },
+    });
+  } catch {
+    // Keep the schedule paused even when the audit store is unavailable.
+  }
   throw new Error(REPORT_DELIVERY_BLOCKED);
 }
 
