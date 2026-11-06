@@ -3,6 +3,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install --disable-pip-version-check --no-cache-dir -r requirements.txt
+# Fail at image-build time if MySQL 8.4 SHA-2 account authentication is
+# unsupported. The dependency is needed when a new account has no auth cache.
+RUN python -c "import pymysql; import cryptography; from cryptography.hazmat.primitives.asymmetric import padding"
+
 COPY runtime/ runtime/
 COPY ops/setup_local.py ops/setup_local.py
 COPY ops/local_bootstrap_probe.py ops/local_bootstrap_probe.py
