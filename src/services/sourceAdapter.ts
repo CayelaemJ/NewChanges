@@ -12,6 +12,7 @@
 
 import { readPinnedSourceApiJson } from "./pinnedSourceHttps.js";
 import { assertSecureSourceSqlTransport } from "./sourceSqlTlsPolicy.js";
+import { safeSourceConnectionFailure } from "./sourceConnectionFailure.js";
 import { LOAD_ORDER, getFormat } from "./reportFormats.js";
 import { lookup } from "node:dns/promises";
 import { isBlockedSourceAddress as privateOrLocalAddress } from "./sourceAddressPolicy.js";
@@ -624,15 +625,11 @@ async function createSqlAdapter(config: IntegrationSourceConfig): Promise<Source
       else if (dialect === "POSTGRESQL") replicaExecutor = await openPostgresExecutor(replicaConfig);
       else replicaExecutor = await openMssqlExecutor(replicaConfig);
     }
-  } catch (error: any) {
-    // A raw driver/protocol error here (garbled bytes, "unexpected message
-    // from backend", immediate connection reset, etc.) almost always means
-    // the configured dialect doesn't match what's actually listening on
-    // sqlHost:sqlPort — e.g. the Postgres driver was used against a MySQL
-    // server, or vice versa. Surface that plainly instead of the raw
-    // driver internals, which read as an unexplained crash.
-    const note = error?.message ?? String(error);
-    throw new Error(`Could not open a ${dialect} connection to ${config.sqlHost}:${config.sqlPort ?? "(default port)"} — ${note}. If this looks like a protocol/handshake error rather than an auth or network error, double-check that "SQL platform" in Admin is actually set to the database engine you're running (and that Save settings was clicked after changing it), then re-test.`, { cause: error });
+  } catch (error: unknown) {
+    // Driver errors may include connection URLs, SQL text, credentials and
+    // private hostnames. Never send raw errors or attach them as API causes.
+    const reason = safeSourceConnectionFailure(error);
+    throw new Error(`Could not open ${dialect} source connection. ${reason}`);
   }
 
   async function* iterateReportPages(reportKey: string, window: SourceWindow = {}, sourceViewOverride?: string | null, options?: { useReplica?: boolean; authoritative?: boolean }): AsyncGenerator<SourceFetchResult> {
