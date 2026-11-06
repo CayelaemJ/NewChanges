@@ -51,6 +51,7 @@ import { exportAuditLogCsv, exportSecurityAuditLogCsv, exportImportBatchCsv } fr
 import { listAnalyticsRoutes, saveAnalyticsRoute } from "./services/syncService.js";
 import { enterpriseOperationsOverview, dataQualityOverview } from "./services/enterpriseOperationsService.js";
 import { checkMysqlReadReplica } from "./services/sourceAdapter.js";
+import { safeSourceConnectionFailure } from "./services/sourceConnectionFailure.js";
 import { subscribeAdminEvents } from "./services/adminEventStream.js";
 import { ensureSectionDefaults, listSections, updateSection, grantUserSection, revokeUserSection, sectionsForUser } from "./services/sectionService.js";
 import { publicEmailConfig, saveEmailConfig, testEmailConnection, createReportSchedule, listReportSchedules, updateReportSchedule, deleteReportSchedule, sendReportNow, recentReportDeliveries, runDueReports } from "./services/reportScheduler.js";
@@ -1744,7 +1745,7 @@ app.get("/api/admin/integration/replica-health", async (req, reply) => {
     const cfg = await getSyncConfig();
     return await checkMysqlReadReplica(cfg);
   } catch (e: any) {
-    return reply.code(400).send({ configured: false, reachable: false, error: e?.message || "Could not check source replica." });
+    return reply.code(400).send({ configured: false, reachable: false, error: safeSourceConnectionFailure(e) });
   }
 });
 
