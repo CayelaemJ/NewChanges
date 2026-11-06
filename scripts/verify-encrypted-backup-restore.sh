@@ -19,7 +19,7 @@ for binary in docker age; do
   fi
 done
 docker image inspect postgres:18-alpine >/dev/null
-CONTAINER="fixer-backup-restore-$"
+CONTAINER="fixer-backup-restore-${BASHPID}"
 # Keep the stopped container available until error diagnostics are captured.
 # All operations remain local to this temporary, network-disabled container.
 RESTORE_STAGE="container startup"
