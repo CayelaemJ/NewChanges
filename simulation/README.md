@@ -49,7 +49,9 @@ bash ops/ci-docker.sh
 
 The script first runs pure unit tests, then creates a disposable MySQL 8.4 instance, installs isolated schemas, grants synthetic test accounts, establishes a binlog checkpoint while source tables are empty, runs simulation, checks FK/idempotency/rollback, exercises INSERT/DELETE row transformations and **attempts an actual binlog read**. It tears down its own Docker project including ephemeral data.
 
-A successful pure test suite is **not** proof the Docker/CDC integration passed. Current verification in this environment: 11 pure Python tests passed, 4 integration tests skipped because Docker is unavailable. A 2026 MySQL binlog library version `mysql-replication==1.0.17` is pinned, but successful interaction with **this** RDS 8.4 instance is still unverified.
+The simulation now rechecks the emergency-stop flag before every committed business event, retains the original run anchor for deterministic retries, and recomputes Gold metrics using indexed affected-day SQL ranges. The MySQL integration suite additionally asserts real binlog DELETE events and replay idempotency, but those tests still require execution.
+
+A successful pure test suite is **not** proof the Docker/CDC integration passed. Current verification in this environment: 13 pure Python tests passed, 4 integration tests skipped because Docker is unavailable. A 2026 MySQL binlog library version `mysql-replication==1.0.17` is pinned, but successful interaction with **this** RDS 8.4 instance is still unverified.
 
 For the existing self-hosted `newchanges-ci` GitHub runner, copy these files under `NewChanges/simulation/` and copy `repo-integration/.github/workflows/aws-sim-docker-ci.yml` to the repository's `.github/workflows/`. Dispatch that workflow manually. It does not use GitHub-hosted runners and does not deploy.
 
@@ -144,7 +146,7 @@ The existing repository has `src/services/sourceAdapter.ts`, `syncService.ts`, `
 | AWS RDS metadata inspection | PASS, read-only |
 | SG not world-open on 3306 | PASS, one non-global IPv4 CIDR rule |
 | Existing repo source/sync inspection | PASS, read-only |
-| Python pure logic/guard tests | PASS, 11/11 |
+| Python pure logic/guard tests | PASS, 13/13 |
 | Python compile check | To be recorded after final packaging |
 | Disposable MySQL 8.4 integration tests | NOT RUN, Docker absent in authoring environment |
 | Binlog INSERT/UPDATE/DELETE on MySQL 8.4 | NOT VERIFIED |
