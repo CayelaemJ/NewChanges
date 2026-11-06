@@ -93,3 +93,13 @@ test('disposable PG18 restore avoids duplicate public schema without touching an
  assert.ok(script.indexOf('DROP SCHEMA public RESTRICT')<script.indexOf('pg_restore --exit-on-error'));
  assert.doesNotMatch(script,/DROP SCHEMA public CASCADE|psql.*DATABASE_URL/);
 });
+
+test('restore selects schema handling by archive catalog (Neon creates public, Aiven may not)',()=>{
+ const script=readFileSync(new URL('../scripts/verify-encrypted-backup-restore.sh',import.meta.url),'utf8');
+ assert.match(script,/pg_restore --list/);
+ assert.match(script,/SCHEMA - public/);
+ assert.match(script,/if printf/);
+ assert.match(script,/DROP SCHEMA public RESTRICT/);
+ assert.match(script,/keeping default empty schema/);
+ assert.ok(script.indexOf('pg_restore --list') < script.indexOf('DROP SCHEMA public RESTRICT'));
+});
