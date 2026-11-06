@@ -7,6 +7,10 @@ test("known email settings validation errors remain useful", () => {
     { statusCode: 400, message: "Enter a valid test recipient email" });
   assert.deepEqual(publicEmailSettingsFailure(new Error("Production SMTP must verify the remote TLS certificate")),
     { statusCode: 400, message: "Production SMTP must verify the remote TLS certificate" });
+  assert.deepEqual(publicEmailSettingsFailure(new Error("syntheticDataMode must be true or false")),
+    { statusCode: 400, message: "syntheticDataMode must be true or false" });
+  assert.deepEqual(publicEmailSettingsFailure(new Error("SMTP port must be an integer between 1 and 65535")),
+    { statusCode: 400, message: "SMTP port must be an integer between 1 and 65535" });
 });
 
 test("classified provider failures have a safe response", () => {
