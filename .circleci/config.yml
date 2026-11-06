@@ -314,9 +314,12 @@ jobs:
           command: npm ls eslint @typescript-eslint/parser vitest @playwright/test
       - run:
           name: ESLint
-          command: npm run quality:lint && node scripts/password-form-contract-check.mjs
+          command: npm run quality:lint
       - run:
-          name: TypeScript
+          name: Password form security contract
+          command: node scripts/password-form-contract-check.mjs
+      - run:
+          name: TypeScript backend and frontend
           command: npm run quality:types
       - run:
           name: Vitest unit tests
