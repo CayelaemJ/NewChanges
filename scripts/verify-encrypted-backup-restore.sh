@@ -37,13 +37,20 @@ if [[ "$ready" != true ]]; then
   echo "BLOCKED: isolated restore PostgreSQL failed to start" >&2
   exit 2
 fi
-# PostgreSQL 18 initializes a public schema in each fresh database. pg_dump's
-# portable archive also contains CREATE SCHEMA public; remove ONLY the empty
-# schema inside this newly created --network none disposable container so
-# pg_restore can recreate it from the archive without a duplicate-object error.
-# Never run this command against Neon, Aiven, or any other existing database.
-docker exec "$CONTAINER" psql -X -v ON_ERROR_STOP=1 -U postgres -d restorecheck \
-  -c 'DROP SCHEMA public RESTRICT;'
+# A fresh PG18 database already includes public. Some dumps include a
+# CREATE SCHEMA public entry (portable Neon); others omit it (full Aiven).
+# Inspect the encrypted archive's table-of-contents first, without ever
+# materializing a plaintext archive on disk or connecting to production.
+archive_catalog="$(age -d -i "$AGE_IDENTITY_FILE" "$1" | \
+  docker exec -i "$CONTAINER" pg_restore --list)"
+if printf '%s\n' "$archive_catalog" | grep -Eq '^[[:space:]]*[0-9]+;.*[[:space:]]SCHEMA - public([[:space:]]|$)'; then
+  echo "Archive defines public schema; removing only empty default schema in disposable database."
+  docker exec "$CONTAINER" psql -X -v ON_ERROR_STOP=1 -U postgres -d restorecheck \
+    -c 'DROP SCHEMA public RESTRICT;'
+else
+  echo "Archive does not define public schema; keeping default empty schema."
+fi
+unset archive_catalog
 echo "Restoring encrypted archive into disposable offline PostgreSQL 18..."
 # pipefail ensures a decrypt failure or pg_restore failure cannot be treated as success.
 age -d -i "$AGE_IDENTITY_FILE" "$1" | \
