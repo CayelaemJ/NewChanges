@@ -1,0 +1,38 @@
+# Direct-to-production cutover candidate. No staging DB or Cloudflare Containers.
+# Planning this file does not deploy or switch traffic. Keep initial state fenced.
+services:
+  - type: web
+    name: newchanges-free-production
+    runtime: docker
+    repo: https://github.com/CayelaemJ/NewChanges
+    branch: feat/free-cloudflare-render-primary-20261105
+    region: frankfurt
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    autoDeployTrigger: off
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: STANDBY_MODE
+        value: "true"
+      - key: TRAFFIC_SAVER_MODE
+        value: "true"
+      - key: ENABLE_AUTHORITATIVE_INCREMENTAL_SCHEDULER
+        value: "false"
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: TRUST_PROXY
+        value: "true"
+      - key: NEWCHANGES_EDGE_ORIGIN_GUARD_ENABLED
+        value: "true"
+      - key: NEWCHANGES_EDGE_ORIGIN_SHARED_SECRET
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: PUBLIC_BASE_URL
+        sync: false
+# The candidate is NEVER a writer until source writers are demonstrably fenced,
+# independent backups checked, final delta synced and final content verified.
+# Aiven runtime role only. No admin database URL and no automatic schema push.
+# Render Free sleeps; authoritative background jobs remain disabled at R0.
