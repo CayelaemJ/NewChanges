@@ -135,3 +135,24 @@ After rebuilding the local application Docker image, the operator confirmed the 
 5. Enable the Cloudflare free-edge route only after the backend passes authenticated and database tests, and retain Neon read-only as rollback evidence. Rollback must never cause old and new systems to write simultaneously.
 
 **Do not claim production cutover completed until the above gates have actual evidence.** Free Render's idle sleep behavior remains a production reliability limitation, and a normal web service cannot guarantee continuous scheduled operations.
+
+
+## 2026-11-06 direct-production free Render plan (supersedes separate staging)
+
+The operator chose direct controlled production migration, with separate staging **not required**. Production still stays on the original host and Neon until final verification. Do not use or approve the earlier staging-only Blueprint as a shortcut.
+
+- New `render.free-production.yaml` provides fail-closed Render Free Docker production candidate, `STANDBY_MODE=true`, `TRAFFIC_SAVER_MODE=true`, incremental scheduler explicitly disabled, `/health` liveness, Cloudflare origin guard enabled, private `DATABASE_URL`, `PUBLIC_BASE_URL`, and origin token unset until protected injection. No auto-deploy or paid resources.
+- `tests/free-production-cutover-contract.test.mjs` checks the free plan, safe env defaults, no committed database URLs, and Cloudflare route disabled. Manual self-hosted workflow now runs it.
+- Render API accepted **planning only** as new Free service `newchanges-free-production-3j5p`, Blueprint `exs-dbmohf6gekts73e32sug`, autoSync false; plan: https://dashboard.render.com/blueprint/exs-dbmohf6gekts73e32sug/sync/exe-dbmohfegekts73e32te0. **Not approved/deployed**. Requires protected manual secret values (Render never received them from Git).
+- Local revised Docker runtime smoke succeeded per operator after rebuilding current image; the new direct-production contract test needs operator rerun.
+- Cutover blocker: independent verified backup and restoration plan, proven old-writer fence, final audited Neon-to-Aiven delta and 57-table reconciliation, restricted connection-pool capacity, production MFA/authorization checks, secure Render env and Cloudflare route. The existing Aiven service showed 14 of 20 connections during a point-in-time inspection. No final delta executed.
+- Do not use Aiven admin credentials for runtime. Do not turn on `STANDBY_MODE=false` until all old writers are fenced and final data is reconciled. When the release is eventually enabled, retain `TRAFFIC_SAVER_MODE=true` until a reliable separate scheduler and single-authoritative-writer system exist. Free Render has idle sleep and is unsuitable for guaranteed on-process cron execution.
+
+To locally validate the newest committed release contract:
+
+```bash
+cd ~/NewChanges-free-edge
+git fetch origin
+git merge --ff-only origin/feat/free-cloudflare-render-primary-20261105
+node --test tests/free-production-cutover-contract.test.mjs tests/cloudflare-free-render-edge.test.mjs
+```
