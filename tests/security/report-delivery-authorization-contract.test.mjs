@@ -18,9 +18,12 @@ test("scheduled and manual reports both revalidate current permissions before em
     "validate before report generation and immediately before external delivery");
   assert.ok(send.lastIndexOf("await assertScheduleDeliveryAuthorized(schedule, triggeredBy)") <
     send.indexOf("await sendEmail("));
-  assert.match(send, /reportDeliveryLog\.create/);
-  assert.match(send, /status: "BLOCKED"/);
-  assert.match(send, /active: false/);
+  const guardStart = scheduler.indexOf("async function assertScheduleDeliveryAuthorized(");
+  assert.ok(guardStart >= 0 && guardStart < start);
+  const guard = scheduler.slice(guardStart, start);
+  assert.match(guard, /reportDeliveryLog\.create/);
+  assert.match(guard, /status: "BLOCKED"/);
+  assert.match(guard, /active: false/);
 });
 
 test("scheduler re-reads owner role, active state, and employer links from database", () => {
