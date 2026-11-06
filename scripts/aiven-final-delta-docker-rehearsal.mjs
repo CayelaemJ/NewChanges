@@ -20,9 +20,17 @@ function docker(args,options={}) {
   if (r.status!==0||r.error) throw Error('Synthetic Docker rehearsal failed ('+args[0]+')');
   return r.stdout.trim();
 }
-function db(sql,allowError=false) {
+function db(sql,allowError=false,stage='unnamed synthetic SQL step') {
   const r=run('docker',['exec','-i',name,'psql','-U','postgres','-d','defaultdb','-X','-A','-t','-v','ON_ERROR_STOP=1','-f','-'],{input:sql});
-  if (!allowError && (r.status!==0||r.error)) throw Error('Synthetic PostgreSQL statement failed');
+  if (!allowError && (r.status!==0||r.error)) {
+    // This is an isolated synthetic database. Never add production SQL or credentials.
+    // Emit only psql's error lines, not the statement, fixture data, or process environment.
+    const errors=String(r.stderr||'').split('\\n')
+      .filter(line => /(?:ERROR|FATAL|PANIC|psql:|could not|permission denied)/i.test(line))
+      .map(line => line.slice(0,400)).slice(0,8).join(' | ');
+    throw Error('Synthetic PostgreSQL statement failed at '+stage+
+      ' (exit='+String(r.status)+')'+(errors ? ': '+errors : ' (no PostgreSQL diagnostic)'));
+  }
   return r;
 }
 const fields = [
@@ -71,14 +79,14 @@ try {
     "INSERT INTO public.\"DataAccessEvent\" (\"id\",\"userId\",\"method\",\"route\",\"ipAddress\",\"deviceType\",\"statusCode\",\"durationMs\",\"createdAt\")",
     "VALUES ('audit-1','synthetic-user','GET','/ready','127.0.0.1','synthetic-device',200,3,'2026-11-05 10:00:00');"
   ].join('\n');
-  db(create);
+  db(create,false,'create disposable fixture tables');
   stage(audit('audit-1')+audit('audit-2'),csv(['session-1','2026-11-05 11:00:00']));
   const plan=buildAivenDeltaSql(auditIn,sessionIn);
-  db(plan);
+  db(plan,false,'first audit and session delta transaction');
   const query="SELECT (SELECT count(*) FROM public.\"DataAccessEvent\")::text || '|' || "+
     "(SELECT to_char(\"lastSeenAt\",'YYYY-MM-DD HH24:MI:SS') FROM public.\"Session\" WHERE id='session-1');";
-  assert.equal(db(query).stdout.trim(),'2|2026-11-05 11:00:00');
-  db(plan); // Replaying the same audit/session delta must be idempotent.
+  assert.equal(db(query,false,'verify inserted audit/session rows').stdout.trim(),'2|2026-11-05 11:00:00');
+  db(plan,false,'idempotent replay'); // Replaying the same audit/session delta must be idempotent.
   assert.equal(db(query).stdout.trim(),'2|2026-11-05 11:00:00');
   stage(audit('audit-1',500)+audit('audit-3'),csv(['session-1','2026-11-05 12:00:00']));
   assert.notEqual(db(plan,true).status,0,'Conflicting existing audit history must abort');
