@@ -304,3 +304,28 @@ node scripts/verify-render-aiven-config.mjs
 ```
 
 **Current state:** Render container deploy previously reported Live but standby/fenced; Aiven service previously reported RUNNING with 57 tables and 14/20 connections at inspection; actual production Render database URL and matching Cloudflare origin token are **not** installed; live Neon is unchanged. Skip persistent staging but **never** skip backup/restore, final-sync reconciliation, MFA checks or sole-writer transition.
+
+
+## 2026-11-06 actual encrypted Neon backup and Neon JWT extension restore blocker
+
+The operator **successfully created an encrypted full Neon source archive**, approximately 17,350,256 bytes, with a SHA-256 reported locally and an actual local archive path under `~/fixer-recovery-archives/`. Preserve that original archive and the separately protected age identity. **Do not delete or overwrite it.** Its offline PG18 restore **FAILED** on `CREATE EXTENSION pg_session_jwt WITH SCHEMA public`: stock `postgres:18-alpine` does not install Neon's JWT extension. The recovery drill stopped immediately at source restore; **no new target/Aiven archive was created by that invocation**. This is not evidence of an Aiven production problem and not a successful full restore.
+
+`pg_session_jwt` is associated with Neon JWT/RLS behavior. Its absence in stock PostgreSQL does **not** mean the extension is safely removable from the production application. The existing full encrypted Neon archive must remain available for a Neon-compatible restore/disaster recovery strategy. Audit application schema dependencies and RLS/auth behavior separately before cutover.
+
+To exercise **portable application-only recovery**, the active branch now supports `node scripts/production-encrypted-backup.mjs source --portable-backup`. It uses PostgreSQL 18 `pg_dump --schema=public --exclude-extension=pg_session_jwt`, encrypts the archive and prints `scope=PORTABLE_PUBLIC_APPLICATION_ONLY`; this deliberately **does not include non-public schemas or that extension**. The recovery orchestrator now selects this mode for Neon and retains full backup mode for Aiven. The offline restore test still requires all 57 public application tables; other dependencies may still block it and must be diagnosed, not bypassed without review.
+
+The new source portable backup is not a substitute for the existing **full encrypted source backup** or for functional auth/MFA testing. It is intended to prove application-table restore portability only. Independent protected copies remain required. Do not mark `sourceBackup.restoreTested=true` for a **full** backup based only on the portable subset restore.
+
+Update the active worktree before retrying:
+```bash
+cd ~/NewChanges-free-edge
+git fetch origin
+git merge --ff-only origin/feat/free-cloudflare-render-primary-20261105
+node --test tests/production-encrypted-backup.test.mjs
+bash -n scripts/production-recovery-drill.sh
+# Existing private DR_SOURCE_DATABASE_URL, DR_TARGET_DATABASE_URL, AGE_IDENTITY_FILE,
+# AGE_RECIPIENT and NEWCHANGES_BACKUP_DIR must still be configured in THIS shell.
+bash scripts/production-recovery-drill.sh
+```
+
+No production DB writes, writer cutoff, Cloudflare route changes, or live sync were performed by this repair.
