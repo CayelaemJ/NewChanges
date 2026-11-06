@@ -156,3 +156,17 @@ git fetch origin
 git merge --ff-only origin/feat/free-cloudflare-render-primary-20261105
 node --test tests/free-production-cutover-contract.test.mjs tests/cloudflare-free-render-edge.test.mjs
 ```
+
+
+## Actual Free production Render service provisioned (2026-11-06)
+
+The operator asked to move the controlled production migration forward. A **Free** Docker web service was created in confirmed Render workspace `My Workspace`, without paid plan, database connection URL, Cloudflare secret or traffic routing:
+- Service `newchanges-free-production`, ID `srv-dbmokqm7bikc73bk2h00`, Frankfurt.
+- Dashboard: https://dashboard.render.com/web/srv-dbmokqm7bikc73bk2h00
+- Public address: https://newchanges-free-production.onrender.com (do **not** send users there yet).
+- Initial deploy `dep-dbmokrm7bikc73bk2jug` from commit `ce6404f06c96e3627b6668d369c55a26be3ddaeb` was **update_in_progress at last observation**, so service health is NOT confirmed.
+- Auto-deploy disabled, `STANDBY_MODE=true`, `TRAFFIC_SAVER_MODE=true`, `ENABLE_AUTHORITATIVE_INCREMENTAL_SCHEDULER=false`, `NEWCHANGES_EDGE_ORIGIN_GUARD_ENABLED=true`, `COOKIE_SECURE=true`, `TRUST_PROXY=true`. No DATABASE_URL or origin shared secret installed. As a result, backend authorization fails closed and DB-backed readiness cannot yet work. A reachable HTTP health endpoint is not proof of DB readiness.
+- The direct `create_web_service` API did **not** expose Render's healthCheckPath setting, so the service currently has an empty platform health-check path (but the Dockerfile has its own `HEALTHCHECK /health`). The separate production Blueprint remains unapproved; do not approve it because it would create a duplicate service. Set the Render platform `/health` health-check path through an appropriate supported configuration mechanism before go-live.
+- Existing standby and MFA staging remain unchanged; no Neon/Aiven writes, paid resources, DNS routes or Cloudflare deployments were performed.
+
+The guarded final-delta scripts and transaction rehearsal tests from PR #217 are now copied into this active Free hosting branch, unchanged in behavior: `scripts/aiven-verify-content.mjs`, `scripts/aiven-final-delta-sync.mjs`, `scripts/aiven-final-delta-plan.mjs`, `scripts/aiven-final-delta-docker-rehearsal.mjs`, and `tests/aiven-final-sync-safety.test.mjs`. The manual local runner workflow runs these tests with synthetic Postgres only. The **new branch** should rerun these guards locally before considering a cutover; no live sync was executed in this iteration.
