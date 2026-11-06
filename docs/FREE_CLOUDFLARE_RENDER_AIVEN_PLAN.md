@@ -118,3 +118,20 @@ Aiven service `the-fixer-postgres` was confirmed `RUNNING` on free-1-1gb, Postgr
 The free-candidate Render health check now uses public `/health` only. When the optional private Cloudflare origin guard is enabled, the database-revealing `/ready` endpoint requires the shared token, just like login and dashboard requests. The synthetic Docker smoke test verifies `/health=200`, direct `/ready=403`, token-authenticated `/ready=200`, direct `/version=403`, and token-authenticated `/version=200`. These new assertions still need to be rerun after updating the local worktree; older passing results do not verify this specific hardening revision.
 
 The Render Blueprint plan has been refreshed successfully using the current free-hosting branch and continues to propose one Free web service, `healthCheckPath=/health`, no automatic deploys, and three manually supplied protected env settings. **Plan only, not approved or deployed.**
+
+
+## Direct-to-production decision and verified rebuilt smoke (2026-11-06)
+
+The operator opted to **skip a separate staging app/database** and prepare a controlled production cutover using Cloudflare Workers Free, Render Free, and the already-migrated Aiven PostgreSQL 18 service. The prior Render Blueprint was planned but **not applied**; do not approve its staging configuration unchanged. The existing Render standby and MFA-staging resources remain untouched.
+
+After rebuilding the local application Docker image, the operator confirmed the revised isolated runtime smoke **passed**: public `/health=200`, direct `/ready=403`, token-authenticated `/ready=200`, direct `/version=403`, and token-authenticated `/version=200`, with synthetic PG18 and container cleanup. The earlier failed smoke used a stale image and is superseded. This remains a local runtime proof, not a full production exercise.
+
+### Outstanding controlled production cutover gates
+
+1. Prepare a Render **Free** production candidate with auto-deploy off and the approved current Docker commit. Do not connect to or write Aiven until the source-fencing and final-delta procedure is ready. Configure private `NEWCHANGES_EDGE_ORIGIN_SHARED_SECRET`, canonical URL, secure cookies, and limited database pool. Never paste secrets into GitHub or logs.
+2. Confirm Aiven runtime account has the intended least-privilege access and that the service has connection headroom. The prior read-only snapshot showed 14/20 current connections, so additional pool connections need explicit limits. Do not enable a second ingestion leader.
+3. Before migrating live traffic: verify recoverable encrypted backup of Neon and Aiven, source-write fencing, final transactional delta, 57-table reconciliation including audit/session activity, then enable the new writer only after old production writes are stopped.
+4. Verify login, forced administrator MFA, user/tenant authorization, dashboard, administrative operations, background-job leadership, and rollback on the new database **before** sending end-user traffic. For a direct migration these checks occur within a controlled maintenance/cutover window, not in a separate persistent staging deployment.
+5. Enable the Cloudflare free-edge route only after the backend passes authenticated and database tests, and retain Neon read-only as rollback evidence. Rollback must never cause old and new systems to write simultaneously.
+
+**Do not claim production cutover completed until the above gates have actual evidence.** Free Render's idle sleep behavior remains a production reliability limitation, and a normal web service cannot guarantee continuous scheduled operations.
