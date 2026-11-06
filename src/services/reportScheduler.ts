@@ -279,8 +279,11 @@ export async function portalBaseUrl(): Promise<string | null> {
 
 export async function testEmailConnection(draft: EmailDraft & { recipient?: string | null }) {
   const recipient = clean(draft.recipient);
-  if (!recipient || !validNotificationEmailAddress(recipient)) throw new Error("Enter a valid test recipient email");
+  if (!validNotificationEmailAddress(recipient)) throw new Error("Enter a valid test recipient email");
   const now = new Date();
+  // Separate transport acceptance from audit persistence. A database write
+  // failure after successful delivery must not report a failed send and prompt
+  // an operator to repeat an email that already reached the provider.
   try {
     const saved = await getEmailConfig();
     const cfg = withEnv(saved, draft);
@@ -290,14 +293,30 @@ export async function testEmailConnection(draft: EmailDraft & { recipient?: stri
       subject: "The Fixer (Pty) Ltd Dashboard Portal — email test",
       html: `<div style="font-family:Arial,sans-serif;color:#241536;max-width:620px"><h2 style="color:#32217c">Email delivery is working</h2><p>This test was sent successfully by the <strong>The Fixer (Pty) Ltd Dashboard Portal</strong>.</p><p style="color:#6b7280;font-size:13px">${escapeHtml(now.toISOString())}</p></div>`,
     }, draft);
-    await prisma.systemEmailConfig.update({ where: { id: "default" }, data: { lastTestAt: now, lastTestStatus: "SUCCESS", lastTestNote: `Test email sent to ${recipient}` } });
-    return { ok: true, recipient };
   } catch (error: unknown) {
     const safeMessage = safeEmailDeliveryFailure(error);
-    await prisma.systemEmailConfig.update({ where: { id: "default" }, data: { lastTestAt: now, lastTestStatus: "FAILED", lastTestNote: safeMessage } });
-    // The HTTP handler must not expose raw SMTP banners or remote error bodies.
+    try {
+      await prisma.systemEmailConfig.update({
+        where: { id: "default" },
+        data: { lastTestAt: now, lastTestStatus: "FAILED", lastTestNote: safeMessage },
+      });
+    } catch {
+      // Preserve the classified transport failure and never log raw DB errors.
+      console.error("Email test failure status could not be persisted");
+    }
     throw new Error(safeMessage);
   }
+  let trackingWarning = false;
+  try {
+    await prisma.systemEmailConfig.update({
+      where: { id: "default" },
+      data: { lastTestAt: now, lastTestStatus: "SUCCESS", lastTestNote: `Test email sent to ${recipient}` },
+    });
+  } catch {
+    trackingWarning = true;
+    console.error("Email test accepted but delivery status could not be persisted");
+  }
+  return { ok: true, recipient, trackingWarning };
 }
 
 function parseTime(sendTime: string) {
