@@ -170,3 +170,32 @@ The operator asked to move the controlled production migration forward. A **Free
 - Existing standby and MFA staging remain unchanged; no Neon/Aiven writes, paid resources, DNS routes or Cloudflare deployments were performed.
 
 The guarded final-delta scripts and transaction rehearsal tests from PR #217 are now copied into this active Free hosting branch, unchanged in behavior: `scripts/aiven-verify-content.mjs`, `scripts/aiven-final-delta-sync.mjs`, `scripts/aiven-final-delta-plan.mjs`, `scripts/aiven-final-delta-docker-rehearsal.mjs`, and `tests/aiven-final-sync-safety.test.mjs`. The manual local runner workflow runs these tests with synthetic Postgres only. The **new branch** should rerun these guards locally before considering a cutover; no live sync was executed in this iteration.
+
+
+## 2026-11-06 production target read-only preflight and evidence gating
+
+Aiven connector reported `the-fixer-postgres` **RUNNING**, PG18.6 Free, `defaultdb`, 57 public tables, 198 MB, `newchanges_app_runtime` LOGIN role exists, and 14 active connections out of max 20. This is a snapshot, not connection-pool headroom under production load. No SQL writes were made.
+
+The operator's isolated PostgreSQL 18 final-delta replay/rollback test passed. A new offline file `scripts/production-cutover-evidence-check.mjs` and its three regression tests check a **local operator-maintained JSON evidence manifest** with exact source/target identities, independent source and target backup checksums, independently tested restores, source and background writer fences, delta and final reconciliation, MFA verification, sole-writer state, rollback review, and ordering timestamps. **This script validates only evidence declarations and structure; it does not technically prove any of them, initiate any database operations, or authorize routing.** A successful fake manifest must never be interpreted as go-live approval. Tests run on the self-hosted manual CI.
+
+The minimal manifest schema, excluding all secrets:
+```json
+{
+  "environment": "production",
+  "source": "Neon:newchanges",
+  "target": "Aiven:the-fixer-postgres/defaultdb",
+  "oldWriterStoppedAt": "YYYY-MM-DDTHH:mm:ssZ",
+  "finalDeltaFinishedAt": "YYYY-MM-DDTHH:mm:ssZ",
+  "sourceBackup": {"verified": true, "evidence": "internal backup/restore reference", "checkedAt": "YYYY-MM-DDTHH:mm:ssZ", "restoreTested": true, "offsiteCopy": true, "sha256": "64-char actual hex checksum"},
+  "targetBackup": {"verified": true, "evidence": "internal backup/restore reference", "checkedAt": "YYYY-MM-DDTHH:mm:ssZ", "restoreTested": true, "offsiteCopy": true, "sha256": "64-char actual hex checksum"},
+  "sourceWritersFenced": {"verified": true, "evidence": "writer and scheduler disable audit", "checkedAt": "YYYY-MM-DDTHH:mm:ssZ"},
+  "backgroundJobsFenced": {"verified": true, "evidence": "worker shutdown audit", "checkedAt": "YYYY-MM-DDTHH:mm:ssZ"},
+  "finalDeltaComplete": {"verified": true, "evidence": "final sync log and transaction receipt", "checkedAt": "YYYY-MM-DDTHH:mm:ssZ"},
+  "contentReconciliation": {"verified": true, "evidence": "57-table comparison, audit and sessions", "checkedAt": "YYYY-MM-DDTHH:mm:ssZ"},
+  "authenticationAndMfaVerified": {"verified": true, "evidence": "authenticated functional checks", "checkedAt": "YYYY-MM-DDTHH:mm:ssZ"},
+  "singleWriterVerified": {"verified": true, "evidence": "writer leader and database connection audit", "checkedAt": "YYYY-MM-DDTHH:mm:ssZ"},
+  "rollbackReviewed": {"verified": true, "evidence": "verified recovery procedure", "checkedAt": "YYYY-MM-DDTHH:mm:ssZ"}
+}
+```
+
+Keep actual production evidence manifest on the operator's local encrypted storage, **not GitHub**, and never populate booleans true based only on intention. The first real backup and restoration checks still need to be performed. The application must remain disconnected from Aiven while the existing Neon writer is active.
