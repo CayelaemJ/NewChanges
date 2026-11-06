@@ -24,5 +24,7 @@ export function safeEmailColor(value: unknown, fallback: string): string {
 }
 
 export function notificationPlainText(value: unknown): string {
-  return String(value ?? "").replace(/[\u0000-\u001f\u007f<>]/g," ").trim().slice(0,200);
+  // Unicode control-category matching avoids explicit control-code regex ranges,
+  // which static lint rules reject, and also covers C1 controls (U+0080-009F).
+  return String(value ?? "").replace(/[\p{Cc}<>]/gu," ").trim().slice(0,200);
 }
