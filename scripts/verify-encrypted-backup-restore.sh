@@ -51,9 +51,12 @@ RESTORE_STAGE="PostgreSQL final-server readiness"
 # evidence that the actual restore database is ready.
 ready=false
 for i in $(seq 1 90); do
-  if docker logs "$CONTAINER" 2>&1 | grep -Fq 'PostgreSQL init process complete; ready for start up.'; then
-    if docker exec "$CONTAINER" psql -X -q -A -t -v ON_ERROR_STOP=1 \
-      -U postgres -d restorecheck -c 'SELECT 1' 2>/dev/null | grep -qx '1'; then
+  # Avoid grep -q pipelines under pipefail: they previously caused SIGPIPE 141.
+  container_log="$(docker logs "$CONTAINER" 2>&1 || true)"
+  if [[ "$container_log" == *'PostgreSQL init process complete; ready for start up.'* ]]; then
+    probe="$(docker exec "$CONTAINER" psql -X -q -A -t -v ON_ERROR_STOP=1 \
+      -U postgres -d restorecheck -c 'SELECT 1' 2>/dev/null || true)"
+    if [[ "$probe" == "1" ]]; then
       ready=true
       break
     fi
