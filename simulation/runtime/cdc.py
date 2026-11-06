@@ -13,6 +13,22 @@ from decimal import Decimal
 from .common import connect, connection_config, positive_int, redacted_error, utcnow
 from .logic import allowed_table, encode, event_id
 
+class CdcBootstrapStageError(RuntimeError):
+    """Unexpected runtime failure during one non-sensitive bootstrap phase."""
+
+    ALLOWED_STAGES = frozenset({
+        "SOURCE_CONNECT", "SINK_CONNECT", "SIMULATION_STOP",
+        "EMPTY_SOURCE", "BINLOG_PREFLIGHT", "SINK_CHECKPOINT",
+        "CHECKPOINT_WRITE",
+    })
+
+    def __init__(self, stage):
+        if stage not in self.ALLOWED_STAGES:
+            raise ValueError("Unexpected CDC bootstrap stage")
+        self.stage = stage
+        super().__init__("CDC bootstrap failed in a restricted stage")
+
+
 class CdcReadinessError(RuntimeError):
     """Controlled diagnostic identifier; never contains SQL, credentials, or server details."""
 
@@ -62,29 +78,48 @@ def bootstrap_empty_source():
     """Only valid before first simulation row. Refuses unsafe skip over existing data."""
     if os.environ.get("SIM_CDC_BOOTSTRAP_APPROVED") != "YES_EMPTY_SOURCE_ONLY":
         raise CdcReadinessError("CDC_APPROVAL_REQUIRED")
-    source = connect("replica")
-    sink = connect("cdc")
+    source = None
+    sink = None
+    stage = "SOURCE_CONNECT"
     try:
+        source = connect("replica")
+        stage = "SINK_CONNECT"
+        sink = connect("cdc")
+        stage = "SIMULATION_STOP"
         enabled = query(source, "SELECT enabled FROM sim_control WHERE control_id=1")
         if not enabled or enabled[0][0] != 0:
             raise CdcReadinessError("CDC_SIMULATION_NOT_STOPPED")
+        stage = "EMPTY_SOURCE"
         for name in ["customers","products","orders","order_items","payments","financial_transactions"]:
             # Table names are fixed, never user-controlled.
             if query(source, f"SELECT 1 FROM {name} LIMIT 1"):
                 raise CdcReadinessError("CDC_SOURCE_NOT_EMPTY")
+        stage = "BINLOG_PREFLIGHT"
         file, pos = preflight()
+        stage = "SINK_CHECKPOINT"
         if query(sink, "SELECT 1 FROM cdc_checkpoint WHERE consumer_name=%s",(CONSUMER,)):
             raise CdcReadinessError("CDC_CHECKPOINT_ALREADY_EXISTS")
+        stage = "CHECKPOINT_WRITE"
         write(sink, "INSERT INTO cdc_checkpoint(consumer_name,log_file,log_pos,updated_at) VALUES(%s,%s,%s,%s)",
               (CONSUMER,file,pos,utcnow()))
         sink.commit()
         return {"status":"BOOTSTRAPPED_EMPTY_SOURCE","binlog_file":file,"position":pos}
-    except Exception:
-        sink.rollback()
+    except Exception as exc:
+        if sink is not None:
+            try:
+                sink.rollback()
+            except Exception:
+                pass
+        # Only whitelisted stages are emitted; never include the original
+        # RuntimeError message, SQL query, username or connection settings.
+        if isinstance(exc, RuntimeError) and not isinstance(exc, CdcReadinessError):
+            raise CdcBootstrapStageError(stage) from None
         raise
     finally:
-        sink.close()
-        source.close()
+        if sink is not None:
+            sink.close()
+        if source is not None:
+            source.close()
 
 
 def _silver_entity(db, table, pk, payload, deleted, key, now):
@@ -311,6 +346,9 @@ if __name__ == "__main__":
         payload = {"status":"FAILED","error_type":redacted_error(exc)}
         if isinstance(exc, CdcReadinessError):
             payload["error_code"] = exc.code
+        elif isinstance(exc, CdcBootstrapStageError):
+            payload["error_code"] = "CDC_BOOTSTRAP_STAGE_FAILED"
+            payload["stage"] = exc.stage
         elif os.environ.get("SIM_ENV") == "local" and getattr(exc, "args", ()) and isinstance(exc.args[0], int):
             # MySQL integer errno is non-sensitive and helps isolate local
             # database permissions/version errors without exposing SQL text.
