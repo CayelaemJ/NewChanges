@@ -86,17 +86,21 @@ def _order_day(db, order_id):
 
 def _recompute_day(db, day, now):
     if day is None:return
-    # One aggregation for the touched day, not a full database refresh.
-    rows = query(db,"""SELECT COUNT(*),COALESCE(SUM(o.status='CANCELLED'),0),
-          COALESCE(SUM(CASE WHEN o.status<>'CANCELLED' THEN o.total ELSE 0 END),0),
-          COALESCE(SUM(CASE WHEN o.status='CANCELLED' THEN 0 ELSE COALESCE(p.net,0) END),0)
-          FROM silver_orders o LEFT JOIN (
-            SELECT order_id,SUM(CASE status WHEN 'CAPTURED' THEN amount
-              WHEN 'REFUNDED' THEN -amount ELSE 0 END) net
-            FROM silver_payments WHERE is_deleted=FALSE GROUP BY order_id
-          ) p ON p.order_id=o.order_id
-          WHERE DATE(o.ordered_at)=%s AND o.is_deleted=FALSE""",(day,))
-    count, cancellations, gross, net = rows[0]
+    # Use sargable day ranges; never aggregate every payment in the source.
+    # The original unfiltered payments GROUP BY scanned the entire Silver table
+    # for each touched day, defeating incremental processing on a micro RDS.
+    start = day
+    count, cancellations, gross = query(db,"""SELECT COUNT(*),COALESCE(SUM(status='CANCELLED'),0),
+         COALESCE(SUM(CASE WHEN status<>'CANCELLED' THEN total ELSE 0 END),0)
+         FROM silver_orders WHERE ordered_at >= %s
+         AND ordered_at < DATE_ADD(%s, INTERVAL 1 DAY)
+         AND is_deleted=FALSE""", (start,start))[0]
+    net = query(db,"""SELECT COALESCE(SUM(CASE p.status
+           WHEN 'CAPTURED' THEN p.amount WHEN 'REFUNDED' THEN -p.amount ELSE 0 END),0)
+         FROM silver_orders o JOIN silver_payments p ON p.order_id=o.order_id
+         WHERE o.ordered_at >= %s AND o.ordered_at < DATE_ADD(%s, INTERVAL 1 DAY)
+           AND o.is_deleted=FALSE AND o.status<>'CANCELLED'
+           AND p.is_deleted=FALSE""", (start,start))[0][0]
     write(db,"""INSERT INTO gold_daily_sales(order_day,order_count,cancelled_count,gross_sales,net_payments,recorded_at)
         VALUES(%s,%s,%s,%s,%s,%s) ON DUPLICATE KEY UPDATE
         order_count=VALUES(order_count),cancelled_count=VALUES(cancelled_count),
@@ -108,7 +112,8 @@ def _recompute_transaction_day(db,day,now):
     if day is None:return
     count, net = query(db,"""SELECT COUNT(*),COALESCE(SUM(CASE WHEN transaction_type='REFUND'
        THEN -amount ELSE amount END),0) FROM silver_transactions
-       WHERE DATE(occurred_at)=%s AND is_deleted=FALSE""",(day,))[0]
+       WHERE occurred_at >= %s AND occurred_at < DATE_ADD(%s, INTERVAL 1 DAY)
+       AND is_deleted=FALSE""",(day,day))[0]
     write(db,"""INSERT INTO gold_daily_transactions(transaction_day,transaction_count,net_amount,recorded_at)
          VALUES(%s,%s,%s,%s) ON DUPLICATE KEY UPDATE transaction_count=VALUES(transaction_count),
          net_amount=VALUES(net_amount),recorded_at=VALUES(recorded_at)""",(day,count,net,now))
