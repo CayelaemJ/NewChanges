@@ -44,17 +44,24 @@ trap diagnostics ERR
 docker run -d --network none --name "$CONTAINER" --memory 2g --shm-size 256m \
   --env POSTGRES_PASSWORD=synthetic-restore-only \
   --env POSTGRES_DB=restorecheck postgres:18-alpine >/dev/null
-RESTORE_STAGE="PostgreSQL readiness"
+RESTORE_STAGE="PostgreSQL final-server readiness"
+# The official postgres image briefly runs a temporary setup server, creates
+# POSTGRES_DB, deliberately shuts that server down, then execs the final one.
+# pg_isready can report ready against the temporary server, so never use it as
+# evidence that the actual restore database is ready.
 ready=false
-for i in $(seq 1 50); do
-  if docker exec "$CONTAINER" pg_isready -q -U postgres -d restorecheck; then
-    ready=true
-    break
+for i in $(seq 1 90); do
+  if docker logs "$CONTAINER" 2>&1 | grep -Fq 'PostgreSQL init process complete; ready for start up.'; then
+    if docker exec "$CONTAINER" psql -X -q -A -t -v ON_ERROR_STOP=1 \
+      -U postgres -d restorecheck -c 'SELECT 1' 2>/dev/null | grep -qx '1'; then
+      ready=true
+      break
+    fi
   fi
   sleep 1
 done
 if [[ "$ready" != true ]]; then
-  echo "BLOCKED: isolated restore PostgreSQL failed to start" >&2
+  echo "BLOCKED: final isolated PostgreSQL server did not become SQL-ready" >&2
   exit 2
 fi
 # A fresh PG18 database already includes public. Some dumps include a
