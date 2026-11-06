@@ -57,6 +57,13 @@ test("email delivery failures never persist or return untrusted provider details
   assert.doesNotMatch(sender,/response\.text\(\)/);
 });
 
+test("failed onboarding emails never reflect raw provider diagnostics",()=>{
+  const userService=read("src/services/userService.ts");
+  assert.match(userService,/import \{ safeEmailDeliveryFailure \} from/);
+  assert.match(userService,/emailError = safeEmailDeliveryFailure\(e\)/);
+  assert.doesNotMatch(userService,/emailError = String\(e\?\.message/);
+});
+
 test("saved Resend API configuration is resolved without leaking secrets to the browser",()=>{
   const provider=read("src/services/emailProviderConfig.ts");
   const start=scheduler.indexOf("function withEnv(");
