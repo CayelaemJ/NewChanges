@@ -35,3 +35,14 @@ test("source adapter rejects unsafe public destination and unbounded responses",
   assert.match(body,/bytes>maxBytes/);
   assert.match(pinned,/response\.headers\["content-encoding"\] !== "identity"/);
 });
+
+test("configured API base URL cannot embed query-string credentials",()=>{
+  const start=adapter.indexOf("async function createApiAdapter(");
+  const end=adapter.indexOf("async function fetchPage(",start);
+  assert.ok(start>=0&&end>start);
+  const setup=adapter.slice(start,end);
+  assert.match(adapter,/import \\{ assertSourceApiBaseUrlHasNoQuery \\} from "\\.\\/sourceApiBaseUrlPolicy\\.js"/);
+  assert.match(setup,/assertSourceApiBaseUrlHasNoQuery\\(parsedBase\\)/);
+  assert.ok(setup.indexOf("assertSourceApiBaseUrlHasNoQuery(parsedBase)") <
+    setup.indexOf("await assertSafeApiBaseUrl(rawBaseUrl)"));
+});
