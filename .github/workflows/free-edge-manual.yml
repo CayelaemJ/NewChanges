@@ -25,6 +25,8 @@ jobs:
         run: node --test tests/aiven-final-sync-safety.test.mjs
       - name: Validate read-only security schema parity guard (offline, no credentials)
         run: node --test tests/aiven-security-parity.test.mjs
+      - name: Assert MFA cutover gate blocks an unintegrated release (offline)
+        run: node --test tests/production-auth-cutover-gate.test.mjs
       - name: Verify production cutover evidence gate fails closed (offline only)
         run: node --test tests/production-cutover-evidence-check.test.mjs
       - name: Verify encrypted backup utility fails closed (no production access)
