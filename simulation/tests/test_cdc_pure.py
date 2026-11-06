@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import patch, Mock
-from runtime.cdc import apply_change, bootstrap_empty_source, CdcReadinessError, preflight
+from runtime.cdc import apply_change, bootstrap_empty_source, CdcReadinessError, CdcBootstrapStageError, preflight
 
 class CdcGuard(unittest.TestCase):
     def test_requires_bootstrap_approval(self):
@@ -52,3 +52,24 @@ class CdcReadinessDiagnostics(unittest.TestCase):
                 bootstrap_empty_source()
         self.assertEqual(raised.exception.code, "CDC_SOURCE_NOT_EMPTY")
         sink.rollback.assert_called_once()
+
+class CdcBootstrapStageTests(unittest.TestCase):
+    def test_unexpected_source_connect_runtime_error_has_safe_stage(self):
+        with patch.dict("os.environ", {"SIM_CDC_BOOTSTRAP_APPROVED": "YES_EMPTY_SOURCE_ONLY"}), patch(
+            "runtime.cdc.connect", side_effect=RuntimeError("secret-password-string")
+        ):
+            with self.assertRaises(CdcBootstrapStageError) as raised:
+                bootstrap_empty_source()
+        self.assertEqual(raised.exception.stage, "SOURCE_CONNECT")
+        self.assertNotIn("secret-password-string", str(raised.exception))
+
+    def test_unexpected_sink_connect_runtime_error_closes_source(self):
+        src = Mock()
+        with patch.dict("os.environ", {"SIM_CDC_BOOTSTRAP_APPROVED": "YES_EMPTY_SOURCE_ONLY"}), patch(
+            "runtime.cdc.connect", side_effect=[src, RuntimeError("do_not_log_host")]
+        ):
+            with self.assertRaises(CdcBootstrapStageError) as raised:
+                bootstrap_empty_source()
+        self.assertEqual(raised.exception.stage, "SINK_CONNECT")
+        self.assertNotIn("do_not_log_host", str(raised.exception))
+        src.close.assert_called_once()
