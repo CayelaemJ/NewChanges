@@ -60,3 +60,16 @@ test('recovery orchestrator keeps both DB operations read-only and performs two 
  assert.match(script,/sha256sum "\$archive"/);
  assert.doesNotMatch(script,/aiven-final-delta-sync|db:push|pg_restore.*onrender/);
 });
+
+test('TLS downgrade is rejected before invoking backup tools',()=>{
+ const url='postgresql://fake:fake@the-fixer-postgres-cay-bed7.b.aivencloud.com:26029/defaultdb?sslmode=prefer';
+ const r=invoke(['target','--preflight'],{DR_TARGET_DATABASE_URL:url});
+ assert.equal(r.status,2);
+ assert.match(r.stderr,/TLS mode must be/);
+});
+test('individual backup command independently blocks repository destinations',()=>{
+ const src=readFileSync(backup,'utf8');
+ assert.match(src,/realpathSync\(folder\)/);
+ assert.match(src,/relative\(repository,backupDirectory\)/);
+ assert.match(src,/Backup output must be outside the repository checkout/);
+});
