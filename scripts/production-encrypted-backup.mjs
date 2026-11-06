@@ -5,9 +5,9 @@
 // Credentials must be provided by DR_SOURCE_DATABASE_URL / DR_TARGET_DATABASE_URL environment.
 import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { createReadStream, createWriteStream, mkdirSync, chmodSync, rmSync, renameSync, statSync } from 'node:fs';
+import { createReadStream, createWriteStream, mkdirSync, chmodSync, rmSync, renameSync, statSync, realpathSync } from 'node:fs';
 import { once } from 'node:events';
-import { resolve, join, isAbsolute } from 'node:path';
+import { resolve, join, isAbsolute, relative, sep } from 'node:path';
 import process from 'node:process';
 
 const side=process.argv[2];
@@ -28,7 +28,8 @@ function parseConnection(raw, selected) {
       (u.hostname!=='the-fixer-postgres-cay-bed7.b.aivencloud.com'||u.port!=='26029'||db!=='defaultdb'))
     throw Error('Unexpected Aiven endpoint; backup blocked');
   if (!u.username || !u.password) throw Error('Missing database username or password');
-  if (u.searchParams.get('sslmode')==='disable') throw Error('SSL cannot be disabled');
+  const tlsMode=u.searchParams.get('sslmode')||'require';
+  if (!['require','verify-ca','verify-full'].includes(tlsMode)) throw Error('Database TLS mode must be require, verify-ca, or verify-full');
   const env={...process.env};
   for (const k of ['PGHOST','PGHOSTADDR','PGPORT','PGUSER','PGPASSWORD','PGDATABASE',
     'PGSSLMODE','PGCHANNELBINDING','PGOPTIONS','PGSERVICE','PGSERVICEFILE']) delete env[k];
@@ -37,7 +38,7 @@ function parseConnection(raw, selected) {
     PGUSER:decodeURIComponent(u.username),
     PGPASSWORD:decodeURIComponent(u.password),
     PGDATABASE:db,
-    PGSSLMODE:u.searchParams.get('sslmode')||'require',
+    PGSSLMODE:tlsMode,
     PGCONNECT_TIMEOUT:'15',
     PGOPTIONS:'-c default_transaction_read_only=on'
   });
@@ -65,8 +66,13 @@ async function main() {
   console.log('PREFLIGHT PASS: side='+side+' TLS='+pg.PGSSLMODE+'; streaming pg_dump to age, no plaintext archive.');
   if (mode==='--preflight') return;
   mkdirSync(folder,{recursive:true,mode:0o700});
+  const backupDirectory=realpathSync(folder);
+  const repository=realpathSync(new URL('..', import.meta.url));
+  const location=relative(repository,backupDirectory);
+  if (location==='' || (location!=='..' && !location.startsWith('..'+sep) && !isAbsolute(location)))
+    throw Error('Backup output must be outside the repository checkout');
   const stamp=new Date().toISOString().replace(/[:.]/g,'-');
-  const out=join(resolve(folder),side+'-'+stamp+'.pgdump.age');
+  const out=join(backupDirectory,side+'-'+stamp+'.pgdump.age');
   const tmp=out+'.incomplete';
   let completed=false;
   let dump, encrypt;
