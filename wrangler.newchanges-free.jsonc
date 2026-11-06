@@ -7,7 +7,7 @@
   "vars": {
     "NEWCHANGES_FREE_EDGE_ENABLED": "false",
     "NEWCHANGES_CANONICAL_HOST": "",
-    "NEWCHANGES_RENDER_ORIGIN": ""
+    "NEWCHANGES_RENDER_ORIGIN": "https://newchanges-free-production.onrender.com"
   },
   "observability": {
     "enabled": true
