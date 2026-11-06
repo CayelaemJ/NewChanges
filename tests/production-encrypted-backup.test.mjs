@@ -35,3 +35,13 @@ test('backup implementation streams through age without writing a raw dump file'
  assert.doesNotMatch(src,/--file[=,]/);
  assert.match(src,/rmSync\(tmp,\{force:true\}\)/);
 });
+
+test('offline restore drill cannot connect to external databases or networks',()=>{
+ const script=readFileSync(new URL('../scripts/verify-encrypted-backup-restore.sh',import.meta.url),'utf8');
+ assert.match(script,/--network none/);
+ assert.match(script,/postgres:18-alpine/);
+ assert.match(script,/pg_restore --exit-on-error/);
+ assert.match(script,/set -Eeuo pipefail/);
+ assert.match(script,/trap cleanup EXIT/);
+ assert.match(script,/table_count.*57|table_count.*!= 57/);
+});
