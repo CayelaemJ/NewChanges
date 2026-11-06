@@ -27,8 +27,7 @@ CREATE TABLE IF NOT EXISTS products (
   product_name VARCHAR(150) NOT NULL, price DECIMAL(12,2) NOT NULL,
   inventory INT NOT NULL DEFAULT 0, is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
   updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
-  CHECK(price>=0), CHECK(inventory>=0), INDEX idx_products_updated(updated_at),
-  INDEX idx_products_updated(updated_at)
+  CHECK(price>=0), CHECK(inventory>=0), INDEX idx_products_updated(updated_at)
 ) ENGINE=InnoDB;
 CREATE TABLE IF NOT EXISTS orders (
   id BIGINT PRIMARY KEY AUTO_INCREMENT, order_key VARCHAR(100) NOT NULL UNIQUE,
