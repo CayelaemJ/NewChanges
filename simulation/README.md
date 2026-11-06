@@ -57,6 +57,23 @@ For the existing self-hosted `newchanges-ci` GitHub runner, copy these files und
 
 ## Troubleshooting Docker CDC bootstrap (local only)
 
+Before calling `runtime.cdc bootstrap`, Docker runs a **read-only, local-only**
+probe which prints one JSON record per stage:
+
+`replica_connection_and_stop`, `source_empty`, `row_binlog_configuration`,
+`binlog_status_privilege`, and `analytics_sink_connection`. The final
+`local_cdc_preflight` field is `PASS` or `FAIL`. No real database host,
+username, SQL exception body or password appears in these records.
+
+If all preflight stages pass but bootstrap raises an unexpected RuntimeError,
+the CLI emits `CDC_BOOTSTRAP_STAGE_FAILED` with one of these fixed `stage`
+values: `SOURCE_CONNECT`, `SINK_CONNECT`, `SIMULATION_STOP`,
+`EMPTY_SOURCE`, `BINLOG_PREFLIGHT`, `SINK_CHECKPOINT`,
+`CHECKPOINT_WRITE`. This intentionally does not invent a root cause.
+Use the failed stage and MySQL error number (if available) to repair only
+the disposable test setup. Never disable the empty-source guard on live RDS.
+
+
 A failed bootstrap writes a JSON object to stderr containing a fixed `error_code`
 rather than printing database driver details. This is intentional: connection
 exceptions may include sensitive SQL or host/account details.
