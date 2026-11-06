@@ -42,7 +42,7 @@ services:
       SIM_CDC_ENABLED: 'true'
       SIM_CDC_BOOTSTRAP_APPROVED: YES_EMPTY_SOURCE_ONLY
       SIM_MAX_ORDERS: '12'
-    command: ["sh","-c","python ops/setup_local.py && python -m runtime.cdc bootstrap && python -m unittest discover -s tests -v"]
+    command: ["sh","-c","python ops/setup_local.py && python ops/local_bootstrap_probe.py && python -m runtime.cdc bootstrap && python -m unittest discover -s tests -v"]
     networks: [isolated_test]
 networks:
   isolated_test:
