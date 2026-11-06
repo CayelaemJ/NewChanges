@@ -28,3 +28,16 @@ export function notificationPlainText(value: unknown): string {
   // which static lint rules reject, and also covers C1 controls (U+0080-009F).
   return String(value ?? "").replace(/[\p{Cc}<>]/gu," ").trim().slice(0,200);
 }
+
+
+// Format a mail sender display name without letting configured text introduce
+// address delimiters, invisible format controls or line breaks. Nodemailer
+// performs its own header encoding, but Resend receives a formatted From value.
+export function safeSenderDisplayName(value: unknown): string {
+  const name = String(value ?? "")
+    .replace(/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}<>]/gu, " ")
+    .replace(/\s+/gu, " ")
+    .trim()
+    .slice(0, 120);
+  return name || "The Fixer (Pty) Ltd Dashboard Portal";
+}
