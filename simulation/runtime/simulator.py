@@ -33,6 +33,11 @@ def _once(conn, key, op, at):
 def _execute_event(conn, key, op, at, fn):
     """Atomic event idempotency plus operation. Replays of committed keys do nothing."""
     try:
+        # Re-check the database kill switch for every atomic business event.
+        # An emergency stop must terminate an already-running simulation, too.
+        control = _rows(conn, "SELECT enabled FROM sim_control WHERE control_id=1")
+        if not control or int(control[0][0]) != 1:
+            raise RuntimeError("Emergency stop active; simulation event refused")
         if not _once(conn, key, op, at):
             conn.rollback()
             return False
@@ -68,11 +73,14 @@ def run(run_key=None, seed=None, max_orders=None):
         enabled = _rows(conn, "SELECT enabled FROM sim_control WHERE control_id=1")
         if not enabled or enabled[0][0] != 1:
             raise RuntimeError("Emergency stop active: sim_control.enabled is false")
-        existing = _rows(conn, "SELECT status FROM simulation_runs WHERE run_key=%s", (run_key,))
+        existing = _rows(conn, "SELECT status,started_at FROM simulation_runs WHERE run_key=%s", (run_key,))
         if existing and existing[0][0] == "SUCCEEDED":
             return {"status": "ALREADY_APPLIED", "run_key": run_key, "statistics": stats}
         if existing:
-            _sql(conn, "UPDATE simulation_runs SET status='RUNNING',started_at=%s,finished_at=NULL,error_code=NULL WHERE run_key=%s", (now,run_key))
+            # Preserve the original UTC run anchor across retries. Otherwise a
+            # retry crossing an hour/day boundary can plan a different volume.
+            now = existing[0][1]
+            _sql(conn, "UPDATE simulation_runs SET status='RUNNING',finished_at=NULL,error_code=NULL WHERE run_key=%s", (run_key,))
         else:
             _sql(conn, "INSERT INTO simulation_runs(run_key,status,started_at) VALUES(%s,'RUNNING',%s)", (run_key,now))
         conn.commit()
@@ -86,8 +94,7 @@ def run(run_key=None, seed=None, max_orders=None):
                      (f"SYN-SKU-{i:03d}", f"Synthetic Product {i}", price, now))
             _execute_event(conn, key, "UPSERT", now, make_product)
 
-        today = datetime.now(timezone.utc)
-        plan = schedule_counts(seed, max_orders=max_orders, now=today)
+        plan = schedule_counts(f"{seed}|{run_key}", max_orders=max_orders, now=now.replace(tzinfo=timezone.utc))
         for i in range(plan["customers"]):
             key = f"{run_key}:customer:{i}"
             def make_customer(i=i):
