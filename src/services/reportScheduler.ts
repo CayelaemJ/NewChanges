@@ -663,8 +663,11 @@ export async function runDueReports(logger?: { info?: Function; error?: Function
       if (!claim.count) continue;
       logger?.info?.({ scheduleId: row.id, name: row.name }, "sending scheduled report");
       await sendSchedule(row.id, "scheduled");
-    } catch (error) {
-      logger?.error?.({ err: error, scheduleId: row.id }, "scheduled report failed");
+    } catch {
+      // A scheduled send may fail in Prisma, SMTP, a source adapter or email
+      // template generation. Raw exceptions can carry server credentials,
+      // connection strings or private report content: never forward them.
+      logger?.error?.({ scheduleId: row.id, reason: "SCHEDULE_DELIVERY_FAILED" }, "scheduled report failed");
     }
   }
   return { checked: due.length };
