@@ -378,3 +378,9 @@ Added focused behavioral tests in `tests/security/sender-display-name.test.ts`, 
 Added `parseAlertEmailRecipients` to reject malformed, duplicate or overlength addresses and enforce a maximum of 10 recipients. The save path validates before persistence; the automatic notification path fails closed on invalid historical persisted values. A blank value clears the list. Two pure behavioral tests and a source-adoption contract were added to `check:security`.
 
 **Compatibility:** Existing saved lists with duplicate, malformed or over-limit addresses will now be ignored by alert delivery until an administrator corrects them. This requires explicit staging review to avoid silently losing operational alerts. **Not yet verified:** current-head Node 24/complete Docker suite, real email delivery or operational notification monitoring. CI failures remain blockers; no merge/deploy/production changes.
+
+### Formatted sender-name address separators (2026-11-06)
+
+**Defense-in-depth finding:** The prior sender sanitizer excluded Unicode controls and angle brackets but preserved quotes, commas, semicolons and backslashes. In a formatted Resend `From` string, these characters may affect address-header interpretation or make provider behavior inconsistent. Both SMTP and Resend now normalize those separators to spaces as part of the shared `safeSenderDisplayName` policy. Additional regression examples cover delimiter-heavy names, and the source contract asserts that the new exclusions stay present.
+
+**Verification:** The shared normalization cases were evaluated without network access and matched expected outputs. Full repository Node 24, actual provider behavior, complete Docker CI and browser tests are still unverified for this latest head. Current CircleCI failures require job logs; this modification alone is not a claim that CI is fixed. No merge, deploy, credential use or production changes.
