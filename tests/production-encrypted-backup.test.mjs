@@ -136,3 +136,12 @@ test('local PG18 restore uses a bounded 2GiB cap and reports container shutdown 
  assert.match(script,/RESTORE_STAGE="pg_restore data\/index reconstruction"/);
  assert.doesNotMatch(script,/docker run -d --rm/);
 });
+
+test('offline restore container name expands to a valid Docker identifier',()=>{
+ const script=readFileSync(new URL('../scripts/verify-encrypted-backup-restore.sh',import.meta.url),'utf8');
+ const declaration=script.split('\n').find(line=>line.startsWith('CONTAINER='));
+ assert.equal(declaration,'CONTAINER="fixer-backup-restore-${BASHPID}"');
+ const probe=spawnSync('bash',['-c',declaration+'; printf "%s" "$CONTAINER"'],{encoding:'utf8'});
+ assert.equal(probe.status,0,probe.stderr);
+ assert.match(probe.stdout,/^fixer-backup-restore-[0-9]+$/);
+});
