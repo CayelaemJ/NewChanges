@@ -46,6 +46,7 @@ fi
 # complete authenticated decryption instead of dying with SIGPIPE (141).
 # Keep pipefail enabled: an incorrect key, corrupt archive or pg_restore failure
 # must still stop the drill. No plaintext archive is written to disk.
+echo "Inspecting encrypted archive catalog in disposable PG18 (streamed; no local plaintext)..."
 archive_catalog="$(age -d -i "$AGE_IDENTITY_FILE" "$1" | {
   docker exec -i "$CONTAINER" pg_restore --list
   cat > /dev/null
