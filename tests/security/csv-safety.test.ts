@@ -7,7 +7,7 @@ test("CSV neutralizes spreadsheet formulas in untrusted text cells", () => {
     "=HYPERLINK(\"https://attacker.example\",\"click\")",
     "+SUM(1,2)", "-cmd|'/C calc'!A0", "@SUM(A1)",
     "  =1+2", "\t=1+2", "\r=1+2", "\n=1+2", "\uFEFF=1+2",
-    "\u200B=1+2",
+    "\u200B=1+2", "\u0085=1+2", "\u00A0=1+2",
   ]) assert.ok(csvEscape(text).startsWith("'") || csvEscape(text).startsWith("\"'"), text);
 });
 
