@@ -26,6 +26,27 @@ SELECT TABLE_NAME,COLUMN_NAME,DATA_TYPE
        'email|phone|mobile|address|first.?name|last.?name|birth|passport|identity|national.?id|account|iban|card|secret|token|password|hash'
  ORDER BY TABLE_NAME,ORDINAL_POSITION;
 
+-- Timestamp-column inventory for the existing, non-simulation ingest_stage.
+-- Do not overwrite historical dates, blindly add ON UPDATE, or modify these
+-- existing tables based solely on their names. This query is metadata-only.
+SELECT TABLE_NAME,COLUMN_NAME,DATA_TYPE,COLUMN_DEFAULT,EXTRA
+  FROM information_schema.COLUMNS
+ WHERE TABLE_SCHEMA='ingest_stage'
+   AND LOWER(COLUMN_NAME) REGEXP
+       'updated|modified|changed|created|loaded|source_.*(time|date|at)|event_.*(time|date|at)'
+ ORDER BY TABLE_NAME,ORDINAL_POSITION;
+
+-- Compare session-local time to the source-of-truth UTC clock.
+SELECT CURRENT_TIMESTAMP(6) AS session_time,
+       UTC_TIMESTAMP(6) AS utc_time,
+       @@SESSION.time_zone AS session_time_zone;
+
+-- After deployment of the entirely separate fixer_sim schema only:
+-- SELECT source_table,last_changed_at_utc,
+--        TIMESTAMPDIFF(SECOND,last_changed_at_utc,UTC_TIMESTAMP(6))
+--          AS seconds_since_last_change
+-- FROM fixer_sim.v_source_freshness ORDER BY last_changed_at_utc DESC;
+
 -- Operator can inspect its own grants separately with SHOW GRANTS;
 -- redact MySQL account names/hosts before sharing results.
 
