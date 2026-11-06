@@ -10,6 +10,7 @@ import { assertSecureSmtpTls } from "./smtpTlsPolicy.js";
 import { resolveEmailProviderConfig } from "./emailProviderConfig.js";
 import { safeEmailDeliveryFailure } from "./emailDeliveryFailure.js";
 import { validNotificationEmailAddress } from "./notificationEmailAddress.js";
+import { strictEmailSettingBoolean, strictSmtpPort, strictStaleDeactivateDays } from "./emailSettingsInputPolicy.js";
 
 export type ReportFilters = {
   period?: string;
@@ -146,10 +147,10 @@ export async function saveEmailConfig(input: EmailDraft) {
   }
   if ("resendApiKey" in input && clean(input.resendApiKey)) data.resendApiKey = clean(input.resendApiKey);
   if ("smtpHost" in input) data.smtpHost = clean(input.smtpHost);
-  if ("smtpPort" in input && input.smtpPort != null) data.smtpPort = Math.max(1, Math.min(65535, Number(input.smtpPort)));
-  if ("smtpSecure" in input) data.smtpSecure = Boolean(input.smtpSecure);
-  if ("smtpRequireTls" in input) data.smtpRequireTls = Boolean(input.smtpRequireTls);
-  if ("smtpRejectUnauthorized" in input) data.smtpRejectUnauthorized = Boolean(input.smtpRejectUnauthorized);
+  if ("smtpPort" in input && input.smtpPort != null) data.smtpPort = strictSmtpPort(input.smtpPort);
+  if ("smtpSecure" in input) data.smtpSecure = strictEmailSettingBoolean(input.smtpSecure, "smtpSecure");
+  if ("smtpRequireTls" in input) data.smtpRequireTls = strictEmailSettingBoolean(input.smtpRequireTls, "smtpRequireTls");
+  if ("smtpRejectUnauthorized" in input) data.smtpRejectUnauthorized = strictEmailSettingBoolean(input.smtpRejectUnauthorized, "smtpRejectUnauthorized");
   if ("smtpUsername" in input) data.smtpUsername = clean(input.smtpUsername);
   if (clean(input.smtpPassword)) data.smtpPassword = clean(input.smtpPassword);
   if ("fromName" in input) data.fromName = clean(input.fromName) || "The Fixer (Pty) Ltd Dashboard Portal";
@@ -178,13 +179,10 @@ export async function saveEmailConfig(input: EmailDraft) {
     else if (!allowedSlackWebhookUrl(webhook)) throw new Error("Slack webhook must be an HTTPS Slack incoming-webhook URL");
     else data.alertSlackWebhookUrl = webhook;
   }
-  if ("digestEnabled" in input) data.digestEnabled = Boolean(input.digestEnabled);
-  if ("staleDeactivateDays" in input) {
-    const n = input.staleDeactivateDays;
-    data.staleDeactivateDays = n == null || Number(n) <= 0 ? null : Math.round(Math.max(7, Math.min(3650, Number(n))));
-  }
-  if ("scoreChangeAlertsEnabled" in input) data.scoreChangeAlertsEnabled = Boolean(input.scoreChangeAlertsEnabled);
-  if ("syntheticDataMode" in input) data.syntheticDataMode = Boolean(input.syntheticDataMode);
+  if ("digestEnabled" in input) data.digestEnabled = strictEmailSettingBoolean(input.digestEnabled, "digestEnabled");
+  if ("staleDeactivateDays" in input) data.staleDeactivateDays = strictStaleDeactivateDays(input.staleDeactivateDays);
+  if ("scoreChangeAlertsEnabled" in input) data.scoreChangeAlertsEnabled = strictEmailSettingBoolean(input.scoreChangeAlertsEnabled, "scoreChangeAlertsEnabled");
+  if ("syntheticDataMode" in input) data.syntheticDataMode = strictEmailSettingBoolean(input.syntheticDataMode, "syntheticDataMode");
   if (data.fromEmail && !validNotificationEmailAddress(data.fromEmail)) throw new Error("from email is not valid");
   if (data.replyTo && !validNotificationEmailAddress(data.replyTo)) throw new Error("reply-to email is not valid");
   if (data.resendFromEmail && !validNotificationEmailAddress(data.resendFromEmail)) throw new Error("Resend From email is not valid");
