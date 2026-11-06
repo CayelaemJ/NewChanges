@@ -366,3 +366,31 @@ AGE_IDENTITY_FILE="$HOME/fixer-recovery-keys/age-identity.txt" bash scripts/veri
 ```
 
 Do not treat a portable Neon public-schema restore as a full Neon disaster recovery rehearsal. Do not mark the cutover cleared until a separate protected copy is verified, full source recovery path and functional authentication/RLS/MFA compatibility are proven, Neon writers fenced, and the controlled final delta and 57-table comparison pass.
+
+
+## 2026-11-06 SIGPIPE 141 root-cause remediation (catalog reader, second stage)
+
+The previous `grep -q` fix did not resolve exit 141. The second streaming problem is that `pg_restore --list` can exit after only reading the archive catalog, closing its stdin while `age -d` is still outputting decrypted bytes. Under `set -o pipefail`, `age` then fails with SIGPIPE 141. The corrected catalog-inspection pipeline is:
+
+```bash
+archive_catalog="$(age -d -i "$AGE_IDENTITY_FILE" "$1" | {
+  docker exec -i "$CONTAINER" pg_restore --list
+  cat > /dev/null
+})"
+```
+
+The trailing `cat` **drains the remainder of the decrypted stream** so `age` can complete authenticated decryption; no plaintext archive is created. `pipefail` stays ON for catalog inspection and for the actual `pg_restore --exit-on-error` restore pipeline. An invalid age key, corrupt archive, or failed PostgreSQL catalog/restore operation continues to block the drill. An offline simulated large-stream regression test now exercises early exit + drain with Bash `pipefail`. The full Aiven restore is still awaiting a new operator run; do not assert success based on the old code's silent exit.
+
+Retry the **existing** encrypted Aiven archive after pulling this branch:
+```bash
+cd ~/NewChanges-free-edge
+git fetch origin
+git merge --ff-only origin/feat/free-cloudflare-render-primary-20261105
+node --test tests/production-encrypted-backup.test.mjs
+bash -n scripts/verify-encrypted-backup-restore.sh
+AGE_IDENTITY_FILE="$HOME/fixer-recovery-keys/age-identity.txt" bash scripts/verify-encrypted-backup-restore.sh \
+  "$HOME/fixer-recovery-archives/target-full-2026-11-06T12-08-35-902Z.pgdump.age"
+printf 'RESTORE EXIT: %s\n' "$?"
+```
+
+Only the isolated Docker container is mutated. Do not run `DROP SCHEMA` against Neon or Aiven, and do not create a new archive for this bugfix.
