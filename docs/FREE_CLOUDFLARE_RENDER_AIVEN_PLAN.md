@@ -499,3 +499,21 @@ echo "Security parity exit code: $?"
 ```
 
 Review the redacted `MISSING FUNCTION SIGNATURES` list. Keep source Neon online, Render fenced and Cloudflare production routing disabled.
+
+
+## 2026-11-06 Neon pg_stat_statements monitoring-only difference classified
+
+The operator's read-only schema comparison identified the full 3-function difference: Neon contains extension-owned `pg_stat_statements(boolean)`, `pg_stat_statements_info()`, and `pg_stat_statements_reset(oid,oid,bigint,boolean)` in `public`. Aiven has none of these extension functions, while **all ten application-defined public functions are present and definition-identical**. Tables: 57/57, RLS policies 0/0, user triggers 0/0. The three functions are PostgreSQL query-statistics/monitoring tools, not application synchronization functions. This difference does **not** require installing `pg_stat_statements` on Aiven's 1 GiB Free service merely to match source metadata.
+
+Updated `scripts/aiven-security-parity.mjs` to accept **only** these exact three source-missing signatures, and only when each is actually owned by `pg_stat_statements` according to `pg_depend` and `pg_extension`. All other function, RLS flag, policy and trigger differences continue to fail. Additionally, inspect direct catalog dependencies from public application-defined functions onto extension member functions; presence blocks cutover. This is a narrow metadata gate, **not proof that dynamically generated SQL or operational tooling never calls the extension**. Application behavior and external monitoring dependencies still require testing. No extension install, schema mutation, or cutover performed.
+
+After fetching the branch, operator should run:
+```bash
+cd ~/NewChanges-free-edge
+git fetch origin
+git merge --ff-only origin/feat/free-cloudflare-render-primary-20261105
+node --test tests/aiven-security-parity.test.mjs
+node scripts/aiven-security-parity.mjs
+echo "Parity exit code: $?"
+```
+Expected only if there are no additional source or target differences: `missing_on_target=0`, `different_definitions=0`, `extra_on_target=0`, `accepted_neon_monitoring_only=3`, followed by PASS and exit 0. The final copy is still prohibited until independent recovery/authorization evidence, writer freeze, and after-freeze audit/session delta are verified.
