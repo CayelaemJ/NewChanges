@@ -357,7 +357,13 @@ jobs:
           command: pip install --no-cache-dir semgrep
       - run:
           name: Scan JavaScript, TypeScript and security rules
-          command: semgrep scan --config p/javascript --config p/typescript --config p/security-audit --error --exclude node_modules --exclude dist --exclude build .
+          command: |
+            mkdir -p test-results/security
+            semgrep scan --config p/javascript --config p/typescript --config p/security-audit --error --json --output test-results/security/semgrep-findings.json --exclude node_modules --exclude dist --exclude build .
+      - store_artifacts:
+          path: test-results/security/semgrep-findings.json
+          destination: security/semgrep-findings.json
+          when: always
 
 
   credential_exposure_scan:
