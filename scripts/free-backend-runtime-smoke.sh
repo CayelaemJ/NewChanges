@@ -57,19 +57,22 @@ for i in $(seq 1 45); do
   if docker exec "$APP" node -e '
     (async () => {
       const base = "http://127.0.0.1:3000";
-      const [health, ready, direct, proxied] = await Promise.all([
+      const [health, readyDirect, ready, direct, proxied] = await Promise.all([
         fetch(base + "/health"),
         fetch(base + "/ready"),
+        fetch(base + "/ready", {headers:{
+          "X-NewChanges-Edge-Token":"synthetic-local-origin-token-of-40-chars"
+        }}),
         fetch(base + "/version"),
         fetch(base + "/version", {headers:{
           "X-NewChanges-Edge-Token":"synthetic-local-origin-token-of-40-chars"
         }})
       ]);
-      if (health.status !== 200 || ready.status !== 200 ||
+      if (health.status !== 200 || readyDirect.status !== 403 || ready.status !== 200 ||
           direct.status !== 403 || proxied.status !== 200) process.exit(1);
       const body = await ready.json();
       if (body.database !== "reachable") process.exit(1);
-      console.log("PASS: /health=200 /ready=200 /version-direct=403 /version-edge=200");
+      console.log("PASS: /health=200 /ready-direct=403 /ready-edge=200 /version-direct=403 /version-edge=200");
     })().catch(() => process.exit(1));
   ' ; then passed=true; break; fi
   sleep 1
