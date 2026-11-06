@@ -24,6 +24,17 @@ class LocalMySQL(unittest.TestCase):
         with cls.db.cursor() as c:c.execute('UPDATE sim_control SET enabled=FALSE WHERE control_id=1')
         cls.db.commit();cls.db.close()
 
+    def test_fresh_sha2_accounts_can_authenticate(self):
+        # MySQL 8.4 defaults to caching_sha2_password. The first connection
+        # of each new local account must work, not just a cached root login.
+        for role in ("writer", "replica", "cdc"):
+            with self.subTest(role=role):
+                db = connect(role)
+                try:
+                    self.assertEqual(query(db, "SELECT 1")[0][0], 1)
+                finally:
+                    db.close()
+
     def test_generator_idempotent_and_relationships(self):
         r=run(run_key='test:run:001',seed='test',max_orders=12)
         self.assertIn(r['status'],('SUCCEEDED','ALREADY_APPLIED'))
