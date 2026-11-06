@@ -37,8 +37,8 @@ SELECT TABLE_NAME,COLUMN_NAME,DATA_TYPE,COLUMN_DEFAULT,EXTRA
  ORDER BY TABLE_NAME,ORDINAL_POSITION;
 
 -- Compare session-local time to the source-of-truth UTC clock.
-SELECT CURRENT_TIMESTAMP(6) AS session_time,
-       UTC_TIMESTAMP(6) AS utc_time,
+SELECT CURRENT_TIMESTAMP(6) AS session_datetime,
+       UTC_TIMESTAMP(6) AS current_utc_datetime,
        @@SESSION.time_zone AS session_time_zone;
 
 -- After deployment of the entirely separate fixer_sim schema only:
