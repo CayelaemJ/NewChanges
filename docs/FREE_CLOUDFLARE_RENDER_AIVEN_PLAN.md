@@ -394,3 +394,25 @@ printf 'RESTORE EXIT: %s\n' "$?"
 ```
 
 Only the isolated Docker container is mutated. Do not run `DROP SCHEMA` against Neon or Aiven, and do not create a new archive for this bugfix.
+
+
+## 2026-11-06 isolated PostgreSQL shutdown while restoring encrypted Aiven archive
+
+After stream-drain and archive schema detection succeeded, the operator's **actual** Aiven restore reached `pg_restore` but received `FATAL: the database system is shutting down` (exit 1). Aiven/Neon production were not touched: this was the disposable `--network none` local PostgreSQL 18 Docker container. The cause is not yet verified. The previous `--memory 768m` limit is a plausible local container OOM trigger during data/index reconstruction; Docker Desktop/WSL restart and disk exhaustion are other possibilities.
+
+The offline restore helper now uses `--memory 2g --shm-size 256m`, retains the temporary container until diagnostic inspection, and on errors reports the failed stage, Docker container state, OOMKilled flag and last 30 local PostgreSQL log lines before automatically cleaning up. The local logs may contain internal SQL details; **redact credentials and record content before sharing**. These changes affect only disposable Docker resource limits and diagnostics, NOT Aiven Free capacity, database schema, Render, or Cloudflare. The updated script remains `--network none` and retains `pg_restore --exit-on-error`.
+
+Retry the exact same Aiven archive after updating the branch:
+```bash
+cd ~/NewChanges-free-edge
+git fetch origin
+git merge --ff-only origin/feat/free-cloudflare-render-primary-20261105
+node --test tests/production-encrypted-backup.test.mjs
+bash -n scripts/verify-encrypted-backup-restore.sh
+AGE_IDENTITY_FILE="$HOME/fixer-recovery-keys/age-identity.txt" \
+ bash scripts/verify-encrypted-backup-restore.sh \
+ "$HOME/fixer-recovery-archives/target-full-2026-11-06T12-08-35-902Z.pgdump.age"
+echo "Restore exit code: $?"
+```
+
+If the restore fails again, check OOMKilled and the log tail. Exit 0 plus the printed 57-table PASS is required. No new archive is needed for this local restore retry. Even a successful target restore does not satisfy offsite backups, Neon full recovery, final delta, writer fencing or MFA checks.
