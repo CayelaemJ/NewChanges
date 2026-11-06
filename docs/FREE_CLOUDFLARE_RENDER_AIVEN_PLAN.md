@@ -416,3 +416,24 @@ echo "Restore exit code: $?"
 ```
 
 If the restore fails again, check OOMKilled and the log tail. Exit 0 plus the printed 57-table PASS is required. No new archive is needed for this local restore retry. Even a successful target restore does not satisfy offsite backups, Neon full recovery, final delta, writer fencing or MFA checks.
+
+
+## 2026-11-06 root cause proven: official PostgreSQL Docker temporary setup server
+
+Operator's new isolated restore logs showed `pg_isready` returned success during the official Postgres entrypoint's **temporary database-initialization server**. The image then intentionally stopped that temporary process, generating `FATAL: the database system is shutting down` when `pg_restore` connected. Log evidence: `CREATE DATABASE`, `received fast shutdown request`, `PostgreSQL init process complete; ready for start up.`. Container showed `oom_killed=false`; no actual OOM evidence. This supersedes the earlier speculative 768 MB OOM explanation.
+
+The restore script now waits for the final Docker initialization completion log marker **and** an actual successful SQL `SELECT 1` against the `restorecheck` database. It does not rely on the transient `pg_isready` response. The log inspection uses a Bash string comparison rather than early-exit `grep -q` pipelines, avoiding the previous SIGPIPE 141 bug. All temporary-container networking remains disabled, and the exact existing encrypted Aiven archive can be re-used.
+
+```bash
+cd ~/NewChanges-free-edge
+git fetch origin
+git merge --ff-only origin/feat/free-cloudflare-render-primary-20261105
+node --test tests/production-encrypted-backup.test.mjs
+bash -n scripts/verify-encrypted-backup-restore.sh
+AGE_IDENTITY_FILE="$HOME/fixer-recovery-keys/age-identity.txt" \
+  bash scripts/verify-encrypted-backup-restore.sh \
+  "$HOME/fixer-recovery-archives/target-full-2026-11-06T12-08-35-902Z.pgdump.age"
+echo "Restore exit code: $?"
+```
+
+Aiven full backup restore is **not yet confirmed** with the new code. No live Neon/Aiven modifications, DNS/Cloudflare cutover or Render writer changes.
