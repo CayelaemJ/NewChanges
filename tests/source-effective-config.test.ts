@@ -86,3 +86,35 @@ test("API token uses the same environment-lock precedence", () => {
     assert.equal(effectiveSourceConfig({ authToken: "saved-token" }).authToken, "env-token");
   });
 });
+
+test("persisted IntegrationConfig analytics-replica columns map to the active adapter", () => {
+  withSourceEnv({
+    SOURCE_CONFIG_LOCKED: "false",
+    SOURCE_SQL_REPLICA_HOST: "env-replica.invalid",
+    SOURCE_SQL_REPLICA_PASSWORD: "env-replica-secret",
+    SOURCE_SQL_REPLICA_ENABLED: "false",
+  }, () => {
+    const resolved = effectiveSourceConfig({
+      sourceAnalyticsReplicaEnabled: true,
+      sourceAnalyticsReplicaHost: "saved-replica.invalid",
+      sourceAnalyticsReplicaPort: 3307,
+      sourceAnalyticsReplicaDatabase: "reporting",
+      sourceAnalyticsReplicaSchema: "analytics",
+      sourceAnalyticsReplicaUsername: "replica_reader",
+      sourceAnalyticsReplicaPassword: "saved-replica-secret",
+      sourceAnalyticsReplicaSsl: true,
+      sourceAnalyticsReplicaTrustServerCertificate: false,
+      sourceAnalyticsReplicaMaxLagSeconds: 45,
+    });
+    assert.equal(resolved.sqlReplicaEnabled, true);
+    assert.equal(resolved.sqlReplicaHost, "saved-replica.invalid");
+    assert.equal(resolved.sqlReplicaPort, 3307);
+    assert.equal(resolved.sqlReplicaDatabase, "reporting");
+    assert.equal(resolved.sqlReplicaSchema, "analytics");
+    assert.equal(resolved.sqlReplicaUsername, "replica_reader");
+    assert.equal(resolved.sqlReplicaPassword, "saved-replica-secret");
+    assert.equal(resolved.sqlReplicaSsl, true);
+    assert.equal(resolved.sqlReplicaTrustServerCertificate, false);
+    assert.equal(resolved.sqlReplicaMaxLagSeconds, 45);
+  });
+});
