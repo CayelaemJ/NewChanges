@@ -39,5 +39,18 @@ test('missing Neon functions are categorized as app-owned versus extension-owned
  assert.match(src,/extension_function/);
  assert.match(src,/MISSING FUNCTION SIGNATURES/);
  assert.match(src,/JSON\.stringify\(absentFunctions\.slice\(0,20\)\)/);
- assert.match(src,/if\(a\.table!==57 \|\| b\.table!==57 \|\| missing \|\| mismatch \|\| extra\)/);
+ assert.match(src,/if\(a\.table!==57 \|\| b\.table!==57 \|\| missing \|\| mismatch \|\| extra \|\|/);
+});
+
+test('known Neon monitoring differences are exact extension-owned signatures only',()=>{
+ assert.match(src,/OPTIONAL_NEON_MONITORING_SIGNATURES = new Set/);
+ assert.match(src,/extension_function:pg_stat_statements\(boolean\)/);
+ assert.match(src,/extension_function:pg_stat_statements_info\(\)/);
+ assert.match(src,/extension_function:pg_stat_statements_reset\(oid,oid,bigint,boolean\)/);
+ assert.match(src,/row\?\.detail\?\.startsWith\('pg_stat_statements\|'\)/);
+ assert.match(src,/if\(optionalMonitoringDifference\(key,row\)\) optionalMonitoring\+\+/);
+ assert.match(src,/a\.extension_dependency \|\| b\.extension_dependency/);
+ assert.match(src,/SELECT 'extension_dependency'/);
+ assert.match(src,/JOIN pg_depend member/);
+ assert.doesNotMatch(src,/if\(row\.category==='extension_function'\) continue/);
 });
