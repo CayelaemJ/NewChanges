@@ -312,6 +312,22 @@
         <div class="security-stat"><div class="k">Successful logins 24h</div><div class="v" id="admin-sec-success">-</div></div>
       </div>
       <div id="admin-sec-copy" style="margin-top:10px;font-size:12px;color:#617486;">Loading security posture...</div>
+      <div style="margin-top:20px;border-top:1px solid var(--line-soft);padding-top:18px;">
+        <h3 style="font-size:14px;color:var(--brand-primary);margin-bottom:7px;">Identity &amp; MFA</h3>
+        <p class="muted">Manage your own authenticator or passkeys and review account access from Users &amp; Security. Security enrollment grants are individual, time-limited credentials; the server encryption key is never displayed here.</p>
+        <div class="row" style="margin-top:12px">
+          <a class="btn btn-primary" href="/mfa/manage">Manage my MFA &amp; passkeys</a>
+          <a class="btn" href="/users">Users &amp; Security</a>
+        </div>
+      </div>
+      <div style="margin-top:18px;border-top:1px solid var(--line-soft);padding-top:18px;">
+        <h3 style="font-size:14px;color:var(--brand-primary);margin-bottom:7px;">Release &amp; test operations</h3>
+        <p class="muted">Policy: dedicated self-hosted runners only. Before any security release, review the exact commit's Docker integration tests, identity regression tests, and security scanners. A green build alone does not authorize a merge.</p>
+        <div class="row" style="margin-top:12px">
+          <a class="btn" href="https://github.com/CayelaemJ/NewChanges/actions/workflows/newchanges-manual-docker-ci.yml" target="_blank" rel="noopener noreferrer">Review self-hosted test results</a>
+        </div>
+        <p class="muted" style="margin-top:9px">Runner status and deployment readiness are not automatically verified by this panel. No production secrets or credentials are sent to GitHub by these links.</p>
+      </div>
     </div>
   </section>
   <section id="admin-compliance-strip" class="card" style="margin:18px 0;border-color:#d7cde9;">
