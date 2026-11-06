@@ -27,3 +27,14 @@ test("source cleanup behavioral and integration tests run in the Docker source g
   assert.match(packageScripts["check:source-sync-safety"], /tests\/security\/source-connection-cleanup\.test\.ts/);
   assert.match(packageScripts["check:source-sync-safety"], /tests\/security\/source-connection-cleanup-contract\.test\.mjs/);
 });
+
+test("PostgreSQL and SQL Server close partially opened connections after failed authentication", () => {
+  const pg = adapter.slice(adapter.indexOf("async function openPostgresExecutor("),
+    adapter.indexOf("async function openMysqlExecutor("));
+  const mssql = adapter.slice(adapter.indexOf("async function openMssqlExecutor("),
+    adapter.indexOf("function effectiveReplicaEnabled("));
+  assert.match(pg, /try \{ await client\.connect\(\); \}/);
+  assert.match(pg, /await Promise\.allSettled\(\[Promise\.resolve\(\)\.then\(\(\) => client\.end\(\)\)\]\)/);
+  assert.match(mssql, /try \{ await pool\.connect\(\); \}/);
+  assert.match(mssql, /await Promise\.allSettled\(\[Promise\.resolve\(\)\.then\(\(\) => pool\.close\(\)\)\]\)/);
+});
