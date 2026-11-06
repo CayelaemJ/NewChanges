@@ -258,7 +258,7 @@ async function createApiAdapter(config: IntegrationSourceConfig): Promise<Source
   const rawBaseUrl = String(config.baseUrl ?? "").trim();
   if (!rawBaseUrl) throw new Error("No API base URL configured.");
   const baseUrl = await assertSafeApiBaseUrl(rawBaseUrl);
-  const token = process.env.SOURCE_API_TOKEN || config.authToken || null;
+  const token = config.authToken || null;
 
   async function fetchPage(reportKey: string, window?: SourceWindow, cursor?:string): Promise<SourceFetchResult & {nextCursor?:string}> {
     const root = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
@@ -347,20 +347,21 @@ function qualifiedView(dialect: SqlDialect, config: IntegrationSourceConfig, rep
 }
 
 async function openPostgresExecutor(config: IntegrationSourceConfig): Promise<SqlExecutor> {
+  // effectiveSourceConfig already applied the environment-lock precedence.
   const pg: any = await import("pg");
   const Client = pg.Client ?? pg.default?.Client;
   if (!Client) throw new Error("The pg driver could not be loaded.");
 
   const queryTimeout = intSetting(config.sqlQueryTimeoutMs, 60_000, 1_000, 600_000);
-  const sslEnabled = boolEnv("SOURCE_SQL_SSL") ?? config.sqlSsl ?? true;
-  const trust = boolEnv("SOURCE_SQL_TRUST_SERVER_CERTIFICATE") ?? config.sqlTrustServerCertificate ?? false;
+  const sslEnabled = config.sqlSsl ?? true;
+  const trust = config.sqlTrustServerCertificate ?? false;
   assertSecureSourceSqlTransport(sslEnabled, trust, "PostgreSQL source");
   const client = new Client({
     host: config.sqlHost,
     port: intSetting(config.sqlPort, 5432, 1, 65535),
     database: config.sqlDatabase,
     user: config.sqlUsername,
-    password: process.env.SOURCE_SQL_PASSWORD || config.sqlPassword,
+    password: config.sqlPassword,
     ssl: sslEnabled ? { rejectUnauthorized: !trust } : false,
     connectionTimeoutMillis: Math.min(queryTimeout, 60_000),
     statement_timeout: queryTimeout,
@@ -411,20 +412,21 @@ async function openPostgresExecutor(config: IntegrationSourceConfig): Promise<Sq
 }
 
 async function openMysqlExecutor(config: IntegrationSourceConfig): Promise<SqlExecutor> {
+  // Replica settings must never inherit primary-source credentials or TLS flags.
   const mysql: any = await import("mysql2/promise");
   const createConnection = mysql.createConnection ?? mysql.default?.createConnection;
   if (!createConnection) throw new Error("The mysql2 driver could not be loaded.");
 
   const queryTimeout = intSetting(config.sqlQueryTimeoutMs, 60_000, 1_000, 600_000);
-  const sslEnabled = boolEnv("SOURCE_SQL_SSL") ?? config.sqlSsl ?? true;
-  const trust = boolEnv("SOURCE_SQL_TRUST_SERVER_CERTIFICATE") ?? config.sqlTrustServerCertificate ?? false;
+  const sslEnabled = config.sqlSsl ?? true;
+  const trust = config.sqlTrustServerCertificate ?? false;
   assertSecureSourceSqlTransport(sslEnabled, trust, "MySQL source");
   const connection = await createConnection({
     host: config.sqlHost,
     port: intSetting(config.sqlPort, 3306, 1, 65535),
     database: config.sqlDatabase,
     user: config.sqlUsername,
-    password: process.env.SOURCE_SQL_PASSWORD || config.sqlPassword,
+    password: config.sqlPassword,
     connectTimeout: Math.min(queryTimeout, 60_000),
     ssl: sslEnabled ? { rejectUnauthorized: !trust } : undefined,
     dateStrings: false,
@@ -480,20 +482,21 @@ async function openMysqlExecutor(config: IntegrationSourceConfig): Promise<SqlEx
 }
 
 async function openMssqlExecutor(config: IntegrationSourceConfig): Promise<SqlExecutor> {
+  // Use only the selected effective configuration, not raw primary env values.
   const mssql: any = await import("mssql");
   const ConnectionPool = mssql.ConnectionPool ?? mssql.default?.ConnectionPool;
   if (!ConnectionPool) throw new Error("The mssql driver could not be loaded.");
 
   const queryTimeout = intSetting(config.sqlQueryTimeoutMs, 60_000, 1_000, 600_000);
-  const encrypt = boolEnv("SOURCE_SQL_SSL") ?? config.sqlSsl ?? true;
-  const trust = boolEnv("SOURCE_SQL_TRUST_SERVER_CERTIFICATE") ?? config.sqlTrustServerCertificate ?? false;
+  const encrypt = config.sqlSsl ?? true;
+  const trust = config.sqlTrustServerCertificate ?? false;
   assertSecureSourceSqlTransport(encrypt, trust, "SQL Server source");
   const pool = await new ConnectionPool({
     server: config.sqlHost,
     port: intSetting(config.sqlPort, 1433, 1, 65535),
     database: config.sqlDatabase,
     user: config.sqlUsername,
-    password: process.env.SOURCE_SQL_PASSWORD || config.sqlPassword,
+    password: config.sqlPassword,
     connectionTimeout: Math.min(queryTimeout, 60_000),
     requestTimeout: queryTimeout,
     pool: { max: 3, min: 0, idleTimeoutMillis: 30_000 },
@@ -548,12 +551,12 @@ async function openMssqlExecutor(config: IntegrationSourceConfig): Promise<SqlEx
 }
 
 function effectiveReplicaEnabled(config: IntegrationSourceConfig): boolean {
-  return Boolean(config.sqlReplicaEnabled || process.env.SOURCE_SQL_REPLICA_ENABLED === "true");
+  return config.sqlReplicaEnabled === true;
 }
 
 export async function checkMysqlReadReplica(config: IntegrationSourceConfig): Promise<{ configured: boolean; reachable: boolean; readOnly: boolean | null; lagSeconds: number | null; lagWithinThreshold: boolean | null; host: string | null; database: string | null; note: string }> {
   const effective = effectiveSourceConfig(config);
-  if (!effective.sqlReplicaHost || !effective.sqlReplicaUsername || !(process.env.SOURCE_SQL_REPLICA_PASSWORD || effective.sqlReplicaPassword)) {
+  if (!effective.sqlReplicaHost || !effective.sqlReplicaUsername || !effective.sqlReplicaPassword) {
     return { configured: false, reachable: false, readOnly: null, lagSeconds: null, lagWithinThreshold: null, host: effective.sqlReplicaHost ?? null, database: effective.sqlReplicaDatabase ?? effective.sqlDatabase ?? null, note: "No read replica is configured." };
   }
   if (sqlDialect(effective) !== "MYSQL") return { configured: true, reachable: false, readOnly: null, lagSeconds: null, lagWithinThreshold: null, host: effective.sqlReplicaHost, database: effective.sqlReplicaDatabase ?? effective.sqlDatabase ?? null, note: "Replica health currently supports MySQL source replicas only." };
@@ -564,7 +567,7 @@ export async function checkMysqlReadReplica(config: IntegrationSourceConfig): Pr
   assertSecureSourceSqlTransport(replicaSslEnabled, replicaTrustServerCertificate, "MySQL read-replica health");
   const mysql: any = await import("mysql2/promise");
   const createConnection = mysql.createConnection ?? mysql.default?.createConnection;
-  const connection = await createConnection({ host: effective.sqlReplicaHost, port: intSetting(effective.sqlReplicaPort, 3306, 1, 65535), database: effective.sqlReplicaDatabase ?? effective.sqlDatabase, user: effective.sqlReplicaUsername, password: process.env.SOURCE_SQL_REPLICA_PASSWORD || effective.sqlReplicaPassword, connectTimeout: 15000, ssl: replicaSslEnabled ? { rejectUnauthorized: !replicaTrustServerCertificate } : undefined });
+  const connection = await createConnection({ host: effective.sqlReplicaHost, port: intSetting(effective.sqlReplicaPort, 3306, 1, 65535), database: effective.sqlReplicaDatabase ?? effective.sqlDatabase, user: effective.sqlReplicaUsername, password: effective.sqlReplicaPassword, connectTimeout: 15000, ssl: replicaSslEnabled ? { rejectUnauthorized: !replicaTrustServerCertificate } : undefined });
   try {
     await connection.query("SELECT 1");
     const [vars]: any = await connection.query("SHOW VARIABLES WHERE Variable_name IN ('read_only','super_read_only')");
@@ -599,7 +602,7 @@ async function createSqlAdapter(config: IntegrationSourceConfig): Promise<Source
   if (!config.sqlHost) throw new Error("SQL host is required.");
   if (!config.sqlDatabase) throw new Error("SQL database/catalog is required.");
   if (!config.sqlUsername) throw new Error("SQL read-only username is required.");
-  if (!(process.env.SOURCE_SQL_PASSWORD || config.sqlPassword)) throw new Error("SQL password is required. Set it in Admin or SOURCE_SQL_PASSWORD.");
+  if (!config.sqlPassword) throw new Error("SQL password is required. Set it in Admin or SOURCE_SQL_PASSWORD.");
 
   const dialect = sqlDialect(config);
   // This is a per-query extraction page size, NOT a total feed limit.
@@ -627,7 +630,7 @@ async function createSqlAdapter(config: IntegrationSourceConfig): Promise<Source
         sqlSsl: config.sqlReplicaSsl,
         sqlTrustServerCertificate: config.sqlReplicaTrustServerCertificate,
       };
-      if (!replicaConfig.sqlHost || !replicaConfig.sqlUsername || !(process.env.SOURCE_SQL_REPLICA_PASSWORD || replicaConfig.sqlPassword)) {
+      if (!replicaConfig.sqlHost || !replicaConfig.sqlUsername || !replicaConfig.sqlPassword) {
         throw new Error("Source analytics read replica is enabled but host, username or password is missing.");
       }
       if (dialect === "MYSQL") replicaExecutor = await openMysqlExecutor(replicaConfig);
