@@ -34,6 +34,18 @@ test("scheduler re-reads owner role, active state, and employer links from datab
   assert.match(scheduler, /!isAdminRole\(user\) && schedule\.userId !== user\.id/);
 });
 
+test("reactivation validates current permissions and patch input is a real boolean", () => {
+  const start = scheduler.indexOf("export async function updateReportSchedule(");
+  const end = scheduler.indexOf("export async function deleteReportSchedule(", start);
+  assert.ok(start >= 0 && end > start);
+  const update = scheduler.slice(start, end);
+  assert.match(update, /typeof patch\.active === "boolean"/);
+  assert.match(update, /currentReportOwner\(current\.userId\)/);
+  assert.match(update, /reportDeliveryAllowed\(owner, current\.employerId, current\.recipients\)/);
+  assert.match(update, /active: patch\.active/);
+  assert.doesNotMatch(update, /Boolean\(patch\.active\)/);
+});
+
 test("report policy tests are included in the Docker security suite", () => {
   assert.match(suite, /tests\/security\/report-delivery-policy\.test\.ts/);
   assert.match(suite, /tests\/security\/report-delivery-authorization-contract\.test\.mjs/);
