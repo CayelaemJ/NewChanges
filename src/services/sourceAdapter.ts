@@ -56,6 +56,18 @@ export interface IntegrationSourceConfig {
   sqlReplicaSsl?: boolean | null;
   sqlReplicaTrustServerCertificate?: boolean | null;
   sqlReplicaMaxLagSeconds?: number | null;
+  // IntegrationConfig's persisted Prisma column names differ from the
+  // internal sqlReplica* adapter fields. Normalize both forms at the boundary.
+  sourceAnalyticsReplicaEnabled?: boolean | null;
+  sourceAnalyticsReplicaHost?: string | null;
+  sourceAnalyticsReplicaPort?: number | null;
+  sourceAnalyticsReplicaDatabase?: string | null;
+  sourceAnalyticsReplicaSchema?: string | null;
+  sourceAnalyticsReplicaUsername?: string | null;
+  sourceAnalyticsReplicaPassword?: string | null;
+  sourceAnalyticsReplicaSsl?: boolean | null;
+  sourceAnalyticsReplicaTrustServerCertificate?: boolean | null;
+  sourceAnalyticsReplicaMaxLagSeconds?: number | null;
 }
 
 export interface SourceAdapter {
@@ -129,16 +141,16 @@ export function effectiveSourceConfig(config: IntegrationSourceConfig): Integrat
     sqlViewPrefix: chooseSourceSetting("SOURCE_SQL_VIEW_PREFIX", config.sqlViewPrefix, text),
     sqlQueryTimeoutMs: chooseSourceSetting("SOURCE_SQL_QUERY_TIMEOUT_MS", config.sqlQueryTimeoutMs, integer),
     sqlMaxRowsPerReport: chooseSourceSetting("SOURCE_SQL_MAX_ROWS_PER_REPORT", config.sqlMaxRowsPerReport, integer),
-    sqlReplicaEnabled: chooseSourceSetting("SOURCE_SQL_REPLICA_ENABLED", config.sqlReplicaEnabled, bool),
-    sqlReplicaHost: chooseSourceSetting("SOURCE_SQL_REPLICA_HOST", config.sqlReplicaHost, text),
-    sqlReplicaPort: chooseSourceSetting("SOURCE_SQL_REPLICA_PORT", config.sqlReplicaPort, integer),
-    sqlReplicaDatabase: chooseSourceSetting("SOURCE_SQL_REPLICA_DATABASE", config.sqlReplicaDatabase, text),
-    sqlReplicaSchema: chooseSourceSetting("SOURCE_SQL_REPLICA_SCHEMA", config.sqlReplicaSchema, text, { allowEmptySaved: true }),
-    sqlReplicaUsername: chooseSourceSetting("SOURCE_SQL_REPLICA_USERNAME", config.sqlReplicaUsername, text),
-    sqlReplicaPassword: chooseSourceSetting("SOURCE_SQL_REPLICA_PASSWORD", config.sqlReplicaPassword, text),
-    sqlReplicaSsl: chooseSourceSetting("SOURCE_SQL_REPLICA_SSL", config.sqlReplicaSsl, bool),
-    sqlReplicaTrustServerCertificate: chooseSourceSetting("SOURCE_SQL_REPLICA_TRUST_SERVER_CERTIFICATE", config.sqlReplicaTrustServerCertificate, bool),
-    sqlReplicaMaxLagSeconds: chooseSourceSetting("SOURCE_SQL_REPLICA_MAX_LAG_SECONDS", config.sqlReplicaMaxLagSeconds, integer),
+    sqlReplicaEnabled: chooseSourceSetting("SOURCE_SQL_REPLICA_ENABLED", (config.sqlReplicaEnabled ?? config.sourceAnalyticsReplicaEnabled), bool),
+    sqlReplicaHost: chooseSourceSetting("SOURCE_SQL_REPLICA_HOST", (config.sqlReplicaHost ?? config.sourceAnalyticsReplicaHost), text),
+    sqlReplicaPort: chooseSourceSetting("SOURCE_SQL_REPLICA_PORT", (config.sqlReplicaPort ?? config.sourceAnalyticsReplicaPort), integer),
+    sqlReplicaDatabase: chooseSourceSetting("SOURCE_SQL_REPLICA_DATABASE", (config.sqlReplicaDatabase ?? config.sourceAnalyticsReplicaDatabase), text),
+    sqlReplicaSchema: chooseSourceSetting("SOURCE_SQL_REPLICA_SCHEMA", (config.sqlReplicaSchema ?? config.sourceAnalyticsReplicaSchema), text, { allowEmptySaved: true }),
+    sqlReplicaUsername: chooseSourceSetting("SOURCE_SQL_REPLICA_USERNAME", (config.sqlReplicaUsername ?? config.sourceAnalyticsReplicaUsername), text),
+    sqlReplicaPassword: chooseSourceSetting("SOURCE_SQL_REPLICA_PASSWORD", (config.sqlReplicaPassword ?? config.sourceAnalyticsReplicaPassword), text),
+    sqlReplicaSsl: chooseSourceSetting("SOURCE_SQL_REPLICA_SSL", (config.sqlReplicaSsl ?? config.sourceAnalyticsReplicaSsl), bool),
+    sqlReplicaTrustServerCertificate: chooseSourceSetting("SOURCE_SQL_REPLICA_TRUST_SERVER_CERTIFICATE", (config.sqlReplicaTrustServerCertificate ?? config.sourceAnalyticsReplicaTrustServerCertificate), bool),
+    sqlReplicaMaxLagSeconds: chooseSourceSetting("SOURCE_SQL_REPLICA_MAX_LAG_SECONDS", (config.sqlReplicaMaxLagSeconds ?? config.sourceAnalyticsReplicaMaxLagSeconds), integer),
   };
 }
 
