@@ -13,8 +13,8 @@ import process from 'node:process';
 const side=process.argv[2];
 const mode=process.argv[3] || '--preflight';
 const ALLOWED=new Set(['source','target']);
-if (!ALLOWED.has(side) || !['--preflight','--backup'].includes(mode)) {
-  console.error('Usage: node scripts/production-encrypted-backup.mjs source|target --preflight|--backup');
+if (!ALLOWED.has(side) || !['--preflight','--backup','--portable-backup'].includes(mode) || (mode==='--portable-backup' && side!=='source')) {
+  console.error('Usage: node scripts/production-encrypted-backup.mjs source|target --preflight|--backup|--portable-backup (source only)');
   process.exit(2);
 }
 function parseConnection(raw, selected) {
@@ -72,14 +72,19 @@ async function main() {
   if (location==='' || (location!=='..' && !location.startsWith('..'+sep) && !isAbsolute(location)))
     throw Error('Backup output must be outside the repository checkout');
   const stamp=new Date().toISOString().replace(/[:.]/g,'-');
-  const out=join(backupDirectory,side+'-'+stamp+'.pgdump.age');
+  const portable=mode==='--portable-backup';
+  const out=join(backupDirectory,side+(portable?'-portable-public':'-full')+'-'+stamp+'.pgdump.age');
   const tmp=out+'.incomplete';
   let completed=false;
   let dump, encrypt;
   try {
     const destination=createWriteStream(tmp,{flags:'wx',mode:0o600});
     // Never put database URLs or passwords on CLI args; pg_dump reads PG* env.
-    dump=spawn('pg_dump',['--format=custom','--no-owner','--no-acl','--serializable-deferrable'],{
+    const dumpArgs=['--format=custom','--no-owner','--no-acl','--serializable-deferrable'];
+    // This *additional* backup is intentionally not a full disaster-recovery image.
+    // Neon-owned pg_session_jwt cannot be restored in stock postgres:18-alpine.
+    if (portable) dumpArgs.push('--schema=public','--exclude-extension=pg_session_jwt');
+    dump=spawn('pg_dump',dumpArgs,{
       env:pg,stdio:['ignore','pipe','ignore']
     });
     encrypt=spawn('age',['-r',recipient],{stdio:['pipe','pipe','ignore']});
@@ -96,9 +101,10 @@ async function main() {
     completed=true;
     const sha=createHash('sha256');
     for await(const chunk of createReadStream(out))sha.update(chunk);
-    console.log('BACKUP ENCRYPTED: side='+side+' bytes='+statSync(out).size);
+    console.log('BACKUP ENCRYPTED: side='+side+' scope='+(portable?'PORTABLE_PUBLIC_APPLICATION_ONLY':'FULL_DATABASE')+' bytes='+statSync(out).size);
     console.log('SHA256 (encrypted archive): '+sha.digest('hex'));
     console.log('LOCAL PATH: '+out);
+    if (portable) console.log('PORTABILITY LIMIT: public application schema only; excludes pg_session_jwt and non-public schemas. Keep the original full Neon archive.');
     console.log('NOT RESTORE-VERIFIED: decrypt and restore this archive into a separate disposable PG18 before marking backup verified.');
   } finally {
     if(!completed) {
