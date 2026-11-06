@@ -77,3 +77,20 @@ Operator explicitly confirmed workspace `My Workspace`. Read-only Render API inv
 Render's published limit is **750 Free instance hours per workspace per calendar month**, pooled across all running Free web services; sleeping services consume no hours. Exhaustion suspends **all** Free web services in the workspace, not just this candidate. Outbound bandwidth and build-pipeline overages can cause billing when a payment method is present. See https://render.com/docs/free. The connector exposes service inventory and performance metrics but **not the workspace Billing → Monthly Included Usage balance or payment-method/spend-limit settings**. Therefore do **not** create or deploy another Free service until the operator verifies the remaining monthly instance hours, outbound bandwidth, pipeline minutes and applicable zero-spend limit. Creating a service with empty database credentials would only produce a broken publicly reachable backend and consume resources.
 
 Next safe gate: operator checks Render dashboard Billing → Monthly Included Usage and account spend settings. Run any remaining tests locally, with no extra Render service until capacity is confirmed. Actual public staging deployment stays blocked pending isolated disposable database availability and origin secret provisioned in the protected stores; no use of Neon production credentials for public staging.
+
+
+## Reproducible full-backend runtime check (2026-11-06)
+
+The operator successfully confirmed on WSL Ubuntu that the built Docker image starts the full Fastify server with an isolated synthetic PostgreSQL 18 container: `/health=200` and `/ready=200`, followed by cleanup. A new deterministic `scripts/free-backend-runtime-smoke.sh` automates that verification in CI. It creates an `--internal` network (no external egress), publishes **no ports**, uses only synthetic credentials, and always destroys both containers and the network via exit trap. It also **enables the Render origin guard** and checks `/version` is rejected without the edge token (403) and accepted with the token (200). Database tables are intentionally not initialized, so this is startup/connectivity/security-only evidence.
+
+To rerun against the already-built image:
+```bash
+cd ~/NewChanges-free-edge
+git fetch origin
+git merge --ff-only origin/feat/free-cloudflare-render-primary-20261105
+node --test tests/cloudflare-free-render-edge.test.mjs
+bash -n scripts/free-backend-runtime-smoke.sh
+bash scripts/free-backend-runtime-smoke.sh
+```
+
+The manual-only self-hosted Linux runner workflow also invokes this script after building the Docker image. No Render deployment, Neon/Aiven access or DNS switch is required.
