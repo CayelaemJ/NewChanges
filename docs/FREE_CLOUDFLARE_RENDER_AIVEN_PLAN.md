@@ -267,3 +267,10 @@ bash scripts/production-recovery-drill.sh
 A successful local backup and offline restore does **not** prove an independent offsite copy, freeze Neon, or approve a cutover. The source remains live, the target may remain stale, and final reconciliation and the sole-writer gate remain outstanding. Since the source may still change during these backups, **take/verify an additional frozen checkpoint backup immediately before final synchronization** as required by the runbook.
 
 This tool has been committed and unit-level checks added to manual CI, but **no real source/target backup or restore has yet been executed by the assistant**.
+
+
+## 2026-11-06 Recovery safety hardening
+
+The backup command now enforces PostgreSQL `sslmode=require`, `verify-ca` or `verify-full`, refusing `prefer`, `allow` and `disable` before any backup subprocess can run. It also resolves symlinks for the backup directory and the Git checkout and rejects destinations inside the repository **even when the backup utility is executed directly**, not only through the convenience shell script. Both guards have new offline regression tests.
+
+These code changes **do not** attest a live database backup or restore. No Neon/Aiven writes, DNS changes, traffic changes or credentials were configured. Operator must run the offline tests and the actual recovery drill with private credentials before the cutover gate can be satisfied. The automation environment lacks a local Docker daemon and PostgreSQL/age binaries, so an actual isolated archive restore was not executable here.
