@@ -13,18 +13,18 @@ const routes = server.slice(
 
 test("all four report schedule write routes use the allowlisted public error boundary", () => {
   assert.ok(routes.length > 500);
-  assert.match(server, /import \\{ publicReportScheduleFailure \\} from "\\.\\/services\\/reportScheduleFailure\\.js"/);
+  assert.match(server, /import \{ publicReportScheduleFailure \} from "\.\/services\/reportScheduleFailure\.js"/);
   const expected = 'const safe = publicReportScheduleFailure(e); return reply.code(safe.statusCode).send({ error: safe.message });';
   assert.equal(routes.split(expected).length - 1, 4);
-  assert.doesNotMatch(routes, /error: e\\?\\.message/);
+  assert.doesNotMatch(routes, /error: e\?\.message/);
 });
 
 test("report validation does not echo arbitrary submitted email addresses", () => {
-  assert.match(scheduler, /if \\(invalid\\) throw new Error\\("invalid recipient email"\\)/);
-  assert.doesNotMatch(scheduler, /invalid recipient email: \\$\\{/);
+  assert.match(scheduler, /if \(invalid\) throw new Error\("invalid recipient email"\)/);
+  assert.doesNotMatch(scheduler, /invalid recipient email: \$\{/);
 });
 
 test("HTTP regression tests are in the Docker security gate", () => {
-  assert.match(suite, /tests\\/security\\/report-schedule-failure\\.test\\.ts/);
-  assert.match(suite, /tests\\/security\\/report-schedule-http-contract\\.test\\.mjs/);
+  assert.match(suite, /tests\/security\/report-schedule-failure\.test\.ts/);
+  assert.match(suite, /tests\/security\/report-schedule-http-contract\.test\.mjs/);
 });
