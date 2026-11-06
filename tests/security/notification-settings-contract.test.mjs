@@ -143,3 +143,14 @@ test("sender display name is normalized for both providers", () => {
   assert.match(scheduler,/from: `\$\{safeSenderDisplayName\(cfg\.fromName\)\} <\$\{fromEmail\}>`/);
   assert.match(scheduler,/from: \{ name: safeSenderDisplayName\(cfg\.fromName\), address: cfg\.fromEmail! \}/);
 });
+
+test("administrator alert emails validate at save and before sending legacy data", () => {
+  const helper=read("src/services/alertEmailRecipients.ts");
+  assert.match(helper,/validNotificationEmailAddress\(address\)/);
+  assert.match(helper,/recipients\.length > 10/);
+  const automation=read("src/services/automationService.ts");
+  assert.match(automation,/parseAlertEmailRecipients\(cfg\.alertEmails\)/);
+  assert.match(automation,/catch \{ return \[\]; \}/);
+  const save=scheduler.slice(scheduler.indexOf("export async function saveEmailConfig("), scheduler.indexOf("async function smtpTransport("));
+  assert.match(save,/parseAlertEmailRecipients\(input\.alertEmails\)/);
+});
