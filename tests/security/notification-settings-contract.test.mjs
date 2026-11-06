@@ -57,6 +57,19 @@ test("email delivery failures never persist or return untrusted provider details
   assert.doesNotMatch(sender,/response\.text\(\)/);
 });
 
+test("scheduled delivery history never persists untrusted transport or sync diagnostics",()=>{
+  const start=scheduler.indexOf("async function assertDashboardPublishable()");
+  const end=scheduler.indexOf("export async function sendReportNow",start);
+  assert.ok(start>=0 && end>start);
+  const delivery=scheduler.slice(start,end);
+  assert.match(delivery,/safeEmailDeliveryFailure\(error\)/);
+  assert.match(delivery,/lastError: message/);
+  assert.match(delivery,/error: message/);
+  assert.match(delivery,/throw new Error\(message\)/);
+  assert.doesNotMatch(delivery,/String\(error\?\.message/);
+  assert.doesNotMatch(delivery,/lastSyncNote/);
+});
+
 test("failed onboarding emails never reflect raw provider diagnostics",()=>{
   const userService=read("src/services/userService.ts");
   assert.match(userService,/import \{ safeEmailDeliveryFailure \} from/);
