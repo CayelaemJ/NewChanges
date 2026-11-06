@@ -480,3 +480,22 @@ node scripts/aiven-final-delta-sync.mjs --check
 ```
 
 These checks run **without mutating either production database**, but only the local operator machine has the Neon source credential needed to complete both-end comparisons. Record only redacted summary/exit status. Failures must block cutover and be diagnosed, not bypassed with environment approval flags. There is no authorization to fence Neon, execute the final Aiven write delta, insert real Render DB credentials, or enable Cloudflare routes yet.
+
+
+## 2026-11-06 first operator live reconciliation and missing-function investigation
+
+Operator ran the new local safety tests (3/3 passed) and two read-only Neon/Aiven content comparisons. The first reported 56/56 non-audit application tables identical, the existing audit prefix matching, Neon source audit events=62,735 vs Aiven target=61,449 (1,286 new events) and one Session.lastSeenAt difference with no missing sessions. The next reported the same **56/56 content match**, **audit prefix MATCH**, source=62,763 vs target=61,449 (1,314 new events), same one session-activity difference. This demonstrates Neon is still receiving writes; **do not fence without cutover plan or assume these reports prove final frozen-source parity**. Dry-run final delta completed with no write.
+
+The first security parity report found 57/57 tables, zero/zero RLS policies, zero/zero user-defined triggers, and **Neon 13 public functions vs Aiven 10**, with three source functions missing from the target. Security parity rightly blocked cutover. Read-only Aiven metadata inspection confirmed all ten Aiven public functions are unowned by extensions and named `sync_upsert_*(jsonb)`. The three extra Neon function identities and ownership are **not yet known**, so do not add arbitrary function definitions or bypass them. Updated the parity script to distinguish application-defined `function` from `extension_function` based on `pg_depend`/ `pg_extension`, and print up to 20 missing function signatures (metadata only), never source SQL definitions, passwords or rows. Added an offline regression test. Extension-owned differences still **BLOCK** until Neon Auth/extension dependency review explicitly resolves them. No automatic exception was introduced.
+
+Run this after pulling the updated branch; its live operation only reads metadata and cannot alter either database:
+```bash
+cd ~/NewChanges-free-edge
+git fetch origin
+git merge --ff-only origin/feat/free-cloudflare-render-primary-20261105
+node --test tests/aiven-security-parity.test.mjs tests/production-cutover-evidence-check.test.mjs
+node scripts/aiven-security-parity.mjs
+echo "Security parity exit code: $?"
+```
+
+Review the redacted `MISSING FUNCTION SIGNATURES` list. Keep source Neon online, Render fenced and Cloudflare production routing disabled.
