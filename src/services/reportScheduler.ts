@@ -4,7 +4,7 @@ import { DateTime } from "luxon";
 import { prisma, getDashboardPayload } from "./snapshotBuilder.js";
 import { themeForEmployer } from "./partnerService.js";
 import { allowedSlackWebhookUrl } from "./slackWebhookPolicy.js";
-import { notificationPlainText, safeEmailColor, safePortalBaseUrl } from "./notificationTextSafety.js";
+import { notificationPlainText, safeEmailColor, safePortalBaseUrl, safeSenderDisplayName } from "./notificationTextSafety.js";
 import { reportDeliveryAllowed } from "./reportDeliveryPolicy.js";
 import { assertSecureSmtpTls } from "./smtpTlsPolicy.js";
 import { resolveEmailProviderConfig } from "./emailProviderConfig.js";
@@ -238,7 +238,7 @@ async function sendEmail(opts: { to: string | string[]; subject: string; html: s
       signal: AbortSignal.timeout(20_000),
       headers: { "Authorization": `Bearer ${cfg.resendApiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        from: `${cfg.fromName || "The Fixer (Pty) Ltd Dashboard Portal"} <${fromEmail}>`,
+        from: `${safeSenderDisplayName(cfg.fromName)} <${fromEmail}>`,
         to: Array.isArray(opts.to) ? opts.to : [opts.to],
         reply_to: opts.replyTo || cfg.replyTo || undefined,
         subject: opts.subject,
@@ -254,7 +254,7 @@ async function sendEmail(opts: { to: string | string[]; subject: string; html: s
   }
   const { transporter } = await smtpTransport(draft);
   await transporter.sendMail({
-    from: { name: cfg.fromName || "The Fixer (Pty) Ltd Dashboard Portal", address: cfg.fromEmail! },
+    from: { name: safeSenderDisplayName(cfg.fromName), address: cfg.fromEmail! },
     to: opts.to,
     replyTo: opts.replyTo || cfg.replyTo || undefined,
     subject: opts.subject,
