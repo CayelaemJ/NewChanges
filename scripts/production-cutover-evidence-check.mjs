@@ -34,6 +34,20 @@ if (!candidate) {
           typeof backup.sha256!=='string' || !/^[a-f0-9]{64}$/i.test(backup.sha256))
         issues.push(key+': restore test, independent copy and SHA-256 required');
     }
+    // A portable public-schema archive cannot recover Neon-managed extensions,
+    // non-public schema objects or all authentication behavior. Never equate
+    // the 57-table application drill with complete source disaster recovery.
+    const scope={sourceBackup:'full_database',targetBackup:'full_database'};
+    const method={sourceBackup:'neon_compatible_full_restore',
+      targetBackup:'isolated_postgresql18_full_restore'};
+    for (const key of ['sourceBackup','targetBackup']) {
+      const backup=doc[key];
+      if (!backup || backup.scope!==scope[key] ||
+          backup.recoveryMethod!==method[key] ||
+          backup.extensionCompatibilityVerified!==true ||
+          backup.authenticationRecoveryVerified!==true)
+        issues.push(key+': full database scope, compatible restore, extensions and authentication recovery evidence required');
+    }
     if (doc.environment!=='production' ||
         doc.source!=='Neon:newchanges' ||
         doc.target!=='Aiven:the-fixer-postgres/defaultdb')
