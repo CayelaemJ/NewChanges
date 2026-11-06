@@ -84,4 +84,6 @@ CREATE OR REPLACE SQL SECURITY INVOKER VIEW v_source_freshness AS
  UNION ALL SELECT 'orders', MAX(updated_at) FROM orders
  UNION ALL SELECT 'order_items', MAX(updated_at) FROM order_items
  UNION ALL SELECT 'payments', MAX(updated_at) FROM payments
- UNION ALL SELECT 'financial_transactions', MAX(updated_at) FROM financial_transactions;
+ UNION ALL SELECT 'financial_transactions', MAX(updated_at) FROM financial_transactions
+ UNION ALL SELECT 'business_events', MAX(occurred_at) FROM business_events
+ UNION ALL SELECT 'simulation_runs', MAX(updated_at) FROM simulation_runs;
