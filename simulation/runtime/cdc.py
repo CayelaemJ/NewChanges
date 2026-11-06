@@ -13,6 +13,22 @@ from decimal import Decimal
 from .common import connect, connection_config, positive_int, redacted_error, utcnow
 from .logic import allowed_table, encode, event_id
 
+class CdcReadinessError(RuntimeError):
+    """Controlled diagnostic identifier; never contains SQL, credentials, or server details."""
+
+    ALLOWED = frozenset({
+        "CDC_APPROVAL_REQUIRED", "CDC_SIMULATION_NOT_STOPPED",
+        "CDC_SOURCE_NOT_EMPTY", "CDC_LOG_CONFIG_UNSUPPORTED",
+        "CDC_BINLOG_STATUS_EMPTY", "CDC_CHECKPOINT_ALREADY_EXISTS",
+    })
+
+    def __init__(self, code):
+        if code not in self.ALLOWED:
+            raise ValueError("Unsupported CDC diagnostic")
+        self.code = code
+        super().__init__(code)
+
+
 LOCK_NAME = "fixer_sim_analytics.cdc.v1"
 CONSUMER = "fixer-sim-v1"
 
@@ -33,10 +49,10 @@ def preflight():
     try:
         mode = query(db, "SELECT @@GLOBAL.log_bin, @@GLOBAL.binlog_format, @@GLOBAL.binlog_row_image")
         if not mode or int(mode[0][0]) != 1 or str(mode[0][1]).upper() != "ROW" or str(mode[0][2]).upper() != "FULL":
-            raise RuntimeError("CDC requires log_bin=ON, binlog_format=ROW, binlog_row_image=FULL")
+            raise CdcReadinessError("CDC_LOG_CONFIG_UNSUPPORTED")
         status = query(db, "SHOW BINARY LOG STATUS")
         if not status:
-            raise RuntimeError("Cannot read binary log status")
+            raise CdcReadinessError("CDC_BINLOG_STATUS_EMPTY")
         return status[0][0], int(status[0][1])
     finally:
         db.close()
@@ -45,20 +61,20 @@ def preflight():
 def bootstrap_empty_source():
     """Only valid before first simulation row. Refuses unsafe skip over existing data."""
     if os.environ.get("SIM_CDC_BOOTSTRAP_APPROVED") != "YES_EMPTY_SOURCE_ONLY":
-        raise RuntimeError("Explicit empty-source bootstrap approval required")
+        raise CdcReadinessError("CDC_APPROVAL_REQUIRED")
     source = connect("replica")
     sink = connect("cdc")
     try:
         enabled = query(source, "SELECT enabled FROM sim_control WHERE control_id=1")
         if not enabled or enabled[0][0] != 0:
-            raise RuntimeError("Disable simulation first; cannot bootstrap while source writes are enabled")
+            raise CdcReadinessError("CDC_SIMULATION_NOT_STOPPED")
         for name in ["customers","products","orders","order_items","payments","financial_transactions"]:
             # Table names are fixed, never user-controlled.
             if query(source, f"SELECT 1 FROM {name} LIMIT 1"):
-                raise RuntimeError("Initial source contains rows: use a consistent snapshot + binlog hand-off, not empty bootstrap")
+                raise CdcReadinessError("CDC_SOURCE_NOT_EMPTY")
         file, pos = preflight()
         if query(sink, "SELECT 1 FROM cdc_checkpoint WHERE consumer_name=%s",(CONSUMER,)):
-            raise RuntimeError("Existing CDC checkpoint: refusing to rewind")
+            raise CdcReadinessError("CDC_CHECKPOINT_ALREADY_EXISTS")
         write(sink, "INSERT INTO cdc_checkpoint(consumer_name,log_file,log_pos,updated_at) VALUES(%s,%s,%s,%s)",
               (CONSUMER,file,pos,utcnow()))
         sink.commit()
@@ -290,5 +306,14 @@ if __name__ == "__main__":
         elif action == "consume":print(json.dumps(run()))
         else:raise ValueError("Unknown CDC action")
     except Exception as exc:
-        print(json.dumps({"status":"FAILED","error_type":redacted_error(exc)}),file=sys.stderr)
+        # Never print arbitrary exception text: database driver failures can
+        # contain hosts, SQL, account names or other sensitive details.
+        payload = {"status":"FAILED","error_type":redacted_error(exc)}
+        if isinstance(exc, CdcReadinessError):
+            payload["error_code"] = exc.code
+        elif os.environ.get("SIM_ENV") == "local" and getattr(exc, "args", ()) and isinstance(exc.args[0], int):
+            # MySQL integer errno is non-sensitive and helps isolate local
+            # database permissions/version errors without exposing SQL text.
+            payload["mysql_errno"] = exc.args[0]
+        print(json.dumps(payload),file=sys.stderr)
         sys.exit(1)
