@@ -7,7 +7,8 @@ from runtime.common import connect
 from runtime.simulator import run
 from runtime.cdc import apply_change, query, write, run as consume_cdc
 from runtime.logic import event_id
-from datetime import datetime
+from datetime import datetime, timezone
+import time
 
 
 @unittest.skipUnless(os.getenv('SIM_ENV')=='local' and os.getenv('RUN_LOCAL_MYSQL_TESTS')=='yes',
@@ -44,6 +45,57 @@ class LocalMySQL(unittest.TestCase):
             self.assertEqual(c.fetchone()[0],0)
             c.execute('SELECT COUNT(*) FROM business_events WHERE event_key=%s',('test:run:001:rollback',))
             self.assertEqual(c.fetchone()[0],0)
+
+    def test_source_timestamps_follow_actual_manual_mutation(self):
+        # Simulates an interactive DBeaver UPDATE: no updated_at argument is
+        # provided, so the table's ON UPDATE clock must record the new time.
+        self.assertEqual(query(self.db, "SELECT @@SESSION.time_zone")[0][0], "+00:00")
+        with self.db.cursor() as cur:
+            cur.execute("""INSERT INTO products
+                (sku,product_name,price,inventory)
+                VALUES(%s,%s,%s,%s)""",
+                ("SYN-TIMESTAMP-CHECK", "Fresh timestamp test", "35.00", 4))
+        self.db.commit()
+        first = query(self.db,"SELECT updated_at FROM products WHERE sku=%s",
+                      ("SYN-TIMESTAMP-CHECK",))[0][0]
+        time.sleep(0.03)
+        with self.db.cursor() as cur:
+            cur.execute("UPDATE products SET inventory=inventory-1 WHERE sku=%s",
+                        ("SYN-TIMESTAMP-CHECK",))
+        self.db.commit()
+        second = query(self.db,"SELECT updated_at FROM products WHERE sku=%s",
+                       ("SYN-TIMESTAMP-CHECK",))[0][0]
+        self.assertGreater(second, first)
+        delta = (datetime.now(timezone.utc).replace(tzinfo=None)-second).total_seconds()
+        self.assertTrue(0 <= delta < 30, f"Source update timestamp too stale: {delta}s")
+        view_value = query(self.db,"SELECT last_changed_at_utc FROM v_source_freshness "
+                           "WHERE source_table='products'")[0][0]
+        self.assertGreaterEqual(view_value,second)
+
+    def test_all_mutable_source_entities_have_automatic_updated_at(self):
+        tables = ("customers","products","orders","order_items",
+                  "payments","financial_transactions","simulation_runs")
+        rows = query(self.db,"""SELECT table_name, EXTRA
+             FROM information_schema.COLUMNS
+             WHERE table_schema='fixer_sim' AND column_name='updated_at'""")
+        updated = {name: extra.lower() for name,extra in rows}
+        for table in tables:
+            with self.subTest(table=table):
+                self.assertIn(table,updated)
+                self.assertIn("on update",updated[table])
+
+    def test_late_business_date_preserved_with_fresh_write_timestamp(self):
+        # Seeded simulator writes a historical business date for late arrivals,
+        # but updated_at is still the actual insertion/manipulation time.
+        run(run_key='test:timing:late',seed='timing-fixture',max_orders=12)
+        rows = query(self.db,"""SELECT ordered_at,updated_at FROM orders
+            WHERE order_key LIKE 'SYN-ORDER-test:timing:late-%'
+              AND ordered_at < UTC_TIMESTAMP(6) - INTERVAL 1 DAY""")
+        self.assertGreater(len(rows),0)
+        for ordered_at, updated_at in rows:
+            self.assertGreater(updated_at,ordered_at)
+            self.assertLess(abs((datetime.now(timezone.utc).replace(
+                tzinfo=None)-updated_at).total_seconds()),30)
 
     def test_real_binlog_end_to_end(self):
         run(run_key='test:real:cdc',seed='cdc-fixture',max_orders=8)
