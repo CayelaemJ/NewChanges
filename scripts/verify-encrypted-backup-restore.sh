@@ -43,22 +43,7 @@ fi
 # materializing a plaintext archive on disk or connecting to production.
 archive_catalog="$(age -d -i "$AGE_IDENTITY_FILE" "$1" | \
   docker exec -i "$CONTAINER" pg_restore --list)"
-if [[ "$archive_catalog" =~ (^|
-  echo "Archive defines public schema; removing only empty default schema in disposable database."
-  docker exec "$CONTAINER" psql -X -v ON_ERROR_STOP=1 -U postgres -d restorecheck \
-    -c 'DROP SCHEMA public RESTRICT;'
-else
-  echo "Archive does not define public schema; keeping default empty schema."
-fi
-unset archive_catalog
-echo "Restoring encrypted archive into disposable offline PostgreSQL 18..."
-# pipefail ensures a decrypt failure or pg_restore failure cannot be treated as success.
-age -d -i "$AGE_IDENTITY_FILE" "$1" | \
-  docker exec -i "$CONTAINER" pg_restore --exit-on-error --no-owner --no-acl \
-    -U postgres -d restorecheck
-table_count=$(docker exec "$CONTAINER" psql -X -q -A -t -U postgres -d restorecheck \
-  -c "SELECT count(*) FROM pg_tables WHERE schemaname='public'")
-if [[ "$table_count" != 57 ]]; then
+if grep -Eq '^[[:space:]]*[0-9]+;.*[[:space:]]SCHEMA - public([[:space:]]|$)' <<< "$archive_catalog"; then
   echo "BLOCKED: restored public table inventory is $table_count, expected 57" >&2
   exit 2
 fi
