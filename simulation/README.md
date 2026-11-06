@@ -57,6 +57,55 @@ Pure Python tests alone do **not** establish CDC integration. The operator-repor
 
 For the existing self-hosted `newchanges-ci` GitHub runner, copy these files under `NewChanges/simulation/` and copy `repo-integration/.github/workflows/aws-sim-docker-ci.yml` to the repository's `.github/workflows/`. Dispatch that workflow manually. It does not use GitHub-hosted runners and does not deploy.
 
+## Precise source freshness and mutation timestamps (6 November 2026)
+
+**Implemented in this PR for new `fixer_sim` installations; NOT deployed
+to RDS and NOT applied to existing `ingest_stage` data.**
+
+- Source `updated_at` columns use MySQL 8.4 `DATETIME(6) DEFAULT
+  CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)`; `order_items`
+  and simulation run status also now have automatic `updated_at`.
+- The simulator uses `UTC_TIMESTAMP(6)` inside each actual INSERT/UPDATE.
+  A retry or no-op duplicate must **not** change the original source row's
+  modification time. Every committed event in `business_events` records
+  its actual database execution time, including the audit for physical DELETE.
+- Every dedicated MySQL connection sets its session time zone to `+00:00`.
+  An external DBeaver session should also use `SET time_zone='+00:00';`
+  before manual updates to `fixer_sim` to preserve UTC DATETIME semantics.
+- `ordered_at`, `payments.event_at`, and `financial_transactions.occurred_at`
+  reflect the business time. Late-arriving historical events intentionally
+  retain their historical dates even when `updated_at` is today.
+- A new `fixer_sim.v_source_freshness` read-only view returns the most recent
+  source modification in UTC for each table, plus the latest business audit
+  event and simulator run. Physical DELETE does not leave a source row, so
+  its committed `business_events` audit timestamp is the source-side marker.
+- Regression tests now verify direct SQL UPDATE without an explicit
+  `updated_at`, a fresh MySQL timestamp, the source freshness view,
+  automatic schema on-update rules, and historical business-date separation.
+
+After separately approved schema installation, a DBeaver user with restricted
+read access can inspect freshness via:
+
+```sql
+SELECT source_table, last_changed_at_utc,
+       TIMESTAMPDIFF(SECOND, last_changed_at_utc, UTC_TIMESTAMP(6))
+           AS seconds_since_change
+FROM fixer_sim.v_source_freshness
+ORDER BY last_changed_at_utc DESC;
+```
+
+**Current RDS findings:** `ingest_stage` contains 11 base tables and 10
+views (21 objects). Two column names matched a limited sensitive-name filter,
+but that is **not** a classification of data in tables such as `employees`,
+`platform_users`, or `salary_advances`. The inspected administrative account
+has the `rds_superuser_role`; do not use it as the simulation runtime identity.
+The live `binlog retention hours` configuration returned a blank value,
+which AWS documents as NULL, meaning zero guaranteed retention hours for
+RDS MySQL. A retention change (e.g. 24 hours) can increase storage use on
+the existing 20 GB instance and requires measured headroom and explicit
+approval. `source delay=0` and `target delay=0` do not establish CDC
+consumer latency. No production change has been performed.
+
 ## MySQL 8.4 SHA-2 authentication (local Docker)
 
 MySQL 8.4 defaults to `caching_sha2_password`. Fresh Docker test accounts
