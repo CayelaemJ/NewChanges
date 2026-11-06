@@ -46,7 +46,7 @@ class IngestStageReadOnlyContract(unittest.TestCase):
             sql = path.read_text(encoding="utf-8")
             with self.subTest(path=str(path)):
                 self.assertNotRegex(
-                    sql, r"(?im)\\bAS\\s+(?:utc_time|utc_date|utc_timestamp)\\b"
+                    sql, r"(?im)\bAS\s+(?:utc_time|utc_date|utc_timestamp)\b"
                 )
                 self.assertIn("AS current_utc_datetime", sql)
 
