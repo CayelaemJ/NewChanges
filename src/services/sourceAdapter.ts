@@ -14,6 +14,7 @@ import { readPinnedSourceApiJson } from "./pinnedSourceHttps.js";
 import { assertSecureSourceSqlTransport } from "./sourceSqlTlsPolicy.js";
 import { safeSourceConnectionFailure } from "./sourceConnectionFailure.js";
 import { closeSourceConnections } from "./sourceConnectionCleanup.js";
+import { assertSourceApiBaseUrlHasNoQuery } from "./sourceApiBaseUrlPolicy.js";
 import { LOAD_ORDER, getFormat } from "./reportFormats.js";
 import { lookup } from "node:dns/promises";
 import { isBlockedSourceAddress as privateOrLocalAddress } from "./sourceAddressPolicy.js";
@@ -258,6 +259,9 @@ async function assertSafeApiBaseUrl(raw: string): Promise<string> {
 async function createApiAdapter(config: IntegrationSourceConfig): Promise<SourceAdapter> {
   const rawBaseUrl = String(config.baseUrl ?? "").trim();
   if (!rawBaseUrl) throw new Error("No API base URL configured.");
+  let parsedBase: URL;
+  try { parsedBase = new URL(rawBaseUrl); } catch { throw new Error("API base URL must be a valid URL."); }
+  assertSourceApiBaseUrlHasNoQuery(parsedBase);
   const baseUrl = await assertSafeApiBaseUrl(rawBaseUrl);
   const token = config.authToken || null;
 
