@@ -40,6 +40,18 @@ test("email notices escape account names and the HTML report fields",()=>{
   assert.match(scheduler,/safePortalBaseUrl\(\(schedule as any\)\.portalBaseUrl\)/);
 });
 
+test("score change emails escape employer, recipient and period fields",()=>{
+  const start=automation.indexOf("export async function notifyScoreChangeIfCurrentPeriod(");
+  assert.ok(start>=0, "score-change notification function must exist");
+  const scoreEmail=automation.slice(start);
+  assert.match(scoreEmail,/notificationPlainText\(employer\?\.name \|\| "Your employer"\)/);
+  assert.match(scoreEmail,/escapeNotificationHtml\(r\.name \|\| ""\)/);
+  assert.match(scoreEmail,/escapeNotificationHtml\(employer\?\.name \|\| "Your employer"\)/);
+  assert.match(scoreEmail,/escapeNotificationHtml\(period\)/);
+  assert.match(scoreEmail,/escapeNotificationHtml\(previous\.period\)/);
+  assert.doesNotMatch(scoreEmail,/<p>Hi \$\{r\.name/);
+});
+
 test("email delivery failures never persist or return untrusted provider details",()=>{
   const testStart=scheduler.indexOf("export async function testEmailConnection(");
   const testEnd=scheduler.indexOf("function parseTime(",testStart);
