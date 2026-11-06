@@ -21,12 +21,16 @@ jobs:
         run: node --test tests/free-production-cutover-contract.test.mjs
       - name: Offline free-edge safety and routing tests
         run: node --test tests/cloudflare-free-render-edge.test.mjs
+      - name: Verify Aiven final synchronization guardrails (no database credentials)
+        run: node --test tests/aiven-final-sync-safety.test.mjs
       - name: Verify full original application Dockerfile exists
         run: test -s Dockerfile
       - name: Build backend image with local Docker
         run: docker build --pull=false -f Dockerfile -t newchanges-free-backend:preflight .
       - name: Offline Fastify runtime, PostgreSQL readiness and private-origin security smoke
         run: bash scripts/free-backend-runtime-smoke.sh
+      - name: Rehearse final Aiven delta transaction with disposable PG18
+        run: node scripts/aiven-final-delta-docker-rehearsal.mjs
       - name: Confirm no secrets or production traffic were changed
         run: |
           echo "Local checks only: no Cloudflare deploy, no Render deploy, only local synthetic PostgreSQL; no production database access."
