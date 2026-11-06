@@ -20,6 +20,14 @@ const CONFIG_ERRORS = new Set([
   "RESEND_API_KEY is required when EMAIL_PROVIDER=resend",
   "Production SMTP must verify the remote TLS certificate",
   "Production SMTP requires implicit TLS or mandatory STARTTLS",
+  "SMTP port must be an integer between 1 and 65535",
+  "Inactivity threshold must be 0 (off) or 7 to 3650 whole days",
+  "smtpSecure must be true or false",
+  "smtpRequireTls must be true or false",
+  "smtpRejectUnauthorized must be true or false",
+  "digestEnabled must be true or false",
+  "scoreChangeAlertsEnabled must be true or false",
+  "syntheticDataMode must be true or false",
 ]);
 
 const DELIVERY_ERRORS = new Set([
