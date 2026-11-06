@@ -55,7 +55,8 @@ test('recovery orchestrator fails closed with no private credentials or key',()=
 test('recovery orchestrator keeps both DB operations read-only and performs two actual restore drills',()=>{
  const script=readFileSync(new URL('../scripts/production-recovery-drill.sh',import.meta.url),'utf8');
  assert.match(script,/for side in source target/);
- assert.match(script,/production-encrypted-backup\.mjs "\$side" --backup/);
+ assert.match(script,/production-encrypted-backup\.mjs source --portable-backup/);
+ assert.match(script,/production-encrypted-backup\.mjs target --backup/);
  assert.match(script,/verify-encrypted-backup-restore\.sh "\$archive"/);
  assert.match(script,/sha256sum "\$archive"/);
  assert.doesNotMatch(script,/aiven-final-delta-sync|db:push|pg_restore.*onrender/);
@@ -72,4 +73,14 @@ test('individual backup command independently blocks repository destinations',()
  assert.match(src,/realpathSync\(folder\)/);
  assert.match(src,/relative\(repository,backupDirectory\)/);
  assert.match(src,/Backup output must be outside the repository checkout/);
+});
+
+test('portable mode is deliberately source-only and excludes Neon JWT extension',()=>{
+ const src=readFileSync(backup,'utf8');
+ assert.match(src,/--portable-backup/);
+ assert.match(src,/--schema=public/);
+ assert.match(src,/--exclude-extension=pg_session_jwt/);
+ assert.match(src,/PORTABLE_PUBLIC_APPLICATION_ONLY/);
+ const r=invoke(['target','--portable-backup'],{DR_TARGET_DATABASE_URL:''});
+ assert.equal(r.status,2);
 });
