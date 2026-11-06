@@ -329,3 +329,21 @@ bash scripts/production-recovery-drill.sh
 ```
 
 No production DB writes, writer cutoff, Cloudflare route changes, or live sync were performed by this repair.
+
+
+## 2026-11-06 portable Neon backup: duplicate public schema on offline restore
+
+The operator created a new encrypted `source-portable-public-2026-11-06T12-02-52-739Z.pgdump.age` archive. The isolated PG18 `pg_restore` then failed with `ERROR: schema "public" already exists` on `CREATE SCHEMA public;`. **The archive exists, but its restoration is not yet verified.** This error is from restoring a normal application schema into PostgreSQL 18's preinitialized `public` schema, not evidence of a live database problem.
+
+The offline-only script `scripts/verify-encrypted-backup-restore.sh` now runs `DROP SCHEMA public RESTRICT` in its newly created `--network none` disposable Docker `restorecheck` database just before `pg_restore --exit-on-error`. `RESTRICT` refuses an unexpected nonempty schema instead of cascading. The command is scoped to the synthetic container and **must never be run against Neon or Aiven**. No new backup is needed merely for this restore fix; re-run on the existing encrypted archive first. `tests/production-encrypted-backup.test.mjs` adds an offline contract check.
+
+```bash
+cd ~/NewChanges-free-edge
+git fetch origin
+git merge --ff-only origin/feat/free-cloudflare-render-primary-20261105
+node --test tests/production-encrypted-backup.test.mjs
+bash -n scripts/verify-encrypted-backup-restore.sh
+AGE_IDENTITY_FILE="$HOME/fixer-recovery-keys/age-identity.txt" bash scripts/verify-encrypted-backup-restore.sh "$HOME/fixer-recovery-archives/source-portable-public-2026-11-06T12-02-52-739Z.pgdump.age"
+```
+
+Only if this standalone archive restore succeeds, retry the two-sided recovery orchestrator `bash scripts/production-recovery-drill.sh` to produce and independently restore the Aiven target archive. Full Neon disaster recovery, offsite duplication, MFA/Neon Auth parity, live delta, and cutover remain separate gates.
