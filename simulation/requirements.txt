@@ -1,2 +1,5 @@
-PyMySQL==1.1.1
+# MySQL 8.4 uses caching_sha2_password; PyMySQL's RSA extra installs
+# the cryptography backend for new accounts over the isolated Docker network.
+PyMySQL[rsa]==1.1.1
 mysql-replication==1.0.17
+cryptography==50.0.2
