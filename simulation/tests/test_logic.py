@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 from runtime.logic import allowed_table, choose_historical_time, encode, event_id, schedule_counts
 from runtime.common import connection_config, positive_int
-from runtime.simulator import run, _execute_event
+from runtime.simulator import run, _execute_event, _once
 
 
 class Helpers(unittest.TestCase):
@@ -61,6 +61,36 @@ class Helpers(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, 'Emergency stop'):
                 _execute_event(conn,'test:blocked2','INSERT',datetime(2026,11,6),Mock())
             conn.rollback.assert_called_once()
+
+    def test_database_sessions_are_utc_for_microsecond_audit(self):
+        with patch.dict('os.environ',{
+            'SIM_ENV':'local','SIM_DB_HOST':'mysql','SIM_DB_USER':'sim_writer',
+            'SIM_DB_PASSWORD':'synthetic-password',
+            'SIM_DB_DATABASE':'fixer_sim'},clear=True):
+            self.assertEqual(connection_config('writer')['init_command'],
+                             "SET time_zone = '+00:00'")
+
+    def test_business_event_uses_database_clock_not_historical_anchor(self):
+        from unittest.mock import Mock
+        fake_db=Mock()
+        historical=datetime(2020,1,1)
+        with patch('runtime.simulator._sql',return_value=(1,None)) as sql:
+            self.assertTrue(_once(fake_db,'synthetic:test','UPDATE',historical))
+        query=sql.call_args.args[1]
+        params=sql.call_args.args[2]
+        self.assertIn('UTC_TIMESTAMP(6)',query)
+        self.assertNotIn(historical,params)
+
+    def test_source_schema_has_auto_timestamps_and_freshness_view(self):
+        from pathlib import Path
+        schema=(Path(__file__).resolve().parents[1] / 'schema' / '001_source.sql')
+        # Schema is in the repository, but the Docker test image needs this
+        # schema fixture copied in for the same contract check.
+        if not schema.exists():
+            self.skipTest('schema DDL not mounted in this environment')
+        ddl=schema.read_text(encoding='utf-8')
+        self.assertGreaterEqual(ddl.count('ON UPDATE CURRENT_TIMESTAMP(6)'),8)
+        self.assertIn('v_source_freshness',ddl)
 
     def test_production_tls_cannot_be_disabled(self):
         with patch.dict('os.environ',{'SIM_ENV':'aws','SIM_DB_HOST':'example.com','SIM_DB_USER':'testwriter',
