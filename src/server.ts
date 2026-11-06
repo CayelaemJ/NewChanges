@@ -157,8 +157,9 @@ app.addHook("onRequest", async (req, reply) => {
   const path = req.url.split("?", 1)[0];
   // When the free Cloudflare edge becomes the production front door, reject
   // direct requests to the public Render origin without its private token.
-  // /health and /ready remain available to Render health checks only.
-  if (path !== "/health" && path !== "/ready" &&
+  // Only /health is public for Render liveness probes. /ready reveals DB
+  // availability and requires the Cloudflare origin token when protected.
+  if (path !== "/health" &&
       !cloudflareOriginAccessAllowed(req.headers, process.env)) {
     return reply.code(403).send({ error: "forbidden" });
   }
