@@ -279,6 +279,16 @@ The API adapter now calls `readPinnedSourceApiJson(url, token)` for every page a
 
 **Verification:** Nine source-level implementation/CI-wiring checks passed. **The physical disposable PostgreSQL test has not yet run.** No production automation, user account or database setting was changed.
 
+## Notification error disclosure hardening (2026-11-06)
+
+**Source-confirmed information-exposure boundary:** The email test route persisted raw SMTP/Resend exceptions to `SystemEmailConfig.lastTestNote`, a field returned by `publicEmailConfig()`. The user-invite path returned raw transport exceptions in `emailError`. Scheduled report delivery also persisted raw transport exceptions in `reportDeliveryLog.error` and `reportSchedule.lastError`; its source-readiness exception interpolated the free-text `lastSyncNote`.
+
+**Draft fix:** `src/services/emailDeliveryFailure.ts` produces allowlisted SMTP error categories or a Resend HTTP status without reflecting remote server banners, response bodies, URLs or credentials. The Resend transport no longer reads its error response body into an exception. `testEmailConnection` persists and throws only the safe message; `createUser` returns only safe email errors; `sendSchedule` stores and throws only safe delivery errors; `assertDashboardPublishable` no longer exposes free-text sync diagnostics.
+
+**Regression coverage:** Three isolated unit tests in `tests/security/email-delivery-failure.test.ts` cover safe classification, credential-bearing error text and untrusted error codes. `tests/security/notification-settings-contract.test.mjs` asserts actual email-test, invite and scheduled-report call paths. Both are included in `npm run check:security`.
+
+**Executed:** Isolated Node 22 transpiled runtime: **3/3 unit tests passed**, standalone strict TypeScript compilation passed. **12 read-only GitHub current-head code/wiring invariants passed.** This is not a full application compilation or PostgreSQL integration test. The latest-head self-hosted Docker release gate, MFA E2E, complete local AI rescan and the three historical CircleCI failures remain unresolved. No production action occurred.
+
 ## Workstream acceptance checks
 
 - [x] Separate code changes on a non-production branch based on PR #219.
