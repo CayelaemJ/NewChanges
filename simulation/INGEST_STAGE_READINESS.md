@@ -48,6 +48,57 @@ missing required columns, missing PKs or dynamic clocks, resolve the
 mapping/DDL design before enabling a live source integration. A view
 with `source_updated_at = UTC_TIMESTAMP()` is NOT a valid CDC cursor.
 
+## Confirmed live schema audit (operator, 6 November 2026)
+
+- All **ten** canonical `ingest_stage.v_*` views exist and expose the expected
+  **59 required source columns**. No required field names were missing.
+- All **eleven** base tables have primary keys. Ten feed tables use `_ingest_id`;
+  `import_manifest` uses `dataset`. This does not yet establish the source
+  view's natural-key uniqueness or CDC mapping correctness.
+- The raw timestamp is **nullable TEXT** `source_updated_at`. The separate
+  `_source_updated_utc` is a nullable **VIRTUAL GENERATED** DATETIME derived
+  from that source value. The view exposes nullable **DATETIME(0)** as
+  `source_updated_at`, with only **one-second precision**.
+- None of the reported base source timestamp columns has MySQL
+  `ON UPDATE` metadata. View audit did not find a dynamic clock expression;
+  this is a heuristic, not evidence that manual UPDATE refreshes the source
+  timestamp. Triggers and full view definitions are still unverified.
+- SQL session time zone was **UTC** and four read-only metadata audits
+  modified no source rows.
+
+**Critical behavior:** Editing an employee, policy, debt or salary row may
+**not** advance the view's `MAX(source_updated_at)`. The Fixer's existing
+60-second polling loop could therefore miss that edit. Two updates within
+the same second can share an identical DATETIME(0) watermark, even if a
+source writer explicitly refreshes the timestamp. A hard DELETE also cannot
+be detected reliably by this simple max-watermark approach. None of these
+risks is solved by faking `source_updated_at = UTC_TIMESTAMP()` in a SELECT.
+
+**Next read-only check:** Execute
+`simulation/ops/ingest_stage_timestamp_lineage.sql` in DBeaver. The four
+metadata queries inspect exact view SQL, `_source_updated_utc` generated
+expressions, triggers (if any), and timestamp/PK indexes. They retrieve
+**no employee or financial records** and perform no DDL. Their results
+determine whether a new source-maintained modification clock, a separate
+CDC event feed, or both are needed.
+
+**Proposed implementation sequence, no live cutover yet:**
+1. Establish column lineage and natural-key guarantees without reading
+   personal row contents. Confirm where (or whether) source mutation times
+   are currently maintained.
+2. Build a staging-only read adapter against `ingest_stage.v_*`, using a
+   restricted SELECT-only account, verified TLS and canonical schema checks.
+3. Implement a separate `ingest_stage` CDC processor for its actual primary
+   keys, with a consistent source snapshot, binlog handoff and protected
+   Bronze event metadata. Do not repurpose the `fixer_sim` consumer, which
+   assumes six unrelated tables and numeric product/order IDs.
+4. Design source-side update-time instrumentation only after confirming
+   SQL lineage and the effect on existing loads. Any ALTER/TRIGGER or sidecar
+   migration requires explicit approval, measured impact and rollback.
+5. Verify an approved, isolated test mutation propagates through committed
+   CDC -> idempotent sync -> dashboard freshness. Distinguish change time,
+   capture time and dashboard publish time.
+
 ## Data and time contract
 
 - A true source mutation timestamp is generated **when a change is committed**.
