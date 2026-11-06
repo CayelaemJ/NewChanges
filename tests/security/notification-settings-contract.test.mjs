@@ -140,6 +140,7 @@ test("sender display name is normalized for both providers", () => {
   assert.match(safety,/export function safeSenderDisplayName\(/);
   assert.match(safety,/\\p\{Cc\}/);
   assert.match(safety,/\\p\{Cf\}/);
+  assert.match(safety,/<>"\x27,;\\\\/);
   assert.match(scheduler,/from: `\$\{safeSenderDisplayName\(cfg\.fromName\)\} <\$\{fromEmail\}>`/);
   assert.match(scheduler,/from: \{ name: safeSenderDisplayName\(cfg\.fromName\), address: cfg\.fromEmail! \}/);
 });
