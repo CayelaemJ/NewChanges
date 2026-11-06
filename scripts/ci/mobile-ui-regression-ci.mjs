@@ -4,6 +4,12 @@ import { readFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { chromium } from '@playwright/test';
 
 const widths = [320, 360, 375, 390, 414, 430, 768];
+const variants = [
+  { name: 'ios-light', platform: 'iPhone', ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148', theme: 'light' },
+  { name: 'ios-dark', platform: 'iPhone', ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148', theme: 'dark' },
+  { name: 'android-light', platform: 'Android', ua: 'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 Chrome/130.0.0.0 Mobile Safari/537.36', theme: 'light' },
+  { name: 'android-dark', platform: 'Android', ua: 'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 Chrome/130.0.0.0 Mobile Safari/537.36', theme: 'dark' },
+];
 const routes = ['/admin', '/users', '/mfa'];
 const folder = 'test-results/mobile-ui';
 mkdirSync(folder, { recursive: true });
@@ -31,21 +37,26 @@ function serveAsset(url) {
 }
 
 try {
-  for (const path of routes) for (const width of widths) {
+  for (const path of routes) for (const width of widths) for (const variant of variants) {
     const context = await browser.newContext({
       viewport: { width, height: 812 },
       deviceScaleFactor: 1,
       isMobile: width < 768,
       hasTouch: width < 768,
       reducedMotion: 'reduce',
+      colorScheme: variant.theme,
+      userAgent: variant.ua,
     });
     const page = await context.newPage();
     const pageErrors = [];
     page.on('pageerror', error => pageErrors.push(error.message));
-    await page.addInitScript(() => {
+    await page.addInitScript(theme => {
+      window.__testTheme = theme;
       localStorage.setItem('cookieNoticeDismissed', '1');
       sessionStorage.setItem('efsWelcomeShown', '1');
-    });
+      // Keep the preference explicit so testing does not depend on host OS defaults.
+      localStorage.setItem('ef_theme', window.__testTheme);
+    }, variant.theme);
     await page.route('**/*', async route => {
       const url = new URL(route.request().url());
       if (url.hostname !== 'mobile-ui.test') return route.abort();
@@ -69,12 +80,17 @@ try {
       }
       return route.fulfill({ status: 404, body: 'Unmocked fixture resource' });
     });
-    const label = path.slice(1) + '-' + width;
+    const label = path.slice(1) + '-' + width + '-' + variant.name;
     try {
       const response = await page.goto('http://mobile-ui.test' + path, { waitUntil: 'domcontentloaded' });
       assert.equal(response?.status(), 200, 'Page should load successfully');
       await page.waitForTimeout(350);
       await page.evaluate(() => document.fonts.ready);
+      // The same fixture is rendered under OS theme preferences and both mobile UA profiles.
+      await page.evaluate(theme => {
+        document.documentElement.setAttribute('data-theme', theme);
+        document.documentElement.classList.toggle('portal-dark', theme === 'dark');
+      }, variant.theme);
       const layout = await page.evaluate(() => {
         const allowedScroll = '.console-table-scroll,.security-table-wrap,[role="grid"],[data-allow-horizontal-scroll]';
         const visible = el => {
@@ -108,18 +124,25 @@ try {
           viewport: innerWidth, documentWidth: document.documentElement.scrollWidth,
           bodyTextLength: document.body.innerText.trim().length,
           offenders, clipped,
+          colorScheme: getComputedStyle(document.documentElement).colorScheme,
+          theme: document.documentElement.getAttribute('data-theme'),
+          touchTargets: [...document.querySelectorAll('button,input[type="button"],input[type="submit"],[role="button"]')]
+            .filter(el => visible(el))
+            .filter(el => { const r = el.getBoundingClientRect(); return r.width < 24 || r.height < 24; })
+            .slice(0, 12).map(el => ({ id: el.id, label: el.getAttribute('aria-label') || el.textContent?.trim().slice(0, 45) })),
         };
       });
       assert.ok(layout.bodyTextLength > 50, 'Blank or nearly empty mobile screen: ' + JSON.stringify(layout));
       assert.ok(layout.documentWidth <= layout.viewport + 3, 'Horizontal document overflow: ' + JSON.stringify(layout));
       assert.deepEqual(layout.offenders, [], 'Elements escaping the viewport');
       assert.deepEqual(layout.clipped, [], 'Clipped form controls or headings');
+      assert.equal(layout.theme, variant.theme, 'Theme preference not reflected in document');
       assert.deepEqual(pageErrors, [], 'Unhandled browser errors');
-      results.push({ path, width, status: 'pass', layout });
+      results.push({ path, width, platform: variant.platform, theme: variant.theme, status: 'pass', layout });
     } catch (error) {
       const screenshot = folder + '/' + label + '-failure.png';
       await page.screenshot({ path: screenshot, fullPage: true }).catch(() => {});
-      results.push({ path, width, status: 'fail', error: String(error), pageErrors, screenshot });
+      results.push({ path, width, platform: variant.platform, theme: variant.theme, status: 'fail', error: String(error), pageErrors, screenshot });
     } finally {
       await context.close();
     }
