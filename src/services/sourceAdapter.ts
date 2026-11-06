@@ -87,19 +87,6 @@ function intSetting(value: number | null | undefined, fallback: number, min: num
   return n;
 }
 
-function boolEnv(name: string): boolean | undefined {
-  const raw = process.env[name];
-  if (raw == null || raw === "") return undefined;
-  return !["0", "false", "no", "off"].includes(raw.toLowerCase());
-}
-
-function numberEnv(name: string): number | undefined {
-  const raw = process.env[name];
-  if (raw == null || raw === "") return undefined;
-  const n = Number(raw);
-  return Number.isFinite(n) ? n : undefined;
-}
-
 export function sourceEnvironmentLocked(): boolean {
   const raw = String(process.env.SOURCE_CONFIG_LOCKED ?? "").trim().toLowerCase();
   return ["1", "true", "yes", "on"].includes(raw);
