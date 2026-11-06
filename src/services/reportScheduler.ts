@@ -512,12 +512,24 @@ async function assertScheduleDeliveryAuthorized(
   throw new Error(REPORT_DELIVERY_BLOCKED);
 }
 
+async function assertScheduledReportStillActive(scheduleId: string): Promise<void> {
+  // A user can pause a schedule while dashboard generation is running.
+  // The claimed next-run timestamp is not permission to deliver anyway.
+  const current = await prisma.reportSchedule.findUnique({
+    where: { id: scheduleId },
+    select: { active: true },
+  });
+  if (current?.active !== true)
+    throw new Error("Report schedule was paused or deleted before delivery.");
+}
+
 async function sendSchedule(scheduleId: string, triggeredBy: "scheduled" | "manual") {
   const schedule = await prisma.reportSchedule.findUnique({
     where: { id: scheduleId },
     include: { employer: { select: { id: true, name: true } }, user: { select: { id: true, email: true, name: true } } },
   });
   if (!schedule) throw new Error("schedule not found");
+  if (triggeredBy === "scheduled") await assertScheduledReportStillActive(schedule.id);
   await assertScheduleDeliveryAuthorized(schedule, triggeredBy);
   await assertDashboardPublishable();
   const filters = (schedule.filters || {}) as ReportFilters;
@@ -531,6 +543,7 @@ async function sendSchedule(scheduleId: string, triggeredBy: "scheduled" | "manu
   // A dashboard refresh can take time. Recheck immediately before external
   // delivery so role changes during report generation cannot go unnoticed.
   await assertScheduleDeliveryAuthorized(schedule, triggeredBy);
+  if (triggeredBy === "scheduled") await assertScheduledReportStillActive(schedule.id);
   // Only transport failures are eligible for a retry. Once the provider
   // accepts the email, a later database/audit failure must never resend it.
   try {
@@ -550,7 +563,19 @@ async function sendSchedule(scheduleId: string, triggeredBy: "scheduled" | "manu
       // The transport has already failed. Try the schedule update regardless.
     }
     try {
-      await prisma.reportSchedule.update({ where: { id: schedule.id }, data: { lastStatus: "FAILED", lastError: message, consecutiveFailures: failed, ...(retry ? { active: true, nextRunAt: retry } : {}) } });
+      if (triggeredBy === "scheduled") {
+        // Do not reactivate a schedule the owner paused during an in-flight
+        // transport attempt. The database predicate is checked atomically.
+        await prisma.reportSchedule.updateMany({
+          where: { id: schedule.id, active: true },
+          data: { lastStatus: "FAILED", lastError: message, consecutiveFailures: failed, ...(retry ? { nextRunAt: retry } : {}) },
+        });
+      } else {
+        await prisma.reportSchedule.update({
+          where: { id: schedule.id },
+          data: { lastStatus: "FAILED", lastError: message, consecutiveFailures: failed },
+        });
+      }
     } catch {
       throw new Error("Email delivery failed; retry status could not be persisted");
     }
@@ -561,7 +586,7 @@ async function sendSchedule(scheduleId: string, triggeredBy: "scheduled" | "manu
     await prisma.reportDeliveryLog.create({ data: { scheduleId: schedule.id, triggeredBy, status: "SENT", recipients: recipients as any, subject, filters: filters as any } });
   } catch { trackingWarning = true; }
   try {
-    await prisma.reportSchedule.update({ where: { id: schedule.id }, data: { lastSentAt: new Date(), lastStatus: "SENT", lastError: null, consecutiveFailures: 0 } });
+    await prisma.reportSchedule.update({ where: { id: schedule.id }, data: { lastSentAt: new Date(), lastStatus: "SENT", lastError: null, consecutiveFailures: 0, ...(triggeredBy === "scheduled" && schedule.frequency === "ONCE" ? { active: false } : {}) } });
   } catch { trackingWarning = true; }
   if (trackingWarning) {
     // Do not log raw DB exceptions or mark a successfully sent email as FAILED.
@@ -599,7 +624,9 @@ export async function runDueReports(logger?: { info?: Function; error?: Function
       const next = row.frequency === "ONCE" ? new Date(now.getTime() + 3650 * 864e5) : nextRunFor(input, new Date(now.getTime() + 1000));
       const claim = await prisma.reportSchedule.updateMany({
         where: { id: row.id, active: true, nextRunAt: { lte: now } },
-        data: { lastRunAt: now, nextRunAt: next, ...(row.frequency === "ONCE" ? { active: false } : {}) },
+        // Keep ONCE active until its send is accepted, so a concurrent user
+        // pause can be enforced by the final pre-delivery check.
+        data: { lastRunAt: now, nextRunAt: next },
       });
       if (!claim.count) continue;
       logger?.info?.({ scheduleId: row.id, name: row.name }, "sending scheduled report");
