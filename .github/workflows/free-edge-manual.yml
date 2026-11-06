@@ -37,6 +37,12 @@ jobs:
           bash -n scripts/production-recovery-drill.sh
       - name: Validate Render Aiven secure connection policy without any live secrets
         run: node --test tests/verify-render-aiven-config.test.mjs
+      - name: Reject migration branch when admin MFA wiring is missing
+        run: node scripts/production-auth-cutover-gate.mjs
+      - name: Build disposable MFA test container with pinned dependencies
+        run: docker build --pull=false -f Dockerfile.mfa-integration-test -t fixer-mfa-integration:preflight .
+      - name: Run admin MFA tests without network, live DB or production credentials
+        run: docker run --rm --network none --memory 2g --cpus 2 fixer-mfa-integration:preflight
       - name: Verify full original application Dockerfile exists
         run: test -s Dockerfile
       - name: Build backend image with local Docker
