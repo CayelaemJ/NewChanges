@@ -73,6 +73,8 @@ test('Render candidate cannot auto deploy or silently receive a production datab
   const y=readFileSync(new URL('../render.free-candidate.yaml',import.meta.url),'utf8');
   assert.match(y,/plan: free/);
   assert.match(y,/autoDeployTrigger: off/);
+  assert.match(y,/healthCheckPath: \/health/);
+  assert.doesNotMatch(y,/healthCheckPath: \/ready/);
   assert.match(y,/STANDBY_MODE\n\s+value: "true"/);
   assert.match(y,/DATABASE_URL\n\s+sync: false/);
   assert.doesNotMatch(y,/postgresql:\/\//);
@@ -85,4 +87,13 @@ test('Fastify origin guard is installed before routing and cannot be bypassed wh
  assert.match(guard,/timingSafeEqual\(a, b\)/);
  assert.match(guard,/secret.length < 32/);
  assert.match(guard,/NEWCHANGES_EDGE_ORIGIN_GUARD_ENABLED === "true"/);
+});
+
+test('protected origin keeps the DB readiness route private', () => {
+  const src=readFileSync(new URL('../src/server.ts',import.meta.url),'utf8');
+  const script=readFileSync(new URL('../scripts/free-backend-runtime-smoke.sh',import.meta.url),'utf8');
+  assert.match(src,/if \(path !== "\/health" &&/);
+  assert.doesNotMatch(src,/path !== "\/ready"/);
+  assert.match(script,/readyDirect\.status !== 403/);
+  assert.match(script,/ready\.status !== 200/);
 });
