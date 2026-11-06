@@ -9,7 +9,8 @@ export type ReportDeliveryOwner = {
 };
 
 const validEmail = (value: string): boolean =>
-  value.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  value.length <= 254 && !/[\p{C}\p{Z}<>]/u.test(value) &&
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
 export function reportDeliveryAllowed(
   owner: ReportDeliveryOwner | null | undefined,
