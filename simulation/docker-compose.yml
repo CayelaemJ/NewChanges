@@ -1,0 +1,49 @@
+# DEV-ONLY: never connects to live RDS, never accepts a database hostname override.
+services:
+  mysql:
+    image: mysql:8.4
+    command: ["--server-id=99", "--log-bin=mysql-bin", "--binlog-format=ROW", "--binlog-row-image=FULL", "--binlog-row-metadata=FULL", "--innodb-buffer-pool-size=64M"]
+    environment:
+      MYSQL_ROOT_PASSWORD: "${LOCAL_MYSQL_ROOT_PASSWORD:?Generate a local ephemeral root password}"
+    volumes:
+      - ./schema/001_source.sql:/docker-entrypoint-initdb.d/01-source.sql:ro
+      - ./schema/002_analytics.sql:/docker-entrypoint-initdb.d/02-analytics.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 3s
+      timeout: 3s
+      retries: 40
+    networks: [isolated_test]
+    tmpfs:
+      - /var/lib/mysql
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    depends_on:
+      mysql: { condition: service_healthy }
+    environment:
+      SIM_ENV: local
+      RUN_LOCAL_MYSQL_TESTS: 'yes'
+      MYSQL_ROOT_PASSWORD: "${LOCAL_MYSQL_ROOT_PASSWORD:?Missing local root password}"
+      SIM_DB_HOST: mysql
+      SIM_DB_USER: sim_writer
+      SIM_DB_PASSWORD: "${LOCAL_SIM_WRITER_PASSWORD:?Missing local writer password}"
+      SIM_DB_DATABASE: fixer_sim
+      SIM_CDC_HOST: mysql
+      SIM_CDC_USER: sim_cdc
+      SIM_CDC_PASSWORD: "${LOCAL_SIM_CDC_PASSWORD:?Missing local CDC password}"
+      SIM_CDC_DATABASE: fixer_sim_analytics
+      SIM_REPL_HOST: mysql
+      SIM_REPL_USER: sim_repl
+      SIM_REPL_PASSWORD: "${LOCAL_SIM_REPL_PASSWORD:?Missing local replication password}"
+      SIM_REPL_DATABASE: fixer_sim
+      SIMULATION_WRITES_APPROVED: YES_ISOLATED_SYNTHETIC_ONLY
+      SIM_CDC_ENABLED: 'true'
+      SIM_CDC_BOOTSTRAP_APPROVED: YES_EMPTY_SOURCE_ONLY
+      SIM_MAX_ORDERS: '12'
+    command: ["sh","-c","python ops/setup_local.py && python -m runtime.cdc bootstrap && python -m unittest discover -s tests -v"]
+    networks: [isolated_test]
+networks:
+  isolated_test:
+    internal: true

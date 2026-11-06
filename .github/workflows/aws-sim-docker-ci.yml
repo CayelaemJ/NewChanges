@@ -1,0 +1,30 @@
+name: AWS synthetic MySQL simulator Docker tests (manual, self-hosted)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: aws-sim-docker-isolated
+  cancel-in-progress: false
+jobs:
+  test:
+    runs-on: [self-hosted, linux, x64, newchanges-ci]
+    timeout-minutes: 35
+    env:
+      CI: 'true'
+      SIM_ENV: local
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify dedicated test directory (no live DB URLs)
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          test -f simulation/docker-compose.yml
+          test -f simulation/ops/ci-docker.sh
+          docker info >/dev/null
+      - name: Run disposable MySQL 8.4 integration suite
+        shell: bash
+        working-directory: simulation
+        run: bash ops/ci-docker.sh
