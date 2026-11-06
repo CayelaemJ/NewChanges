@@ -246,3 +246,24 @@ AGE_IDENTITY_FILE="$HOME/fixer-recovery-keys/age-identity.txt" \
 Use the actual filenames printed by the backup script. Save a **separate encrypted copy** and record its matching hash. Do not invent backup evidence or mark `offsiteCopy`, `restoreTested`, `sha256` or `verified` in the cutover manifest before checks finish. Local storage alone is not an independent recovery location. The local backup tool intentionally does not upload archives to cloud services.
 
 **Security/compatibility limits:** `pg_dump` needs PostgreSQL 18 client compatibility and sufficient SELECT access to all backed-up objects. Neon-managed nonportable schemas or restricted permissions may make an attempted full restore fail; do not silently exclude them to turn a failed drill green. Aiven Free does not provide a substitute for these independent recovery copies. This procedure is read-only on production but may impose temporary load and increase transfer/egress consumption. Its generated archives contain sensitive production data, encrypted only as long as the private age identity remains protected.
+
+
+## Single-command read-only backup + offline restoration drill (2026-11-06)
+
+New `scripts/production-recovery-drill.sh` automates, in order: private environment/age key checks; both pinned DB URL preflights; streaming encrypted source (Neon) and target (Aiven) backups; SHA-256 output; and two actual independent offline PostgreSQL 18 restores. It refuses a missing private age key or non-matching public recipient. It rejects a backup directory inside the repository. It does NOT stop live writers or apply final migration SQL.
+
+**Before running:** secure the private environment variables `DR_SOURCE_DATABASE_URL`, `DR_TARGET_DATABASE_URL`, `AGE_IDENTITY_FILE`, `AGE_RECIPIENT`, and an absolute `NEWCHANGES_BACKUP_DIR`. Use the protected paths in the instructions above. Keep the private age identity outside the backup archive folder; store independent recovery copies in separate protected storage. Never paste DB URLs, passwords, or private keys in chat, GitHub or terminal commands.
+
+```bash
+cd ~/NewChanges-free-edge
+git fetch origin
+git merge --ff-only origin/feat/free-cloudflare-render-primary-20261105
+node --test tests/production-encrypted-backup.test.mjs
+bash -n scripts/production-recovery-drill.sh
+# WITH THE REQUIRED PRIVATE ENV VARIABLES ALREADY SET IN YOUR SHELL:
+bash scripts/production-recovery-drill.sh
+```
+
+A successful local backup and offline restore does **not** prove an independent offsite copy, freeze Neon, or approve a cutover. The source remains live, the target may remain stale, and final reconciliation and the sole-writer gate remain outstanding. Since the source may still change during these backups, **take/verify an additional frozen checkpoint backup immediately before final synchronization** as required by the runbook.
+
+This tool has been committed and unit-level checks added to manual CI, but **no real source/target backup or restore has yet been executed by the assistant**.
