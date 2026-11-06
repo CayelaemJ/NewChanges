@@ -7,6 +7,7 @@ import { allowedSlackWebhookUrl } from "./slackWebhookPolicy.js";
 import { safeEmailColor, safePortalBaseUrl } from "./notificationTextSafety.js";
 import { assertSecureSmtpTls } from "./smtpTlsPolicy.js";
 import { resolveEmailProviderConfig } from "./emailProviderConfig.js";
+import { safeEmailDeliveryFailure } from "./emailDeliveryFailure.js";
 
 export type ReportFilters = {
   period?: string;
@@ -235,8 +236,9 @@ async function sendEmail(opts: { to: string | string[]; subject: string; html: s
       }),
     });
     if (!response.ok) {
-      const detail = await response.text();
-      throw new Error(`Resend request failed (${response.status}): ${detail.slice(0, 500)}`);
+      // Never capture an untrusted provider response body in an exception:
+      // the admin test route persists error messages and exposes them again.
+      throw new Error(`Resend request failed (HTTP ${response.status})`);
     }
     return cfg;
   }
@@ -278,9 +280,11 @@ export async function testEmailConnection(draft: EmailDraft & { recipient?: stri
     }, draft);
     await prisma.systemEmailConfig.update({ where: { id: "default" }, data: { lastTestAt: now, lastTestStatus: "SUCCESS", lastTestNote: `Test email sent to ${recipient}` } });
     return { ok: true, recipient };
-  } catch (error: any) {
-    await prisma.systemEmailConfig.update({ where: { id: "default" }, data: { lastTestAt: now, lastTestStatus: "FAILED", lastTestNote: String(error?.message || error).slice(0, 500) } });
-    throw error;
+  } catch (error: unknown) {
+    const safeMessage = safeEmailDeliveryFailure(error);
+    await prisma.systemEmailConfig.update({ where: { id: "default" }, data: { lastTestAt: now, lastTestStatus: "FAILED", lastTestNote: safeMessage } });
+    // The HTTP handler must not expose raw SMTP banners or remote error bodies.
+    throw new Error(safeMessage);
   }
 }
 
