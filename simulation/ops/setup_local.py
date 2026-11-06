@@ -14,7 +14,8 @@ conn=pymysql.connect(host='mysql',user='root',password=root_pw,autocommit=True,c
 try:
     with conn.cursor() as cur:
         for user,password in users:
-            cur.execute(f"CREATE USER IF NOT EXISTS '{user}'@'%' IDENTIFIED BY %s",(password,))
+            # PyMySQL formats SQL with %, so escape the literal MySQL host wildcard.
+            cur.execute(f"CREATE USER IF NOT EXISTS '{user}'@'%%' IDENTIFIED BY %s",(password,))
         cur.execute("GRANT SELECT, INSERT, UPDATE, DELETE ON fixer_sim.* TO 'sim_writer'@'%'")
         cur.execute("GRANT SELECT, INSERT, UPDATE, DELETE ON fixer_sim_analytics.* TO 'sim_cdc'@'%'")
         cur.execute("GRANT SELECT ON fixer_sim.* TO 'sim_repl'@'%'")
