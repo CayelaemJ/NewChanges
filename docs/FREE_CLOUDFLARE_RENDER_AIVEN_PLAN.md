@@ -437,3 +437,26 @@ echo "Restore exit code: $?"
 ```
 
 Aiven full backup restore is **not yet confirmed** with the new code. No live Neon/Aiven modifications, DNS/Cloudflare cutover or Render writer changes.
+
+
+## 2026-11-06 post-restore read-only production target check and authorization parity gate
+
+After the operator reported a successful Aiven encrypted archive restore, the assistant checked the live Aiven service and did **not** change it. Aiven `the-fixer-postgres` is RUNNING, PG 18.6, Free `free-1-1gb`, public tables = 57, `defaultdb` = ~198 MB, `pg_stat_activity` total sessions = 14 of 20. Source content is still unverified with live Neon credentials, and the reported Aiven restore PASS/exit 0 is **operator reported**, not independently executed by the assistant.
+
+The normal runtime login `newchanges_app_runtime` exists. Live read-only privilege inspection showed SELECT/INSERT/UPDATE/DELETE are granted on all 57 public tables, schema USAGE yes, CREATE no, and no public database sequences. Aiven showed **zero public application tables with PostgreSQL row-level security enabled**. This is not evidence that app-level tenant isolation fails; it does mean PostgreSQL RLS is not providing a second tenant-authorization barrier. Private production auth, RBAC, tenant boundary and MFA functional checks remain necessary.
+
+Added `scripts/aiven-security-parity.mjs` which performs read-only repeatable-read PostgreSQL metadata queries on both endpoints, pins their identities/TLS, and compares hash fingerprints of each public table's RLS flags, pg_policies rows, user-defined trigger definitions and public function definitions. It prints only counts/difference totals, never private definitions or DB credentials. Difference or missing object blocks production cutover. This is a parity screen, not proof of functional security or policy effectiveness. Added offline tests to the self-hosted manual workflow; **these latest tests are not yet operator-executed**.
+
+Operator local verification (private URLs must already exist in the shell):
+```bash
+cd ~/NewChanges-free-edge
+git fetch origin
+git merge --ff-only origin/feat/free-cloudflare-render-primary-20261105
+node --test tests/aiven-security-parity.test.mjs
+# READ-ONLY, requires private DR_SOURCE_DATABASE_URL and DR_TARGET_DATABASE_URL
+node scripts/aiven-security-parity.mjs
+node scripts/aiven-verify-content.mjs
+node scripts/aiven-final-delta-sync.mjs --check
+```
+
+Do **not** run `--execute` until existing Neon writers are fenced and all separate production cutover evidence is truly verified. Do **not** install unreviewed private credentials, enable Cloudflare Worker routes, or set Render `STANDBY_MODE=false` based on metadata parity alone.
