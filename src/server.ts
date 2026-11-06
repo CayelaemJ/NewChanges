@@ -56,6 +56,7 @@ import { subscribeAdminEvents } from "./services/adminEventStream.js";
 import { ensureSectionDefaults, listSections, updateSection, grantUserSection, revokeUserSection, sectionsForUser } from "./services/sectionService.js";
 import { publicEmailConfig, saveEmailConfig, testEmailConnection, createReportSchedule, listReportSchedules, updateReportSchedule, deleteReportSchedule, sendReportNow, recentReportDeliveries, runDueReports } from "./services/reportScheduler.js";
 import type { ScheduleInput } from "./services/reportScheduler.js";
+import { publicReportScheduleFailure } from "./services/reportScheduleFailure.js";
 import { runMLOpsAssessment, getMLOpsPortfolioAssessment, recordMLOpsFeedback, listMLOpsModels, registerMLOpsModel, promoteMLOpsModel, rollbackMLOpsModel, listMLOpsEvents } from "./services/mlopsService.js";
 import { getBrandLearningProfile, learnFromBrandUpload, recordBrandCorrection } from "./services/brandLearningService.js";
 
@@ -1839,22 +1840,22 @@ app.get("/api/report-schedules", async (req, reply) => {
 app.post<{ Body: ScheduleInput }>("/api/report-schedules", async (req, reply) => {
   const user = await requireUser(req, reply); if (!user) return;
   try { return await createReportSchedule(user, req.body); }
-  catch (e: any) { return reply.code(400).send({ error: e?.message || "Could not create report schedule" }); }
+  catch (e: unknown) { const safe = publicReportScheduleFailure(e); return reply.code(safe.statusCode).send({ error: safe.message }); }
 });
 app.patch<{ Params: { id: string }; Body: any }>("/api/report-schedules/:id", async (req, reply) => {
   const user = await requireUser(req, reply); if (!user) return;
   try { return await updateReportSchedule(user, req.params.id, req.body || {}); }
-  catch (e: any) { return reply.code(400).send({ error: e?.message || "Could not update report schedule" }); }
+  catch (e: unknown) { const safe = publicReportScheduleFailure(e); return reply.code(safe.statusCode).send({ error: safe.message }); }
 });
 app.delete<{ Params: { id: string } }>("/api/report-schedules/:id", async (req, reply) => {
   const user = await requireUser(req, reply); if (!user) return;
   try { return await deleteReportSchedule(user, req.params.id); }
-  catch (e: any) { return reply.code(400).send({ error: e?.message || "Could not delete report schedule" }); }
+  catch (e: unknown) { const safe = publicReportScheduleFailure(e); return reply.code(safe.statusCode).send({ error: safe.message }); }
 });
 app.post<{ Params: { id: string } }>("/api/report-schedules/:id/send-now", async (req, reply) => {
   const user = await requireUser(req, reply); if (!user) return;
   try { return await sendReportNow(user, req.params.id); }
-  catch (e: any) { return reply.code(400).send({ error: e?.message || "Could not send report" }); }
+  catch (e: unknown) { const safe = publicReportScheduleFailure(e); return reply.code(safe.statusCode).send({ error: safe.message }); }
 });
 
 // ── channel partners (white-label) — admin only ──
