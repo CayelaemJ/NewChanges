@@ -227,6 +227,8 @@ async function sendEmail(opts: { to: string | string[]; subject: string; html: s
     if (!fromEmail || !emailOk(fromEmail)) throw new Error("A valid Resend From email is required");
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
+      redirect: "error",
+      signal: AbortSignal.timeout(20_000),
       headers: { "Authorization": `Bearer ${cfg.resendApiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         from: `${cfg.fromName || "The Fixer (Pty) Ltd Dashboard Portal"} <${fromEmail}>`,
