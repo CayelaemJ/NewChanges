@@ -23,6 +23,8 @@ jobs:
         run: test -s Dockerfile
       - name: Build backend image with local Docker
         run: docker build --pull=false -f Dockerfile -t newchanges-free-backend:preflight .
+      - name: Offline Fastify runtime, PostgreSQL readiness and private-origin security smoke
+        run: bash scripts/free-backend-runtime-smoke.sh
       - name: Confirm no secrets or production traffic were changed
         run: |
-          echo "Local checks only: no Cloudflare deploy, no Render deploy, no database access."
+          echo "Local checks only: no Cloudflare deploy, no Render deploy, only local synthetic PostgreSQL; no production database access."
