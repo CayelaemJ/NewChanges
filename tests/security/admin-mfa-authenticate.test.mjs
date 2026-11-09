@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {newMfaChallenge} from '../../src/services/adminMfaChallenge.mjs';
 import {authenticateAdminPasskey} from '../../src/services/adminMfaAuthenticate.mjs';
 const now=new Date('2026-10-30T10:00:00Z');
@@ -26,7 +27,9 @@ test('cannot elevate a revoked credential or expired challenge',async()=>{
  assert.equal(await authenticateAdminPasskey({...base,credential:{...base.credential,revokedAt:now}}),false);
  assert.equal(await authenticateAdminPasskey({...base,challengeRecord:{...base.challengeRecord,expiresAt:now}}),false);
 });
-test('rejects non-admin accounts and incomplete challenges',async()=>{
+test('passkey authentication supports regular roles and still rejects incomplete challenges',async()=>{
+ const source=readFileSync('src/services/adminMfaAuthenticate.mjs','utf8');
+ assert.doesNotMatch(source,/\['ADMIN','SUPERADMIN'\]\.includes\(user\.role\)/);
  assert.equal(await authenticateAdminPasskey({...base,user:{...base.user,role:'VIEWER'}}),false);
  assert.equal(await authenticateAdminPasskey({...base,challenge:'bad'}),false);
 });

@@ -1,21 +1,22 @@
-# Administrator MFA — integration and staged rollout
+# All-account MFA — integration and staged rollout
 
 ## Implementation status
-The application now contains passkey registration/authentication routes, a branded /mfa page, a session-rotating cryptographic verification path and an environment-controlled administrator authorization guard. **Do not enable enforcement until the committed dependency passes a clean-checkout run, and real-browser and recovery rehearsals pass.** This is not yet a production rollout.
+The application now contains passkey registration/authentication routes, a branded `/mfa` page, a session-rotating cryptographic verification path and an environment-controlled all-account authorization guard. Every active role must enroll or verify before protected access. **Do not enable enforcement until the committed dependency passes a clean-checkout run, and real-browser and recovery rehearsals pass.** This is not yet a production rollout.
 
 ## Required runtime settings
 - `MFA_RP_ID`: exact relying-party domain, such as `staging.example.com`; never derive from a user-supplied Host header.
 - `MFA_EXPECTED_ORIGIN`: exact secure origin, such as `https://staging.example.com`, with no path.
-- `ADMIN_MFA_ENFORCE`: defaults to false. Enable only in an isolated staging deployment after review and approved admin recovery is in place.
+- `MFA_ENFORCE`: preferred all-account switch; defaults to false. `ADMIN_MFA_ENFORCE` remains a compatibility alias and also applies to every role. Enable only in isolated staging after review and account-specific recovery is in place.
 - `COOKIE_SECURE`: true on HTTPS deployments.
 
 ## Server endpoints
-- `GET /mfa`: administrator passkey UX.
+- `GET /mfa`: signed-in account passkey/authenticator UX.
 - `GET /api/auth/mfa/status`: authenticated user's enrolled/verified state.
-- `POST /api/auth/mfa/register/options` and `/verify`: require a recent passkey verification or one-time grant; all attestation responses are checked by SimpleWebAuthn.
+- `POST /api/auth/mfa/register/options` and `/verify`: require a recent factor, current password for first-time regular-user enrollment, or approved administrator enrollment; all attestation responses are checked by SimpleWebAuthn.
 - `POST /api/auth/mfa/authenticate/options` and `/verify`: verify a signed assertion, require user verification and atomic counter/challenge update, and rotate the session token.
-- When `ADMIN_MFA_ENFORCE=true`, the shared administrator guard and all `/api/admin/` operations require recently verified passkey proof; admin and users pages redirect to /mfa.
-- **There are no public password-only enrollment or recovery bypass routes.**
+- When either enforcement switch is true, protected APIs and pages require recently verified MFA for every role; administrator-only APIs still retain their role checks.
+- Regular-user self-recovery requires the current password plus one-time recovery key and revokes existing factors and sessions. Administrator recovery retains the two-superadministrator approval process.
+- **There are no unauthenticated enrollment or recovery bypass routes.**
 
 ## First enrollment (synthetic disposable local DB only)
 A controlled local operator script issues one-time 10-minute enrollment grants:

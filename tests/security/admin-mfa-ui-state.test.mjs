@@ -12,9 +12,13 @@ for(const id of ['mfa-passkey-verify-panel','mfa-passkey-enroll-panel','mfa-pass
   });
 }
 async function check(state,pathname='/mfa'){
+  state={isAdministrator:true,...state};
   const nodes=new Map();
   const getElementById=id=>{
-    if(!nodes.has(id))nodes.set(id,{hidden:false,value:'',textContent:'',disabled:false,addEventListener(){},removeAttribute(){}});
+    if(!nodes.has(id)){
+      const tag=html.match(new RegExp('<[^>]+\\bid="'+id+'"[^>]*>'))?.[0]||'';
+      nodes.set(id,{hidden:/\bhidden(?:\s|>|=)/.test(tag),value:'',textContent:'',disabled:false,addEventListener(){},removeAttribute(){}});
+    }
     return nodes.get(id);
   };
   const document={getElementById,querySelector(){return {hidden:false}}};
@@ -68,6 +72,15 @@ test('first-time authenticator setup offers QR after secure server approval',asy
   assert.equal(el('mfa-approval-panel').hidden,false);
   assert.equal(el('totp-verify-panel').hidden,true);
   assert.match(el('totp-title').textContent,/QR code/i);
+});
+test('first-time regular account can enroll after password confirmation and can recover itself',async()=>{
+ const el=await check({isAdministrator:false,enrolled:false,verified:false,passkeyEnrolled:false,
+  totpEnrolled:false,totpAvailable:true,canManageRecovery:false});
+ assert.equal(el('mfa-approval-panel').hidden,true);
+ assert.equal(el('mfa-self-enroll-form').hidden,false);
+ assert.equal(el('mfa-self-recovery').hidden,false);
+ assert.equal(el('enroll').disabled,false);
+ assert.equal(el('totp-start').disabled,false);
 });
 
 test('passkey enrollment clearly explains device-native PIN and biometric options',()=>{

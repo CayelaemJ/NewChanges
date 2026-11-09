@@ -26,7 +26,8 @@ test('MFA staging uses unique Docker entrypoint and exact synthetic-only databas
  assert.match(boot,/approvedStagingDatabaseEnvironment/);
  assert.match(boot,/MFA_STAGING_SYNTHETIC_ONLY/);
  assert.match(boot,/MFA_STAGING_ENFORCEMENT_APPROVED/);
- assert.match(boot,/ADMIN_MFA_ENFORCE\s*===\s*'true'/);
+ assert.match(boot,/MFA_ENFORCE,process\.env\.ADMIN_MFA_ENFORCE/);
+ assert.match(boot,/mfaEnforcementEnabled/);
  assert.match(boot,/DATABASE_URL/);
  assert.match(boot,/run\('node',\['node_modules\/prisma\/build\/index\.js','db','push'\]\)/);
  assert.match(boot,/MFA_STAGING_LOCAL_EPHEMERAL_DB/);
@@ -43,6 +44,7 @@ test('MFA staging uses unique Docker entrypoint and exact synthetic-only databas
  assert.match(seed,/role:'ADMIN'/);
  assert.match(seed,/new Set\(passwords\)\.size!==3/);
  assert.match(seed,/MFA_STAGING_ENFORCEMENT_APPROVED/);
+ assert.match(seed,/process\.env\.MFA_ENFORCE!=='true'/);
 });
 
 test('managed staging DB is exact, private-network only and mutually exclusive with local mode',()=>{

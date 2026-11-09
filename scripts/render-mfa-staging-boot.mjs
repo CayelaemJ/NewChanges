@@ -14,14 +14,18 @@ const port=Number(process.env.PORT||3000);
 const localMode=process.env.MFA_STAGING_LOCAL_EPHEMERAL_DB==='true';
 const localDatabase='newchanges_mfa_ephemeral';
 const localPort='55432';
+const mfaEnforcementValues=[process.env.MFA_ENFORCE,process.env.ADMIN_MFA_ENFORCE]
+ .filter(value=>value!==undefined);
+const mfaEnforcementEnabled=mfaEnforcementValues.includes('true');
 
 function safeConfig(){
  if(process.env.MFA_STAGING_ONLY!=='true' ||
     process.env.MFA_STAGING_SYNTHETIC_ONLY!=='true' ||
     process.env.STANDBY_MODE!=='true' ||
     process.env.TRAFFIC_SAVER_MODE!=='true' ||
-    !['false','true'].includes(process.env.ADMIN_MFA_ENFORCE) ||
-    (process.env.ADMIN_MFA_ENFORCE==='true' &&
+    mfaEnforcementValues.length===0 ||
+    !mfaEnforcementValues.every(value=>['false','true'].includes(value)) ||
+    (mfaEnforcementEnabled &&
        process.env.MFA_STAGING_ENFORCEMENT_APPROVED!=='true') ||
     process.env.COOKIE_SECURE!=='true' ||
     process.env.MFA_RP_ID!==expectedRpId ||
