@@ -1,7 +1,8 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { createHash, randomBytes } from 'node:crypto';
+import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { prisma } from './database.js';
 import {decodeTotpSecret,decryptTotpSecret,encryptTotpSecret,findTotpStep,generateTotpSecret,makeTotpQrSvgDataUri,makeTotpUri,requireTotpEncryptionKey,totpIsEnabled} from './adminTotp.js';
+import { verifyPassword } from './authService.js';
 
 const MAX_MFA_AGE = 10 * 60 * 1000;
 const MAX_CHALLENGE_AGE = 5 * 60 * 1000;
@@ -25,15 +26,23 @@ async function webauthn() {
   // @ts-ignore package is installed through a locked, reviewed npm dependency.
   return import('@simplewebauthn/server');
 }
-async function adminSession(req: FastifyRequest, reply: FastifyReply) {
+async function mfaSession(req: FastifyRequest, reply: FastifyReply) {
   const token = req.cookies?.session;
   if (typeof token !== 'string' || token.length < 32 || token.length > 256) {
-    reply.code(401).send({error:'Admin session required'}); return null;
+    reply.code(401).send({error:'Signed-in account required'}); return null;
   }
   const session = await prisma.session.findUnique({where:{token:digest(token)},include:{user:true}});
   if (!session || session.endedAt || session.revokedAt || session.expiresAt <= new Date() ||
-      !session.user.active || !['ADMIN','SUPERADMIN'].includes(session.user.role)) {
-    reply.code(403).send({error:'Administrator session unavailable'}); return null;
+      !session.user.active) {
+    reply.code(403).send({error:'Account session unavailable'}); return null;
+  }
+  return session;
+}
+async function adminSession(req: FastifyRequest, reply: FastifyReply) {
+  const session=await mfaSession(req,reply);
+  if (!session) return null;
+  if (!['ADMIN','SUPERADMIN'].includes(session.user.role)) {
+    reply.code(403).send({error:'Administrator session required'}); return null;
   }
   return session;
 }
@@ -67,16 +76,22 @@ async function hasEnrollmentApproval(session: {id:string;userId:string}) {
   return Boolean(request && request.approvedByOne!==request.approvedByTwo);
 }
 async function isAuthorizedToEnroll(
-  session: {id:string;userId:string;mfaVerifiedAt:Date|null}, code: unknown
+  session: {id:string;userId:string;mfaVerifiedAt:Date|null;user:{role:string;passwordHash:string|null}},
+  proof: {grantCode?:unknown;password?:unknown}
 ) {
   if (session.mfaVerifiedAt && Date.now() - session.mfaVerifiedAt.getTime() >= 0 &&
       Date.now() - session.mfaVerifiedAt.getTime() <= MAX_MFA_AGE) return true;
+  if (!['ADMIN','SUPERADMIN'].includes(session.user.role)) {
+    const password=proof?.password;
+    return typeof password==='string' && password.length<=256 &&
+      !!session.user.passwordHash && verifyPassword(password,session.user.passwordHash);
+  }
   // Server-managed authorization: the session itself is the bearer;
   // the approval record never leaves PostgreSQL or becomes a browser secret.
   if (await hasEnrollmentApproval(session)) return true;
   // Retain legacy, explicitly provisioned one-time grants only for isolated
   // initial-superadmin bootstrap and vetted recovery flows.
-  const hash=grantHash(code);
+  const hash=grantHash(proof?.grantCode);
   if (!hash) return false;
   const grant=await prisma.adminMfaEnrollmentGrant.findUnique({where:{codeHash:hash}});
   return Boolean(grant && grant.userId === session.userId && !grant.consumedAt &&
@@ -159,7 +174,7 @@ async function issueRecoveryKey(tx:any,userId:string){
   }
   return key;
 }
-type MfaBody={challenge?:string;response?:any;grantCode?:string};
+type MfaBody={challenge?:string;response?:any;grantCode?:string;password?:string};
 export function registerAdminMfaRoutes(app:FastifyInstance) {
   // A password-only administrator can request enrollment, but cannot approve
   // their own request. Two independent passkey-verified superadmins verify
@@ -273,7 +288,7 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
   });
 
   app.get('/api/auth/mfa/status',async(req,reply)=>{
-    const session=await adminSession(req,reply);if(!session)return;
+    const session=await mfaSession(req,reply);if(!session)return;
     const count=await prisma.adminMfaCredential.count({where:{userId:session.userId,revokedAt:null}});
     const verified=await hasFreshAdminMfa(req,session.userId);
     const totp=totpIsEnabled() ? await prisma.adminMfaTotp.findUnique({
@@ -285,12 +300,14 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
       credentialCount:count,passkeyEnrolled:count>0,totpAvailable:totpIsEnabled(),
       totpEnrolled:Boolean(totp?.enabledAt),verified,hasRecoveryKey:Boolean(recoveryKey && !recoveryKey.usedAt),
       verificationMethod:session.mfaVerifiedAt && verified ? session.mfaMethod:null,
-      canManageRecovery:passkeyVerified && session.user.role==='SUPERADMIN'};
+      canManageRecovery:passkeyVerified && session.user.role==='SUPERADMIN',
+      isAdministrator:['ADMIN','SUPERADMIN'].includes(session.user.role),
+      accountName:session.user.name};
   });
   // Previously enrolled users may obtain their first recovery key after a
   // fresh MFA proof. Existing keys are never retrievable or overwritten here.
   app.post('/api/auth/mfa/recovery-key/issue',async(req,reply)=>{
-    const session=await adminSession(req,reply);if(!session)return;
+    const session=await mfaSession(req,reply);if(!session)return;
     if(!await hasFreshAdminMfa(req,session.userId))
       return reply.code(403).send({error:'Verify MFA before generating a recovery key'});
     const enrolled=await Promise.all([
@@ -317,11 +334,68 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
       return {ok:true,recoveryKey:key};
     }catch{return reply.code(409).send({error:'Recovery key already issued'});}
   });
+  // A regular account can recover its own factors only with both its current
+  // password and the one-time recovery key. Administrator recovery continues
+  // through the separately approved two-superadmin process below.
+  app.post<{Body:{password?:string;recoveryKey?:string} }>(
+    '/api/auth/mfa/recovery/self',async(req,reply)=>{
+    const session=await mfaSession(req,reply);if(!session)return;
+    if(['ADMIN','SUPERADMIN'].includes(session.user.role))
+      return reply.code(403).send({error:'Administrator accounts use the approved security recovery process'});
+    const password=req.body?.password;
+    const recoveryKey=req.body?.recoveryKey;
+    const row=await prisma.adminMfaRecoveryCode.findUnique({where:{userId:session.userId}});
+    const now=new Date();
+    if(row?.lockedUntil && row.lockedUntil>now)
+      return reply.code(429).header('Retry-After',Math.ceil((row.lockedUntil.getTime()-now.getTime())/1000))
+        .send({error:'Account recovery is temporarily locked'});
+    const passwordValid=typeof password==='string' && password.length<=256 &&
+      !!session.user.passwordHash && verifyPassword(password,session.user.passwordHash);
+    const keyDigest=typeof recoveryKey==='string' && /^[A-Za-z0-9_-]{43}$/.test(recoveryKey)
+      ?digest(recoveryKey):'';
+    const keyValid=!!row && !row.usedAt && keyDigest.length===row.codeHash.length &&
+      timingSafeEqual(Buffer.from(keyDigest),Buffer.from(row.codeHash));
+    if(!passwordValid || !keyValid){
+      if(row && !row.usedAt){
+        const attempts=row.failedAttempts+1;
+        await prisma.adminMfaRecoveryCode.updateMany({
+          where:{id:row.id,usedAt:null,failedAttempts:row.failedAttempts},
+          data:{failedAttempts:attempts,lockedUntil:attempts>=5?new Date(now.getTime()+15*60_000):null},
+        });
+      }
+      return reply.code(403).send({error:'Password or recovery key is invalid'});
+    }
+    try{
+      await prisma.$transaction(async tx=>{
+        const consumed=await tx.adminMfaRecoveryCode.updateMany({
+          where:{id:row.id,userId:session.userId,codeHash:row.codeHash,usedAt:null,
+            failedAttempts:row.failedAttempts,
+            OR:[{lockedUntil:null},{lockedUntil:{lte:now}}]},
+          data:{usedAt:now,failedAttempts:0,lockedUntil:null},
+        });
+        if(consumed.count!==1)throw new Error('Recovery key already consumed');
+        await tx.adminMfaCredential.updateMany({where:{userId:session.userId,revokedAt:null},data:{revokedAt:now}});
+        await tx.adminMfaTotp.deleteMany({where:{userId:session.userId}});
+        await tx.adminMfaChallenge.updateMany({where:{userId:session.userId,consumedAt:null},data:{consumedAt:now}});
+        await tx.session.updateMany({where:{userId:session.userId,endedAt:null},
+          data:{endedAt:now,revokedAt:now,revokedBy:'self-service MFA recovery'}});
+        await tx.adminAuditLog.create({data:{
+          actorEmail:session.user.email,actorName:session.user.name,
+          action:'security.mfa.self_recovery',targetType:'User',targetId:session.userId,
+          summary:'Account owner used password and one-time recovery key to revoke MFA factors and sessions',
+          riskLevel:'HIGH',flagged:true,
+        }});
+      });
+      reply.clearCookie('session',{path:'/',secure:secureCookies,httpOnly:true,sameSite:'lax'});
+      reply.header('Cache-Control','no-store').header('Pragma','no-cache');
+      return {ok:true,reauthenticate:true};
+    }catch{return reply.code(409).send({error:'Recovery key was already used; sign in again or contact support'});}
+  });
   app.post<{Body:MfaBody}>('/api/auth/mfa/register/options',async(req,reply)=>{
-    const session=await adminSession(req,reply);if(!session)return;
+    const session=await mfaSession(req,reply);if(!session)return;
     const config=mfaConfig();if(!config)return reply.code(503).send({error:'MFA origin not configured'});
-    if(!await isAuthorizedToEnroll(session,req.body?.grantCode))
-      return reply.code(403).send({error:'One-time enrollment grant or recent passkey verification required'});
+    if(!await isAuthorizedToEnroll(session,req.body??{}))
+      return reply.code(403).send({error:'Re-enter your password to enroll, or verify an enrolled factor'});
     const existing=await prisma.adminMfaCredential.findMany({where:{userId:session.userId,revokedAt:null}});
     const {generateRegistrationOptions}=await webauthn();
     const options=await generateRegistrationOptions({
@@ -336,12 +410,12 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
     return options;
   });
   app.post<{Body:MfaBody}>('/api/auth/mfa/register/verify',async(req,reply)=>{
-    const session=await adminSession(req,reply);if(!session)return;
+    const session=await mfaSession(req,reply);if(!session)return;
     const config=mfaConfig();if(!config)return reply.code(503).send({error:'MFA origin not configured'});
     const body=req.body??{};
     const challenge=await challengeFor(session,'register',body.challenge);
-    if(!challenge || !await isAuthorizedToEnroll(session,body.grantCode))
-      return reply.code(403).send({error:'Enrollment approval or challenge expired'});
+    if(!challenge || !await isAuthorizedToEnroll(session,body))
+      return reply.code(403).send({error:'Password or enrollment authorization is invalid, or the challenge expired'});
     let info:any;
     try{
       const {verifyRegistrationResponse}=await webauthn();
@@ -365,7 +439,7 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
         const recent=session.mfaVerifiedAt &&
           now.getTime()-session.mfaVerifiedAt.getTime()>=0 &&
           now.getTime()-session.mfaVerifiedAt.getTime()<=MAX_MFA_AGE;
-        if(!recent){
+        if(!recent && ['ADMIN','SUPERADMIN'].includes(session.user.role)){
           await consumeEnrollmentApproval(tx,session,now,body.grantCode);
         }
         await tx.adminMfaCredential.create({data:{
@@ -377,7 +451,7 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
         await tx.adminAuditLog.create({data:{
           actorEmail:session.user.email,actorName:session.user.name,
           action:'security.mfa.passkey.enrolled',targetType:'User',targetId:session.userId,
-          summary:'Administrator passkey enrollment cryptographically verified',
+          summary:'Account passkey enrollment cryptographically verified',
           riskLevel:'HIGH',flagged:false,
         }});
         const recoveryKey=await issueRecoveryKey(tx,session.userId);
@@ -389,10 +463,10 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
     }catch{return reply.code(409).send({error:'Enrollment authorization expired or credential already exists'});}
   });
   app.post('/api/auth/mfa/authenticate/options',async(req,reply)=>{
-    const session=await adminSession(req,reply);if(!session)return;
+    const session=await mfaSession(req,reply);if(!session)return;
     const config=mfaConfig();if(!config)return reply.code(503).send({error:'MFA origin not configured'});
     const credentials=await prisma.adminMfaCredential.findMany({where:{userId:session.userId,revokedAt:null}});
-    if(credentials.length===0)return reply.code(409).send({error:'No passkeys enrolled: ask security administrators for an enrollment grant'});
+    if(credentials.length===0)return reply.code(409).send({error:'No passkeys enrolled'});
     const {generateAuthenticationOptions}=await webauthn();
     const options=await generateAuthenticationOptions({
       rpID:config.rpID,userVerification:'required',
@@ -402,7 +476,7 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
     return options;
   });
   app.post<{Body:MfaBody}>('/api/auth/mfa/authenticate/verify',async(req,reply)=>{
-    const session=await adminSession(req,reply);if(!session)return;
+    const session=await mfaSession(req,reply);if(!session)return;
     const config=mfaConfig();if(!config)return reply.code(503).send({error:'MFA origin not configured'});
     const challenge=await challengeFor(session,'authenticate',req.body?.challenge);
     if(!challenge)return reply.code(403).send({error:'Challenge missing or expired'});
@@ -447,7 +521,7 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
         await tx.adminAuditLog.create({data:{
           actorEmail:session.user.email,actorName:session.user.name,
           action:'security.mfa.passkey.verified',targetType:'User',targetId:session.userId,
-          summary:'Administrator passkey verification succeeded',
+          summary:'Account passkey verification succeeded',
           riskLevel:'NORMAL',flagged:false,
         }});
         return rotateElevatedSession(tx,session,now);
@@ -460,14 +534,14 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
   // RFC 6238: authenticator apps (Google / Microsoft / others) use the same
   // standard otpauth URI and 30-second, six-digit TOTP flow. The QR is generated
   // server-side; no code or secret is sent to an image service.
-  app.post<{Body:{grantCode?:string}}>('/api/auth/mfa/totp/setup',async(req,reply)=>{
-    const session=await adminSession(req,reply);if(!session)return;
+  app.post<{Body:{grantCode?:string;password?:string}}>('/api/auth/mfa/totp/setup',async(req,reply)=>{
+    const session=await mfaSession(req,reply);if(!session)return;
     if(!totpIsEnabled())return reply.code(404).send({error:'Authenticator app setup is unavailable'});
     const key=requireTotpEncryptionKey();
     const existing=await prisma.adminMfaTotp.findUnique({where:{userId:session.userId}});
     if(existing?.enabledAt) return reply.code(409).send({error:'Authenticator already enrolled; verified factor recovery required to replace it'});
-    if(!await isAuthorizedToEnroll(session,req.body?.grantCode))
-      return reply.code(403).send({error:'A one-time enrollment grant or recently verified factor is required'});
+    if(!await isAuthorizedToEnroll(session,req.body??{}))
+      return reply.code(403).send({error:'Re-enter your password to enroll, or verify an enrolled factor'});
     const secret=generateTotpSecret();
     const encrypted=encryptTotpSecret(secret,key);
     const expiresAt=new Date(Date.now()+10*60_000);
@@ -482,15 +556,15 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
     return {ok:true,qrDataUri:qr,manualKey:secret,expiresAt:expiresAt.toISOString(),
       message:'Scan this QR with your authenticator app, then enter the displayed six-digit code'};
   });
-  app.post<{Body:{grantCode?:string;code?:string}}>('/api/auth/mfa/totp/confirm',async(req,reply)=>{
-    const session=await adminSession(req,reply);if(!session)return;
+  app.post<{Body:{grantCode?:string;code?:string;password?:string}}>('/api/auth/mfa/totp/confirm',async(req,reply)=>{
+    const session=await mfaSession(req,reply);if(!session)return;
     if(!totpIsEnabled())return reply.code(404).send({error:'Authenticator app setup is unavailable'});
     const row=await prisma.adminMfaTotp.findUnique({where:{userId:session.userId}});
     const now=new Date();
     if(!row?.pendingCiphertext || !row.pendingExpiresAt || row.pendingExpiresAt<=now || row.enabledAt)
       return reply.code(409).send({error:'Authenticator setup expired; start again'});
-    if(!await isAuthorizedToEnroll(session,req.body?.grantCode))
-      return reply.code(403).send({error:'Approved enrollment grant or verified factor required'});
+    if(!await isAuthorizedToEnroll(session,req.body??{}))
+      return reply.code(403).send({error:'Password or enrollment authorization is invalid'});
     let step:bigint|null=null;
     try{
       step=findTotpStep(decryptTotpSecret(row.pendingCiphertext,requireTotpEncryptionKey()),
@@ -510,13 +584,13 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
         const alreadyVerified=session.mfaVerifiedAt &&
           now.getTime()-session.mfaVerifiedAt.getTime()>=0 &&
           now.getTime()-session.mfaVerifiedAt.getTime()<=MAX_MFA_AGE;
-        if(!alreadyVerified){
+        if(!alreadyVerified && ['ADMIN','SUPERADMIN'].includes(session.user.role)){
           await consumeEnrollmentApproval(tx,session,now,req.body?.grantCode);
         }
         await tx.adminAuditLog.create({data:{
           actorEmail:session.user.email,actorName:session.user.name,
           action:'security.mfa.totp.enrolled',targetType:'User',targetId:session.userId,
-          summary:'Administrator authenticator app enrolled with verified TOTP code',
+          summary:'Account authenticator app enrolled with verified TOTP code',
           riskLevel:'HIGH',flagged:false,
         }});
         const recoveryKey=await issueRecoveryKey(tx,session.userId);
@@ -528,7 +602,7 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
     }catch{return reply.code(409).send({error:'Authenticator setup or enrollment grant already used'});}
   });
   app.post<{Body:{code?:string}}>('/api/auth/mfa/totp/verify',async(req,reply)=>{
-    const session=await adminSession(req,reply);if(!session)return;
+    const session=await mfaSession(req,reply);if(!session)return;
     if(!totpIsEnabled())return reply.code(404).send({error:'Authenticator app verification unavailable'});
     const row=await prisma.adminMfaTotp.findUnique({where:{userId:session.userId}});
     const now=new Date();

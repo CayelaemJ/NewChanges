@@ -7,6 +7,7 @@ const managingMethods=window.location?.pathname==='/mfa/manage';
 let enrollmentApproved=false;
 let enrollmentRequestId=null;
 let legacyGrant='';
+let accountIsAdministrator=false;
 function show(message){statusEl.textContent=message;}
 function displayRecoveryKey(key){
  if(typeof key!=='string'||!/^[A-Za-z0-9_-]{43}$/.test(key))return;
@@ -79,9 +80,14 @@ function serialize(credential){
 async function refresh(){
  try{
   const res=await fetch('/api/auth/mfa/status',{credentials:'same-origin'});
-  if(!res.ok)throw Error('Please sign in as an administrator');
+  if(!res.ok)throw Error('Please sign in to continue');
   const state=await res.json();
   const firstTime=!state.enrolled&&!state.verified&&!managingMethods;
+  accountIsAdministrator=state.isAdministrator===true;
+  document.querySelector('header strong').textContent=accountIsAdministrator
+    ? 'THE FIXER · ADMIN SECURITY' : 'THE FIXER · ACCOUNT SECURITY';
+  document.querySelector('h1').textContent=accountIsAdministrator
+    ? 'Protect your administrator account' : 'Protect your account';
   const missingRecovery=!!state.verified && !!state.enrolled && !state.hasRecoveryKey;
   const issuePanel=document.getElementById('mfa-existing-recovery-key');
   issuePanel.hidden=!missingRecovery || !document.getElementById('mfa-backup-key').hidden;
@@ -90,14 +96,16 @@ async function refresh(){
   document.getElementById('mfa-manage-link').hidden=missingRecovery ||
     !document.getElementById('mfa-backup-key').hidden;
   let approval={approved:false,requestId:null,expiresAt:null};
-  if(firstTime){
+  if(firstTime && accountIsAdministrator){
     const ar=await fetch('/api/auth/mfa/enrollment/status',{credentials:'same-origin'});
     if(ar.ok)approval=await ar.json();
   }
   enrollmentApproved=!!approval.approved;
   enrollmentRequestId=approval.requestId||null;
-  document.getElementById('mfa-approval-panel').hidden=!firstTime;
+  document.getElementById('mfa-approval-panel').hidden=!firstTime || !accountIsAdministrator;
+  document.getElementById('mfa-self-enroll-form').hidden=!firstTime || accountIsAdministrator;
   document.getElementById('mfa-approval-admin').hidden=!state.canManageRecovery;
+  document.getElementById('mfa-self-recovery').hidden=accountIsAdministrator || managingMethods;
   document.getElementById('mfa-approval-state').textContent=enrollmentApproved
     ? 'Setup approved. Choose your authenticator QR code or device passkey below.'
     : enrollmentRequestId
@@ -129,10 +137,11 @@ async function refresh(){
   const passkeyGrantLabel=document.querySelector?.('label[for="grant"]');
   grantEl.hidden=true;
   if(passkeyGrantLabel)passkeyGrantLabel.hidden=true;
-  enrollBtn.disabled=firstTime && !enrollmentApproved && !legacyGrant;
+  const adminApprovalRequired=firstTime && accountIsAdministrator && !enrollmentApproved && !legacyGrant;
+  enrollBtn.disabled=adminApprovalRequired;
   document.getElementById('totp-grant').hidden=true;
   document.getElementById('totp-start').hidden=!!state.totpEnrolled || (!!state.verified && !managingMethods);
-  document.getElementById('totp-start').disabled=firstTime && !enrollmentApproved && !legacyGrant;
+  document.getElementById('totp-start').disabled=adminApprovalRequired;
   document.getElementById('totp-title').textContent=state.totpEnrolled
     ? 'Verify with your authenticator app'
     : 'Set up your authenticator app with a QR code';
@@ -166,18 +175,18 @@ async function refresh(){
         ? 'Save and acknowledge the recovery key shown below before continuing. You cannot view it again.'
         : missingRecovery
           ? 'MFA is verified. Generate and securely save your one-time recovery key before opening the dashboard.'
-          : 'Your administrator MFA is active. On your next sign-in, use an enrolled passkey or a fresh authenticator code.';
+          : 'Your account MFA is active. On your next sign-in, use an enrolled passkey or a fresh authenticator code.';
   }
   if(state.totpEnrolled){
     document.getElementById('totp-setup').hidden=true;
     document.getElementById('totp-manual-key').textContent='';
     document.getElementById('totp-qr').removeAttribute('src');
   }
-  show(state.verified?'Administrator MFA verified with '+(state.verificationMethod==='TOTP'?'authenticator app.':'passkey.')+' You may open the dashboard.':
-   !state.enrolled?'MFA setup required. Request identity-verified approval, then choose a passkey or authenticator QR.':
+  show(state.verified?'MFA verified with '+(state.verificationMethod==='TOTP'?'authenticator app.':'passkey.')+' You may continue.':
+   !state.enrolled?(accountIsAdministrator?'MFA setup required. Request identity-verified approval, then choose a passkey or authenticator QR.':'MFA setup required. Confirm your password, then choose a passkey or authenticator QR.'):
    state.passkeyEnrolled&&state.totpEnrolled?'Verify your passkey or enter a six-digit authenticator code to continue.':
    state.totpEnrolled?'Authenticator app enrolled. Enter a fresh six-digit code — no enrollment grant is needed.':
-   'Passkey enrolled. Verify it to unlock administrator actions.');
+   'Passkey enrolled. Verify it to continue to your account.');
  }catch(e){
   document.getElementById('recovery').hidden=true;
   show(e.message);
@@ -190,16 +199,21 @@ async function run(kind){
   if(!browserSupported())throw Error('This browser does not support the required WebAuthn passkey APIs.');
   if(kind==='enroll'){
     const grantCode=grantEl.value.trim();
-    if(!grantCode && !enrollmentApproved && !managingMethods)
+    const password=document.getElementById('mfa-enrollment-password').value;
+    if(!accountIsAdministrator && !managingMethods && !password)
+      throw Error('Enter your current password before enrolling MFA.');
+    if(accountIsAdministrator && !grantCode && !enrollmentApproved && !managingMethods)
       throw Error('Request security enrollment approval before registering a passkey.');
+    const proof=accountIsAdministrator?{grantCode}:{password};
     show('Waiting for passkey registration on your device…');
-    const options=await api('register/options',{grantCode});
+    const options=await api('register/options',proof);
     const publicKey=creationOptions(options);
     const credential=await navigator.credentials.create({publicKey});
     if(!credential)throw Error('Enrollment cancelled');
-    const result=await api('register/verify',{challenge:options.challenge,response:serialize(credential),grantCode});
+    const result=await api('register/verify',{challenge:options.challenge,response:serialize(credential),...proof});
+    document.getElementById('mfa-enrollment-password').value='';
     displayRecoveryKey(result.recoveryKey);
-    grantEl.value='';show('Passkey enrolled and verified. You can return to the admin console.');
+    grantEl.value='';show('Passkey enrolled and verified. Your account is protected.');
   }else{
     show('Waiting for passkey confirmation…');
     const options=await api('authenticate/options');
@@ -207,7 +221,7 @@ async function run(kind){
     const credential=await navigator.credentials.get({publicKey});
     if(!credential)throw Error('Verification cancelled');
     await api('authenticate/verify',{challenge:options.challenge,response:serialize(credential)});
-    show('Passkey verified. You can return to the admin console.');
+    show('Passkey verified. You can continue.');
   }
  }catch(error){show(error?.message||'Passkey verification failed.');}
  finally{button.disabled=false;verifyBtn.disabled=false;enrollBtn.disabled=false;await refresh();}
@@ -228,9 +242,11 @@ async function withTotpBusy(button,action){
 }
 totpStart.addEventListener('click',()=>withTotpBusy(totpStart,async()=>{
  const grantCode=document.getElementById('totp-grant').value.trim();
- if(!grantCode && !managingMethods && !enrollmentApproved)throw Error('Request security enrollment approval before generating your QR code.');
+ const password=document.getElementById('mfa-enrollment-password').value;
+ if(!accountIsAdministrator && !managingMethods && !password)throw Error('Enter your current password before enrolling MFA.');
+ if(accountIsAdministrator && !grantCode && !managingMethods && !enrollmentApproved)throw Error('Request security enrollment approval before generating your QR code.');
  show('Generating your private authenticator QR code…');
- const data=await api('totp/setup',{grantCode});
+ const data=await api('totp/setup',accountIsAdministrator?{grantCode}:{password});
  if(typeof data.qrDataUri!=='string'||!data.qrDataUri.startsWith('data:image/svg+xml;base64,'))
    throw Error('The QR code could not be generated');
  document.getElementById('totp-qr').src=data.qrDataUri;
@@ -241,8 +257,13 @@ totpStart.addEventListener('click',()=>withTotpBusy(totpStart,async()=>{
 totpConfirm.addEventListener('click',()=>withTotpBusy(totpConfirm,async()=>{
  const code=document.getElementById('totp-confirm-code').value.trim();
  if(!/^[0-9]{6}$/.test(code))throw Error('Enter the six-digit code shown in your authenticator app.');
- const result=await api('totp/confirm',{grantCode:document.getElementById('totp-grant').value.trim(),code});
+ const password=document.getElementById('mfa-enrollment-password').value;
+ const proof=accountIsAdministrator
+   ?{grantCode:document.getElementById('totp-grant').value.trim()}
+   :{password};
+ const result=await api('totp/confirm',{...proof,code});
  displayRecoveryKey(result.recoveryKey);
+ document.getElementById('mfa-enrollment-password').value='';
  document.getElementById('totp-confirm-code').value='';
  document.getElementById('totp-manual-key').textContent='';
  document.getElementById('totp-qr').removeAttribute('src');
@@ -257,7 +278,7 @@ totpVerify.addEventListener('click',()=>withTotpBusy(totpVerify,async()=>{
  if(!/^[0-9]{6}$/.test(code))throw Error('Enter the current six-digit authenticator code.');
  await api('totp/verify',{code});
  field.value='';
- show('Authenticator app verified. Administrator access granted.');
+ show('Authenticator app verified. You can continue.');
  await refresh();
 }));
 
@@ -297,10 +318,32 @@ recoveryApproveButton.addEventListener('click',()=>withRecoveryBusy(recoveryAppr
   '\nDeliver privately to the identity-verified administrator. Do not paste into tickets or chat.';
 }));
 
+document.getElementById('mfa-self-recovery-submit').addEventListener('click',async event=>{
+ const button=event.currentTarget;
+ const password=document.getElementById('mfa-recovery-password');
+ const recoveryKey=document.getElementById('mfa-recovery-key');
+ const output=document.getElementById('mfa-self-recovery-status');
+ if(!password.value || !/^[A-Za-z0-9_-]{43}$/.test(recoveryKey.value)){
+  output.textContent='Enter your current password and the 43-character recovery key.';
+  return;
+ }
+ button.disabled=true;output.textContent='Verifying your recovery details…';
+ try{
+  await api('recovery/self',{password:password.value,recoveryKey:recoveryKey.value});
+  password.value='';recoveryKey.value='';
+  output.textContent='Your lost MFA methods and sessions were revoked. Sign in again to enroll a new method.';
+  window.location.assign('/login');
+ }catch(error){
+  password.value='';recoveryKey.value='';
+  output.textContent=error?.message||'Account recovery failed.';
+ }finally{button.disabled=false;}
+});
+
 
 document.getElementById('mfa-approval-check').addEventListener('click',()=>refresh());
 const approvalRequestButton=document.getElementById('mfa-approval-request');
 approvalRequestButton.addEventListener('click',async()=>{
+ if(!accountIsAdministrator){show('Use your current password to start account MFA setup.');return;}
  approvalRequestButton.disabled=true;
  try{
   const result=await api('enrollment/request');

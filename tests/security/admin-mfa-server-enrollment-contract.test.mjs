@@ -57,6 +57,20 @@ test('authorization is session-bound, expires and is atomically single use',()=>
  assert.match(source,/await consumeEnrollmentApproval\(tx,session,now,req\.body\?\.grantCode\)/);
 });
 
+test('regular accounts enroll with password proof and recover with password plus one-time key',()=>{
+ const auth=scope('async function isAuthorizedToEnroll','async function consumeEnrollmentApproval');
+ assert.match(auth,/!\['ADMIN','SUPERADMIN'\]\.includes\(session\.user\.role\)/);
+ assert.match(auth,/verifyPassword\(password,session\.user\.passwordHash\)/);
+ const recovery=scope("'/api/auth/mfa/recovery/self'","app.post<{Body:MfaBody}>('/api/auth/mfa/register/options'");
+ for(const text of ["['ADMIN','SUPERADMIN'].includes(session.user.role)",'verifyPassword(password,session.user.passwordHash)',
+   'timingSafeEqual','attempts>=5','tx.adminMfaCredential.updateMany',
+   'tx.adminMfaTotp.deleteMany','tx.session.updateMany','tx.adminAuditLog.create'])
+  assert.ok(recovery.includes(text),'Missing '+text);
+ assert.match(html,/id="mfa-self-enroll-form"/);
+ assert.match(html,/id="mfa-self-recovery"/);
+ assert.match(browser,/api\('recovery\/self'/);
+});
+
 test('client exposes request and approval, not user-generated enrollment tokens',()=>{
  for(const id of ['mfa-approval-panel','mfa-approval-request','mfa-approval-admin',
    'mfa-approval-id','mfa-approval-confirm-identity'])

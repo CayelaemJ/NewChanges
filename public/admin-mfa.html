@@ -55,8 +55,8 @@ input:focus{border-color:#65349e}
 @media(max-width:600px){header{padding:16px 20px}header a{font-size:12px}main{padding:0 12px}article{padding:20px;border-radius:14px}.actions{grid-template-columns:1fr}.panel{padding:16px}h1{font-size:27px}}
 @media(prefers-reduced-motion:reduce){button,.panel{transition:none}}
 </style></head>
-<body><header><strong>THE FIXER · ADMIN SECURITY</strong><a href="/dashboard">Back to dashboard</a></header>
-<main><article><h1>Protect your administrator account</h1>
+<body><header><strong>THE FIXER · ACCOUNT SECURITY</strong><a href="/dashboard">Back to dashboard</a></header>
+<main><article><h1>Protect your account</h1>
 <p>Choose either a device passkey (Windows Hello, Face ID, Touch ID or security key) or a one-time authenticator QR setup. Once enrolled, future sign-ins use your saved passkey or a fresh six-digit authenticator code — not another setup grant.</p>
 <div role="status" aria-live="polite" class="state" id="status">Checking your account security…</div>
 <div id="mfa-success" class="state" hidden>
@@ -79,7 +79,7 @@ input:focus{border-color:#65349e}
 <p>Your MFA method is already active, but you have not received a recovery key. Generate one now and save it in a trusted password manager or another secure place. It will be shown only once.</p>
 <button id="mfa-existing-recovery-issue" type="button">Generate my one-time recovery key</button>
 </section>
-<section id="mfa-manage-banner" class="panel" hidden><h2>Manage your authentication methods</h2><p>Your administrator session is verified. Add a device passkey or an authenticator app without repeating first-time grant enrollment. Existing methods cannot be silently replaced.</p></section>
+<section id="mfa-manage-banner" class="panel" hidden><h2>Manage your authentication methods</h2><p>Your account session is verified. Add a device passkey or an authenticator app without repeating first-time enrollment. Existing methods cannot be silently replaced.</p></section>
 <section id="mfa-approval-panel" class="panel" hidden style="margin:18px 0">
 <h2>First-time security setup</h2>
 <p>The Fixer handles enrollment authorization securely. Request approval and have two independently verified security administrators confirm your identity. You will not need to create or enter a 43-character code.</p>
@@ -93,10 +93,26 @@ input:focus{border-color:#65349e}
 <button type="button" id="mfa-legacy-apply">Use approved one-time grant</button>
 </details>
 </section>
+<form id="mfa-self-enroll-form" class="panel" hidden onsubmit="return false" style="margin:18px 0">
+<h2>Confirm your password to set up MFA</h2>
+<p>For your account's protection, enter your current password before registering a passkey or authenticator app. Your password is checked by The Fixer and is not saved in this browser.</p>
+<label for="mfa-enrollment-password">Current password</label>
+<input id="mfa-enrollment-password" type="password" autocomplete="current-password" maxlength="256" required>
+</form>
+<section id="mfa-self-recovery" class="panel" hidden style="margin:18px 0;border:1px solid #b66f18">
+<h2>Recover your account MFA</h2>
+<p>If you lost access to your passkey or authenticator, enter your account password and the one-time recovery key you saved during setup. This revokes your existing MFA methods and active sessions; you will sign in again and enroll a new method.</p>
+<label for="mfa-recovery-password">Current account password</label>
+<input id="mfa-recovery-password" type="password" autocomplete="current-password" maxlength="256">
+<label for="mfa-recovery-key">One-time recovery key</label>
+<input id="mfa-recovery-key" type="password" autocomplete="off" maxlength="43" spellcheck="false">
+<button id="mfa-self-recovery-submit" type="button">Revoke lost MFA and sign out</button>
+<p id="mfa-self-recovery-status" role="status" aria-live="polite"></p>
+</section>
 <div class="actions" id="mfa-passkey-actions"><section class="panel" id="mfa-passkey-verify-panel"><h2>Verify your passkey</h2>
-<p>Verify again when accessing sensitive administrative controls.</p>
+<p>Verify your passkey to complete sign-in.</p>
 <button id="verify" type="button">Verify passkey</button></section>
-<section class="panel" id="mfa-passkey-enroll-panel"><h2>Set up Windows Hello, Face ID or a security key</h2><p>Use a passkey secured by your device: Windows Hello PIN or biometrics, Apple Face ID/Touch ID, or a compatible FIDO2 security key. Your device selects the available verification method; The Fixer never receives your PIN or biometric data. First-time enrollment requires approval by your organization's security administrators. The Fixer manages authorization internally.</p>
+<section class="panel" id="mfa-passkey-enroll-panel"><h2>Set up Windows Hello, Face ID or a security key</h2><p>Use a passkey secured by your device: Windows Hello PIN or biometrics, Apple Face ID/Touch ID, or a compatible FIDO2 security key. Your device selects the available verification method; The Fixer never receives your PIN or biometric data. Administrator first-time setup requires identity-verified approval; regular accounts confirm their password.</p>
 <label for="grant" hidden>Approved bootstrap or recovery grant</label><input id="grant" type="password" autocomplete="off" spellcheck="false" hidden>
 <button id="enroll" type="button">Set up device passkey</button><small>Adding a second passkey requires recent verification or another approved grant.</small>
 </section></div>
