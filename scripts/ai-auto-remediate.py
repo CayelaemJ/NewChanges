@@ -1,36 +1,4 @@
-#!/usr/bin/env python3
-"""Conservative Ollama auto-repair: edit at most one low-risk UI source file.
-
-No GitHub credentials or secret-bearing files are needed. The workflow tests any
-edit and opens a PR only if the checks pass. Never run this against production.
-"""
-import json
-import os
-import re
-from pathlib import Path
-from urllib.request import Request, urlopen
-
-root = Path(os.getenv("GITHUB_WORKSPACE", ".")).resolve()
-reports = root / "test-reports" / "ai-security"
-reports.mkdir(parents=True, exist_ok=True)
-decision_path = reports / "decision.json"
-result = {"status": "no_action", "reason": "No eligible low-risk finding", "file": ""}
-decision_path.write_text(json.dumps(result), encoding="utf-8")
-source_report = reports / "report.json"
-if not source_report.exists():
-    result.update(status="escalate", reason="Scan report missing")
-else:
-    report = json.loads(source_report.read_text())
-    findings = report.get("findings", [])
-    errors = report.get("errors", [])
-    if errors:
-        result.update(status="escalate", reason="Scanner had unreviewed timeouts/errors")
-    elif any(x.get("severity") in ("critical", "high") for x in findings):
-        result.update(status="escalate", reason="High or critical security finding needs review")
-    else:
-        eligible = [
-            x for x in findings if x.get("severity") == "low"
-            and re.fullmatch(r"frontend/src/components/ui/[A-Za-z0-9_-]+\.(?:tsx|ts)", str(x.get("file", "")))
+YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬ÔŒ„½ÕÍÈ½‰¥¸½•¹ØÁåÑ¡½¸Ì(ˆˆ‰½¹Í•ÉÙ…Ñ¥Ù”=±±…µ„…ÕÑ¼µÉ•Á…¥Èè•‘¥Ğ…Ğµ½ÍĞ½¹”±½ÜµÉ¥Í¬U$Í½ÕÉ”™¥±”¸()9¼¥Ñ!ÕˆÉ•‘•¹Ñ¥…±Ì½ÈÍ•É•Ğµ‰•…É¥¹œ™¥±•Ì…É”¹••‘•¸Q¡”İ½É­™±½ÜÑ•ÍÑÌ…¹ä)•‘¥Ğ…¹½Á•¹Ì„AH½¹±ä¥˜Ñ¡”¡•­ÌÁ…ÍÌ¸9•Ù•ÈÉÕ¸Ñ¡¥Ì……¥¹ÍĞÁÉ½‘ÕÑ¥½¸¸(ˆˆˆ)¥µÁ½ÉĞ©Í½¸)¥µÁ½ÉĞ½Ì)¥µÁ½ÉĞÉ”)™É½´Á…Ñ¡±¥ˆ¥µÁ½ÉĞA…Ñ )™É½´ÕÉ±±¥ˆ¹É•ÅÕ•ÍĞ¥µÁ½ÉĞI•ÅÕ•ÍĞ°ÕÉ±½Á•¸)™É½´±½…±}½±±…µ…}ÑÉ…¹ÍÁ½ÉĞ¥µÁ½ÉĞ±½…±}½±±…µ…}ÕÉ°()É½½Ğ€ôA…Ñ ¡½Ì¹•Ñ•¹Ø ‰%Q!U	}]=I-MAˆ°€ˆ¸ˆ¤¤¹É•Í½±Ù” ¤)É•Á½ÉÑÌ€ôÉ½½Ğ€¼€‰Ñ•ÍĞµÉ•Á½ÉÑÌˆ€¼€‰…¤µÍ•ÕÉ¥Ñäˆ)É•Á½ÉÑÌ¹µ­‘¥È¡Á…É•¹ÑÌõQÉÕ”°•á¥ÍÑ}½¬õQÉÕ”¤)‘•¥Í¥½¹}Á…Ñ €ôÉ•Á½ÉÑÌ€¼€‰‘•¥Í¥½¸¹©Í½¸ˆ)É•ÍÕ±Ğ€ôì‰ÍÑ…ÑÕÌˆè€‰¹½}…Ñ¥½¸ˆ°€‰É•…Í½¸ˆè€‰9¼•±¥¥‰±”±½ÜµÉ¥Í¬™¥¹‘¥¹œˆ°€‰™¥±”ˆè€ˆ‰ô)‘•¥Í¥½¹}Á…Ñ ¹İÉ¥Ñ•}Ñ•áĞ¡©Í½¸¹‘ÕµÁÌ¡É•ÍÕ±Ğ¤°•¹½‘¥¹œô‰ÕÑ˜´àˆ¤)Í½ÕÉ•}É•Á½ÉĞ€ôÉ•Á½ÉÑÌ€¼€‰É•Á½ÉĞ¹©Í½¸ˆ)¥˜¹½ĞÍ½ÕÉ•}É•Á½ÉĞ¹•á¥ÍÑÌ ¤è(€€€É•ÍÕ±Ğ¹ÕÁ‘…Ñ”¡ÍÑ…ÑÕÌô‰•Í…±…Ñ”ˆ°É•…Í½¸ô‰M…¸É•Á½ÉĞµ¥ÍÍ¥¹œˆ¤)•±Í”è(€€€É•Á½ÉĞ€ô©Í½¸¹±½…‘Ì¡Í½ÕÉ•}É•Á½ÉĞ¹É•…‘}Ñ•áĞ ¤¤(€€€™¥¹‘¥¹Ì€ôÉ•Á½ÉĞ¹•Ğ ‰™¥¹‘¥¹Ìˆ°mt¤(€€€•ÉÉ½ÉÌ€ôÉ•Á½ÉĞ¹•Ğ ‰•ÉÉ½ÉÌˆ°mt¤(€€€¥˜•ÉÉ½ÉÌè(€€€€€€€É•ÍÕ±Ğ¹ÕÁ‘…Ñ”¡ÍÑ…ÑÕÌô‰•Í…±…Ñ”ˆ°É•…Í½¸ô‰M…¹¹•È¡…Õ¹É•Ù¥•İ•Ñ¥µ•½ÕÑÌ½•ÉÉ½ÉÌˆ¤(€€€•±¥˜…¹ä¡à¹•Ğ ‰Í•Ù•É¥Ñäˆ¤¥¸€ ‰É¥Ñ¥…°ˆ°€‰¡¥ ˆ¤™½Èà¥¸™¥¹‘¥¹Ì¤è(€€€€€€€É•ÍÕ±Ğ¹ÕÁ‘…Ñ”¡ÍÑ…ÑÕÌô‰•Í…±…Ñ”ˆ°É•…Í½¸ô‰!¥ ½ÈÉ¥Ñ¥…°Í•ÕÉ¥Ñä™¥¹‘¥¹œ¹••‘ÌÉ•Ù¥•Üˆ¤(€€€•±Í”è(€€€€€€€•±¥¥‰±”€ôl(€€€€€€€€€€€à™½Èà¥¸™¥¹‘¥¹Ì¥˜à¹•Ğ ‰Í•Ù•É¥Ñäˆ¤€ôô€‰±½Üˆ(€€€€€€€€€€€…¹É”¹™Õ±±µ…Ñ ¡È‰™É½¹Ñ•¹½ÍÉŒ½½µÁ½¹•¹ÑÌ½Õ¤½mµi„µèÀ´å|µt­p¸ üéÑÍáñÑÌ¤ˆ°ÍÑÈ¡ã[h‘éì¶»§q«^vget("file", "")))
             and not re.search(r"auth|security|session|password|permission|token|mfa|secret",
                               str(x.get("file", "")), re.I)
         ]
@@ -54,27 +22,7 @@ else:
                     "error handling that suppresses failures, or exported/public APIs. "
                     "Respond ONLY as JSON with keys old and new. Each must be a literal exact "
                     "source snippet of 1-6 lines. Return empty strings if uncertain. "
-                    "Do not add imports or disable tests. "
-                    "\nUNVERIFIED FINDING:\n" + json.dumps(finding) +
-                    "\nSOURCE:\n" + old_file
-                )
-                payload = json.dumps({
-                    "model": "qwen2.5-coder:7b", "prompt": prompt, "stream": False,
-                    "format": "json", "options": {"temperature": 0, "num_predict": 700}
-                }).encode()
-                req = Request("http://host.docker.internal:11434/api/generate",
-                              data=payload, headers={"Content-Type": "application/json"})
-                # On the WSL host, Docker's alias is not guaranteed to resolve.
-                # Host Ollama is usually accessible on localhost only when bridged.
-                ollama_url = os.getenv("LOCAL_OLLAMA_URL", "http://localhost:11434/api/generate")
-                req.full_url = ollama_url
-                try:
-                    with urlopen(req, timeout=180) as response:
-                        proposal = json.loads(json.loads(response.read())["response"])
-                    old, new = proposal.get("old", ""), proposal.get("new", "")
-                    forbidden = re.compile(
-                        r"\b(?:auth|mfa|session|token|secret|password|permission|role|"
-                        r"fetch|axios|eval|exec|import|export|require|process|window\.location)\b", re.I)
+                    "Do not addYªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Ô¥µÁ½ÉÑÌ½È‘¥Í…‰±”Ñ•ÍÑÌ¸€ˆ(€€€€€€€€€€€€€€€€€€€€‰q¹U9YI%%%9%9éq¸ˆ€¬©Í½¸¹‘ÕµÁÌ¡™¥¹‘¥¹œ¤€¬(€€€€€€€€€€€€€€€€€€€€‰q¹M=UIéq¸ˆ€¬½±‘}™¥±”(€€€€€€€€€€€€€€€€¤(€€€€€€€€€€€€€€€Á…å±½…€ô©Í½¸¹‘ÕµÁÌ¡ì(€€€€€€€€€€€€€€€€€€€€‰µ½‘•°ˆè€‰Åİ•¸È¸Ôµ½‘•Èèİˆˆ°€‰ÁÉ½µÁĞˆèÁÉ½µÁĞ°€‰ÍÑÉ•…´ˆè…±Í”°(€€€€€€€€€€€€€€€€€€€€‰™½Éµ…Ğˆè€‰©Í½¸ˆ°€‰½ÁÑ¥½¹Ìˆèì‰Ñ•µÁ•É…ÑÕÉ”ˆè€À°€‰¹Õµ}ÁÉ•‘¥Ğˆè€ÜÀÁô(€€€€€€€€€€€€€€€ô¤¹•¹½‘” ¤(€€€€€€€€€€€€€€€€ŒQ¡”ÉÕ¹¹•Èµ…äÍ•±•Ğ±½½Á‰…¬½È½­•ÈÌ¡½ÍĞ…±¥…Ì°‰ÕĞ(€€€€€€€€€€€€€€€€Œ…¹¹½ĞÉ•‘¥É•ĞÍ½ÕÉ”™¥¹‘¥¹ÌÑ¼…¸…É‰¥ÑÉ…Éä¹•Ñİ½É¬¡½ÍĞ¸(€€€€€€€€€€€€€€€½±±…µ…}ÕÉ°€ô±½…±}½±±…µ…}ÕÉ° (€€€€€€€€€€€€€€€€€€€½Ì¹•Ñ•¹Ø ‰1=1}=115}UI0ˆ°€‰¡ÑÑÀè¼½±½…±¡½ÍĞèÄÄĞÌĞ½…Á¤½•¹•É…Ñ”ˆ¤°(€€€€€€€€€€€€€€€€€€€€ˆ½…Á¤½•¹•É…Ñ”ˆ¤(€€€€€€€€€€€€€€€É•Ä€ôI•ÅÕ•ÍĞ¡½±±…µ…}ÕÉ°°‘…Ñ„õÁ…å±½…°(€€€€€€€€€€€€€€€€€€€€€€€€€€€€€¡•…‘•ÉÌõì‰½¹Ñ•¹ĞµQåÁ”ˆè€‰…ÁÁ±¥…Ñ¥½¸½©Í½¸‰ô¤(€€€€€€€€€€€€€€€ÑÉäè(€€€€€€€€€€€€€€€€€€€€Œ¹½Í•µÉ•ÀèÁåÑ¡½¸¹±…¹œ¹Í•ÕÉ¥Ñä¹…Õ‘¥Ğ¹‘å¹…µ¥ŒµÕÉ±±¥ˆµÕÍ”µ‘•Ñ•Ñ•¹‘å¹…µ¥ŒµÕÉ±±¥ˆµÕÍ”µ‘•Ñ•Ñ•€´´UI0¥Ì…¹½¹¥…±¥é•Ñ¼Ñ¡”±½…°=±±…µ„…±±½İ±¥ÍĞ¸(€€€€€€€€€€€€€€€€€€€İ¥Ñ ÕÉ±½Á•¸¡É•Ä°Ñ¥µ•½ÕĞôÄàÀ¤…ÌÉ•ÍÁ½¹Í”è(€€€€€€€€€€€€€€€€€€€€€€€ÁÉ½Á½Í…°€ô©Í½¸¹±½…‘Ì¡©Í½¸¹±½…‘Ì¡É•ÍÁ½¹Í”¹É•… ¤¥l‰É•ÍÁ½¹Í”‰t¤(€€€€€€€€€€€€€€€€€€€½±°¹•Ü€ôÁÉ½Á½Í…°¹•Ğ ‰½±ˆ°€ˆˆ¤°ÁÉ½Á½Í…°¹•Ğ ‰¹•Üˆ°€ˆˆ¤(€€€€€€€€€€€€€€€€€€€™½É‰¥‘‘•¸€ôÉ”¹½µÁ¥±” (€€€€€€€€€€€€€€€€€€€€€€€È‰qˆ üé…ÕÑ¡ñµ™…ñÍ•ÍÍ¥½¹ñÑ½­•¹ñÍ•É•ÑñÁ…ÍÍİ½É‘ñÁ•Éµ¥ÍÍ¥½¹ñÉ½±•ğˆ(€€€€€€€€€€€€€€€€€€€€€€€È‰™•Ñ¡ñ…á¥½Íñ•Ù…±ñ•á•ñ¥µÁ½ÉÑñ•áÁ½ÉÑñÉ•ÅÕ¥É•ñÁÉ½•ÍÍñİ¥»[h‘éì¶»§q«^tow\.location)\b", re.I)
                     if not isinstance(old, str) or not isinstance(new, str):
                         raise ValueError("Malformed patch")
                     if not old.strip() or not new.strip() or old == new:

@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 from urllib.request import Request, urlopen
+from local_ollama_transport import local_ollama_url
 
 folder = Path(os.environ.get("REPORT_DIR", "/reports"))
 report_file = folder / "report.json"
@@ -19,7 +20,7 @@ if not findings:
 if os.environ.get("OLLAMA_MODEL", "").endswith(":cloud"):
     raise SystemExit("Cloud model disallowed")
 model = os.environ.get("OLLAMA_MODEL", "qwen2.5-coder:7b")
-url = os.environ.get("OLLAMA_URL", "http://host.docker.internal:11434").rstrip("/")
+url = local_ollama_url(os.environ.get("OLLAMA_URL", "http://host.docker.internal:11434"), "/api/generate")
 summary = [{k: x.get(k) for k in ("file", "line", "severity", "title", "evidence", "recommendation")}
            for x in findings[:40]]
 prompt = (
@@ -32,8 +33,9 @@ prompt = (
 )
 payload = json.dumps({"model": model, "prompt": prompt, "stream": False,
                       "options": {"temperature": 0, "num_predict": 1800}}).encode()
-req = Request(url + "/api/generate", data=payload,
+req = Request(url, data=payload,
               headers={"Content-Type": "application/json"}, method="POST")
+# nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected -- URL is canonicalized to the local Ollama allowlist.
 with urlopen(req, timeout=240) as response:
     result = json.loads(response.read())
 plan = result.get("response", "")

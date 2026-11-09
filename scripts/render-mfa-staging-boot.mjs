@@ -1,33 +1,4 @@
-// Synthetic-only MFA preview. Never connect this entrypoint to production.
-// Supports an ephemeral loopback Postgres when private Render database credentials
-// cannot be accessed via the connector. Its data disappears on container restart.
-import {spawnSync,spawn} from 'node:child_process';
-import {createServer} from 'node:http';
-import {readdirSync,mkdtempSync,readFileSync} from 'node:fs';
-import {tmpdir} from 'node:os';
-import {join} from 'node:path';
-import {approvedStagingDatabaseEnvironment,EPHEMERAL_STAGING_URL} from './mfa-staging-db-target.mjs';
-
-const expectedOrigin='https://newchanges-mfa-isolated-staging.onrender.com';
-const expectedRpId='newchanges-mfa-isolated-staging.onrender.com';
-const port=Number(process.env.PORT||3000);
-const localMode=process.env.MFA_STAGING_LOCAL_EPHEMERAL_DB==='true';
-const localDatabase='newchanges_mfa_ephemeral';
-const localPort='55432';
-const mfaEnforcementValues=[process.env.MFA_ENFORCE,process.env.ADMIN_MFA_ENFORCE]
- .filter(value=>value!==undefined);
-const mfaEnforcementEnabled=mfaEnforcementValues.includes('true');
-
-function safeConfig(){
- if(process.env.MFA_STAGING_ONLY!=='true' ||
-    process.env.MFA_STAGING_SYNTHETIC_ONLY!=='true' ||
-    process.env.STANDBY_MODE!=='true' ||
-    process.env.TRAFFIC_SAVER_MODE!=='true' ||
-    mfaEnforcementValues.length===0 ||
-    !mfaEnforcementValues.every(value=>['false','true'].includes(value)) ||
-    (mfaEnforcementEnabled &&
-       process.env.MFA_STAGING_ENFORCEMENT_APPROVED!=='true') ||
-    process.env.COOKIE_SECURE!=='true' ||
+YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Ô¼¼Må¹Ñ¡•Ñ¥Œµ½¹±ä5ÁÉ•Ù¥•Ü¸9•Ù•È½¹¹•ĞÑ¡¥Ì•¹ÑÉåÁ½¥¹ĞÑ¼ÁÉ½‘ÕÑ¥½¸¸(¼¼MÕÁÁ½ÉÑÌ…¸•Á¡•µ•É…°±½½Á‰…¬A½ÍÑÉ•Ìİ¡•¸ÁÉ¥Ù…Ñ”I•¹‘•È‘…Ñ…‰…Í”É•‘•¹Ñ¥…±Ì(¼¼…¹¹½Ğ‰”…•ÍÍ•Ù¥„Ñ¡”½¹¹•Ñ½È¸%ÑÌ‘…Ñ„‘¥Í…ÁÁ•…ÉÌ½¸½¹Ñ…¥¹•ÈÉ•ÍÑ…ÉĞ¸)¥µÁ½ÉĞíÍÁ…İ¹Må¹Œ±ÍÁ…İ¹ô™É½´€¹½‘”é¡¥±‘}ÁÉ½•ÍÌœì)¥µÁ½ÉĞíÉ•…Ñ•M•ÉÙ•Éô™É½´€¹½‘”é¡ÑÑÀœì)¥µÁ½ÉĞíÉ•…‘‘¥ÉMå¹Œ±µ­‘Ñ•µÁMå¹Œ±É•…‘¥±•Må¹ô™É½´€¹½‘”é™Ìœì)¥µÁ½ÉĞíÑµÁ‘¥Éô™É½´€¹½‘”é½Ìœì)¥µÁ½ÉĞí©½¥¹ô™É½´€¹½‘”éÁ…Ñ œì)¥µÁ½ÉĞí…ÁÁÉ½Ù•‘MÑ…¥¹…Ñ…‰…Í•¹Ù¥É½¹µ•¹Ğ±A!5I1}MQ%9}UI1ô™É½´€œ¸½µ™„µÍÑ…¥¹œµ‘ˆµÑ…É•Ğ¹µ©Ìœì()½¹ÍĞ•áÁ•Ñ•‘=É¥¥¸ô¡ÑÑÁÌè¼½¹•İ¡…¹•Ìµµ™„µ¥Í½±…Ñ•µÍÑ…¥¹œ¹½¹É•¹‘•È¹½´œì)½¹ÍĞ•áÁ•Ñ•‘IÁ%ô¹•İ¡…¹•Ìµµ™„µ¥Í½±…Ñ•µÍÑ…¥¹œ¹½¹É•¹‘•È¹½´œì)½¹ÍĞÁ½ÉĞõ9Õµ‰•È¡ÁÉ½•ÍÌ¹•¹Ø¹A=IQñğÌÀÀÀ¤ì)½¹ÍĞ±½…±5½‘”õÁÉ½•ÍÌ¹•¹Ø¹5}MQ%9}1=1}A!5I1}ôôôÑÉÕ”œì)½¹ÍĞ±½…±…Ñ…‰…Í”ô¹•İ¡…¹•Í}µ™…}•Á¡•µ•É…°œì)½¹ÍĞ±½…±A½ÉĞôœÔÔĞÌÈœì)½¹ÍĞµ™…¹™½É•µ•¹ÑY…±Õ•ÌõmÁÉ½•ÍÌ¹•¹Ø¹5}9=I±ÁÉ½•ÍÌ¹•¹Ø¹5%9}5}9=It(€¹™¥±Ñ•È¡Ù…±Õ”ôùÙ…±Õ”„ôõÕ¹‘•™¥¹•¤ì)½¹ÍĞµ™…¹™½É•µ•¹Ñ¹…‰±•õµ™…¹™½É•µ•¹ÑY…±Õ•Ì¹¥¹±Õ‘•Ì ÑÉÕ”œ¤ì()™Õ¹Ñ¥½¸Í…™•½¹™¥œ ¥ì(¥˜¡ÁÉ½•ÍÌ¹•¹Ø¹5}MQ%9}=91d„ôôÑÉÕ”œñğ(€€€ÁÉ½•ÍÌ¹•¹Ø¹5}MQ%9}Me9Q!Q%}=91d„ôôÑÉÕ”œñğ(€€€ÁÉ½•ÍÌ¹•¹Ø¹MQ9	e}5=„ôôÑÉÕ”œñğ(€€€ÁÉ½•ÍÌ¹•¹Ø¹QI%}MYI}5=„ôôÑÉÕ”œñğ(€€€µ™…¹™½É•µ•¹ÑY…±Õ•Ì¹±•¹Ñ ôôôÀñğ(€€€€…µ™…¹™½É•µ•¹ÑY…±Õ•Ì¹•Ù•Éä¡Ù…±Õ”ôùl™…±Í”œ°ÑÉÕ”t¹¥¹±Õ‘•Ì¡Ù…±Õ”¤¤ñğ(€€€€¡µ™…¹™½É•µ•¹Ñ¹…‰±•€˜˜(€€€€€€ÁÉ½•ÍÌ¹•¹Ø¹5}MQ%9}9=I59Q}AAI=Y„ôôÑÉÕ”œ¤ñó[h‘éì¶»§q«^v    process.env.COOKIE_SECURE!=='true' ||
     process.env.MFA_RP_ID!==expectedRpId ||
     process.env.MFA_EXPECTED_ORIGIN!==expectedOrigin) return false;
  const gate=process.env.MFA_STAGING_GATE_PASSWORD;
@@ -64,36 +35,7 @@ function run(exe,args,env=process.env,diagnostic=false){
  });
  if(diagnostic && result.status!==0){
    const name=exe.split('/').at(-1);
-   // These PostgreSQL setup commands do not include application credentials.
-   // Never log environment variables, DATABASE_URL or user-supplied arguments.
-   const details=String(result.stderr||result.error?.message||'No stderr')
-     .replace(/postgres(?:ql)?:\/\/[^\s]+/gi,'[REDACTED_DB_URI]')
-     .slice(0,700);
-   process.stderr.write('Synthetic database '+name+' failed: '+details+'\n');
- }
- return result.status===0;
-}
-function startDisposablePostgres(){
- let versions;
- try{versions=readdirSync('/usr/lib/postgresql').sort((a,b)=>Number(b)-Number(a))}
- catch{return false}
- const version=versions?.find(v=>/^\d+$/.test(v));
- if(!version)return false;
- const bin='/usr/lib/postgresql/'+version+'/bin/';
- const dataDir=mkdtempSync(join(tmpdir(),'newchanges-mfa-pg-'));
- // PostgreSQL runs as the existing non-root "node" container user.
- // Host-based authentication is trust ONLY on an unexposed loopback port.
- // It is not a durable DB, and its credentials are NEVER used by production.
- if(!run(bin+'initdb',['-D',dataDir,'-U','node','-A','trust','--no-instructions'],process.env,true))
-   return false;
- const options='-h 127.0.0.1 -p '+localPort+
-   ' -c listen_addresses=127.0.0.1 -c unix_socket_directories=/tmp'+
-   ' -c dynamic_shared_memory_type=mmap -c shared_buffers=16MB'+
-   ' -c max_connections=20 -c fsync=off -c synchronous_commit=off';
- if(!run(bin+'pg_ctl',['-D',dataDir,'-l',join(dataDir,'server.log'),
-   '-o',options,'-w','start'],process.env,true)){
-    try {
-      const detail=readFileSync(join(dataDir,'server.log'),'utf8')
+   // These PostgreSYªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬ÕE0Í•ÑÕÀ½µµ…¹‘Ì‘¼¹½Ğ¥¹±Õ‘”…ÁÁ±¥…Ñ¥½¸É•‘•¹Ñ¥…±Ì¸(€€€¼¼9•Ù•È±½œ•¹Ù¥É½¹µ•¹ĞÙ…É¥…‰±•Ì°Q	M}UI0½ÈÕÍ•ÈµÍÕÁÁ±¥•…ÉÕµ•¹ÑÌ¸(€€½¹ÍĞ‘•Ñ…¥±ÌõMÑÉ¥¹œ¡É•ÍÕ±Ğ¹ÍÑ‘•ÉÉññÉ•ÍÕ±Ğ¹•ÉÉ½Èü¹µ•ÍÍ…•ñğ9¼ÍÑ‘•ÉÈœ¤(€€€€€¹É•Á±…” ½Á½ÍÑÉ•Ì üéÅ°¤üép½p½myqÍt¬½¤°mIQ}	}UI%tœ¤(€€€€€¹Í±¥” À°ÜÀÀ¤ì(€€ÁÉ½•ÍÌ¹ÍÑ‘•ÉÈ¹İÉ¥Ñ” Må¹Ñ¡•Ñ¥Œ‘…Ñ…‰…Í”€œ­¹…µ”¬œ™…¥±•è€œ­‘•Ñ…¥±Ì¬q¸œ¤ì(ô(É•ÑÕÉ¸É•ÍÕ±Ğ¹ÍÑ…ÑÕÌôôôÀì)ô)™Õ¹Ñ¥½¸ÍÑ…ÉÑ¥ÍÁ½Í…‰±•A½ÍÑÉ•Ì ¥ì(±•ĞÙ•ÉÍ¥½¹Ìì(ÑÉåíÙ•ÉÍ¥½¹ÌõÉ•…‘‘¥ÉMå¹Œ œ½ÕÍÈ½±¥ˆ½Á½ÍÑÉ•ÍÅ°œ¤¹Í½ÉĞ ¡„±ˆ¤ôù9Õµ‰•È¡ˆ¤µ9Õµ‰•È¡„¤¥ô(…Ñ¡íÉ•ÑÕÉ¸™…±Í•ô(½¹ÍĞÙ•ÉÍ¥½¸õÙ•ÉÍ¥½¹Ìü¹™¥¹¡Øôø½yq¬¼¹Ñ•ÍĞ¡Ø¤¤ì(¥˜ …Ù•ÉÍ¥½¸¥É•ÑÕÉ¸™…±Í”ì(½¹ÍĞ‰¥¸ôœ½ÕÍÈ½±¥ˆ½Á½ÍÑÉ•ÍÅ°¼œ­Ù•ÉÍ¥½¸¬œ½‰¥¸¼œì(½¹ÍĞ‘…Ñ…¥Èõµ­‘Ñ•µÁMå¹Œ¡©½¥¸¡ÑµÁ‘¥È ¤°¹•İ¡…¹•Ìµµ™„µÁœ´œ¤¤ì(€¼¼A½ÍÑÉ•ME0ÉÕ¹Ì…ÌÑ¡”•á¥ÍÑ¥¹œ¹½¸µÉ½½Ğ€‰¹½‘”ˆ½¹Ñ…¥¹•ÈÕÍ•È¸(€¼¼!½ÍĞµ‰…Í•…ÕÑ¡•¹Ñ¥…Ñ¥½¸¥ÌÑÉÕÍĞ=91d½¸…¸Õ¹•áÁ½Í•±½½Á‰…¬Á½ÉĞ¸(€¼¼%Ğ¥Ì¹½Ğ„‘ÕÉ…‰±”°…¹¥ÑÌÉ•‘•¹Ñ¥…±Ì…É”9YHÕÍ•‰äÁÉ½‘ÕÑ¥½¸¸(¥˜ …ÉÕ¸¡‰¥¸¬¥¹¥Ñ‘ˆœ±lœµœ±‘…Ñ…¥È°œµTœ°¹½‘”œ°œµœ°ÑÉÕÍĞœ°œ´µ¹¼µ¥¹ÍÑÉÕÑ¥½¹Ìt±ÁÉ½•ÍÌ¹•¹Ø±ÑÉÕ”¤¤(€€É•ÑÕÉ¸™…±Í”ì(½¹ÍĞ½ÁÑ¥½¹Ìôœµ €ÄÈÜ¸À¸À¸Ä€µÀ€œ­±½…±A½ÉĞ¬(€€€œ€µŒ±¥ÍÑ•¹}…‘‘É•ÍÍ•ÌôÄÈÜ¸À¸À¸Ä€µŒÕ¹¥á}Í½­•Ñ}‘¥É•Ñ½É¥•Ìô½ÑµÀœ¬(€€€œ€µŒ‘å¹…µ¥}Í¡…É•‘}µ•µ½Éå}ÑåÁ”õµµ…À€µŒÍ¡…É•‘}‰Õ™™•ÉÌôÄÙ5œ¬(€€€œ€µŒµ…á}½¹¹•Ñ¥½¹ÌôÈÀ€µŒ™Íå¹Œõ½™˜€µŒÍå¹¡É½¹½ÕÍ}½µµ¥Ğõ½™˜œì(¥˜ …ÉÕ¸¡‰¥¸¬Á}Ñ°œ±lœµœ±‘…Ñ…¥È°œµ°œ±©½¥¸¡‘…Ñ…¥È°Í•ÉÙ•È¹±½œœ¤°(€€€œµ¼œ±½ÁÑ¥½¹Ì°œµÜœ°ÍÑ…ÉĞt±ÁÉ½•ÍÌ¹•¹Ø±ÑÉÕ”¤¥ì(€€€ÑÉäì(€€€€€½¹ÍĞ‘•Ñ…¥°õÉ•…‘¥±—[h‘éì¶»§q«^wync(join(dataDir,'server.log'),'utf8')
         .replace(/postgres(?:ql)?:\/\/[^\s]+/gi,'[REDACTED_DB_URI]')
         .slice(-700);
       process.stderr.write('Disposable PostgreSQL startup log: '+detail+'\n');

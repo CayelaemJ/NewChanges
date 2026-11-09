@@ -1,30 +1,4 @@
-// Synthetic staging fixture provisioning, never a production account seeder.
-// All credentials and enrollment codes arrive via Render environment settings,
-// not code, repository files, logs or a publicly callable endpoint.
-import { createHash } from 'node:crypto';
-import { prisma } from '../dist/services/database.js';
-import { hashPassword } from '../dist/services/authService.js';
-import {approvedStagingDatabaseEnvironment} from './mfa-staging-db-target.mjs';
-
-const guard = approvedStagingDatabaseEnvironment(process.env) &&
-  ((process.env.MFA_ENFORCE!=='true' && process.env.ADMIN_MFA_ENFORCE!=='true') ||
-    process.env.MFA_STAGING_ENFORCEMENT_APPROVED==='true');
-
-if (!guard) throw new Error('Synthetic-only staging fixture provisioning refused');
-const passwordNames=['MFA_STAGING_ADMIN_A_PASSWORD','MFA_STAGING_ADMIN_B_PASSWORD',
- 'MFA_STAGING_TARGET_PASSWORD'];
-const grantNames=['MFA_STAGING_ADMIN_A_GRANT','MFA_STAGING_ADMIN_B_GRANT',
- 'MFA_STAGING_TARGET_GRANT'];
-const passwords=passwordNames.map(x=>process.env[x]);
-const grants=grantNames.map(x=>process.env[x]);
-for(const p of passwords){
- if(typeof p!=='string'||Buffer.byteLength(p,'utf8')<24||
-  Buffer.byteLength(p,'utf8')>256||p===process.env.MFA_STAGING_GATE_PASSWORD)
-  throw new Error('Synthetic staging passwords must be unique and sufficiently strong');
-}
-if(new Set(passwords).size!==3 || new Set(grants).size!==3)
- throw new Error('Each synthetic administrator needs distinct credentials and grants');
-for(const code of grants)
+YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Ô¼¼Må¹Ñ¡•Ñ¥ŒÍÑ…¥¹œ™¥áÑÕÉ”ÁÉ½Ù¥Í¥½¹¥¹œ°¹•Ù•È„ÁÉ½‘ÕÑ¥½¸…½Õ¹ÐÍ••‘•È¸(¼¼±°É•‘•¹Ñ¥…±Ì…¹•¹É½±±µ•¹Ð½‘•Ì…ÉÉ¥Ù”Ù¥„I•¹‘•È•¹Ù¥É½¹µ•¹ÐÍ•ÑÑ¥¹Ì°(¼¼¹½Ð½‘”°É•Á½Í¥Ñ½Éä™¥±•Ì°±½Ì½È„ÁÕ‰±¥±ä…±±…‰±”•¹‘Á½¥¹Ð¸)¥µÁ½ÉÐìÉ•…Ñ•!…Í ô™É½´€¹½‘”éÉåÁÑ¼œì)¥µÁ½ÉÐìÁÉ¥Íµ„ô™É½´€œ¸¸½‘¥ÍÐ½Í•ÉÙ¥•Ì½‘…Ñ…‰…Í”¹©Ìœì)¥µÁ½ÉÐì¡…Í¡A…ÍÍÝ½Éô™É½´€œ¸¸½‘¥ÍÐ½Í•ÉÙ¥•Ì½…ÕÑ¡M•ÉÙ¥”¹©Ìœì)¥µÁ½ÉÐí…ÁÁÉ½Ù•‘MÑ…¥¹…Ñ…‰…Í•¹Ù¥É½¹µ•¹Ñô™É½´€œ¸½µ™„µÍÑ…¥¹œµ‘ˆµÑ…É•Ð¹µ©Ìœì()½¹ÍÐÕ…É€ô…ÁÁÉ½Ù•‘MÑ…¥¹…Ñ…‰…Í•¹Ù¥É½¹µ•¹Ð¡ÁÉ½•ÍÌ¹•¹Ø¤€˜˜(€€ ¡ÁÉ½•ÍÌ¹•¹Ø¹5}9=I„ôôÑÉÕ”œ€˜˜ÁÉ½•ÍÌ¹•¹Ø¹5%9}5}9=I„ôôÑÉÕ”œ¤ñð(€€€ÁÉ½•ÍÌ¹•¹Ø¹5}MQ%9}9=I59Q}AAI=YôôôÑÉÕ”œ¤ì()¥˜€ …Õ…É¤Ñ¡É½Ü¹•ÜÉÉ½È Må¹Ñ¡•Ñ¥Œµ½¹±äÍÑ…¥¹œ™¥áÑÕÉ”ÁÉ½Ù¥Í¥½¹¥¹œÉ•™ÕÍ•œ¤ì)½¹ÍÐÁ…ÍÍÝ½É‘9…µ•Ìõl5}MQ%9}5%9}}AMM]=Iœ°5}MQ%9}5%9}	}AMM]=Iœ°(€5}MQ%9}QIQ}AMM]=Itì)½¹ÍÐÉ…¹Ñ9…µ•Ìõl5}MQ%9}5%9}}I9Pœ°5}MQ%9}5%9}	}I9Pœ°(€5}MQ%9}QIQ}I9Ptì)½¹ÍÐÁ…ÍÍÝ½É‘ÌõÁ…ÍÍÝ½É‘9…µ•Ì¹µ…À¡àôùÁÉ½•ÍÌ¹•¹Ùmát¤ì)½¹ÍÐÉ…¹ÑÌõÉ…¹Ñ9…µ•Ì¹µ…À¡àôùÁÉ½•ÍÌ¹•¹Ùmát¤ì)™½È¡½¹ÍÐÀ½˜Á…ÍÍÝ½É‘Ì¥ì(¥˜¡ÑåÁ•½˜À„ôôÍÑÉ¥¹œññ	Õ™™•È¹‰åÑ•1•¹Ñ ¡À°ÕÑ˜àœ¤ðÈÑñð(€	Õ™™•È¹‰åÑ•1•¹Ñ ¡À°ÕÑ˜àœ¤øÈÔÙññÀôôõÁÉ½•ÍÌ¹•¹Ø¹5}MQ%9}Q}AMM]=I¤(€Ñ¡É½Ü¹•ÜÉÉ½È Må¹Ñ¡•Ñ¥ŒÍÑ…¥¹œÁ…ÍÍÝ½É‘ÌµÕÍÐ‰”Õ¹¥ÅÕ”…¹ÍÕ™™¥¥•¹Ñ±äÍÑÉ½¹œœ¤ì)ô)¥˜¡¹•ÜM•Ð¡Á…ÍÍÝ½É‘Ì¤¹Í¥é”„ôôÌñð¹•ÜM•Ð¡É…¹ÑÌ¤¹Í¥é”„ôôÌ¤(Ñ¡É½Ü¹•ÜÉÉ½È … Íå¹Ñ¡•Ñ¥Œ…‘µ¥¹¥ÍÑÉ…Ñ½È¹••‘Ì‘¥ÍÑ¥¹ÐÉ•‘•¹Ñ¥…±Ì…¹É…¹ÑÌœ¤ì)™½È¡½¹ÍÐ¿[h‘éì¶»§q«^te of grants)
  if(typeof code!=='string'|| !/^[A-Za-z0-9_-]{43}$/.test(code))
   throw new Error('Synthetic grants must be independent 32-byte base64url values');
 

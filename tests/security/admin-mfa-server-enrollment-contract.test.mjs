@@ -1,33 +1,4 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
-
-const schema=readFileSync('prisma/schema.prisma','utf8');
-const source=readFileSync('src/services/adminMfaRoutes.ts','utf8');
-const migration=readFileSync(
- 'prisma/migrations/20261103123000_mfa_server_managed_enrollment/migration.sql','utf8');
-const html=readFileSync('public/admin-mfa.html','utf8');
-const browser=readFileSync('public/admin-mfa.js','utf8');
-
-function scope(start,end) {
- const index=source.indexOf(start);
- assert.ok(index>=0,'Missing route '+start);
- const stop=end?source.indexOf(end,index+start.length):-1;
- return source.slice(index,stop>=0?stop:undefined);
-}
-
-test('server persists session-scoped authorization, not raw enrollment codes',()=>{
- const model=schema.match(/model AdminMfaEnrollmentRequest \{[\s\S]*?\n\}/)?.[0]||'';
- for(const field of ['userId','sessionId','expiresAt','approvedByOne','approvedByTwo','consumedAt'])
-  assert.match(model,new RegExp('\\b'+field+'\\b'));
- assert.doesNotMatch(model,/codeHash|grantCode|secretCiphertext/);
- assert.match(migration,/CREATE TABLE "AdminMfaEnrollmentRequest"/);
- assert.match(migration,/FOREIGN KEY \("userId"\) REFERENCES "User"/);
- assert.doesNotMatch(migration,/DROP TABLE|DROP COLUMN|DELETE FROM/i);
-});
-
-test('request is tied to signed in user and active session and refuses existing MFA',()=>{
- const route=scope("app.post('/api/auth/mfa/enrollment/request'","app.get('/api/auth/mfa/enrollment/status'");
+YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Õ¥µÁ½ÉÐÑ•ÍÐ™É½´€¹½‘”éÑ•ÍÐœì)¥µÁ½ÉÐ…ÍÍ•ÉÐ™É½´€¹½‘”é…ÍÍ•ÉÐ½ÍÑÉ¥Ðœì)¥µÁ½ÉÐíÉ•…‘¥±•Må¹ô™É½´€¹½‘”é™Ìœì()½¹ÍÐÍ¡•µ„õÉ•…‘¥±•Må¹Œ ÁÉ¥Íµ„½Í¡•µ„¹ÁÉ¥Íµ„œ°ÕÑ˜àœ¤ì)½¹ÍÐÍ½ÕÉ”õÉ•…‘¥±•Må¹Œ ÍÉŒ½Í•ÉÙ¥•Ì½…‘µ¥¹5™…I½ÕÑ•Ì¹ÑÌœ°ÕÑ˜àœ¤ì)½¹ÍÐµ¥É…Ñ¥½¸õÉ•…‘¥±•Må¹Œ (€ÁÉ¥Íµ„½µ¥É…Ñ¥½¹Ì¼ÈÀÈØÄÄÀÌÄÈÌÀÀÁ}µ™…}Í•ÉÙ•É}µ…¹…•‘}•¹É½±±µ•¹Ð½µ¥É…Ñ¥½¸¹ÍÅ°œ°ÕÑ˜àœ¤ì)½¹ÍÐ¡Ñµ°õÉ•…‘¥±•Må¹Œ ÁÕ‰±¥Œ½…‘µ¥¸µµ™„¹¡Ñµ°œ°ÕÑ˜àœ¤ì)½¹ÍÐ‰É½ÝÍ•ÈõÉ•…‘¥±•Må¹Œ ÁÕ‰±¥Œ½…‘µ¥¸µµ™„¹©Ìœ°ÕÑ˜àœ¤ì()™Õ¹Ñ¥½¸Í½Á”¡ÍÑ…ÉÐ±•¹¤ì(½¹ÍÐ¥¹‘•àõÍ½ÕÉ”¹¥¹‘•á=˜¡ÍÑ…ÉÐ¤ì(…ÍÍ•ÉÐ¹½¬¡¥¹‘•àøôÀ°5¥ÍÍ¥¹œÉ½ÕÑ”€œ­ÍÑ…ÉÐ¤ì(½¹ÍÐÍÑ½Àõ•¹ýÍ½ÕÉ”¹¥¹‘•á=˜¡•¹±¥¹‘•à­ÍÑ…ÉÐ¹±•¹Ñ ¤è´Äì(É•ÑÕÉ¸Í½ÕÉ”¹Í±¥”¡¥¹‘•à±ÍÑ½ÀøôÀýÍÑ½ÀéÕ¹‘•™¥¹•¤ì)ô()Ñ•ÍÐ Í•ÉÙ•ÈÁ•ÉÍ¥ÍÑÌÍ•ÍÍ¥½¸µÍ½Á•…ÕÑ¡½É¥é…Ñ¥½¸°¹½ÐÉ…Ü•¹É½±±µ•¹Ð½‘•Ìœ° ¤ôùì(½¹ÍÐµ½‘•°õÍ¡•µ„¹µ…Ñ  ½µ½‘•°‘µ¥¹5™…¹É½±±µ•¹ÑI•ÅÕ•ÍÐqímqÍqMt¨ýq¹qô¼¤ü¹lÁuñðœœì(™½È¡½¹ÍÐ™¥•±½˜lÕÍ•É%œ°Í•ÍÍ¥½¹%œ°•áÁ¥É•ÍÐœ°…ÁÁÉ½Ù•‘	å=¹”œ°…ÁÁÉ½Ù•‘	åQÝ¼œ°½¹ÍÕµ•‘Ðt¤(€…ÍÍ•ÉÐ¹µ…Ñ ¡µ½‘•°±¹•ÜI•áÀ qqˆœ­™¥•±¬qqˆœ¤¤ì(…ÍÍ•ÉÐ¹‘½•Í9½Ñ5…Ñ ¡µ½‘•°°½½‘•!…Í¡ñÉ…¹Ñ½‘•ñÍ•É•Ñ¥Á¡•ÉÑ•áÐ¼¤ì(…ÍÍ•ÉÐ¹µ…Ñ ¡µ¥É…Ñ¥½¸°½IQQ	1€‰‘µ¥¹5™…¹É½±±µ•¹ÑI•ÅÕ•ÍÐˆ¼¤ì(…ÍÍ•ÉÐ¹µ…Ñ ¡µ¥É…Ñ¥½¸°½=I%8-dp ‰ÕÍ•É%‰p¤II9L€‰UÍ•Èˆ¼¤ì(…ÍÍ•ÉÐ¹‘½•Í9½Ñ5…Ñ ¡µ¥É…Ñ¥½¸°½I=@Q	1ñI=@=1U59ñ1QI=4½¤¤ì)ô¤ì()Ñ•ÍÐ É•ÅÕ•ÍÐ¥ÌÑ¥•Ñ¼Í¥¹•¥¸ÕÍ•È…¹…Ñ¥Ù”Í•ÍÍ¥½¸…¹É•™ÕÍ•Ì•á¥ÍÑ¥¹œ5œ° ¤ôùì(½¹ÍÐÉ½ÕÑ”õÍ½Á” ‰…ÁÀ¹Á½ÍÐ œ½…Á¤½…ÕÑ ½µ™„½•¹É½±±µ•¹Ð½É•ÅÕ•ÍÐœˆ°‰…ÁÀ¹•Ð œ½…Á¤½…ÕÑ ½µ™„½•¹É½±±µ•¹Ð½ÍÑ…ÑÕÌœ‹[h‘éì¶»§q«^u;
  for(const text of ['await adminSession(req,reply)','session.userId','session.id',
    'prisma.adminMfaCredential.count','prisma.adminMfaTotp.findUnique',
    'prisma.adminMfaEnrollmentRequest.findFirst','tx.adminAuditLog.create'])

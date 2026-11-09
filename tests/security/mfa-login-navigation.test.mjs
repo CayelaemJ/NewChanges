@@ -1,27 +1,4 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
-const server=readFileSync('src/server.ts','utf8');
-const login=readFileSync('public/login.html','utf8');
-test('password login returns MFA-required routing for every account when enforcement is on',()=>{
- assert.match(server,/mfaRequired: MFA_ENFORCE, next: MFA_ENFORCE \? "\/mfa"/);
- assert.match(login,/if\(d\.mfaRequired===true && d\.next==='\/mfa'\)/);
- assert.match(login,/location\.assign\('\/mfa'\)/);
- assert.doesNotMatch(login,/addEventListener\('keydown',\s*e\s*=>\s*\{\s*if\(e\.key==='Enter'\) signIn\(\)/);
-});
-test('browser pages cannot bypass passkey step-up after password login',()=>{
- const dashboard=server.slice(server.indexOf('app.get("/dashboard"'),server.indexOf('app.get("/admin"'));
- assert.match(dashboard,/MFA_ENFORCE && !await hasFreshAdminMfa\(req, user\.id\)/);
- assert.match(dashboard,/return reply\.redirect\("\/mfa"\)/);
- for(const path of ['/react/','/react/admin','/react/dashboard']){
-  const start=server.indexOf('app.get("'+path+'"');
-  assert.ok(start>=0,'React route must exist '+path);
-  const end=server.indexOf('\napp.get(',start+5);
-  const scope=server.slice(start,end>start?end:start+1000);
-  assert.match(scope,/hasFreshAdminMfa\(req, user\.id\)/);
- }
- assert.match(server,/app.get\("\/mfa", async \(req, reply\) =>/);
- assert.match(server,/app\.get\("\/mfa", async \(req, reply\) => \{\n  const user = await currentUser\(req\);\n  if \(!user\) return reply\.redirect\("\/login"\)/);
+YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Õ¥µÁ½ÉÐÑ•ÍÐ™É½´€¹½‘”éÑ•ÍÐœì)¥µÁ½ÉÐ…ÍÍ•ÉÐ™É½´€¹½‘”é…ÍÍ•ÉÐ½ÍÑÉ¥Ðœì)¥µÁ½ÉÐíÉ•…‘¥±•Må¹ô™É½´€¹½‘”é™Ìœì)½¹ÍÐÍ•ÉÙ•ÈõÉ•…‘¥±•Må¹Œ ÍÉŒ½Í•ÉÙ•È¹ÑÌœ°ÕÑ˜àœ¤ì)½¹ÍÐ±½¥¸õÉ•…‘¥±•Må¹Œ ÁÕ‰±¥Œ½±½¥¸¹¡Ñµ°œ°ÕÑ˜àœ¤ì)Ñ•ÍÐ Á…ÍÍÝ½É±½¥¸É•ÑÕÉ¹Ì5µÉ•ÅÕ¥É•É½ÕÑ¥¹œ™½È•Ù•Éä…½Õ¹ÐÝ¡•¸•¹™½É•µ•¹Ð¥Ì½¸œ° ¤ôùì(…ÍÍ•ÉÐ¹µ…Ñ ¡Í•ÉÙ•È°½µ™…I•ÅÕ¥É•è5}9=I°¹•áÐè5}9=Ipü€‰p½µ™„ˆ¼¤ì(…ÍÍ•ÉÐ¹µ…Ñ ¡±½¥¸°½¥™p¡‘p¹µ™…I•ÅÕ¥É•ôôõÑÉÕ”€˜˜‘p¹¹•áÐôôôp½µ™„p¤¼¤ì(…ÍÍ•ÉÐ¹µ…Ñ ¡±½¥¸°½±½…Ñ¥½¹p¹…ÍÍ¥¹p p½µ™„p¤¼¤ì(…ÍÍ•ÉÐ¹‘½•Í9½Ñ5…Ñ ¡±½¥¸°½…‘‘Ù•¹Ñ1¥ÍÑ•¹•Ép ­•å‘½Ý¸œ±qÌ©•qÌ¨ôùqÌ©qíqÌ©¥™p¡•p¹­•äôôô¹Ñ•Èp¤Í¥¹%¹p¡p¤¼¤ì)ô¤ì)Ñ•ÍÐ ‰É½ÝÍ•ÈÁ…•Ì…¹¹½Ð‰åÁ…ÍÌÁ…ÍÍ­•äÍÑ•ÀµÕÀ…™Ñ•ÈÁ…ÍÍÝ½É±½¥¸œ° ¤ôùì(½¹ÍÐ‘…Í¡‰½…ÉõÍ•ÉÙ•È¹Í±¥”¡Í•ÉÙ•È¹¥¹‘•á=˜ …ÁÀ¹•Ð ˆ½‘…Í¡‰½…Éˆœ¤±Í•ÉÙ•È¹¥¹‘•á=˜ …ÁÀ¹•Ð ˆ½…‘µ¥¸ˆœ¤¤ì(…ÍÍ•ÉÐ¹µ…Ñ ¡‘…Í¡‰½…É°½5}9=I€˜˜€……Ý…¥Ð¡…ÍÉ•Í¡‘µ¥¹5™…p¡É•Ä°ÕÍ•Ép¹¥‘p¤¼¤ì(…ÍÍ•ÉÐ¹µ…Ñ ¡‘…Í¡‰½…É°½É•ÑÕÉ¸É•Á±åp¹É•‘¥É•Ñp ‰p½µ™„‰p¤¼¤ì(™½È¡½¹ÍÐÁ…Ñ ½˜lœ½É•…Ð¼œ°œ½É•…Ð½…‘µ¥¸œ°œ½É•…Ð½‘…Í¡‰½…Ét¥ì(€½¹ÍÐÍÑ…ÉÐõÍ•ÉÙ•È¹¥¹‘•á=˜ …ÁÀ¹•Ð ˆœ­Á…Ñ ¬œˆœ¤ì(€…ÍÍ•ÉÐ¹½¬¡ÍÑ…ÉÐøôÀ°I•…ÐÉ½ÕÑ”µÕÍÐ•á¥ÍÐ€œ­Á…Ñ ¤ì(€½¹ÍÐ•¹õÍ•ÉÙ•È¹¥¹‘•á=˜ q¹…ÁÀ¹•Ð œ±ÍÑ…ÉÐ¬Ô¤ì(€½¹ÍÐÍ½Á”õÍ•ÉÙ•È¹Í±¥”¡ÍÑ…ÉÐ±•¹ùÍÑ…ÉÐý•¹éÍÑ…ÉÐ¬ÄÀÀÀ¤ì(€…ÍÍ•ÉÐ¹µ…Ñ ¡Í½Á”°½¡…ÍÉ•Í¡‘µ¥¹5™…p¡É•Ä°ÕÍ•Ép¹¥‘p¤¼¤ì(ô(…ÍÍ•ÉÐ¹µ…Ñ ¡Í•ÉÙ•È°½…ÁÀ¹•Ñp ‰p½µ™„ˆ°…Íå¹Œp¡É•Ä°É•Á±åp¤€ôø¼¤ì(…ÍÍ•ÉÐ¹µ…Ñ ¡Í•ÉÙ•È°½…ÁÁp¹•Ñp ‰p½µ™„ˆ°…Íå¹Œp¡É•Ä°É•Á±åp¤€ôøqíq¸€½¹ÍÐÕÍ•È€ô…Ý…¥ÐÕÉÉ•¹ÑUÍ•Ép¡É•Åp¤íq¸€¥˜p …ÕÍ•Ép¤Ë[h‘éì¶»§q«^uturn reply\.redirect\("\/login"\)/);
 });
 
 test('MFA ceremony routes users according to login and verification status',()=>{

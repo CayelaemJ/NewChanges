@@ -1,37 +1,4 @@
-'use strict';
-const statusEl=document.getElementById('status');
-const verifyBtn=document.getElementById('verify');
-const enrollBtn=document.getElementById('enroll');
-const grantEl=document.getElementById('grant');
-const managingMethods=window.location?.pathname==='/mfa/manage';
-let enrollmentApproved=false;
-let enrollmentRequestId=null;
-let legacyGrant='';
-let accountIsAdministrator=false;
-function show(message){statusEl.textContent=message;}
-function displayRecoveryKey(key){
- if(typeof key!=='string'||!/^[A-Za-z0-9_-]{43}$/.test(key))return;
- const panel=document.getElementById('mfa-backup-key');
- document.getElementById('mfa-backup-value').textContent=key;
- document.getElementById('mfa-backup-confirm').checked=false;
- document.getElementById('mfa-backup-dismiss').disabled=true;
- document.getElementById('mfa-continue').hidden=true;
- panel.hidden=false;
- panel.scrollIntoView?.({behavior:'smooth',block:'center'});
-}
-
-async function api(path,data){
- const response=await fetch('/api/auth/mfa/'+path,{method:'POST',credentials:'same-origin',
-  headers:{'Content-Type':'application/json'},body:JSON.stringify(data||{})});
- const body=await response.json().catch(()=>({}));
- if(!response.ok)throw Error(body.error||'Security request rejected');
- return body;
-}
-function browserSupported(){
- return window.isSecureContext && typeof PublicKeyCredential!=='undefined' && !!navigator.credentials;
-}
-function fromBase64Url(value){
- if(typeof value!=='string' || !/^[A-Za-z0-9_-]+$/.test(value))throw Error('Invalid passkey options');
+YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬ÔÕÍ”ÍÑÉ¥Ðœì)½¹ÍÐÍÑ…ÑÕÍ°õ‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% ÍÑ…ÑÕÌœ¤ì)½¹ÍÐÙ•É¥™å	Ñ¸õ‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% Ù•É¥™äœ¤ì)½¹ÍÐ•¹É½±±	Ñ¸õ‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% •¹É½±°œ¤ì)½¹ÍÐÉ…¹Ñ°õ‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% É…¹Ðœ¤ì)½¹ÍÐµ…¹…¥¹5•Ñ¡½‘ÌõÝ¥¹‘½Ü¹±½…Ñ¥½¸ü¹Á…Ñ¡¹…µ”ôôôœ½µ™„½µ…¹…”œì)±•Ð•¹É½±±µ•¹ÑÁÁÉ½Ù•õ™…±Í”ì)±•Ð•¹É½±±µ•¹ÑI•ÅÕ•ÍÑ%õ¹Õ±°ì)±•Ð±•…åÉ…¹Ðôœœì)±•Ð…½Õ¹Ñ%Í‘µ¥¹¥ÍÑÉ…Ñ½Èõ™…±Í”ì)™Õ¹Ñ¥½¸Í¡½Ü¡µ•ÍÍ…”¥íÍÑ…ÑÕÍ°¹Ñ•áÑ½¹Ñ•¹Ðõµ•ÍÍ…”íô)™Õ¹Ñ¥½¸‘¥ÍÁ±…åI•½Ù•Éå-•ä¡­•ä¥ì(¥˜¡ÑåÁ•½˜­•ä„ôôÍÑÉ¥¹œñð„½ymµi„µèÀ´å|µuìÐÍô¼¹Ñ•ÍÐ¡­•ä¤¥É•ÑÕÉ¸ì(½¹ÍÐÁ…¹•°õ‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% µ™„µ‰…­ÕÀµ­•äœ¤ì(‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% µ™„µ‰…­ÕÀµÙ…±Õ”œ¤¹Ñ•áÑ½¹Ñ•¹Ðõ­•äì(‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% µ™„µ‰…­ÕÀµ½¹™¥É´œ¤¹¡•­•õ™…±Í”ì(‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% µ™„µ‰…­ÕÀµ‘¥Íµ¥ÍÌœ¤¹‘¥Í…‰±•õÑÉÕ”ì(‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% µ™„µ½¹Ñ¥¹Õ”œ¤¹¡¥‘‘•¸õÑÉÕ”ì(Á…¹•°¹¡¥‘‘•¸õ™…±Í”ì(Á…¹•°¹ÍÉ½±±%¹Ñ½Y¥•Üü¸¡í‰•¡…Ù¥½ÈèÍµ½½Ñ œ±‰±½¬è•¹Ñ•Èô¤ì)ô()…Íå¹Œ™Õ¹Ñ¥½¸…Á¤¡Á…Ñ ±‘…Ñ„¥ì(½¹ÍÐÉ•ÍÁ½¹Í”õ…Ý…¥Ð™•Ñ  œ½…Á¤½…ÕÑ ½µ™„¼œ­Á…Ñ ±íµ•Ñ¡½èA=MPœ±É•‘•¹Ñ¥…±ÌèÍ…µ”µ½É¥¥¸œ°(€¡•…‘•ÉÌéì½¹Ñ•¹ÐµQåÁ”œè…ÁÁ±¥…Ñ¥½¸½©Í½¸ô±‰½‘äé)M=8¹ÍÑÉ¥¹¥™ä¡‘…Ñ…ññíô¥ô¤ì(½¹ÍÐ‰½‘äõ…Ý…¥ÐÉ•ÍÁ½¹Í”¹©Í½¸ ¤¹…Ñ   ¤ôø¡íô¤¤ì(¥˜ …É•ÍÁ½¹Í”¹½¬¥Ñ¡É½ÜÉÉ½È¡‰½‘ä¹•ÉÉ½ÉñðM•ÕÉ¥ÑäÉ•ÅÕ•ÍÐÉ•©•Ñ•œ¤ì(É•ÑÕÉ¸‰½‘äì)ô)™Õ¹Ñ¥½¸‰É½ÝÍ•ÉMÕÁÁ½ÉÑ• ¥ì(É•ÑÕÉ¸Ý¥¹‘½Ü¹¥ÍM•ÕÉ•½¹Ñ•áÐ€˜˜ÑåÁ•½˜AÕ‰±¥-•åÉ•‘•¹Ñ¥…°„ôôÕ¹‘•™¥¹•œ€˜˜€„…¹…Ù¥…Ñ½È¹É•‘•¹Ñ¥…±Ìì)ô)™Õ¹Ñ¥½¸™É½µ	…Í”ØÑUÉ°¡Ù…±Õ”¥ì(¥˜¡ÑåÁ•½˜Ù…±Õ”„ôôÍÑÉ¥¹œœñð€„½ymµi„µèÀ´å|µt¬¼¹Ñ•ÍÐ¡Ù…±Õ”¤¥Ñ£[h‘éì¶»§q«^vow Error('Invalid passkey options');
  const normalized=value.replace(/-/g,'+').replace(/_/g,'/');
  const bytes=atob(normalized+'='.repeat((4-normalized.length%4)%4));
  return Uint8Array.from(bytes,chr=>chr.charCodeAt(0));
@@ -61,34 +28,9 @@ function serialize(credential){
  if(typeof credential?.toJSON==='function')return credential.toJSON();
  if(!credential?.response || credential.type!=='public-key')throw Error('Invalid passkey response');
  const base={id:credential.id,rawId:toBase64Url(credential.rawId),type:'public-key',
-  authenticatorAttachment:credential.authenticatorAttachment||undefined,
-  clientExtensionResults:credential.getClientExtensionResults?.()||{}};
- const response={clientDataJSON:toBase64Url(credential.response.clientDataJSON)};
- if(credential.response.attestationObject){
-  response.attestationObject=toBase64Url(credential.response.attestationObject);
-  response.transports=credential.response.getTransports?.()||[];
- }else{
-  if(!credential.response.authenticatorData || !credential.response.signature)
-   throw Error('Incomplete passkey authentication response');
-  response.authenticatorData=toBase64Url(credential.response.authenticatorData);
-  response.signature=toBase64Url(credential.response.signature);
-  response.userHandle=credential.response.userHandle
-   ?toBase64Url(credential.response.userHandle):null;
- }
- return {...base,response};
-}
-async function refresh(){
- try{
-  const res=await fetch('/api/auth/mfa/status',{credentials:'same-origin'});
-  if(!res.ok)throw Error('Please sign in to continue');
-  const state=await res.json();
-  const firstTime=!state.enrolled&&!state.verified&&!managingMethods;
-  accountIsAdministrator=state.isAdministrator===true;
-  document.querySelector('header strong').textContent=accountIsAdministrator
-    ? 'THE FIXER Â· ADMIN SECURITY' : 'THE FIXER Â· ACCOUNT SECURITY';
-  document.querySelector('h1').textContent=accountIsAdministrator
-    ? 'Protect your administrator account' : 'Protect your account';
-  const missingRecovery=!!state.verified && !!state.enrolled && !state.hasRecoveryKey;
+  authenticatorAttachment:crYªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Õ•‘•¹Ñ¥…°¹…ÕÑ¡•¹Ñ¥…Ñ½ÉÑÑ…¡µ•¹ÑññÕ¹‘•™¥¹•°(€±¥•¹ÑáÑ•¹Í¥½¹I•ÍÕ±ÑÌéÉ•‘•¹Ñ¥…°¹•Ñ±¥•¹ÑáÑ•¹Í¥½¹I•ÍÕ±ÑÌü¸ ¥ññíõôì(½¹ÍÐÉ•ÍÁ½¹Í”õí±¥•¹Ñ…Ñ…)M=8éÑ½	…Í”ØÑUÉ°¡É•‘•¹Ñ¥…°¹É•ÍÁ½¹Í”¹±¥•¹Ñ…Ñ…)M=8¥ôì(¥˜¡É•‘•¹Ñ¥…°¹É•ÍÁ½¹Í”¹…ÑÑ•ÍÑ…Ñ¥½¹=‰©•Ð¥ì(€É•ÍÁ½¹Í”¹…ÑÑ•ÍÑ…Ñ¥½¹=‰©•ÐõÑ½	…Í”ØÑUÉ°¡É•‘•¹Ñ¥…°¹É•ÍÁ½¹Í”¹…ÑÑ•ÍÑ…Ñ¥½¹=‰©•Ð¤ì(€É•ÍÁ½¹Í”¹ÑÉ…¹ÍÁ½ÉÑÌõÉ•‘•¹Ñ¥…°¹É•ÍÁ½¹Í”¹•ÑQÉ…¹ÍÁ½ÉÑÌü¸ ¥ññmtì(õ•±Í•ì(€¥˜ …É•‘•¹Ñ¥…°¹É•ÍÁ½¹Í”¹…ÕÑ¡•¹Ñ¥…Ñ½É…Ñ„ñð€…É•‘•¹Ñ¥…°¹É•ÍÁ½¹Í”¹Í¥¹…ÑÕÉ”¤(€€Ñ¡É½ÜÉÉ½È %¹½µÁ±•Ñ”Á…ÍÍ­•ä…ÕÑ¡•¹Ñ¥…Ñ¥½¸É•ÍÁ½¹Í”œ¤ì(€É•ÍÁ½¹Í”¹…ÕÑ¡•¹Ñ¥…Ñ½É…Ñ„õÑ½	…Í”ØÑUÉ°¡É•‘•¹Ñ¥…°¹É•ÍÁ½¹Í”¹…ÕÑ¡•¹Ñ¥…Ñ½É…Ñ„¤ì(€É•ÍÁ½¹Í”¹Í¥¹…ÑÕÉ”õÑ½	…Í”ØÑUÉ°¡É•‘•¹Ñ¥…°¹É•ÍÁ½¹Í”¹Í¥¹…ÑÕÉ”¤ì(€É•ÍÁ½¹Í”¹ÕÍ•É!…¹‘±”õÉ•‘•¹Ñ¥…°¹É•ÍÁ½¹Í”¹ÕÍ•É!…¹‘±”(€€€ýÑ½	…Í”ØÑUÉ°¡É•‘•¹Ñ¥…°¹É•ÍÁ½¹Í”¹ÕÍ•É!…¹‘±”¤é¹Õ±°ì(ô(É•ÑÕÉ¸ì¸¸¹‰…Í”±É•ÍÁ½¹Í•ôì)ô)…Íå¹Œ™Õ¹Ñ¥½¸É•™É•Í  ¥ì(ÑÉåì(€½¹ÍÐÉ•Ìõ…Ý…¥Ð™•Ñ  œ½…Á¤½…ÕÑ ½µ™„½ÍÑ…ÑÕÌœ±íÉ•‘•¹Ñ¥…±ÌèÍ…µ”µ½É¥¥¸ô¤ì(€¥˜ …É•Ì¹½¬¥Ñ¡É½ÜÉÉ½È A±•…Í”Í¥¸¥¸Ñ¼½¹Ñ¥¹Õ”œ¤ì(€½¹ÍÐÍÑ…Ñ”õ…Ý…¥ÐÉ•Ì¹©Í½¸ ¤ì(€½¹ÍÐ™¥ÉÍÑQ¥µ”ô…ÍÑ…Ñ”¹•¹É½±±•˜˜…ÍÑ…Ñ”¹Ù•É¥™¥•˜˜…µ…¹…¥¹5•Ñ¡½‘Ìì(€…½Õ¹Ñ%Í‘µ¥¹¥ÍÑÉ…Ñ½ÈõÍÑ…Ñ”¹¥Í‘µ¥¹¥ÍÑÉ…Ñ½ÈôôõÑÉÕ”ì(€‘½Õµ•¹Ð¹ÅÕ•ÉåM•±•Ñ½È ¡•…‘•ÈÍÑÉ½¹œœ¤¹Ñ•áÑ½¹Ñ•¹Ðõ…½Õ¹Ñ%Í‘µ¥¹¥ÍÑÉ…Ñ½È(€€€€ü€Q!%aHƒ
+Ü5%8MUI%Qdœ€è€Q!%aHƒ
+Ü=U9PMUI%Qdœì(€‘½Õµ•¹Ð¹ÅÕ•ÉåM•±•Ñ½È  Äœ¤¹Ñ•áÑ½¹Ñ•¹Ðõ…½Õ¹Ñ%Í‘µ¥¹¥ÍÑÉ…Ñ½È(€€€€ü€AÉ½Ñ•Ðå½ÕÈ…‘µ¥¹¥ÍÑÉ…Ñ½È…½Õ¹Ðœ€è€AÉ½Ñ•Ðå½ÕÈ…½Õ¹Ðœì(€½¹ÍÐµ¥ÍÍ¥¹I•½Ù•Éäô„…ÍÑ…Ñ”¹Ù•É¥™¥•€˜˜€„…ÍÑ…Ñ”¹•¹É½±±•€˜˜€…ÍÑ…Ñ”»[h‘éì¶»§q«^tasRecoveryKey;
   const issuePanel=document.getElementById('mfa-existing-recovery-key');
   issuePanel.hidden=!missingRecovery || !document.getElementById('mfa-backup-key').hidden;
   document.getElementById('mfa-continue').hidden=
@@ -111,29 +53,7 @@ async function refresh(){
     : enrollmentRequestId
       ? 'Awaiting two independent administrator approvals. Request ID: '+enrollmentRequestId
       : 'Request identity-verified setup approval to get started.';
-  document.getElementById('mfa-approval-request').disabled=!!enrollmentRequestId;
-  document.getElementById('mfa-approval-check').hidden=!firstTime || !enrollmentRequestId;
-  document.getElementById('recovery').hidden=!state.canManageRecovery;
-  const manageBanner=document.getElementById('mfa-manage-banner');
-  if(manageBanner)manageBanner.hidden=!(managingMethods && state.verified);
-  document.getElementById('totp-panel').hidden=!state.totpAvailable;
-  document.getElementById('totp-start').hidden=!!state.totpEnrolled;
-  // Only show the next relevant action. The server remains authoritative.
-  const passkeyVerify=document.getElementById('mfa-passkey-verify-panel');
-  const passkeyEnroll=document.getElementById('mfa-passkey-enroll-panel');
-  const passkeyActions=document.getElementById('mfa-passkey-actions');
-  // On the protected method-manager page, an authenticator-verified
-  // superadmin may explicitly step up with an existing passkey for sensitive
-  // approvals without first logging out.
-  if(passkeyVerify)passkeyVerify.hidden=!state.passkeyEnrolled ||
-    (!!state.verified && (!managingMethods || state.verificationMethod==='PASSKEY'));
-  // A user who already has authenticator MFA should not be asked for a new
-  // passkey enrollment grant at every sign-in.
-  if(passkeyEnroll)passkeyEnroll.hidden=managingMethods
-    ? !state.verified
-    : (!!state.verified || !!state.enrolled);
-  if(passkeyActions)passkeyActions.hidden=
-    (!!passkeyVerify?.hidden && !!passkeyEnroll?.hidden);
+  documYªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Õ•¹Ð¹•Ñ±•µ•¹Ñ	å% µ™„µ…ÁÁÉ½Ù…°µÉ•ÅÕ•ÍÐœ¤¹‘¥Í…‰±•ô„…•¹É½±±µ•¹ÑI•ÅÕ•ÍÑ%ì(€‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% µ™„µ…ÁÁÉ½Ù…°µ¡•¬œ¤¹¡¥‘‘•¸ô…™¥ÉÍÑQ¥µ”ñð€…•¹É½±±µ•¹ÑI•ÅÕ•ÍÑ%ì(€‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% É•½Ù•Éäœ¤¹¡¥‘‘•¸ô…ÍÑ…Ñ”¹…¹5…¹…•I•½Ù•Éäì(€½¹ÍÐµ…¹…•	…¹¹•Èõ‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% µ™„µµ…¹…”µ‰…¹¹•Èœ¤ì(€¥˜¡µ…¹…•	…¹¹•È¥µ…¹…•	…¹¹•È¹¡¥‘‘•¸ô„¡µ…¹…¥¹5•Ñ¡½‘Ì€˜˜ÍÑ…Ñ”¹Ù•É¥™¥•¤ì(€‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% Ñ½ÑÀµÁ…¹•°œ¤¹¡¥‘‘•¸ô…ÍÑ…Ñ”¹Ñ½ÑÁÙ…¥±…‰±”ì(€‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% Ñ½ÑÀµÍÑ…ÉÐœ¤¹¡¥‘‘•¸ô„…ÍÑ…Ñ”¹Ñ½ÑÁ¹É½±±•ì(€€¼¼=¹±äÍ¡½ÜÑ¡”¹•áÐÉ•±•Ù…¹Ð…Ñ¥½¸¸Q¡”Í•ÉÙ•ÈÉ•µ…¥¹Ì…ÕÑ¡½É¥Ñ…Ñ¥Ù”¸(€½¹ÍÐÁ…ÍÍ­•åY•É¥™äõ‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% µ™„µÁ…ÍÍ­•äµÙ•É¥™äµÁ…¹•°œ¤ì(€½¹ÍÐÁ…ÍÍ­•å¹É½±°õ‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% µ™„µÁ…ÍÍ­•äµ•¹É½±°µÁ…¹•°œ¤ì(€½¹ÍÐÁ…ÍÍ­•åÑ¥½¹Ìõ‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% µ™„µÁ…ÍÍ­•äµ…Ñ¥½¹Ìœ¤ì(€€¼¼=¸Ñ¡”ÁÉ½Ñ•Ñ•µ•Ñ¡½µµ…¹…•ÈÁ…”°…¸…ÕÑ¡•¹Ñ¥…Ñ½ÈµÙ•É¥™¥•(€€¼¼ÍÕÁ•É…‘µ¥¸µ…ä•áÁ±¥¥Ñ±äÍÑ•ÀÕÀÝ¥Ñ …¸•á¥ÍÑ¥¹œÁ…ÍÍ­•ä™½ÈÍ•¹Í¥Ñ¥Ù”(€€¼¼…ÁÁÉ½Ù…±ÌÝ¥Ñ¡½ÕÐ™¥ÉÍÐ±½¥¹œ½ÕÐ¸(€¥˜¡Á…ÍÍ­•åY•É¥™ä¥Á…ÍÍ­•åY•É¥™ä¹¡¥‘‘•¸ô…ÍÑ…Ñ”¹Á…ÍÍ­•å¹É½±±•ñð(€€€€ „…ÍÑ…Ñ”¹Ù•É¥™¥•€˜˜€ …µ…¹…¥¹5•Ñ¡½‘ÌñðÍÑ…Ñ”¹Ù•É¥™¥…Ñ¥½¹5•Ñ¡½ôôôAMM-dœ¤¤ì(€€¼¼ÕÍ•ÈÝ¡¼…±É•…‘ä¡…Ì…ÕÑ¡•¹Ñ¥…Ñ½È5Í¡½Õ±¹½Ð‰”…Í­•™½È„¹•Ü(€€¼¼Á…ÍÍ­•ä•¹É½±±µ•¹ÐÉ…¹Ð…Ð•Ù•ÉäÍ¥¸µ¥¸¸(€¥˜¡Á…ÍÍ­•å¹É½±°¥Á…ÍÍ­•å¹É½±°¹¡¥‘‘•¸õµ…¹…¥¹5•Ñ¡½‘Ì(€€€€ü€…ÍÑ…Ñ”¹Ù•É¥™¥•(€€€€è€ „…ÍÑ…Ñ”¹Ù•É¥™¥•ñð€„…ÍÑ…Ñ”¹•¹É½±±•¤ì(€¥˜¡Á…ÍÍ­•åÑ¥½¹Ì¥Á…ÍÍ­•åÑ¥½¹Ì¹¡¥‘‘•¸ô(€€€€ „…Á…ÍÍ­•åY•É¥™äü¹¡¥‘‘•¸€˜˜€„…Á…ÍÍ­•å¹É½±°ü¹¡¥‘‘—[h‘éì¶»§q«^v);
   const passkeyGrantLabel=document.querySelector?.('label[for="grant"]');
   grantEl.hidden=true;
   if(passkeyGrantLabel)passkeyGrantLabel.hidden=true;
@@ -152,27 +72,7 @@ async function refresh(){
       ? 'Add a second method: scan your one-time QR code and verify a six-digit code. Your verified session replaces the first-time enrollment grant.'
       : 'First time only: request your personal QR code, open Google Authenticator or Microsoft Authenticator, tap Add account and scan the QR. Enter one code to activate the saved account.';
   const totpGrantLabel=document.querySelector?.('label[for="totp-grant"]');
-  if(totpGrantLabel)totpGrantLabel.hidden=true;
-  document.getElementById('totp-panel').hidden=!state.totpAvailable || (!!state.verified && (!managingMethods || !!state.totpEnrolled));
-  document.getElementById('totp-state').textContent=state.totpEnrolled
-    ? 'Already set up. Enter the current six-digit code from your app. No setup key or QR scan is needed again.'
-    : state.verified && managingMethods
-      ? 'Your session is verified. Add an authenticator using a QR code without another enrollment grant.'
-    : state.verified
-      ? 'Your account is verified. No new setup is needed to continue.'
-      : 'After your setup request is approved, choose Generate QR code and scan it using Google or Microsoft Authenticator. The Fixer handles authorization on the server.';
-  // The setup code was already consumed by confirmation. Never prompt the
-  // user to verify it again on the same freshly elevated session.
-  document.getElementById('totp-verify-panel').hidden=!state.totpEnrolled || !!state.verified;
-  const success=document.getElementById('mfa-success');
-  success.hidden=!state.verified;
-  if(state.verified){
-    document.getElementById('mfa-success-title').textContent=
-      state.verificationMethod==='TOTP'?'Authenticator app connected and verified.':'Passkey verified successfully.';
-    const keyStillVisible=!document.getElementById('mfa-backup-key').hidden;
-    document.getElementById('mfa-success-note').textContent=
-      keyStillVisible
-        ? 'Save and acknowledge the recovery key shown below before continuing. You cannot view it again.'
+  if(totpGrantLabel)totpGrantLabel.hidden=truYªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Õ”ì(€‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% Ñ½ÑÀµÁ…¹•°œ¤¹¡¥‘‘•¸ô…ÍÑ…Ñ”¹Ñ½ÑÁÙ…¥±…‰±”ñð€ „…ÍÑ…Ñ”¹Ù•É¥™¥•€˜˜€ …µ…¹…¥¹5•Ñ¡½‘Ìñð€„…ÍÑ…Ñ”¹Ñ½ÑÁ¹É½±±•¤¤ì(€‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% Ñ½ÑÀµÍÑ…Ñ”œ¤¹Ñ•áÑ½¹Ñ•¹ÐõÍÑ…Ñ”¹Ñ½ÑÁ¹É½±±•(€€€€ü€±É•…‘äÍ•ÐÕÀ¸¹Ñ•ÈÑ¡”ÕÉÉ•¹ÐÍ¥àµ‘¥¥Ð½‘”™É½´å½ÕÈ…ÁÀ¸9¼Í•ÑÕÀ­•ä½ÈEHÍ…¸¥Ì¹••‘•……¥¸¸œ(€€€€èÍÑ…Ñ”¹Ù•É¥™¥•€˜˜µ…¹…¥¹5•Ñ¡½‘Ì(€€€€€€ü€e½ÕÈÍ•ÍÍ¥½¸¥ÌÙ•É¥™¥•¸‘…¸…ÕÑ¡•¹Ñ¥…Ñ½ÈÕÍ¥¹œ„EH½‘”Ý¥Ñ¡½ÕÐ…¹½Ñ¡•È•¹É½±±µ•¹ÐÉ…¹Ð¸œ(€€€€èÍÑ…Ñ”¹Ù•É¥™¥•(€€€€€€ü€e½ÕÈ…½Õ¹Ð¥ÌÙ•É¥™¥•¸9¼¹•ÜÍ•ÑÕÀ¥Ì¹••‘•Ñ¼½¹Ñ¥¹Õ”¸œ(€€€€€€è€™Ñ•Èå½ÕÈÍ•ÑÕÀÉ•ÅÕ•ÍÐ¥Ì…ÁÁÉ½Ù•°¡½½Í”•¹•É…Ñ”EH½‘”…¹Í…¸¥ÐÕÍ¥¹œ½½±”½È5¥É½Í½™ÐÕÑ¡•¹Ñ¥…Ñ½È¸Q¡”¥á•È¡…¹‘±•Ì…ÕÑ¡½É¥é…Ñ¥½¸½¸Ñ¡”Í•ÉÙ•È¸œì(€€¼¼Q¡”Í•ÑÕÀ½‘”Ý…Ì…±É•…‘ä½¹ÍÕµ•‰ä½¹™¥Éµ…Ñ¥½¸¸9•Ù•ÈÁÉ½µÁÐÑ¡”(€€¼¼ÕÍ•ÈÑ¼Ù•É¥™ä¥Ð……¥¸½¸Ñ¡”Í…µ”™É•Í¡±ä•±•Ù…Ñ•Í•ÍÍ¥½¸¸(€‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% Ñ½ÑÀµÙ•É¥™äµÁ…¹•°œ¤¹¡¥‘‘•¸ô…ÍÑ…Ñ”¹Ñ½ÑÁ¹É½±±•ñð€„…ÍÑ…Ñ”¹Ù•É¥™¥•ì(€½¹ÍÐÍÕ•ÍÌõ‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% µ™„µÍÕ•ÍÌœ¤ì(€ÍÕ•ÍÌ¹¡¥‘‘•¸ô…ÍÑ…Ñ”¹Ù•É¥™¥•ì(€¥˜¡ÍÑ…Ñ”¹Ù•É¥™¥•¥ì(€€€‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% µ™„µÍÕ•ÍÌµÑ¥Ñ±”œ¤¹Ñ•áÑ½¹Ñ•¹Ðô(€€€€€ÍÑ…Ñ”¹Ù•É¥™¥…Ñ¥½¹5•Ñ¡½ôôôQ=Q@œüÕÑ¡•¹Ñ¥…Ñ½È…ÁÀ½¹¹•Ñ•…¹Ù•É¥™¥•¸œèA…ÍÍ­•äÙ•É¥™¥•ÍÕ•ÍÍ™Õ±±ä¸œì(€€€½¹ÍÐ­•åMÑ¥±±Y¥Í¥‰±”ô…‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% µ™„µ‰…­ÕÀµ­•äœ¤¹¡¥‘‘•¸ì(€€€‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% µ™„µÍÕ•ÍÌµ¹½Ñ”œ¤¹Ñ•áÑ½¹Ñ•¹Ðô(€€€€€­•åMÑ¥±±Y¥Í¥‰±”(€€€€€€€€ü€M…Ù”…¹…­¹½Ý±•‘”Ñ¡”É•½Ù•Éä­•äÍ¡½Ý¸‰•±½Ü‰•™½É”½¹Ñ¥»[h‘éì¶»§q«^uing. You cannot view it again.'
         : missingRecovery
           ? 'MFA is verified. Generate and securely save your one-time recovery key before opening the dashboard.'
           : 'Your account MFA is active. On your next sign-in, use an enrolled passkey or a fresh authenticator code.';
@@ -196,31 +96,7 @@ async function run(kind){
  const button=kind==='enroll'?enrollBtn:verifyBtn;
  button.disabled=true;verifyBtn.disabled=true;enrollBtn.disabled=true;
  try{
-  if(!browserSupported())throw Error('This browser does not support the required WebAuthn passkey APIs.');
-  if(kind==='enroll'){
-    const grantCode=grantEl.value.trim();
-    const password=document.getElementById('mfa-enrollment-password').value;
-    if(!accountIsAdministrator && !managingMethods && !password)
-      throw Error('Enter your current password before enrolling MFA.');
-    if(accountIsAdministrator && !grantCode && !enrollmentApproved && !managingMethods)
-      throw Error('Request security enrollment approval before registering a passkey.');
-    const proof=accountIsAdministrator?{grantCode}:{password};
-    show('Waiting for passkey registration on your deviceâ€¦');
-    const options=await api('register/options',proof);
-    const publicKey=creationOptions(options);
-    const credential=await navigator.credentials.create({publicKey});
-    if(!credential)throw Error('Enrollment cancelled');
-    const result=await api('register/verify',{challenge:options.challenge,response:serialize(credential),...proof});
-    document.getElementById('mfa-enrollment-password').value='';
-    displayRecoveryKey(result.recoveryKey);
-    grantEl.value='';show('Passkey enrolled and verified. Your account is protected.');
-  }else{
-    show('Waiting for passkey confirmationâ€¦');
-    const options=await api('authenticate/options');
-    const publicKey=requestOptions(options);
-    const credential=await navigator.credentials.get({publicKey});
-    if(!credential)throw Error('Verification cancelled');
-    await api('authenticate/verify',{challenge:options.challenge,response:serialize(credential)});
+  if(!browserSupported())throw Error('This browser does not support the required YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Õ]•‰ÕÑ¡¸Á…ÍÍ­•äA%Ì¸œ¤ì(€¥˜¡­¥¹ôôô•¹É½±°œ¥ì(€€€½¹ÍÐÉ…¹Ñ½‘”õÉ…¹Ñ°¹Ù…±Õ”¹ÑÉ¥´ ¤ì(€€€½¹ÍÐÁ…ÍÍÝ½Éõ‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% µ™„µ•¹É½±±µ•¹ÐµÁ…ÍÍÝ½Éœ¤¹Ù…±Õ”ì(€€€¥˜ ……½Õ¹Ñ%Í‘µ¥¹¥ÍÑÉ…Ñ½È€˜˜€…µ…¹…¥¹5•Ñ¡½‘Ì€˜˜€…Á…ÍÍÝ½É¤(€€€€€Ñ¡É½ÜÉÉ½È ¹Ñ•Èå½ÕÈÕÉÉ•¹ÐÁ…ÍÍÝ½É‰•™½É”•¹É½±±¥¹œ5¸œ¤ì(€€€¥˜¡…½Õ¹Ñ%Í‘µ¥¹¥ÍÑÉ…Ñ½È€˜˜€…É…¹Ñ½‘”€˜˜€…•¹É½±±µ•¹ÑÁÁÉ½Ù•€˜˜€…µ…¹…¥¹5•Ñ¡½‘Ì¤(€€€€€Ñ¡É½ÜÉÉ½È I•ÅÕ•ÍÐÍ•ÕÉ¥Ñä•¹É½±±µ•¹Ð…ÁÁÉ½Ù…°‰•™½É”É•¥ÍÑ•É¥¹œ„Á…ÍÍ­•ä¸œ¤ì(€€€½¹ÍÐÁÉ½½˜õ…½Õ¹Ñ%Í‘µ¥¹¥ÍÑÉ…Ñ½ÈýíÉ…¹Ñ½‘•ôéíÁ…ÍÍÝ½É‘ôì(€€€Í¡½Ü ]…¥Ñ¥¹œ™½ÈÁ…ÍÍ­•äÉ•¥ÍÑÉ…Ñ¥½¸½¸å½ÕÈ‘•Ù¥—Š˜œ¤ì(€€€½¹ÍÐ½ÁÑ¥½¹Ìõ…Ý…¥Ð…Á¤ É•¥ÍÑ•È½½ÁÑ¥½¹Ìœ±ÁÉ½½˜¤ì(€€€½¹ÍÐÁÕ‰±¥-•äõÉ•…Ñ¥½¹=ÁÑ¥½¹Ì¡½ÁÑ¥½¹Ì¤ì(€€€½¹ÍÐÉ•‘•¹Ñ¥…°õ…Ý…¥Ð¹…Ù¥…Ñ½È¹É•‘•¹Ñ¥…±Ì¹É•…Ñ”¡íÁÕ‰±¥-•åô¤ì(€€€¥˜ …É•‘•¹Ñ¥…°¥Ñ¡É½ÜÉÉ½È ¹É½±±µ•¹Ð…¹•±±•œ¤ì(€€€½¹ÍÐÉ•ÍÕ±Ðõ…Ý…¥Ð…Á¤ É•¥ÍÑ•È½Ù•É¥™äœ±í¡…±±•¹”é½ÁÑ¥½¹Ì¹¡…±±•¹”±É•ÍÁ½¹Í”éÍ•É¥…±¥é”¡É•‘•¹Ñ¥…°¤°¸¸¹ÁÉ½½™ô¤ì(€€€‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% µ™„µ•¹É½±±µ•¹ÐµÁ…ÍÍÝ½Éœ¤¹Ù…±Õ”ôœœì(€€€‘¥ÍÁ±…åI•½Ù•Éå-•ä¡É•ÍÕ±Ð¹É•½Ù•Éå-•ä¤ì(€€€É…¹Ñ°¹Ù…±Õ”ôœœíÍ¡½Ü A…ÍÍ­•ä•¹É½±±•…¹Ù•É¥™¥•¸e½ÕÈ…½Õ¹Ð¥ÌÁÉ½Ñ•Ñ•¸œ¤ì(€õ•±Í•ì(€€€Í¡½Ü ]…¥Ñ¥¹œ™½ÈÁ…ÍÍ­•ä½¹™¥Éµ…Ñ¥½»Š˜œ¤ì(€€€½¹ÍÐ½ÁÑ¥½¹Ìõ…Ý…¥Ð…Á¤ …ÕÑ¡•¹Ñ¥…Ñ”½½ÁÑ¥½¹Ìœ¤ì(€€€½¹ÍÐÁÕ‰±¥-•äõÉ•ÅÕ•ÍÑ=ÁÑ¥½¹Ì¡½ÁÑ¥½¹Ì¤ì(€€€½¹ÍÐÉ•‘•¹Ñ¥…°õ…Ý…¥Ð¹…Ù¥…Ñ½È¹É•‘•¹Ñ¥…±Ì¹•Ð¡íÁÕ‰±¥-•åô¤ì(€€€¥˜ …É•‘•¹Ñ¥…°¥Ñ¡É½ÜÉÉ½È Y•É¥™¥…Ñ¥½¸…¹•±±•œ¤ì(€€€…Ý…¥Ð…Á¤ …ÕÑ¡•¹Ñ¥…Ñ”½Ù•É¥™äœ±í¡…±±•¹”é½ÁÑ¥½¹Ì¹¡…±±•¹”±É•ÍÃ[h‘éì¶»§q«^wnse:serialize(credential)});
     show('Passkey verified. You can continue.');
   }
  }catch(error){show(error?.message||'Passkey verification failed.');}
@@ -246,33 +122,7 @@ totpStart.addEventListener('click',()=>withTotpBusy(totpStart,async()=>{
  if(!accountIsAdministrator && !managingMethods && !password)throw Error('Enter your current password before enrolling MFA.');
  if(accountIsAdministrator && !grantCode && !managingMethods && !enrollmentApproved)throw Error('Request security enrollment approval before generating your QR code.');
  show('Generating your private authenticator QR codeâ€¦');
- const data=await api('totp/setup',accountIsAdministrator?{grantCode}:{password});
- if(typeof data.qrDataUri!=='string'||!data.qrDataUri.startsWith('data:image/svg+xml;base64,'))
-   throw Error('The QR code could not be generated');
- document.getElementById('totp-qr').src=data.qrDataUri;
- document.getElementById('totp-manual-key').textContent=data.manualKey||'';
- document.getElementById('totp-setup').hidden=false;
- show('Open Google or Microsoft Authenticator, add an account, scan this QR, and enter the six-digit code below.');
-}));
-totpConfirm.addEventListener('click',()=>withTotpBusy(totpConfirm,async()=>{
- const code=document.getElementById('totp-confirm-code').value.trim();
- if(!/^[0-9]{6}$/.test(code))throw Error('Enter the six-digit code shown in your authenticator app.');
- const password=document.getElementById('mfa-enrollment-password').value;
- const proof=accountIsAdministrator
-   ?{grantCode:document.getElementById('totp-grant').value.trim()}
-   :{password};
- const result=await api('totp/confirm',{...proof,code});
- displayRecoveryKey(result.recoveryKey);
- document.getElementById('mfa-enrollment-password').value='';
- document.getElementById('totp-confirm-code').value='';
- document.getElementById('totp-manual-key').textContent='';
- document.getElementById('totp-qr').removeAttribute('src');
- document.getElementById('totp-setup').hidden=true;
- document.getElementById('totp-grant').value='';
- show('Authenticator app enrolled and verified. Your account is protected.');
- await refresh();
-}));
-totpVerify.addEventListener('click',()=>withTotpBusy(totpVerify,async()=>{
+ const data=await api('totp/setuYªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬ÕÀœ±…½Õ¹Ñ%Í‘µ¥¹¥ÍÑÉ…Ñ½ÈýíÉ…¹Ñ½‘•ôéíÁ…ÍÍÝ½É‘ô¤ì(¥˜¡ÑåÁ•½˜‘…Ñ„¹ÅÉ…Ñ…UÉ¤„ôôÍÑÉ¥¹œñð…‘…Ñ„¹ÅÉ…Ñ…UÉ¤¹ÍÑ…ÉÑÍ]¥Ñ  ‘…Ñ„é¥µ…”½ÍÙœ­áµ°í‰…Í”ØÐ°œ¤¤(€€Ñ¡É½ÜÉÉ½È Q¡”EH½‘”½Õ±¹½Ð‰”•¹•É…Ñ•œ¤ì(‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% Ñ½ÑÀµÅÈœ¤¹ÍÉŒõ‘…Ñ„¹ÅÉ…Ñ…UÉ¤ì(‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% Ñ½ÑÀµµ…¹Õ…°µ­•äœ¤¹Ñ•áÑ½¹Ñ•¹Ðõ‘…Ñ„¹µ…¹Õ…±-•åñðœœì(‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% Ñ½ÑÀµÍ•ÑÕÀœ¤¹¡¥‘‘•¸õ™…±Í”ì(Í¡½Ü =Á•¸½½±”½È5¥É½Í½™ÐÕÑ¡•¹Ñ¥…Ñ½È°…‘…¸…½Õ¹Ð°Í…¸Ñ¡¥ÌEH°…¹•¹Ñ•ÈÑ¡”Í¥àµ‘¥¥Ð½‘”‰•±½Ü¸œ¤ì)ô¤¤ì)Ñ½ÑÁ½¹™¥É´¹…‘‘Ù•¹Ñ1¥ÍÑ•¹•È ±¥¬œ° ¤ôùÝ¥Ñ¡Q½ÑÁ	ÕÍä¡Ñ½ÑÁ½¹™¥É´±…Íå¹Œ ¤ôùì(½¹ÍÐ½‘”õ‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% Ñ½ÑÀµ½¹™¥É´µ½‘”œ¤¹Ù…±Õ”¹ÑÉ¥´ ¤ì(¥˜ „½ylÀ´åuìÙô¼¹Ñ•ÍÐ¡½‘”¤¥Ñ¡É½ÜÉÉ½È ¹Ñ•ÈÑ¡”Í¥àµ‘¥¥Ð½‘”Í¡½Ý¸¥¸å½ÕÈ…ÕÑ¡•¹Ñ¥…Ñ½È…ÁÀ¸œ¤ì(½¹ÍÐÁ…ÍÍÝ½Éõ‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% µ™„µ•¹É½±±µ•¹ÐµÁ…ÍÍÝ½Éœ¤¹Ù…±Õ”ì(½¹ÍÐÁÉ½½˜õ…½Õ¹Ñ%Í‘µ¥¹¥ÍÑÉ…Ñ½È(€€€ýíÉ…¹Ñ½‘”é‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% Ñ½ÑÀµÉ…¹Ðœ¤¹Ù…±Õ”¹ÑÉ¥´ ¥ô(€€€éíÁ…ÍÍÝ½É‘ôì(½¹ÍÐÉ•ÍÕ±Ðõ…Ý…¥Ð…Á¤ Ñ½ÑÀ½½¹™¥É´œ±ì¸¸¹ÁÉ½½˜±½‘•ô¤ì(‘¥ÍÁ±…åI•½Ù•Éå-•ä¡É•ÍÕ±Ð¹É•½Ù•Éå-•ä¤ì(‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% µ™„µ•¹É½±±µ•¹ÐµÁ…ÍÍÝ½Éœ¤¹Ù…±Õ”ôœœì(‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% Ñ½ÑÀµ½¹™¥É´µ½‘”œ¤¹Ù…±Õ”ôœœì(‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% Ñ½ÑÀµµ…¹Õ…°µ­•äœ¤¹Ñ•áÑ½¹Ñ•¹Ðôœœì(‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% Ñ½ÑÀµÅÈœ¤¹É•µ½Ù•ÑÑÉ¥‰ÕÑ” ÍÉŒœ¤ì(‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% Ñ½ÑÀµÍ•ÑÕÀœ¤¹¡¥‘‘•¸õÑÉÕ”ì(‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% Ñ½ÑÀµÉ…¹Ðœ¤¹Ù…±Õ”ôœœì(Í¡½Ü ÕÑ¡•¹Ñ¥…Ñ½È…ÁÀ•¹É½±±•…¹Ù•É¥™¥•¸e½ÕÈ…½Õ¹Ð¥ÌÁÉ½Ñ•Ñ•¸œ¤ì(…Ý…¥ÐÉ•™É•Í  ¤ì)ô¤¤ì)Ñ½ÑÁY•É¥™ä»[h‘éì¶»§q«^uddEventListener('click',()=>withTotpBusy(totpVerify,async()=>{
  const field=document.getElementById('totp-code');
  const code=field.value.trim();
  if(!/^[0-9]{6}$/.test(code))throw Error('Enter the current six-digit authenticator code.');
@@ -302,32 +152,7 @@ const recoveryApproveButton=document.getElementById('recovery-approve');
 recoveryRequestButton.addEventListener('click',()=>withRecoveryBusy(recoveryRequestButton,async output=>{
  const targetUserId=document.getElementById('recovery-target').value.trim();
  if(!targetUserId || targetUserId.length>128)throw Error('Enter the affected administrator user ID');
- const result=await recoveryApi('request',{targetUserId});
- document.getElementById('recovery-request-id').value=result.requestId;
- output.textContent='Recovery request created.\nRequest ID: '+result.requestId+
-  '\nExpires: '+result.expiresAt+
-  '\nA different, passkey-verified superadministrator must independently approve it.';
-}));
-recoveryApproveButton.addEventListener('click',()=>withRecoveryBusy(recoveryApproveButton,async output=>{
- const id=document.getElementById('recovery-request-id').value.trim();
- if(!id || id.length>128)throw Error('Enter the pending recovery request ID');
- const result=await recoveryApi(encodeURIComponent(id)+'/approve',{});
- output.textContent='Recovery approved; existing credentials and sessions revoked.\n'+
-  'One-time replacement grant (shown only in this response):\n'+result.grantCode+
-  '\nExpires: '+result.expiresAt+
-  '\nDeliver privately to the identity-verified administrator. Do not paste into tickets or chat.';
-}));
-
-document.getElementById('mfa-self-recovery-submit').addEventListener('click',async event=>{
- const button=event.currentTarget;
- const password=document.getElementById('mfa-recovery-password');
- const recoveryKey=document.getElementById('mfa-recovery-key');
- const output=document.getElementById('mfa-self-recovery-status');
- if(!password.value || !/^[A-Za-z0-9_-]{43}$/.test(recoveryKey.value)){
-  output.textContent='Enter your current password and the 43-character recovery key.';
-  return;
- }
- button.disabled=true;output.textContent='Verifying your recovery detailsâ€¦';
+ const rYªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Õ•ÍÕ±Ðõ…Ý…¥ÐÉ•½Ù•ÉåÁ¤ É•ÅÕ•ÍÐœ±íÑ…É•ÑUÍ•É%‘ô¤ì(‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% É•½Ù•ÉäµÉ•ÅÕ•ÍÐµ¥œ¤¹Ù…±Õ”õÉ•ÍÕ±Ð¹É•ÅÕ•ÍÑ%ì(½ÕÑÁÕÐ¹Ñ•áÑ½¹Ñ•¹ÐôI•½Ù•ÉäÉ•ÅÕ•ÍÐÉ•…Ñ•¹q¹I•ÅÕ•ÍÐ%è€œ­É•ÍÕ±Ð¹É•ÅÕ•ÍÑ%¬(€€q¹áÁ¥É•Ìè€œ­É•ÍÕ±Ð¹•áÁ¥É•ÍÐ¬(€€q¹‘¥™™•É•¹Ð°Á…ÍÍ­•äµÙ•É¥™¥•ÍÕÁ•É…‘µ¥¹¥ÍÑÉ…Ñ½ÈµÕÍÐ¥¹‘•Á•¹‘•¹Ñ±ä…ÁÁÉ½Ù”¥Ð¸œì)ô¤¤ì)É•½Ù•ÉåÁÁÉ½Ù•	ÕÑÑ½¸¹…‘‘Ù•¹Ñ1¥ÍÑ•¹•È ±¥¬œ° ¤ôùÝ¥Ñ¡I•½Ù•Éå	ÕÍä¡É•½Ù•ÉåÁÁÉ½Ù•	ÕÑÑ½¸±…Íå¹Œ½ÕÑÁÕÐôùì(½¹ÍÐ¥õ‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% É•½Ù•ÉäµÉ•ÅÕ•ÍÐµ¥œ¤¹Ù…±Õ”¹ÑÉ¥´ ¤ì(¥˜ …¥ñð¥¹±•¹Ñ øÄÈà¥Ñ¡É½ÜÉÉ½È ¹Ñ•ÈÑ¡”Á•¹‘¥¹œÉ•½Ù•ÉäÉ•ÅÕ•ÍÐ%œ¤ì(½¹ÍÐÉ•ÍÕ±Ðõ…Ý…¥ÐÉ•½Ù•ÉåÁ¤¡•¹½‘•UI%½µÁ½¹•¹Ð¡¥¤¬œ½…ÁÁÉ½Ù”œ±íô¤ì(½ÕÑÁÕÐ¹Ñ•áÑ½¹Ñ•¹ÐôI•½Ù•Éä…ÁÁÉ½Ù•ì•á¥ÍÑ¥¹œÉ•‘•¹Ñ¥…±Ì…¹Í•ÍÍ¥½¹ÌÉ•Ù½­•¹q¸œ¬(€€=¹”µÑ¥µ”É•Á±…•µ•¹ÐÉ…¹Ð€¡Í¡½Ý¸½¹±ä¥¸Ñ¡¥ÌÉ•ÍÁ½¹Í”¤éq¸œ­É•ÍÕ±Ð¹É…¹Ñ½‘”¬(€€q¹áÁ¥É•Ìè€œ­É•ÍÕ±Ð¹•áÁ¥É•ÍÐ¬(€€q¹•±¥Ù•ÈÁÉ¥Ù…Ñ•±äÑ¼Ñ¡”¥‘•¹Ñ¥ÑäµÙ•É¥™¥•…‘µ¥¹¥ÍÑÉ…Ñ½È¸¼¹½ÐÁ…ÍÑ”¥¹Ñ¼Ñ¥­•ÑÌ½È¡…Ð¸œì)ô¤¤ì()‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% µ™„µÍ•±˜µÉ•½Ù•ÉäµÍÕ‰µ¥Ðœ¤¹…‘‘Ù•¹Ñ1¥ÍÑ•¹•È ±¥¬œ±…Íå¹Œ•Ù•¹Ðôùì(½¹ÍÐ‰ÕÑÑ½¸õ•Ù•¹Ð¹ÕÉÉ•¹ÑQ…É•Ðì(½¹ÍÐÁ…ÍÍÝ½Éõ‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% µ™„µÉ•½Ù•ÉäµÁ…ÍÍÝ½Éœ¤ì(½¹ÍÐÉ•½Ù•Éå-•äõ‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% µ™„µÉ•½Ù•Éäµ­•äœ¤ì(½¹ÍÐ½ÕÑÁÕÐõ‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% µ™„µÍ•±˜µÉ•½Ù•ÉäµÍÑ…ÑÕÌœ¤ì(¥˜ …Á…ÍÍÝ½É¹Ù…±Õ”ñð€„½ymµi„µèÀ´å|µuìÐÍô¼¹Ñ•ÍÐ¡É•½Ù•Éå-•ä¹Ù…±Õ”¤¥ì(€½ÕÑÁÕÐ¹Ñ•áÑ½¹Ñ•¹Ðô¹Ñ•Èå½ÕÈÕÉÉ•¹ÐÁ…ÍÍÝ½É…¹Ñ¡”€ÐÌµ¡…É…Ñ•ÈÉ•½Ù•Éä­•ä¸œì(€É•ÑÕÉ¸ì(ô(‰ÕÑÑ½¸¹‘¥Í…‰±•õÑÉÕ”í½ÕÑÁÕÐ¹Ñ•áÑ½¹Ñ•»[h‘éì¶»§q«^t='Verifying your recovery detailsâ€¦';
  try{
   await api('recovery/self',{password:password.value,recoveryKey:recoveryKey.value});
   password.value='';recoveryKey.value='';
@@ -356,33 +181,7 @@ approvalRequestButton.addEventListener('click',async()=>{
 document.getElementById('mfa-legacy-apply').addEventListener('click',async()=>{
  const value=document.getElementById('mfa-legacy-grant').value.trim();
  if(!/^[A-Za-z0-9_-]{43}$/.test(value)){show('A valid, approved recovery or bootstrap grant is required.');return;}
- legacyGrant=value;
- grantEl.value=value;
- document.getElementById('totp-grant').value=value;
- document.getElementById('mfa-legacy-grant').value='';
- show('Approved bootstrap or recovery grant applied for this enrollment only.');
- await refresh();
-});
-const approveEnrollment=document.getElementById('mfa-approval-approve');
-approveEnrollment.addEventListener('click',async()=>{
- const target=document.getElementById('mfa-approval-id').value.trim();
- const checked=document.getElementById('mfa-approval-confirm-identity').checked;
- const resultEl=document.getElementById('mfa-approval-admin-status');
- if(!checked){resultEl.textContent='Confirm identity through a separate trusted channel first.';return;}
- if(!target || target.length>128){resultEl.textContent='Enter the enrollment request ID.';return;}
- approveEnrollment.disabled=true;
- try{
-  const response=await fetch('/api/admin/mfa/enrollment/'+encodeURIComponent(target)+'/approve',{
-   method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},
-   body:JSON.stringify({identityConfirmed:true})
-  });
-  const result=await response.json().catch(()=>({}));
-  if(!response.ok)throw Error(result.error||'Approval rejected');
-  resultEl.textContent=result.approved
-    ? 'Second independent approval recorded. The requester may now enroll MFA.'
-    : 'First approval recorded. Another verified superadministrator must approve.';
-  document.getElementById('mfa-approval-confirm-identity').checked=false;
- }catch(error){resultEl.textContent=error?.message||'Approval failed';}
+ legacyGrant=YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬ÕÙ…±Õ”ì(É…¹Ñ°¹Ù…±Õ”õÙ…±Õ”ì(‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% Ñ½ÑÀµÉ…¹Ðœ¤¹Ù…±Õ”õÙ…±Õ”ì(‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% µ™„µ±•…äµÉ…¹Ðœ¤¹Ù…±Õ”ôœœì(Í¡½Ü ÁÁÉ½Ù•‰½½ÑÍÑÉ…À½ÈÉ•½Ù•ÉäÉ…¹Ð…ÁÁ±¥•™½ÈÑ¡¥Ì•¹É½±±µ•¹Ð½¹±ä¸œ¤ì(…Ý…¥ÐÉ•™É•Í  ¤ì)ô¤ì)½¹ÍÐ…ÁÁÉ½Ù•¹É½±±µ•¹Ðõ‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% µ™„µ…ÁÁÉ½Ù…°µ…ÁÁÉ½Ù”œ¤ì)…ÁÁÉ½Ù•¹É½±±µ•¹Ð¹…‘‘Ù•¹Ñ1¥ÍÑ•¹•È ±¥¬œ±…Íå¹Œ ¤ôùì(½¹ÍÐÑ…É•Ðõ‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% µ™„µ…ÁÁÉ½Ù…°µ¥œ¤¹Ù…±Õ”¹ÑÉ¥´ ¤ì(½¹ÍÐ¡•­•õ‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% µ™„µ…ÁÁÉ½Ù…°µ½¹™¥É´µ¥‘•¹Ñ¥Ñäœ¤¹¡•­•ì(½¹ÍÐÉ•ÍÕ±Ñ°õ‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% µ™„µ…ÁÁÉ½Ù…°µ…‘µ¥¸µÍÑ…ÑÕÌœ¤ì(¥˜ …¡•­•¥íÉ•ÍÕ±Ñ°¹Ñ•áÑ½¹Ñ•¹Ðô½¹™¥É´¥‘•¹Ñ¥ÑäÑ¡É½Õ „Í•Á…É…Ñ”ÑÉÕÍÑ•¡…¹¹•°™¥ÉÍÐ¸œíÉ•ÑÕÉ¸íô(¥˜ …Ñ…É•ÐñðÑ…É•Ð¹±•¹Ñ øÄÈà¥íÉ•ÍÕ±Ñ°¹Ñ•áÑ½¹Ñ•¹Ðô¹Ñ•ÈÑ¡”•¹É½±±µ•¹ÐÉ•ÅÕ•ÍÐ%¸œíÉ•ÑÕÉ¸íô(…ÁÁÉ½Ù•¹É½±±µ•¹Ð¹‘¥Í…‰±•õÑÉÕ”ì(ÑÉåì(€½¹ÍÐÉ•ÍÁ½¹Í”õ…Ý…¥Ð™•Ñ  œ½…Á¤½…‘µ¥¸½µ™„½•¹É½±±µ•¹Ð¼œ­•¹½‘•UI%½µÁ½¹•¹Ð¡Ñ…É•Ð¤¬œ½…ÁÁÉ½Ù”œ±ì(€€µ•Ñ¡½èA=MPœ±É•‘•¹Ñ¥…±ÌèÍ…µ”µ½É¥¥¸œ±¡•…‘•ÉÌéì½¹Ñ•¹ÐµQåÁ”œè…ÁÁ±¥…Ñ¥½¸½©Í½¸ô°(€€‰½‘äé)M=8¹ÍÑÉ¥¹¥™ä¡í¥‘•¹Ñ¥Ñå½¹™¥Éµ•éÑÉÕ•ô¤(€ô¤ì(€½¹ÍÐÉ•ÍÕ±Ðõ…Ý…¥ÐÉ•ÍÁ½¹Í”¹©Í½¸ ¤¹…Ñ   ¤ôø¡íô¤¤ì(€¥˜ …É•ÍÁ½¹Í”¹½¬¥Ñ¡É½ÜÉÉ½È¡É•ÍÕ±Ð¹•ÉÉ½ÉñðÁÁÉ½Ù…°É•©•Ñ•œ¤ì(€É•ÍÕ±Ñ°¹Ñ•áÑ½¹Ñ•¹ÐõÉ•ÍÕ±Ð¹…ÁÁÉ½Ù•(€€€€ü€M•½¹¥¹‘•Á•¹‘•¹Ð…ÁÁÉ½Ù…°É•½É‘•¸Q¡”É•ÅÕ•ÍÑ•Èµ…ä¹½Ü•¹É½±°5¸œ(€€€€è€¥ÉÍÐ…ÁÁÉ½Ù…°É•½É‘•¸¹½Ñ¡•ÈÙ•É¥™¥•ÍÕÁ•É…‘µ¥¹¥ÍÑÉ…Ñ½ÈµÕÍÐ…ÁÁÉ½Ù”¸œì(€‘½Õµ•¹Ð¹•Ñ±•µ•¹Ñ	å% µ™„µ…ÁÁÉ½Ù…°µ½¹™¥É´µ¥‘•¹Ñ¥Ñäœ¤¹¡•­•õ™…±Í”ì(õ…Ñ ¡•ÉÉ½È¥íÉ•ÍÕ±Ñ°¹Ñ•áÑ¿[h‘éì¶»§q«^vtent=error?.message||'Approval failed';}
  finally{approveEnrollment.disabled=false;}
 });
 

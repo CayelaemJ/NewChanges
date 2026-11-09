@@ -1,27 +1,4 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
-import {isMfaStagingAccessValid} from '../../src/services/mfaStagingGate.js';
-import {isApprovedManagedStagingUrl,approvedStagingDatabaseEnvironment,EPHEMERAL_STAGING_URL,RENDER_STAGING_DB_ID,RENDER_STAGING_DB_NAME} from '../../scripts/mfa-staging-db-target.mjs';
-
-const pass='fake-synthetic-staging-password-long-enough';
-const valid='Basic '+Buffer.from('mfa-staging:'+pass).toString('base64');
-test('isolated MFA staging requires a valid independent Basic password',()=>{
- assert.equal(isMfaStagingAccessValid(valid,pass),true);
- for (const header of [undefined,'', 'Bearer something','Basic garbage',
-  'Basic '+Buffer.from('other-user:'+pass).toString('base64'),
-  'Basic '+Buffer.from('mfa-staging:incorrect').toString('base64')])
-   assert.equal(isMfaStagingAccessValid(header,pass),false);
- assert.equal(isMfaStagingAccessValid(valid,undefined),false);
- assert.equal(isMfaStagingAccessValid(valid,'short'),false);
-});
-test('MFA staging uses unique Docker entrypoint and exact synthetic-only database',()=>{
- const f=readFileSync('Dockerfile.mfa-staging','utf8');
- const boot=readFileSync('scripts/render-mfa-staging-boot.mjs','utf8');
- const server=readFileSync('src/server.ts','utf8');
- assert.match(f,/CMD \["node", "scripts\/render-mfa-staging-boot\.mjs"\]/);
- const target=readFileSync('scripts/mfa-staging-db-target.mjs','utf8');
- assert.match(target,/dpg-dbib30142hec73cus92g-a/);
+YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Õ¥µÁ½ÉÐÑ•ÍÐ™É½´€¹½‘”éÑ•ÍÐœì)¥µÁ½ÉÐ…ÍÍ•ÉÐ™É½´€¹½‘”é…ÍÍ•ÉÐ½ÍÑÉ¥Ðœì)¥µÁ½ÉÐíÉ•…‘¥±•Må¹ô™É½´€¹½‘”é™Ìœì)¥µÁ½ÉÐí¥Í5™…MÑ…¥¹•ÍÍY…±¥‘ô™É½´€œ¸¸¼¸¸½ÍÉŒ½Í•ÉÙ¥•Ì½µ™…MÑ…¥¹…Ñ”¹©Ìœì)¥µÁ½ÉÐí¥ÍÁÁÉ½Ù•‘5…¹…•‘MÑ…¥¹UÉ°±…ÁÁÉ½Ù•‘MÑ…¥¹…Ñ…‰…Í•¹Ù¥É½¹µ•¹Ð±A!5I1}MQ%9}UI0±I9I}MQ%9}	}%±I9I}MQ%9}	}95ô™É½´€œ¸¸¼¸¸½ÍÉ¥ÁÑÌ½µ™„µÍÑ…¥¹œµ‘ˆµÑ…É•Ð¹µ©Ìœì()½¹ÍÐÁ…ÍÌô™…­”µÍå¹Ñ¡•Ñ¥ŒµÍÑ…¥¹œµÁ…ÍÍÝ½Éµ±½¹œµ•¹½Õ œì)½¹ÍÐÙ…±¥ô	…Í¥Œ€œ­	Õ™™•È¹™É½´ µ™„µÍÑ…¥¹œèœ­Á…ÍÌ¤¹Ñ½MÑÉ¥¹œ ‰…Í”ØÐœ¤ì)Ñ•ÍÐ ¥Í½±…Ñ•5ÍÑ…¥¹œÉ•ÅÕ¥É•Ì„Ù…±¥¥¹‘•Á•¹‘•¹Ð	…Í¥ŒÁ…ÍÍÝ½Éœ° ¤ôùì(…ÍÍ•ÉÐ¹•ÅÕ…°¡¥Í5™…MÑ…¥¹•ÍÍY…±¥¡Ù…±¥±Á…ÍÌ¤±ÑÉÕ”¤ì(™½È€¡½¹ÍÐ¡•…‘•È½˜mÕ¹‘•™¥¹•°œœ°€	•…É•ÈÍ½µ•Ñ¡¥¹œœ°	…Í¥Œ…É‰…”œ°(€€	…Í¥Œ€œ­	Õ™™•È¹™É½´ ½Ñ¡•ÈµÕÍ•Èèœ­Á…ÍÌ¤¹Ñ½MÑÉ¥¹œ ‰…Í”ØÐœ¤°(€€	…Í¥Œ€œ­	Õ™™•È¹™É½´ µ™„µÍÑ…¥¹œé¥¹½ÉÉ•Ðœ¤¹Ñ½MÑÉ¥¹œ ‰…Í”ØÐœ¥t¤(€€…ÍÍ•ÉÐ¹•ÅÕ…°¡¥Í5™…MÑ…¥¹•ÍÍY…±¥¡¡•…‘•È±Á…ÍÌ¤±™…±Í”¤ì(…ÍÍ•ÉÐ¹•ÅÕ…°¡¥Í5™…MÑ…¥¹•ÍÍY…±¥¡Ù…±¥±Õ¹‘•™¥¹•¤±™…±Í”¤ì(…ÍÍ•ÉÐ¹•ÅÕ…°¡¥Í5™…MÑ…¥¹•ÍÍY…±¥¡Ù…±¥°Í¡½ÉÐœ¤±™…±Í”¤ì)ô¤ì)Ñ•ÍÐ 5ÍÑ…¥¹œÕÍ•ÌÕ¹¥ÅÕ”½­•È•¹ÑÉåÁ½¥¹Ð…¹•á…ÐÍå¹Ñ¡•Ñ¥Œµ½¹±ä‘…Ñ…‰…Í”œ° ¤ôùì(½¹ÍÐ˜õÉ•…‘¥±•Må¹Œ ½­•É™¥±”¹µ™„µÍÑ…¥¹œœ°ÕÑ˜àœ¤ì(½¹ÍÐ‰½½ÐõÉ•…‘¥±•Må¹Œ ÍÉ¥ÁÑÌ½É•¹‘•Èµµ™„µÍÑ…¥¹œµ‰½½Ð¹µ©Ìœ°ÕÑ˜àœ¤ì(½¹ÍÐÍ•ÉÙ•ÈõÉ•…‘¥±•Må¹Œ ÍÉŒ½Í•ÉÙ•È¹ÑÌœ°ÕÑ˜àœ¤ì(…ÍÍ•ÉÐ¹µ…Ñ ¡˜°½5ql‰¹½‘”ˆ°€‰ÍÉ¥ÁÑÍp½É•¹‘•Èµµ™„µÍÑ…¥¹œµ‰½½Ñp¹µ©Ì‰qt¼¤ì(½¹ÍÐÑ…É•ÐõÉ•…‘¥±•Må¹Œ ÍÉ¥ÁÑÌ½µ™„µÍÑ…¥¹œµ‘ˆµÑ…É•Ð¹µ©Ìœ°ÕÑ˜àœ¤ì(…ÍÍ•ÉÐ¹µ…Ñ ¡Ñ…É•Ð°½‘Áœµ‘‰¥ˆÌÀÄÐÉ¡•ŒÜÍÕÌäÉœµ‡[h‘éì¶»§q«^w);
  assert.match(target,/newchanges_mfa_synthetic_staging_db/);
  assert.match(boot,/approvedStagingDatabaseEnvironment/);
  assert.match(boot,/MFA_STAGING_SYNTHETIC_ONLY/);

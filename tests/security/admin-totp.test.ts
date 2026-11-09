@@ -1,33 +1,4 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
-import {randomBytes} from 'node:crypto';
-import {readFileSync} from 'node:fs';
-import {decodeTotpSecret,decryptTotpSecret,encryptTotpSecret,
- findTotpStep,generateTotpSecret,makeTotpUri,makeTotpQrSvgDataUri,
- requireTotpEncryptionKey,totpCode,totpIsEnabled} from '../../src/services/adminTotp.js';
-
-const rfcSeed='GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ';
-test('RFC 6238 SHA1 test vectors and code window',()=>{
- assert.equal(totpCode(rfcSeed,Math.floor(59/30),8),'94287082');
- assert.equal(totpCode(rfcSeed,Math.floor(1111111109/30),8),'07081804');
- assert.equal(totpCode(rfcSeed,Math.floor(1111111111/30),8),'14050471');
- const code=totpCode(rfcSeed,Math.floor(59/30));
- assert.equal(findTotpStep(rfcSeed,code,59000),1n);
- assert.equal(findTotpStep(rfcSeed,code,59000,1n),null);
- assert.equal(findTotpStep(rfcSeed,code,59000,2n),null);
- assert.equal(findTotpStep(rfcSeed,'00000a',59000),null);
- assert.equal(findTotpStep(rfcSeed,'1234567',59000),null);
-});
-test('generated secrets are unique 160-bit Base32 and encrypted with authenticated GCM',()=>{
- const key=randomBytes(32);
- const a=generateTotpSecret(),b=generateTotpSecret();
- assert.match(a,/^[A-Z2-7]{32}$/);
- assert.notEqual(a,b);
- assert.equal(decodeTotpSecret(a).length,20);
- const ciphertext=encryptTotpSecret(a,key);
- assert.doesNotMatch(ciphertext,new RegExp(a));
- assert.equal(decryptTotpSecret(ciphertext,key),a);
- assert.throws(()=>decryptTotpSecret(ciphertext,randomBytes(32)));
+YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Õ¥µÁ½ÉÐÑ•ÍÐ™É½´€¹½‘”éÑ•ÍÐœì)¥µÁ½ÉÐ…ÍÍ•ÉÐ™É½´€¹½‘”é…ÍÍ•ÉÐ½ÍÑÉ¥Ðœì)¥µÁ½ÉÐíÉ…¹‘½µ	åÑ•Íô™É½´€¹½‘”éÉåÁÑ¼œì)¥µÁ½ÉÐíÉ•…‘¥±•Må¹ô™É½´€¹½‘”é™Ìœì)¥µÁ½ÉÐí‘•½‘•Q½ÑÁM•É•Ð±‘•ÉåÁÑQ½ÑÁM•É•Ð±•¹ÉåÁÑQ½ÑÁM•É•Ð°(™¥¹‘Q½ÑÁMÑ•À±•¹•É…Ñ•Q½ÑÁM•É•Ð±µ…­•Q½ÑÁUÉ¤±µ…­•Q½ÑÁEÉMÙ…Ñ…UÉ¤°(É•ÅÕ¥É•Q½ÑÁ¹ÉåÁÑ¥½¹-•ä±Ñ½ÑÁ½‘”±Ñ½ÑÁ%Í¹…‰±•‘ô™É½´€œ¸¸¼¸¸½ÍÉŒ½Í•ÉÙ¥•Ì½…‘µ¥¹Q½ÑÀ¹©Ìœì()½¹ÍÐÉ™M••ôi9	YdÍQE=)Ei9	YdÍQE=)Dœì)Ñ•ÍÐ I€ØÈÌàM!ÄÑ•ÍÐÙ•Ñ½ÉÌ…¹½‘”Ý¥¹‘½Üœ° ¤ôùì(…ÍÍ•ÉÐ¹•ÅÕ…°¡Ñ½ÑÁ½‘”¡É™M••±5…Ñ ¹™±½½È Ôä¼ÌÀ¤°à¤°œäÐÈàÜÀàÈœ¤ì(…ÍÍ•ÉÐ¹•ÅÕ…°¡Ñ½ÑÁ½‘”¡É™M••±5…Ñ ¹™±½½È ÄÄÄÄÄÄÄÄÀä¼ÌÀ¤°à¤°œÀÜÀàÄàÀÐœ¤ì(…ÍÍ•ÉÐ¹•ÅÕ…°¡Ñ½ÑÁ½‘”¡É™M••±5…Ñ ¹™±½½È ÄÄÄÄÄÄÄÄÄÄ¼ÌÀ¤°à¤°œÄÐÀÔÀÐÜÄœ¤ì(½¹ÍÐ½‘”õÑ½ÑÁ½‘”¡É™M••±5…Ñ ¹™±½½È Ôä¼ÌÀ¤¤ì(…ÍÍ•ÉÐ¹•ÅÕ…°¡™¥¹‘Q½ÑÁMÑ•À¡É™M••±½‘”°ÔäÀÀÀ¤°Å¸¤ì(…ÍÍ•ÉÐ¹•ÅÕ…°¡™¥¹‘Q½ÑÁMÑ•À¡É™M••±½‘”°ÔäÀÀÀ°Å¸¤±¹Õ±°¤ì(…ÍÍ•ÉÐ¹•ÅÕ…°¡™¥¹‘Q½ÑÁMÑ•À¡É™M••±½‘”°ÔäÀÀÀ°É¸¤±¹Õ±°¤ì(…ÍÍ•ÉÐ¹•ÅÕ…°¡™¥¹‘Q½ÑÁMÑ•À¡É™M••°œÀÀÀÀÁ„œ°ÔäÀÀÀ¤±¹Õ±°¤ì(…ÍÍ•ÉÐ¹•ÅÕ…°¡™¥¹‘Q½ÑÁMÑ•À¡É™M••°œÄÈÌÐÔØÜœ°ÔäÀÀÀ¤±¹Õ±°¤ì)ô¤ì)Ñ•ÍÐ •¹•É…Ñ•Í•É•ÑÌ…É”Õ¹¥ÅÕ”€ÄØÀµ‰¥Ð	…Í”ÌÈ…¹•¹ÉåÁÑ•Ý¥Ñ …ÕÑ¡•¹Ñ¥…Ñ•4œ° ¤ôùì(½¹ÍÐ­•äõÉ…¹‘½µ	åÑ•Ì ÌÈ¤ì(½¹ÍÐ„õ•¹•É…Ñ•Q½ÑÁM•É•Ð ¤±ˆõ•¹•É…Ñ•Q½ÑÁM•É•Ð ¤ì(…ÍÍ•ÉÐ¹µ…Ñ ¡„°½ymµhÈ´ÝuìÌÉô¼¤ì(…ÍÍ•ÉÐ¹¹½ÑÅÕ…°¡„±ˆ¤ì(…ÍÍ•ÉÐ¹•ÅÕ…°¡‘•½‘•Q½ÑÁM•É•Ð¡„¤¹±•¹Ñ °ÈÀ¤ì(½¹ÍÐ¥Á¡•ÉÑ•áÐõ•¹ÉåÁÑQ½ÑÁM•É•Ð¡„±­•ä¤ì(…ÍÍ•ÉÐ¹‘½•Í9½Ñ5…Ñ ¡¥Á¡•ÉÑ•áÐ±¹•ÜI•áÀ¡„¤¤ì(…ÍÍ•ÉÐ¹•ÅÕ…°¡‘•ÉåÁÑQ½ÑÁM•É•Ð¡¥Á¡•ÉÑ•áÐ±­•ä¤±„¤ì(…ÍÍ•ÉÐ¹Ñ¡É½ÝÌ  ¤ôù‘•ÉåÁÑQ½ÑÁM•É•Ð¡¥Á¡•ÉÑ•áÐ±É…¹‘¿[h‘éì¶»§q«^uBytes(32)));
  const bad=ciphertext.slice(0,-1)+(ciphertext.endsWith('A')?'B':'A');
  assert.throws(()=>decryptTotpSecret(bad,key));
 });
@@ -54,35 +25,7 @@ test('QR is an actual locally generated scannable SVG and never invokes remote i
  assert.doesNotMatch(implementation,/fetch\(|https:\/\//);
 });
 test('authenticator app has a dedicated grant and private QR user flow',()=>{
- const html=readFileSync('public/admin-mfa.html','utf8');
- const js=readFileSync('public/admin-mfa.js','utf8');
- assert.match(html,/id="totp-grant"/);
- assert.match(html,/id="totp-qr"/);
- assert.match(html,/id="totp-confirm-code"/);
- assert.match(html,/id="totp-code"/);
- assert.match(js,/getElementById\('totp-grant'\)\.value\.trim\(\)/);
- assert.match(js,/api\('totp\/setup'/);
- assert.match(js,/api\('totp\/confirm'/);
- assert.match(js,/api\('totp\/verify'/);
- assert.doesNotMatch(js,/localStorage\.setItem\([^)]*totp/i);
-});
-test('successful authenticator QR confirmation shows completion, not another verification prompt',()=>{
- const html=readFileSync('public/admin-mfa.html','utf8');
- const js=readFileSync('public/admin-mfa.js','utf8');
- assert.match(html,/id="mfa-success"/);
- assert.match(html,/id="mfa-continue"/);
- assert.match(html,/href="\/dashboard" id="mfa-continue"/);
- assert.match(js,/success\.hidden=!state\.verified/);
- assert.match(js,/totp-verify-panel'\)\.hidden=!state\.totpEnrolled \|\| !!state\.verified/);
- assert.match(js,/fresh six-digit code/i);
-});
-test('MFA is required for every signed-in account on protected APIs and pages',()=>{
- const server=readFileSync('src/server.ts','utf8');
- assert.match(server,/protectedAppRead = path\.startsWith\("\/api\/"\)/);
- assert.match(server,/!scope\.adminOnly && !scope\.adminMutation && !protectedAppRead/);
- assert.match(server,/if \(!await hasFreshAdminMfa\(req, user\.id\)\)/);
- assert.match(server,/mfaRequired:\s*MFA_ENFORCE/);
- assert.match(server,/const MFA_ENFORCE = process\.env\.MFA_ENFORCE === "true" \|\| process\.env\.ADMIN_MFA_ENFORCE === "true"/);
+ const htYªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Õµ°õÉ•…‘¥±•Må¹Œ ÁÕ‰±¥Œ½…‘µ¥¸µµ™„¹¡Ñµ°œ°ÕÑ˜àœ¤ì(½¹ÍÐ©ÌõÉ•…‘¥±•Må¹Œ ÁÕ‰±¥Œ½…‘µ¥¸µµ™„¹©Ìœ°ÕÑ˜àœ¤ì(…ÍÍ•ÉÐ¹µ…Ñ ¡¡Ñµ°°½¥ô‰Ñ½ÑÀµÉ…¹Ðˆ¼¤ì(…ÍÍ•ÉÐ¹µ…Ñ ¡¡Ñµ°°½¥ô‰Ñ½ÑÀµÅÈˆ¼¤ì(…ÍÍ•ÉÐ¹µ…Ñ ¡¡Ñµ°°½¥ô‰Ñ½ÑÀµ½¹™¥É´µ½‘”ˆ¼¤ì(…ÍÍ•ÉÐ¹µ…Ñ ¡¡Ñµ°°½¥ô‰Ñ½ÑÀµ½‘”ˆ¼¤ì(…ÍÍ•ÉÐ¹µ…Ñ ¡©Ì°½•Ñ±•µ•¹Ñ	å%‘p Ñ½ÑÀµÉ…¹Ðp¥p¹Ù…±Õ•p¹ÑÉ¥µp¡p¤¼¤ì(…ÍÍ•ÉÐ¹µ…Ñ ¡©Ì°½…Á¥p Ñ½ÑÁp½Í•ÑÕÀœ¼¤ì(…ÍÍ•ÉÐ¹µ…Ñ ¡©Ì°½…Á¥p Ñ½ÑÁp½½¹™¥É´œ¼¤ì(…ÍÍ•ÉÐ¹µ…Ñ ¡©Ì°½…Á¥p Ñ½ÑÁp½Ù•É¥™äœ¼¤ì(…ÍÍ•ÉÐ¹‘½•Í9½Ñ5…Ñ ¡©Ì°½±½…±MÑ½É…•p¹Í•Ñ%Ñ•µp¡mx¥t©Ñ½ÑÀ½¤¤ì)ô¤ì)Ñ•ÍÐ ÍÕ•ÍÍ™Õ°…ÕÑ¡•¹Ñ¥…Ñ½ÈEH½¹™¥Éµ…Ñ¥½¸Í¡½ÝÌ½µÁ±•Ñ¥½¸°¹½Ð…¹½Ñ¡•ÈÙ•É¥™¥…Ñ¥½¸ÁÉ½µÁÐœ° ¤ôùì(½¹ÍÐ¡Ñµ°õÉ•…‘¥±•Må¹Œ ÁÕ‰±¥Œ½…‘µ¥¸µµ™„¹¡Ñµ°œ°ÕÑ˜àœ¤ì(½¹ÍÐ©ÌõÉ•…‘¥±•Må¹Œ ÁÕ‰±¥Œ½…‘µ¥¸µµ™„¹©Ìœ°ÕÑ˜àœ¤ì(…ÍÍ•ÉÐ¹µ…Ñ ¡¡Ñµ°°½¥ô‰µ™„µÍÕ•ÍÌˆ¼¤ì(…ÍÍ•ÉÐ¹µ…Ñ ¡¡Ñµ°°½¥ô‰µ™„µ½¹Ñ¥¹Õ”ˆ¼¤ì(…ÍÍ•ÉÐ¹µ…Ñ ¡¡Ñµ°°½¡É•˜ô‰p½‘…Í¡‰½…Éˆ¥ô‰µ™„µ½¹Ñ¥¹Õ”ˆ¼¤ì(…ÍÍ•ÉÐ¹µ…Ñ ¡©Ì°½ÍÕ•ÍÍp¹¡¥‘‘•¸ô…ÍÑ…Ñ•p¹Ù•É¥™¥•¼¤ì(…ÍÍ•ÉÐ¹µ…Ñ ¡©Ì°½Ñ½ÑÀµÙ•É¥™äµÁ…¹•°p¥p¹¡¥‘‘•¸ô…ÍÑ…Ñ•p¹Ñ½ÑÁ¹É½±±•qñqð€„…ÍÑ…Ñ•p¹Ù•É¥™¥•¼¤ì(…ÍÍ•ÉÐ¹µ…Ñ ¡©Ì°½™É•Í Í¥àµ‘¥¥Ð½‘”½¤¤ì)ô¤ì)Ñ•ÍÐ 5¥ÌÉ•ÅÕ¥É•™½È•Ù•ÉäÍ¥¹•µ¥¸…½Õ¹Ð½¸ÁÉ½Ñ•Ñ•A%Ì…¹Á…•Ìœ° ¤ôùì(½¹ÍÐÍ•ÉÙ•ÈõÉ•…‘¥±•Må¹Œ ÍÉŒ½Í•ÉÙ•È¹ÑÌœ°ÕÑ˜àœ¤ì(…ÍÍ•ÉÐ¹µ…Ñ ¡Í•ÉÙ•È°½ÁÉ½Ñ•Ñ•‘ÁÁI•…€ôÁ…Ñ¡p¹ÍÑ…ÉÑÍ]¥Ñ¡p ‰p½…Á¥p¼‰p¤¼¤ì(…ÍÍ•ÉÐ¹µ…Ñ ¡Í•ÉÙ•È°¼…Í½Á•p¹…‘µ¥¹=¹±ä€˜˜€…Í½Á•p¹…‘µ¥¹5ÕÑ…Ñ¥½¸€˜˜€…ÁÉ½Ñ•Ñ•‘ÁÁI•…¼¤ì(…ÍÍ•ÉÐ¹µ…Ñ ¡Í•ÉÙ•È°½¥˜p ……Ý…¥Ð¡…ÍÉ•Í¡‘µ¥¹5™…p¡É•Ä°ÕÍ•Ép¹¥‘p¥p¤¼¤ì(…ÍÍ•ÉÐ¹µ…Ñ ¡Í•ÉÙ•È°½µ™…I•ÅÕ¥É•éqÌ©5}9=I¼¤ì(…Ï[h‘éì¶»§q«^wert.match(server,/const MFA_ENFORCE = process\.env\.MFA_ENFORCE === "true" \|\| process\.env\.ADMIN_MFA_ENFORCE === "true"/);
  assert.match(server,/sections:\[\],employers:\[\]/);
 });
 test('TOTP and passkey rate limits have separate tight buckets and status is read-only',()=>{

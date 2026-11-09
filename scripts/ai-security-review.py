@@ -1,35 +1,4 @@
-#!/usr/bin/env python3
-"""Resumable, evidence-first local Ollama review of Git-tracked text files.
-
-A completed scan requires every reviewable chunk to succeed. Network/model failures
-are retained as failures, never turned into clean passes. Reports remain local.
-"""
-import hashlib
-import json
-import os
-import re
-import subprocess
-import sys
-import time
-from datetime import datetime, timezone
-from pathlib import Path
-from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
-
-VERSION = 5
-ROOT = Path(os.getenv("SCAN_ROOT", "/workspace")).resolve()
-REPORTS = Path(os.getenv("REPORT_DIR", "/workspace/test-reports/ai-security")).resolve()
-MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5-coder:7b")
-URL = os.getenv("OLLAMA_URL", "http://host.docker.internal:11434").rstrip("/")
-MAX_FILES = max(0, int(os.getenv("MAX_FILES", "0")))
-CHUNK_CHARS = max(1000, min(12000, int(os.getenv("AI_SCAN_CHUNK_CHARS", "3000"))))
-TIMEOUT = max(60, min(1200, int(os.getenv("AI_SCAN_REQUEST_TIMEOUT", "360"))))
-RETRIES = max(1, min(8, int(os.getenv("AI_SCAN_RETRIES", "4"))))
-REQUIRE_GPU = os.getenv("OLLAMA_REQUIRE_GPU", "true").lower() in ("1", "true", "yes")
-MAX_TEXT_BYTES = max(100000, int(os.getenv("AI_SCAN_MAX_TEXT_BYTES", "5000000")))
-CHECKPOINTS = Path(os.getenv("SCAN_CACHE_DIR", str(REPORTS / "checkpoints"))).resolve()
-# Only actual key material/credential stores are excluded. Security implementation
-# code, including auth, MFA and secrets-handling logic, is always eligible.
+YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬ÔŒ„½ÕÍÈ½‰¥¸½•¹ØÁåÑ¡½¸Ì(ˆˆ‰I•ÍÕµ…‰±”°•Ù¥‘•¹”µ™¥ÉÍÐ±½…°=±±…µ„É•Ù¥•Ü½˜¥ÐµÑÉ…­•Ñ•áÐ™¥±•Ì¸()½µÁ±•Ñ•Í…¸É•ÅÕ¥É•Ì•Ù•ÉäÉ•Ù¥•Ý…‰±”¡Õ¹¬Ñ¼ÍÕ••¸9•ÑÝ½É¬½µ½‘•°™…¥±ÕÉ•Ì)…É”É•Ñ…¥¹•…Ì™…¥±ÕÉ•Ì°¹•Ù•ÈÑÕÉ¹•¥¹Ñ¼±•…¸Á…ÍÍ•Ì¸I•Á½ÉÑÌÉ•µ…¥¸±½…°¸(ˆˆˆ)¥µÁ½ÉÐ¡…Í¡±¥ˆ)¥µÁ½ÉÐ©Í½¸)¥µÁ½ÉÐ½Ì)¥µÁ½ÉÐÉ”)¥µÁ½ÉÐÍÕ‰ÁÉ½•ÍÌ)¥µÁ½ÉÐÍåÌ)¥µÁ½ÉÐÑ¥µ”)™É½´‘…Ñ•Ñ¥µ”¥µÁ½ÉÐ‘…Ñ•Ñ¥µ”°Ñ¥µ•é½¹”)™É½´Á…Ñ¡±¥ˆ¥µÁ½ÉÐA…Ñ )™É½´ÕÉ±±¥ˆ¹•ÉÉ½È¥µÁ½ÉÐ!QQAÉÉ½È°UI1ÉÉ½È)™É½´ÕÉ±±¥ˆ¹É•ÅÕ•ÍÐ¥µÁ½ÉÐI•ÅÕ•ÍÐ°ÕÉ±½Á•¸)™É½´±½…±}½±±…µ…}ÑÉ…¹ÍÁ½ÉÐ¥µÁ½ÉÐ±½…±}½±±…µ…}ÕÉ°()YIM%=8€ô€Ô)I==P€ôA…Ñ ¡½Ì¹•Ñ•¹Ø ‰M9}I==Pˆ°€ˆ½Ý½É­ÍÁ…”ˆ¤¤¹É•Í½±Ù” ¤)IA=IQL€ôA…Ñ ¡½Ì¹•Ñ•¹Ø ‰IA=IQ}%Hˆ°€ˆ½Ý½É­ÍÁ…”½Ñ•ÍÐµÉ•Á½ÉÑÌ½…¤µÍ•ÕÉ¥Ñäˆ¤¤¹É•Í½±Ù” ¤)5=0€ô½Ì¹•Ñ•¹Ø ‰=115}5=0ˆ°€‰ÅÝ•¸È¸Ôµ½‘•ÈèÝˆˆ¤)UI0€ô±½…±}½±±…µ…}ÕÉ°¡½Ì¹•Ñ•¹Ø ‰=115}UI0ˆ°€‰¡ÑÑÀè¼½¡½ÍÐ¹‘½­•È¹¥¹Ñ•É¹…°èÄÄÐÌÐˆ¤°€ˆˆ¤)5a}%1L€ôµ…à À°¥¹Ð¡½Ì¹•Ñ•¹Ø ‰5a}%1Lˆ°€ˆÀˆ¤¤¤)!U9-}!IL€ôµ…à ÄÀÀÀ°µ¥¸ ÄÈÀÀÀ°¥¹Ð¡½Ì¹•Ñ•¹Ø ‰%}M9}!U9-}!ILˆ°€ˆÌÀÀÀˆ¤¤¤¤)Q%5=UP€ôµ…à ØÀ°µ¥¸ ÄÈÀÀ°¥¹Ð¡½Ì¹•Ñ•¹Ø ‰%}M9}IEUMQ}Q%5=UPˆ°€ˆÌØÀˆ¤¤¤¤)IQI%L€ôµ…à Ä°µ¥¸ à°¥¹Ð¡½Ì¹•Ñ•¹Ø ‰%}M9}IQI%Lˆ°€ˆÐˆ¤¤¤¤)IEU%I}AT€ô½Ì¹•Ñ•¹Ø ‰=115}IEU%I}ATˆ°€‰ÑÉÕ”ˆ¤¹±½Ý•È ¤¥¸€ ˆÄˆ°€‰ÑÉÕ”ˆ°€‰å•Ìˆ¤)5a}QaQ}	eQL€ôµ…à ÄÀÀÀÀÀ°¥¹Ð¡½Ì¹•Ñ•¹Ø ‰%}M9}5a}QaQ}	eQLˆ°€ˆÔÀÀÀÀÀÀˆ¤¤¤)!-A=%9QL€ôA…Ñ ¡½Ì¹•Ñ•¹Ø ‰M9}!}%Hˆ°ÍÑÈ¡IA=IQL€¼€‰¡•­Á½¥¹ÑÌˆ¤¤¤¹É•Í½±Ù” ¤(Œ=¹±ä…ÑÕ…°­•äµ…Ñ•É¥…°½É•‘•¹Ñ¥…°ÍÑ½É•Ì…É”•á±Õ‘•¸M•ÕÉ¥Ñä¥µÁ±•µ•¹Ñ…Ñ¥½¸(Œ½‘”°¥¹±Õ“[h‘éì¶»§q«^ung auth, MFA and secrets-handling logic, is always eligible.
 SENSITIVE_NAMES = {".env", ".env.local", ".env.production", "id_rsa", "id_ed25519",
                    "credentials.json", "service-account.json", "token.json"}
 SENSITIVE_SUFFIX = {".pem", ".p12", ".pfx", ".key", ".keystore", ".jks"}
@@ -51,52 +20,7 @@ PROMPT = (
     "meaningful but bounded impact; low means limited security impact. "
     "Never infer severity from examples or default to HIGH. "
     "Cite the exact source line, concrete mechanism, and affected boundary. "
-    "Report no more than four defensible findings. Keep output fields concise; "
-    "return a JSON object containing a findings array only."
-)
-
-FINDINGS_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "findings": {
-            "type": "array", "maxItems": 4,
-            "items": {
-                "type": "object",
-                "properties": {
-                    "severity": {"type": "string", "enum": ["critical", "high", "medium", "low"]},
-                    "line": {"type": "integer"},
-                    "title": {"type": "string", "maxLength": 150},
-                    "evidence": {"type": "string", "maxLength": 150},
-                    "recommendation": {"type": "string", "maxLength": 150}
-                },
-                "required": ["severity", "line", "title", "evidence", "recommendation"],
-                "additionalProperties": False
-            }
-        }
-    },
-    "required": ["findings"], "additionalProperties": False
-}
-
-def now():
-    return datetime.now(timezone.utc).isoformat()
-
-def safe_write(path, data):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(path.name + ".tmp")
-    tmp.write_text(data, encoding="utf-8")
-    tmp.replace(path)
-
-def atom_json(path, value):
-    safe_write(path, json.dumps(value, indent=2, ensure_ascii=False))
-
-def tracked_files():
-    raw = subprocess.check_output(
-        ["git", "-c", f"safe.directory={ROOT}", "-C", str(ROOT), "ls-files", "-z"],
-        stderr=subprocess.DEVNULL
-    )
-    return [os.fsdecode(p) for p in raw.split(b"\0") if p]
-
-def read_manifest():
+    "Report no more than four defensible findings. Keep output fields concise;YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Ô€ˆ(€€€€‰É•ÑÕÉ¸„)M=8½‰©•Ð½¹Ñ…¥¹¥¹œ„™¥¹‘¥¹Ì…ÉÉ…ä½¹±ä¸ˆ(¤()%9%9M}M!5€ôì(€€€€‰ÑåÁ”ˆè€‰½‰©•Ðˆ°(€€€€‰ÁÉ½Á•ÉÑ¥•Ìˆèì(€€€€€€€€‰™¥¹‘¥¹Ìˆèì(€€€€€€€€€€€€‰ÑåÁ”ˆè€‰…ÉÉ…äˆ°€‰µ…á%Ñ•µÌˆè€Ð°(€€€€€€€€€€€€‰¥Ñ•µÌˆèì(€€€€€€€€€€€€€€€€‰ÑåÁ”ˆè€‰½‰©•Ðˆ°(€€€€€€€€€€€€€€€€‰ÁÉ½Á•ÉÑ¥•Ìˆèì(€€€€€€€€€€€€€€€€€€€€‰Í•Ù•É¥Ñäˆèì‰ÑåÁ”ˆè€‰ÍÑÉ¥¹œˆ°€‰•¹Õ´ˆèl‰É¥Ñ¥…°ˆ°€‰¡¥ ˆ°€‰µ•‘¥Õ´ˆ°€‰±½Ü‰uô°(€€€€€€€€€€€€€€€€€€€€‰±¥¹”ˆèì‰ÑåÁ”ˆè€‰¥¹Ñ••È‰ô°(€€€€€€€€€€€€€€€€€€€€‰Ñ¥Ñ±”ˆèì‰ÑåÁ”ˆè€‰ÍÑÉ¥¹œˆ°€‰µ…á1•¹Ñ ˆè€ÄÔÁô°(€€€€€€€€€€€€€€€€€€€€‰•Ù¥‘•¹”ˆèì‰ÑåÁ”ˆè€‰ÍÑÉ¥¹œˆ°€‰µ…á1•¹Ñ ˆè€ÄÔÁô°(€€€€€€€€€€€€€€€€€€€€‰É•½µµ•¹‘…Ñ¥½¸ˆèì‰ÑåÁ”ˆè€‰ÍÑÉ¥¹œˆ°€‰µ…á1•¹Ñ ˆè€ÄÔÁô(€€€€€€€€€€€€€€€ô°(€€€€€€€€€€€€€€€€‰É•ÅÕ¥É•ˆèl‰Í•Ù•É¥Ñäˆ°€‰±¥¹”ˆ°€‰Ñ¥Ñ±”ˆ°€‰•Ù¥‘•¹”ˆ°€‰É•½µµ•¹‘…Ñ¥½¸‰t°(€€€€€€€€€€€€€€€€‰…‘‘¥Ñ¥½¹…±AÉ½Á•ÉÑ¥•Ìˆè…±Í”(€€€€€€€€€€€ô(€€€€€€€ô(€€€ô°(€€€€‰É•ÅÕ¥É•ˆèl‰™¥¹‘¥¹Ì‰t°€‰…‘‘¥Ñ¥½¹…±AÉ½Á•ÉÑ¥•Ìˆè…±Í”)ô()‘•˜¹½Ü ¤è(€€€É•ÑÕÉ¸‘…Ñ•Ñ¥µ”¹¹½Ü¡Ñ¥µ•é½¹”¹ÕÑŒ¤¹¥Í½™½Éµ…Ð ¤()‘•˜Í…™•}ÝÉ¥Ñ”¡Á…Ñ °‘…Ñ„¤è(€€€Á…Ñ ¹Á…É•¹Ð¹µ­‘¥È¡Á…É•¹ÑÌõQÉÕ”°•á¥ÍÑ}½¬õQÉÕ”¤(€€€ÑµÀ€ôÁ…Ñ ¹Ý¥Ñ¡}¹…µ”¡Á…Ñ ¹¹…µ”€¬€ˆ¹ÑµÀˆ¤(€€€ÑµÀ¹ÝÉ¥Ñ•}Ñ•áÐ¡‘…Ñ„°•¹½‘¥¹œô‰ÕÑ˜´àˆ¤(€€€ÑµÀ¹É•Á±…”¡Á…Ñ ¤()‘•˜…Ñ½µ}©Í½¸¡Á…Ñ °Ù…±Õ”¤è(€€€Í…™•}ÝÉ¥Ñ”¡Á…Ñ °©Í½¸¹‘ÕµÁÌ¡Ù…±Õ”°¥¹‘•¹ÐôÈ°•¹ÍÕÉ•}…Í¥¤õ…±Í”¤¤()‘•˜ÑÉ…­•‘}™¥±•Ì ¤è(€€€É…Ü€ôÍÕ‰ÁÉ½•ÍÌ¹¡•­}½ÕÑÁÕÐ (€€€€€€€l‰¥Ðˆ°€ˆµŒˆ°˜‰Í…™”¹‘¥É•Ñ½ÉäõíI==Qôˆ°€ˆµˆ°ÍÑÈ¡I==P¤°€‰±Ìµ™¥±•Ìˆ°€ˆµè‰t°(€€€€€€€ÍÑ‘•ÉÈõÍÕ‰ÁÉ½•ÍÌ¹Y9U10(€€€€¤(€€€É•ÑÕÉ¸m½Ì¹™Í‘•½‘”¡À¤™½ÈÀ¥¸É…Ü¹ÍÁ±¥Ð¡ˆ‰pÀˆ¤¥˜Át()‘•˜É•…‘}µ…¹¥™•ÍÓ[h‘éì¶»§q«^t):
     selected, excluded = [], []
     for name in tracked_files():
         path = ROOT / name
@@ -128,46 +52,7 @@ def read_manifest():
     selected.sort(key=lambda item: (-sum(t in item[0].lower() for t in TOPICS), item[0]))
     if MAX_FILES:
         remaining = selected[MAX_FILES:]
-        excluded.extend({"file": p, "reason": "file_limit"} for p, _ in remaining)
-        selected = selected[:MAX_FILES]
-    return selected, excluded
-
-def chunks_for(content):
-    # Preserve exact original 1-based line numbers, even for very long lines.
-    lines = content.splitlines()
-    if not lines:
-        return [(1, 1, "1: [empty file]")]
-    chunks, batch, count, start = [], [], 0, 1
-    for i, line in enumerate(lines, 1):
-        # Split very long source lines into numbered fragments, no silent truncation.
-        parts = [line[j:j+CHUNK_CHARS-120] for j in range(0, max(len(line), 1), CHUNK_CHARS-120)]
-        for segment in parts:
-            value = f"{i}: {segment}"
-            if batch and count + len(value) + 1 > CHUNK_CHARS:
-                chunks.append((start, i, "\n".join(batch)))
-                batch, count, start = [], 0, i
-            if not batch:
-                start = i
-            batch.append(value)
-            count += len(value) + 1
-    if batch:
-        chunks.append((start, len(lines), "\n".join(batch)))
-    return chunks
-
-def parse_answer(raw):
-    if isinstance(raw, dict):
-        obj = raw
-    else:
-        s = str(raw).strip()
-        s = re.sub(r"^"+chr(96)+r"{3}(?:json)?\s*", "", s)
-        s = re.sub(r"\s*"+chr(96)+r"{3}$", "", s)
-        try:
-            obj = json.loads(s)
-        except (ValueError, TypeError):
-            left, right = s.find("{"), s.rfind("}")
-            if left < 0 or right <= left:
-                raise ValueError("Model returned no JSON object")
-            obj = json.loads(s[left:right+1])
+        excluded.extend({"file": p, "reason": "fiYªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Õ±•}±¥µ¥Ð‰ô™½ÈÀ°|¥¸É•µ…¥¹¥¹œ¤(€€€€€€€Í•±•Ñ•€ôÍ•±•Ñ•‘lé5a}%1Mt(€€€É•ÑÕÉ¸Í•±•Ñ•°•á±Õ‘•()‘•˜¡Õ¹­Í}™½È¡½¹Ñ•¹Ð¤è(€€€€ŒAÉ•Í•ÉÙ”•á…Ð½É¥¥¹…°€Äµ‰…Í•±¥¹”¹Õµ‰•ÉÌ°•Ù•¸™½ÈÙ•Éä±½¹œ±¥¹•Ì¸(€€€±¥¹•Ì€ô½¹Ñ•¹Ð¹ÍÁ±¥Ñ±¥¹•Ì ¤(€€€¥˜¹½Ð±¥¹•Ìè(€€€€€€€É•ÑÕÉ¸l Ä°€Ä°€ˆÄèm•µÁÑä™¥±•tˆ¥t(€€€¡Õ¹­Ì°‰…Ñ °½Õ¹Ð°ÍÑ…ÉÐ€ômt°mt°€À°€Ä(€€€™½È¤°±¥¹”¥¸•¹Õµ•É…Ñ”¡±¥¹•Ì°€Ä¤è(€€€€€€€€ŒMÁ±¥ÐÙ•Éä±½¹œÍ½ÕÉ”±¥¹•Ì¥¹Ñ¼¹Õµ‰•É•™É…µ•¹ÑÌ°¹¼Í¥±•¹ÐÑÉÕ¹…Ñ¥½¸¸(€€€€€€€Á…ÉÑÌ€ôm±¥¹•m¨é¨­!U9-}!IL´ÄÈÁt™½È¨¥¸É…¹” À°µ…à¡±•¸¡±¥¹”¤°€Ä¤°!U9-}!IL´ÄÈÀ¥t(€€€€€€€™½ÈÍ•µ•¹Ð¥¸Á…ÉÑÌè(€€€€€€€€€€€Ù…±Õ”€ô˜‰í¥ôèíÍ•µ•¹Ñôˆ(€€€€€€€€€€€¥˜‰…Ñ …¹½Õ¹Ð€¬±•¸¡Ù…±Õ”¤€¬€Ä€ø!U9-}!ILè(€€€€€€€€€€€€€€€¡Õ¹­Ì¹…ÁÁ•¹ ¡ÍÑ…ÉÐ°¤°€‰q¸ˆ¹©½¥¸¡‰…Ñ ¤¤¤(€€€€€€€€€€€€€€€‰…Ñ °½Õ¹Ð°ÍÑ…ÉÐ€ômt°€À°¤(€€€€€€€€€€€¥˜¹½Ð‰…Ñ è(€€€€€€€€€€€€€€€ÍÑ…ÉÐ€ô¤(€€€€€€€€€€€‰…Ñ ¹…ÁÁ•¹¡Ù…±Õ”¤(€€€€€€€€€€€½Õ¹Ð€¬ô±•¸¡Ù…±Õ”¤€¬€Ä(€€€¥˜‰…Ñ è(€€€€€€€¡Õ¹­Ì¹…ÁÁ•¹ ¡ÍÑ…ÉÐ°±•¸¡±¥¹•Ì¤°€‰q¸ˆ¹©½¥¸¡‰…Ñ ¤¤¤(€€€É•ÑÕÉ¸¡Õ¹­Ì()‘•˜Á…ÉÍ•}…¹ÍÝ•È¡É…Ü¤è(€€€¥˜¥Í¥¹ÍÑ…¹”¡É…Ü°‘¥Ð¤è(€€€€€€€½‰¨€ôÉ…Ü(€€€•±Í”è(€€€€€€€Ì€ôÍÑÈ¡É…Ü¤¹ÍÑÉ¥À ¤(€€€€€€€Ì€ôÉ”¹ÍÕˆ¡È‰xˆ­¡È äØ¤­È‰ìÍô üé©Í½¸¤ýqÌ¨ˆ°€ˆˆ°Ì¤(€€€€€€€Ì€ôÉ”¹ÍÕˆ¡È‰qÌ¨ˆ­¡È äØ¤­È‰ìÍôˆ°€ˆˆ°Ì¤(€€€€€€€ÑÉäè(€€€€€€€€€€€½‰¨€ô©Í½¸¹±½…‘Ì¡Ì¤(€€€€€€€•á•ÁÐ€¡Y…±Õ•ÉÉ½È°QåÁ•ÉÉ½È¤è(€€€€€€€€€€€±•™Ð°É¥¡Ð€ôÌ¹™¥¹ ‰ìˆ¤°Ì¹É™¥¹ ‰ôˆ¤(€€€€€€€€€€€¥˜±•™Ð€ð€À½ÈÉ¥¡Ð€ðô±•™Ðè(€€€€€€€€€€€€€€€É…¥Í”Y…±Õ•ÉÉ½È ‰5½‘•°É•ÑÕÉ¹•¹¼)M=8½‰©•Ðˆ¤(€€€€€€€€€€ƒ[h‘éì¶»§q«^tobj = json.loads(s[left:right+1])
     if not isinstance(obj, dict) or not isinstance(obj.get("findings"), list):
         raise ValueError("Model response lacks findings array")
     return obj["findings"]
@@ -184,6 +69,7 @@ def ask_model(name, start, end, block):
     last = "unknown"
     for attempt in range(1, RETRIES+1):
         try:
+            # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected -- URL is canonicalized to the local Ollama allowlist.
             with urlopen(req, timeout=TIMEOUT) as resp:
                 envelope = json.load(resp)
             if envelope.get("done_reason") == "length":
@@ -195,32 +81,7 @@ def ask_model(name, start, end, block):
             for item in candidates:
                 if not isinstance(item, dict):
                     raise ValueError("Nonobject finding")
-                line = item.get("line")
-                if type(line) is not int or not start <= line <= end:
-                    raise ValueError("Finding missing valid source line")
-                severity = str(item.get("severity", "")).lower()
-                if severity not in ("critical", "high", "medium", "low"):
-                    raise ValueError("Finding missing severity")
-                fields = {}
-                for field in ("title", "evidence", "recommendation"):
-                    value = item.get(field)
-                    if not isinstance(value, str) or not value.strip() or len(value) > 150:
-                        raise ValueError(f"Finding has invalid {field}")
-                    fields[field] = value
-                valid.append({"file": name, "line": line, "severity": severity, **fields})
-            return valid, attempt
-        except (HTTPError, URLError, TimeoutError, OSError, ValueError, KeyError,
-                json.JSONDecodeError) as exc:
-            last = f"HTTP_{exc.code}" if isinstance(exc, HTTPError) else f"{type(exc).__name__}: {str(exc)[:110]}"
-            print(f"Retry {attempt}/{RETRIES}: {name}:{start}-{end} ({last})", flush=True)
-            if attempt < RETRIES:
-                time.sleep(min(20, 2 ** attempt))
-    raise RuntimeError(f"{last} after {RETRIES} attempts")
-
-def gpu_residency(models, model=MODEL):
-    """Return VRAM bytes for the running exact Ollama model, 0 if CPU-only."""
-    for info in models:
-        if info.get("name") == model or info.get("model") == model:
+              YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Ô€±¥¹”€ô¥Ñ•´¹•Ð ‰±¥¹”ˆ¤(€€€€€€€€€€€€€€€¥˜ÑåÁ”¡±¥¹”¤¥Ì¹½Ð¥¹Ð½È¹½ÐÍÑ…ÉÐ€ðô±¥¹”€ðô•¹è(€€€€€€€€€€€€€€€€€€€É…¥Í”Y…±Õ•ÉÉ½È ‰¥¹‘¥¹œµ¥ÍÍ¥¹œÙ…±¥Í½ÕÉ”±¥¹”ˆ¤(€€€€€€€€€€€€€€€Í•Ù•É¥Ñä€ôÍÑÈ¡¥Ñ•´¹•Ð ‰Í•Ù•É¥Ñäˆ°€ˆˆ¤¤¹±½Ý•È ¤(€€€€€€€€€€€€€€€¥˜Í•Ù•É¥Ñä¹½Ð¥¸€ ‰É¥Ñ¥…°ˆ°€‰¡¥ ˆ°€‰µ•‘¥Õ´ˆ°€‰±½Üˆ¤è(€€€€€€€€€€€€€€€€€€€É…¥Í”Y…±Õ•ÉÉ½È ‰¥¹‘¥¹œµ¥ÍÍ¥¹œÍ•Ù•É¥Ñäˆ¤(€€€€€€€€€€€€€€€™¥•±‘Ì€ôíô(€€€€€€€€€€€€€€€™½È™¥•±¥¸€ ‰Ñ¥Ñ±”ˆ°€‰•Ù¥‘•¹”ˆ°€‰É•½µµ•¹‘…Ñ¥½¸ˆ¤è(€€€€€€€€€€€€€€€€€€€Ù…±Õ”€ô¥Ñ•´¹•Ð¡™¥•±¤(€€€€€€€€€€€€€€€€€€€¥˜¹½Ð¥Í¥¹ÍÑ…¹”¡Ù…±Õ”°ÍÑÈ¤½È¹½ÐÙ…±Õ”¹ÍÑÉ¥À ¤½È±•¸¡Ù…±Õ”¤€ø€ÄÔÀè(€€€€€€€€€€€€€€€€€€€€€€€É…¥Í”Y…±Õ•ÉÉ½È¡˜‰¥¹‘¥¹œ¡…Ì¥¹Ù…±¥í™¥•±‘ôˆ¤(€€€€€€€€€€€€€€€€€€€™¥•±‘Ím™¥•±‘t€ôÙ…±Õ”(€€€€€€€€€€€€€€€Ù…±¥¹…ÁÁ•¹¡ì‰™¥±”ˆè¹…µ”°€‰±¥¹”ˆè±¥¹”°€‰Í•Ù•É¥ÑäˆèÍ•Ù•É¥Ñä°€¨©™¥•±‘Íô¤(€€€€€€€€€€€É•ÑÕÉ¸Ù…±¥°…ÑÑ•µÁÐ(€€€€€€€•á•ÁÐ€¡!QQAÉÉ½È°UI1ÉÉ½È°Q¥µ•½ÕÑÉÉ½È°=MÉÉ½È°Y…±Õ•ÉÉ½È°-•åÉÉ½È°(€€€€€€€€€€€€€€€©Í½¸¹)M=9•½‘•ÉÉ½È¤…Ì•áŒè(€€€€€€€€€€€±…ÍÐ€ô˜‰!QQA}í•áŒ¹½‘•ôˆ¥˜¥Í¥¹ÍÑ…¹”¡•áŒ°!QQAÉÉ½È¤•±Í”˜‰íÑåÁ”¡•áŒ¤¹}}¹…µ•}}ôèíÍÑÈ¡•áŒ¥lèÄÄÁuôˆ(€€€€€€€€€€€ÁÉ¥¹Ð¡˜‰I•ÑÉäí…ÑÑ•µÁÑô½íIQI%Môèí¹…µ•ôéíÍÑ…ÉÑôµí•¹‘ô€¡í±…ÍÑô¤ˆ°™±ÕÍ õQÉÕ”¤(€€€€€€€€€€€¥˜…ÑÑ•µÁÐ€ðIQI%Lè(€€€€€€€€€€€€€€€Ñ¥µ”¹Í±••À¡µ¥¸ ÈÀ°€È€¨¨…ÑÑ•µÁÐ¤¤(€€€É…¥Í”IÕ¹Ñ¥µ•ÉÉ½È¡˜‰í±…ÍÑô…™Ñ•ÈíIQI%Mô…ÑÑ•µÁÑÌˆ¤()‘•˜ÁÕ}É•Í¥‘•¹ä¡µ½‘•±Ì°µ½‘•°õ5=0¤è(€€€€ˆˆ‰I•ÑÕÉ¸YI4‰åÑ•Ì™½ÈÑ¡”ÉÕ¹¹¥¹œ•á…Ð=±±…µ„µ½‘•°°€À¥˜ATµ½¹±ä¸ˆˆˆ(€€€™½È¥¹™¼¥¸µ½‘•±Ìè(€€€€€€€¥˜¥¹™¼¹•Ð ‰¹…µ”ˆ¤€ôôƒ[h‘éì¶»§q«^uodel or info.get("model") == model:
             return max(0, int(info.get("size_vram") or 0))
     return 0
 
@@ -239,46 +100,15 @@ def require_local_gpu():
     request = Request(URL + "/api/generate", data=body,
                       headers={"Content-Type": "application/json"}, method="POST")
     try:
+        # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected -- URL is canonicalized to the local Ollama allowlist.
         with urlopen(request, timeout=TIMEOUT) as response:
             reply = json.load(response)
         if reply.get("error"):
             raise RuntimeError("Ollama warm-up failed")
+        # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected -- URL is canonicalized to the local Ollama allowlist.
         with urlopen(URL + "/api/ps", timeout=30) as response:
             status = json.load(response)
-        vram = gpu_residency(status.get("models", []))
-    except (HTTPError, URLError, TimeoutError, OSError, KeyError, ValueError) as exc:
-        raise RuntimeError(f"Cannot verify RTX GPU acceleration: {type(exc).__name__}") from exc
-    if vram <= 0:
-        raise RuntimeError(
-            "GPU acceleration REQUIRED but Ollama reports no model VRAM usage. "
-            "Check NVIDIA driver and 'ollama ps' on Windows; CPU fallback refused."
-        )
-    print(f"GPU verified for {MODEL}: {vram / (1024 ** 3):.2f} GiB resident in VRAM.", flush=True)
-    return vram
-
-def scan():
-    if MODEL.endswith(":cloud") or URL not in (
-        "http://host.docker.internal:11434", "http://localhost:11434",
-        "http://127.0.0.1:11434"
-    ):
-        raise SystemExit("Only local Ollama models/endpoints are allowed")
-    REPORTS.mkdir(parents=True, exist_ok=True)
-    CHECKPOINTS.mkdir(parents=True, exist_ok=True)
-    require_local_gpu()
-    selected, excluded = read_manifest()
-    if not selected:
-        raise SystemExit("No reviewable tracked text files")
-    total_chunks = sum(len(chunks_for(content)) for _, content in selected)
-    print(f"Local model: {MODEL}; files: {len(selected)}, chunks: {total_chunks}; "
-          f"persistent checkpoint dir: {CHECKPOINTS}", flush=True)
-    all_findings, failed = [], []
-    done = 0
-    attempt_count = 0
-    seen_findings = set()
-    for file_index, (name, content) in enumerate(selected, 1):
-        print(f"File {file_index}/{len(selected)}: {name}", flush=True)
-        for first, last, block in chunks_for(content):
-            identity = json.dumps([VERSION, MODEL, name, first, last, block], ensure_ascii=False)
+        vram = gpu_residency(staYªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬ÕÑÕÌ¹•Ð ‰µ½‘•±Ìˆ°mt¤¤(€€€•á•ÁÐ€¡!QQAÉÉ½È°UI1ÉÉ½È°Q¥µ•½ÕÑÉÉ½È°=MÉÉ½È°-•åÉÉ½È°Y…±Õ•ÉÉ½È¤…Ì•áŒè(€€€€€€€É…¥Í”IÕ¹Ñ¥µ•ÉÉ½È¡˜‰…¹¹½ÐÙ•É¥™äIQ`AT…•±•É…Ñ¥½¸èíÑåÁ”¡•áŒ¤¹}}¹…µ•}}ôˆ¤™É½´•áŒ(€€€¥˜ÙÉ…´€ðô€Àè(€€€€€€€É…¥Í”IÕ¹Ñ¥µ•ÉÉ½È (€€€€€€€€€€€€‰AT…•±•É…Ñ¥½¸IEU%I‰ÕÐ=±±…µ„É•Á½ÉÑÌ¹¼µ½‘•°YI4ÕÍ…”¸€ˆ(€€€€€€€€€€€€‰¡•¬9Y%%‘É¥Ù•È…¹€½±±…µ„ÁÌœ½¸]¥¹‘½ÝÌìAT™…±±‰…¬É•™ÕÍ•¸ˆ(€€€€€€€€¤(€€€ÁÉ¥¹Ð¡˜‰ATÙ•É¥™¥•™½Èí5=1ôèíÙÉ…´€¼€ ÄÀÈÐ€¨¨€Ì¤è¸É™ô¥É•Í¥‘•¹Ð¥¸YI4¸ˆ°™±ÕÍ õQÉÕ”¤(€€€É•ÑÕÉ¸ÙÉ…´()‘•˜Í…¸ ¤è(€€€¥˜5=0¹•¹‘ÍÝ¥Ñ  ˆé±½Õˆ¤è(€€€€€€€É…¥Í”MåÍÑ•µá¥Ð ‰=¹±ä±½…°=±±…µ„µ½‘•±Ì½•¹‘Á½¥¹ÑÌ…É”…±±½Ý•ˆ¤(€€€IA=IQL¹µ­‘¥È¡Á…É•¹ÑÌõQÉÕ”°•á¥ÍÑ}½¬õQÉÕ”¤(€€€!-A=%9QL¹µ­‘¥È¡Á…É•¹ÑÌõQÉÕ”°•á¥ÍÑ}½¬õQÉÕ”¤(€€€É•ÅÕ¥É•}±½…±}ÁÔ ¤(€€€Í•±•Ñ•°•á±Õ‘•€ôÉ•…‘}µ…¹¥™•ÍÐ ¤(€€€¥˜¹½ÐÍ•±•Ñ•è(€€€€€€€É…¥Í”MåÍÑ•µá¥Ð ‰9¼É•Ù¥•Ý…‰±”ÑÉ…­•Ñ•áÐ™¥±•Ìˆ¤(€€€Ñ½Ñ…±}¡Õ¹­Ì€ôÍÕ´¡±•¸¡¡Õ¹­Í}™½È¡½¹Ñ•¹Ð¤¤™½È|°½¹Ñ•¹Ð¥¸Í•±•Ñ•¤(€€€ÁÉ¥¹Ð¡˜‰1½…°µ½‘•°èí5=1ôì™¥±•Ìèí±•¸¡Í•±•Ñ•¥ô°¡Õ¹­ÌèíÑ½Ñ…±}¡Õ¹­Íôì€ˆ(€€€€€€€€€˜‰Á•ÉÍ¥ÍÑ•¹Ð¡•­Á½¥¹Ð‘¥Èèí!-A=%9QMôˆ°™±ÕÍ õQÉÕ”¤(€€€…±±}™¥¹‘¥¹Ì°™…¥±•€ômt°mt(€€€‘½¹”€ô€À(€€€…ÑÑ•µÁÑ}½Õ¹Ð€ô€À(€€€Í••¹}™¥¹‘¥¹Ì€ôÍ•Ð ¤(€€€™½È™¥±•}¥¹‘•à°€¡¹…µ”°½¹Ñ•¹Ð¤¥¸•¹Õµ•É…Ñ”¡Í•±•Ñ•°€Ä¤è(€€€€€€€ÁÉ¥¹Ð¡˜‰¥±”í™¥±•}¥¹‘•áô½í±•¸¡Í•±•Ñ•¥ôèí¹…µ•ôˆ°™±ÕÍ õQÉÕ”¤(€€€€€€€™½È™¥ÉÍÐ°±…ÍÐ°‰±½¬¥¸¡Õ¹­Í}™½È¡½¹Ñ•¹Ð¤è(€€€€€€€€€€€¥‘•¹Ñ¥Ñä€ô©Í½¸¹‘ÕµÁÌ¡mYIM%=8°5=0°¹…µ”°™¥ÉÍÐ°±…ÍÐ°‰±½­t°•»[h‘éì¶»§q«^wure_ascii=False)
             key = hashlib.sha256(identity.encode()).hexdigest()
             checkpoint = CHECKPOINTS / (key + ".json")
             cached = False
@@ -306,33 +136,7 @@ def scan():
             for item in findings:
                 signature = (item.get("file"), item.get("line"), item.get("title"))
                 if signature not in seen_findings:
-                    all_findings.append(item)
-                    seen_findings.add(signature)
-            if done % 10 == 0 or done == total_chunks:
-                print(f"Progress: {done}/{total_chunks} chunks completed, "
-                      f"{len(failed)} failed, {len(all_findings)} unverified findings", flush=True)
-            # Persist resumable intermediate coverage after each successful chunk.
-            atom_json(REPORTS / "progress.json", {"completed_chunks": done,
-                "total_chunks": total_chunks, "failed_this_run": failed,
-                "updated_at": now()})
-    covered_files = {name: True for name, _ in selected}
-    for failure in failed:
-        covered_files[failure["file"]] = False
-    completed_files = sum(covered_files.values())
-    complete = done == total_chunks and not failed
-    report = {
-        "schema_version": VERSION, "model": MODEL, "created_at": now(),
-        "eligible_files": len(selected), "selected_files": len(selected),
-        "reviewed_files": completed_files,
-        "total_tracked_files": len(selected) + len(excluded),
-        "total_chunks": total_chunks, "completed_chunks": done,
-        "skipped_files": excluded, "truncated_files": [],
-        "errors": failed, "findings": all_findings,
-        "complete": complete, "all_tracked_included": not excluded,
-        "attempt_count": attempt_count,
-        "note": "AI findings are unverified. Excluded binary/key/generated files are reported, not silently ignored."
-    }
-    atom_json(REPORTS / "report.json", report)
+                    all_finYªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Õ‘¥¹Ì¹…ÁÁ•¹¡¥Ñ•´¤(€€€€€€€€€€€€€€€€€€€Í••¹}™¥¹‘¥¹Ì¹…‘¡Í¥¹…ÑÕÉ”¤(€€€€€€€€€€€¥˜‘½¹”€”€ÄÀ€ôô€À½È‘½¹”€ôôÑ½Ñ…±}¡Õ¹­Ìè(€€€€€€€€€€€€€€€ÁÉ¥¹Ð¡˜‰AÉ½É•ÍÌèí‘½¹•ô½íÑ½Ñ…±}¡Õ¹­Íô¡Õ¹­Ì½µÁ±•Ñ•°€ˆ(€€€€€€€€€€€€€€€€€€€€€˜‰í±•¸¡™…¥±•¥ô™…¥±•°í±•¸¡…±±}™¥¹‘¥¹Ì¥ôÕ¹Ù•É¥™¥•™¥¹‘¥¹Ìˆ°™±ÕÍ õQÉÕ”¤(€€€€€€€€€€€€ŒA•ÉÍ¥ÍÐÉ•ÍÕµ…‰±”¥¹Ñ•Éµ•‘¥…Ñ”½Ù•É…”…™Ñ•È•… ÍÕ•ÍÍ™Õ°¡Õ¹¬¸(€€€€€€€€€€€…Ñ½µ}©Í½¸¡IA=IQL€¼€‰ÁÉ½É•ÍÌ¹©Í½¸ˆ°ì‰½µÁ±•Ñ•‘}¡Õ¹­Ìˆè‘½¹”°(€€€€€€€€€€€€€€€€‰Ñ½Ñ…±}¡Õ¹­ÌˆèÑ½Ñ…±}¡Õ¹­Ì°€‰™…¥±•‘}Ñ¡¥Í}ÉÕ¸ˆè™…¥±•°(€€€€€€€€€€€€€€€€‰ÕÁ‘…Ñ•‘}…Ðˆè¹½Ü ¥ô¤(€€€½Ù•É•‘}™¥±•Ì€ôí¹…µ”èQÉÕ”™½È¹…µ”°|¥¸Í•±•Ñ•‘ô(€€€™½È™…¥±ÕÉ”¥¸™…¥±•è(€€€€€€€½Ù•É•‘}™¥±•Ím™…¥±ÕÉ•l‰™¥±”‰ut€ô…±Í”(€€€½µÁ±•Ñ•‘}™¥±•Ì€ôÍÕ´¡½Ù•É•‘}™¥±•Ì¹Ù…±Õ•Ì ¤¤(€€€½µÁ±•Ñ”€ô‘½¹”€ôôÑ½Ñ…±}¡Õ¹­Ì…¹¹½Ð™…¥±•(€€€É•Á½ÉÐ€ôì(€€€€€€€€‰Í¡•µ…}Ù•ÉÍ¥½¸ˆèYIM%=8°€‰µ½‘•°ˆè5=0°€‰É•…Ñ•‘}…Ðˆè¹½Ü ¤°(€€€€€€€€‰•±¥¥‰±•}™¥±•Ìˆè±•¸¡Í•±•Ñ•¤°€‰Í•±•Ñ•‘}™¥±•Ìˆè±•¸¡Í•±•Ñ•¤°(€€€€€€€€‰É•Ù¥•Ý•‘}™¥±•Ìˆè½µÁ±•Ñ•‘}™¥±•Ì°(€€€€€€€€‰Ñ½Ñ…±}ÑÉ…­•‘}™¥±•Ìˆè±•¸¡Í•±•Ñ•¤€¬±•¸¡•á±Õ‘•¤°(€€€€€€€€‰Ñ½Ñ…±}¡Õ¹­ÌˆèÑ½Ñ…±}¡Õ¹­Ì°€‰½µÁ±•Ñ•‘}¡Õ¹­Ìˆè‘½¹”°(€€€€€€€€‰Í­¥ÁÁ•‘}™¥±•Ìˆè•á±Õ‘•°€‰ÑÉÕ¹…Ñ•‘}™¥±•Ìˆèmt°(€€€€€€€€‰•ÉÉ½ÉÌˆè™…¥±•°€‰™¥¹‘¥¹Ìˆè…±±}™¥¹‘¥¹Ì°(€€€€€€€€‰½µÁ±•Ñ”ˆè½µÁ±•Ñ”°€‰…±±}ÑÉ…­•‘}¥¹±Õ‘•ˆè¹½Ð•á±Õ‘•°(€€€€€€€€‰…ÑÑ•µÁÑ}½Õ¹Ðˆè…ÑÑ•µÁÑ}½Õ¹Ð°(€€€€€€€€‰¹½Ñ”ˆè€‰$™¥¹‘¥¹Ì…É”Õ¹Ù•É¥™¥•¸á±Õ‘•‰¥¹…Éä½­•ä½•¹•É…Ñ•™¥±•Ì…É”É•Á½ÉÑ•°¹½ÐÍ¥±•¹Ñ±ä¥¹½É•¸ˆ(€€€ô(€€€…Ñ½µ}©Í½¸¡IA=IQL€¼€‰É—[h‘éì¶»§q«^tort.json", report)
     lines = [
         "# The Fixer â€” Resumable local Ollama source audit",
         f"Reviewed files: {completed_files}/{len(selected)} reviewable tracked text files",
