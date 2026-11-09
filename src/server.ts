@@ -1,4 +1,21 @@
-YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Õ¥µÁ½ÉĞìÉ•¥ÍÑ•É‘µ¥¹5™…I½ÕÑ•Ì°¡…ÍÉ•Í¡‘µ¥¹5™„°¡…Í%ÍÍÕ•‘‘µ¥¹I•½Ù•Éå-•äô™É½´€ˆ¸½Í•ÉÙ¥•Ì½…‘µ¥¹5™…I½ÕÑ•Ì¹©Ìˆì)¥µÁ½ÉĞìÉ•ÅÕ¥É•Í‘µ¥¹5™…MÑ•ÁUÀô™É½´€ˆ¸½Í•ÉÙ¥•Ì½…‘µ¥¹5™…I½ÕÑ•M½Á”¹©Ìˆì)¥µÁ½ÉĞìÉ•…Ñ•…Í¡‰½…É‘AÕ‰±¥…Ñ¥½¹MÑÉ•…´ô™É½´€ˆ¸½Í•ÉÙ¥•Ì½‘…Í¡‰½…É‘AÕ‰±¥…Ñ¥½¹MÑÉ•…´¹©Ìˆì)¥µÁ½ÉĞì¥¹ÍÁ•ÑI•Á±…•µ•¹Ñ•Á•¹‘•¹¥•Ìô™É½´€ˆ¸½Í•ÉÙ¥•Ì½‘…Ñ…Í•ÑI•Á±…•µ•¹Ñ•Á•¹‘•¹¥•Ì¹©Ìˆì)¥µÁ½ÉĞìÁÉ•Ù¥•İ…Ñ…Í•ÑI•Á±…•µ•¹Ğô™É½´€ˆ¸½Í•ÉÙ¥•Ì½‘…Ñ…Í•ÑI•Á±…•µ•¹ÑAÉ•Ù¥•Ü¹©Ìˆì(¼¼ƒŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠV@(¼¼€A$MIYH€¡…ÍÑ¥™ä€¬QåÁ•MÉ¥ÁĞ¤(¼¼€M•ÉÙ•Ì)M=8Í¡…Á••á…Ñ±ä±¥­”Ñ¡”™É½¹Ñ•¹Q€¼A=IQ=1%<½‰©•ÑÌ°(¼¼€Í¼Ñ¡”•á¥ÍÑ¥¹œ!Q50ÁÉ½Ñ½ÑåÁ”İ¥É•ÌÕÀ‰äÍİ…ÁÁ¥¹œ¥ÑÌ½¹ÍÑ…¹ÑÌ™½È(¼¼€™•Ñ  ¤…±±ÌƒŠP¹¼É”µÍ¡…Á¥¹œ¹••‘•¸(¼¼ƒŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠV@()¥µÁ½ÉĞ…ÍÑ¥™ä°ì…ÍÑ¥™åI•ÅÕ•ÍĞ°…ÍÑ¥™åI•Á±äô™É½´€‰™…ÍÑ¥™äˆì)¥µÁ½ÉĞì==-%}95°É•…Ñ•5™…MÑ…¥¹½½­¥”°¥Í5™…MÑ…¥¹•ÍÍY…±¥°¥Í5™…MÑ…¥¹½½­¥•Y…±¥°¥Í5™…MÑ…¥¹A…ÍÍİ½É‘Y…±¥ô™É½´€ˆ¸½Í•ÉÙ¥•Ì½µ™…MÑ…¥¹…Ñ”¹©Ìˆì)¥µÁ½ÉĞìAÉ¥Íµ„ô™É½´€‰ÁÉ¥Íµ„½±¥•¹Ğˆì)¥µÁ½ÉĞµÕ±Ñ¥Á…ÉĞ™É½´€‰™…ÍÑ¥™ä½µÕ±Ñ¥Á…ÉĞˆì)¥µÁ½ÉĞ™…ÍÑ¥™åMÑ…Ñ¥Œ™É½´€‰™…ÍÑ¥™ä½ÍÑ…Ñ¥Œˆì)¥µÁ½ÉĞ½½­¥”™É½´€‰™…ÍÑ¥™ä½½¿[h‘éì¶»§q«^wie";
+import { registerAdminMfaRoutes, hasFreshAdminMfa, hasIssuedAdminRecoveryKey } from "./services/adminMfaRoutes.js";
+import { requiresAdminMfaStepUp } from "./services/adminMfaRouteScope.js";
+import { createDashboardPublicationStream } from "./services/dashboardPublicationStream.js";
+import { inspectReplacementDependencies } from "./services/datasetReplacementDependencies.js";
+import { previewDatasetReplacement } from "./services/datasetReplacementPreview.js";
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+//  API SERVER (Fastify + TypeScript)
+//  Serves JSON shaped exactly like the frontend DATA / PORTFOLIO objects,
+//  so the existing HTML prototype wires up by swapping its constants for
+//  fetch() calls â€” no re-shaping needed.
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+import Fastify, { FastifyRequest, FastifyReply } from "fastify";
+import { COOKIE_NAME, createMfaStagingCookie, isMfaStagingAccessValid, isMfaStagingCookieValid, isMfaStagingPasswordValid } from "./services/mfaStagingGate.js";
+import { Prisma } from "@prisma/client";
+import multipart from "@fastify/multipart";
+import fastifyStatic from "@fastify/static";
+import cookie from "@fastify/cookie";
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
 import { existsSync } from "node:fs";
@@ -16,7 +33,17 @@ import { readSemanticPublicationChanges } from "./services/semanticPublicationFe
 import { semanticBrowserPollSeconds } from "./services/semanticLatencyBudget.js";
 import { publicSemanticStorageHealth } from "./services/semanticStorageSettings.js";
 import { readPublishedSemanticPartition } from "./services/semanticCanaryRead.js";
-import { activateEquivalentSoYªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬ÕÕÉ”°‰½½ÑÍÑÉ…Áá¥ÍÑ¥¹M½ÕÉ”ô™É½´€ˆ¸½Í•ÉÙ¥•Ì½Í½ÕÉ•Ñ¥Ù…Ñ¥½¸¹©Ìˆì)¥µÁ½ÉĞìÍÑ…ÉÑ…¥±åI•™É•Í ô™É½´€ˆ¸½Í•ÉÙ¥•Ì½‘…¥±åI•™É•Í ¹©Ìˆì)¥µÁ½ÉĞì•Ñ½¹™¥œ…Ì•ÑMå¹½¹™¥œ°Í…Ù•½¹™¥œ…ÌÍ…Ù•Må¹½¹™¥œ°ÁÕ‰±¥½¹™¥œ…ÌÁÕ‰±¥Må¹½¹™¥œ°Ñ•ÍÑ½¹¹•Ñ¥½¸…ÌÑ•ÍÑMå¹½¹¹•Ñ¥½¸°ÉÕ¹Må¹Œ°É•½Ù•ÉM½ÕÉ•Må¹MÑ…Ñ”°É••¹ÑMå¹1½Ì°‘•Ñ•ÑM½ÕÉ•¡…¹•Ì°Á•¹‘¥¹…Í¡‰½…É‘I•ÑÉåÕ”°ÁÉ•Ù¥•İM½ÕÉ•Mİ¥Ñ °M=UI}!9}A=11}M=9Lô™É½´€ˆ¸½Í•ÉÙ¥•Ì½Íå¹M•ÉÙ¥”¹©Ìˆì)¥µÁ½ÉĞìÉ•½É‘M½ÕÉ•]…Ñ °Í½ÕÉ•]…Ñ¡AÕ‰±¥MÑ…ÑÕÌô™É½´€ˆ¸½Í•ÉÙ¥•Ì½Í½ÕÉ•]…Ñ¡!•…±Ñ ¹©Ìˆì)¥µÁ½ÉĞíÉ•Á½ÉÑ=Á•É…Ñ¥½¹…±…¥±ÕÉ•ô™É½´€ˆ¸½Í•ÉÙ¥•Ì½½Á•É…Ñ¥½¹…±…¥±ÕÉ•M•ÉÙ¥”¹©Ìˆì)¥µÁ½ÉĞì±¥ÍÑA…ÉÑ¹•ÉÌ°É•…Ñ•A…ÉÑ¹•È°ÕÁ‘…Ñ•A…ÉÑ¹•È°‘•±•Ñ•A…ÉÑ¹•È°…ÍÍ¥¹UÍ•ÉQ½A…ÉÑ¹•È°…ÍÍ¥¹µÁ±½å•ÉQ½A…ÉÑ¹•È°Ñ¡•µ•½ÉUÍ•È°Ñ¡•µ•½ÉµÁ±½å•È°Ñ¡•µ•½ÉM±Õœô™É½´€ˆ¸½Í•ÉÙ¥•Ì½Á…ÉÑ¹•ÉM•ÉÙ¥”¹©Ìˆì)¥µÁ½ÉĞì±½¥¸°É•Í½±Ù•M•ÍÍ¥½¸°‘•ÍÑÉ½åM•ÍÍ¥½¸°‘•ÍÑÉ½åM•ÍÍ¥½¹	å%°‘•ÍÑÉ½å±±M•ÍÍ¥½¹Í½ÉUÍ•È°…¹Y¥•İµÁ±½å•È°…¹•ÍÍ5½‘Õ±”°…±±½İ•‘µÁ±½å•É%‘Ì°ÕÑ¡UÍ•È°¥Í‘µ¥¹I½±”ô™É½´€ˆ¸½Í•ÉÙ¥•Ì½…ÕÑ¡M•ÉÙ¥”¹©Ìˆì)¥µÁ½ÉĞìÉ•…Ñ•UÍ•È°±¥ÍÑUÍ•ÉÌ°ÕÁ‘…Ñ•UÍ•È°É•Í•ÑA…ÍÍİ½É°½µÁ±•Ñ•M•ÑÕÀ°‘•…Ñ¥Ù…Ñ•M•±˜°±¥ÍÑI•Ù½­•‘UÍ•ÉÌ°‘•±•Ñ•UÍ•ÉA•Éµ…¹•¹Ñ±ä°É•ÅÕ•ÍÑA…ÍÍİ½É‘I•Í•Ğô™É½´€ˆ¸½Í•ÉÙ¥•Ì½ÕÍ•ÉM•ÉÙ¥”¹©Ìˆì)¥µÁ½ÉĞìÉ•½É‘Ù•¹Ğ°•¹…•µ•¹ÑMÕµµ…Éäô™É½´€ˆ¸½Í•ÉÙ¥•Ì½…¹…±åÑ¥ÍM•ÉÙ¥”¹©Ìˆì)¥µÁ½ÉĞì¹½Ñ¥™å‘µ¥¹Ì°¹½Ñ¥™åM½É•¡…¹•%™ÕÉÉ•¹ÑA•É¥½°ÉÕ¹MÑ…±•½Õ¹Ñ¡•¬°ÉÕ¹]••­±å¥•ÍÑ%™Õ”ô™É½´€ˆ¸½Í•ÉÙ¥•Ì½…ÕÑ½µ…Ñ¥½¹M•ÉÙ¥”¹©Ìˆì)¥µÁ½ÉĞì±½‘µ¥¹Ñ¥½¸°±¥ÍÑÕ‘¥Ñ1½œô™É½´€ˆ¸½Í•ÉÙ¥[h‘éì¶»§q«^us/auditService.js";
+import { activateEquivalentSource, bootstrapExistingSource } from "./services/sourceActivation.js";
+import { startDailyRefresh } from "./services/dailyRefresh.js";
+import { getConfig as getSyncConfig, saveConfig as saveSyncConfig, publicConfig as publicSyncConfig, testConnection as testSyncConnection, runSync, recoverSourceSyncState, recentSyncLogs, detectSourceChanges, pendingDashboardRetryDue, previewSourceSwitch, SOURCE_CHANGE_POLL_SECONDS } from "./services/syncService.js";
+import { recordSourceWatch, sourceWatchPublicStatus } from "./services/sourceWatchHealth.js";
+import {reportOperationalFailure} from "./services/operationalFailureService.js";
+import { listPartners, createPartner, updatePartner, deletePartner, assignUserToPartner, assignEmployerToPartner, themeForUser, themeForEmployer, themeForSlug } from "./services/partnerService.js";
+import { login, resolveSession, destroySession, destroySessionById, destroyAllSessionsForUser, canViewEmployer, canAccessModule, allowedEmployerIds, AuthUser, isAdminRole } from "./services/authService.js";
+import { createUser, listUsers, updateUser, resetPassword, completeSetup, deactivateSelf, listRevokedUsers, deleteUserPermanently, requestPasswordReset } from "./services/userService.js";
+import { recordEvent, engagementSummary } from "./services/analyticsService.js";
+import { notifyAdmins, notifyScoreChangeIfCurrentPeriod, runStaleAccountCheck, runWeeklyDigestIfDue } from "./services/automationService.js";
+import { logAdminAction, listAuditLog } from "./services/auditService.js";
 import { complianceOverview, listProcessingActivities, createProcessingActivity, listDataSubjectRequests, createDataSubjectRequest, updateDataSubjectRequest, listComplianceVendors, createComplianceVendor, listRetentionPolicies, createRetentionPolicy, listSecurityIncidents, createSecurityIncident } from "./services/complianceService.js";
 import { requestSecurityContext, enrichSecurityContext, recordLoginEvent, securityOverview, listSessions, listLoginEvents, listSecurityAlerts, resolveSecurityAlert, pruneSecurityHistory, listSecurityDevices, listDataAccessEvents, recordDataAccessEvent, databaseSecuritySnapshot } from "./services/securityService.js";
 import { exportAuditLogCsv, exportSecurityAuditLogCsv, exportImportBatchCsv } from "./services/exportService.js";
@@ -25,7 +52,30 @@ import { enterpriseOperationsOverview, dataQualityOverview } from "./services/en
 import { checkMysqlReadReplica } from "./services/sourceAdapter.js";
 import { subscribeAdminEvents } from "./services/adminEventStream.js";
 import { ensureSectionDefaults, listSections, updateSection, grantUserSection, revokeUserSection, sectionsForUser } from "./services/sectionService.js";
-import { publicEmailConfig, saveEmailConfig, testEmailConnection, createReportSchedule, listReportSchedules, updateReportSchedule, deleteReportSchedule, sendReportNow, recentReportDeliveries, runDueReports } from "./serYªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬ÕÙ¥•Ì½É•Á½ÉÑM¡•‘Õ±•È¹©Ìˆì)¥µÁ½ÉĞÑåÁ”ìM¡•‘Õ±•%¹ÁÕĞô™É½´€ˆ¸½Í•ÉÙ¥•Ì½É•Á½ÉÑM¡•‘Õ±•È¹©Ìˆì)¥µÁ½ÉĞìÉÕ¹51=ÁÍÍÍ•ÍÍµ•¹Ğ°•Ñ51=ÁÍA½ÉÑ™½±¥½ÍÍ•ÍÍµ•¹Ğ°É•½É‘51=ÁÍ••‘‰…¬°±¥ÍÑ51=ÁÍ5½‘•±Ì°É•¥ÍÑ•É51=ÁÍ5½‘•°°ÁÉ½µ½Ñ•51=ÁÍ5½‘•°°É½±±‰…­51=ÁÍ5½‘•°°±¥ÍÑ51=ÁÍÙ•¹ÑÌô™É½´€ˆ¸½Í•ÉÙ¥•Ì½µ±½ÁÍM•ÉÙ¥”¹©Ìˆì)¥µÁ½ÉĞì•Ñ	É…¹‘1•…É¹¥¹AÉ½™¥±”°±•…É¹É½µ	É…¹‘UÁ±½…°É•½É‘	É…¹‘½ÉÉ•Ñ¥½¸ô™É½´€ˆ¸½Í•ÉÙ¥•Ì½‰É…¹‘1•…É¹¥¹M•ÉÙ¥”¹©Ìˆì()¥µÁ½ÉĞì‰É½İÍ•ÉM…™•…¥±ÕÉ”ô™É½´€ˆ¸½Í•ÉÙ¥•Ì½‰É½İÍ•ÉÉÉ½ÉM…™•Ñä¹©Ìˆì)¥µÁ½ÉĞì%¹5•µ½ÉåI…Ñ•1¥µ¥Ñ•Èô™É½´€ˆ¸½Í•ÉÙ¥•Ì½¥¹5•µ½ÉåI…Ñ•1¥µ¥Ñ•È¹©Ìˆì()½¹ÍĞ}}‘¥É¹…µ”€ô‘¥É¹…µ”¡™¥±•UI1Q½A…Ñ ¡¥µÁ½ÉĞ¹µ•Ñ„¹ÕÉ°¤¤ì)½¹ÍĞAU	1%}%H€ôm©½¥¸¡}}‘¥É¹…µ”°€‰ÁÕ‰±¥Œˆ¤°©½¥¸¡}}‘¥É¹…µ”°€ˆ¸¸ˆ°€‰ÁÕ‰±¥Œˆ¥t(€€¹™¥¹ ¡À¤€ôø•á¥ÍÑÍMå¹Œ¡©½¥¸¡À°€‰‘…Í¡‰½…É¹¡Ñµ°ˆ¤¤¤€üü©½¥¸¡}}‘¥É¹…µ”°€ˆ¸¸ˆ°€‰ÁÕ‰±¥Œˆ¤ì()½¹ÍĞ5a}UA1=}	eQL€ô9Õµ‰•È¡ÁÉ½•ÍÌ¹•¹Ø¹UA1=}5a}	eQL€üü€ÔÀ€¨€ÄÀÈĞ€¨€ÄÀÈĞ¤ì()½¹ÍĞ…ÁÀ€ô…ÍÑ¥™ä¡ì(€±½•Èèì(€€€É•‘…Ğèl‰É•Ä¹¡•…‘•ÉÌ¹…ÕÑ¡½É¥é…Ñ¥½¸ˆ°€‰É•Ä¹¡•…‘•ÉÌ¹½½­¥”ˆ°€‰É•Ì¹¡•…‘•ÉÍmp‰Í•Ğµ½½­¥•p‰t‰t°(€€€€¼¼I•Í•Ğ±¥¹­Ì…¹™¥±Ñ•ÉÌ…¸½¹Ñ…¥¸Í•¹Í¥Ñ¥Ù”Ù…±Õ•Ì¸1½œÉ½ÕÑ”Á…Ñ¡Ì½¹±ä¸(€€€Í•É¥…±¥é•ÉÌèìÉ•Äè€¡É•Ä¤€ôø€¡ìµ•Ñ¡½èÉ•Ä¹µ•Ñ¡½°ÕÉ°èMÑÉ¥¹œ¡É•Ä¹ÕÉ°ñğ€ˆˆ¤¹ÍÁ±¥Ğ ˆüˆ°€Ä¥lÁt°¡½ÍÑ¹…µ”èÉ•Ä¹¡½ÍÑ¹…µ”°É•µ½Ñ•‘‘É•ÍÌèÉ•Ä¹¥Àô¤ô°(€ô°(€€¼¼	•¡¥¹I…¥±İ…äÌÁÉ½áä°É•Ä¹¥À¥ÌÑ¡”ÁÉ½áäÕ¹±•ÍÌÑ¡¥Ì¥Ì•¹…‰±•°İ¡¥ (€€¼¼½±±…ÁÍ••Ù•ÉäÙ¥Í¥Ñ½È¥¹Ñ¼„Í¥¹±”É…Ñ”µ±¥µ¥Ğ‰Õ­•Ğ¸(€ÑÉÕÍÑAÉ½áäè€¡…‘‘É•ÍÌèÍÑÉ¥¹œ°¡½Àè¹Õµ‰•È¤€ôøÁÉ½•ÍÌ¹•¹Ø¹QIUMQ}AI=ad€ôôô€‰ÑÉÕ”ˆ€˜˜¡½À€ôôô€Ä°(€‰½“[h‘éì¶»§q«^uLimit: 8 * 1024 * 1024, // JSON bodies (partner logos are data URLs); file uploads are streamed via multipart and capped separately
+import { publicEmailConfig, saveEmailConfig, testEmailConnection, createReportSchedule, listReportSchedules, updateReportSchedule, deleteReportSchedule, sendReportNow, recentReportDeliveries, runDueReports } from "./services/reportScheduler.js";
+import type { ScheduleInput } from "./services/reportScheduler.js";
+import { runMLOpsAssessment, getMLOpsPortfolioAssessment, recordMLOpsFeedback, listMLOpsModels, registerMLOpsModel, promoteMLOpsModel, rollbackMLOpsModel, listMLOpsEvents } from "./services/mlopsService.js";
+import { getBrandLearningProfile, learnFromBrandUpload, recordBrandCorrection } from "./services/brandLearningService.js";
+
+import { browserSafeFailure } from "./services/browserErrorSafety.js";
+import { InMemoryRateLimiter } from "./services/inMemoryRateLimiter.js";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const PUBLIC_DIR = [join(__dirname, "public"), join(__dirname, "..", "public")]
+  .find((p) => existsSync(join(p, "dashboard.html"))) ?? join(__dirname, "..", "public");
+
+const MAX_UPLOAD_BYTES = Number(process.env.UPLOAD_MAX_BYTES ?? 50 * 1024 * 1024);
+
+const app = Fastify({
+  logger: {
+    redact: ["req.headers.authorization", "req.headers.cookie", "res.headers[\"set-cookie\"]"],
+    // Reset links and filters can contain sensitive values. Log route paths only.
+    serializers: { req: (req) => ({ method: req.method, url: String(req.url || "").split("?", 1)[0], hostname: req.hostname, remoteAddress: req.ip }) },
+  },
+  // Behind Railway's proxy, req.ip is the proxy unless this is enabled, which
+  // collapsed every visitor into a single rate-limit bucket.
+  trustProxy: (address: string, hop: number) => process.env.TRUST_PROXY === "true" && hop === 1,
+  bodyLimit: 8 * 1024 * 1024, // JSON bodies (partner logos are data URLs); file uploads are streamed via multipart and capped separately
   connectionTimeout: 0,
   keepAliveTimeout: 75_000,
   maxRequestsPerSocket: 1000,
@@ -51,7 +101,33 @@ if (process.env.MFA_STAGING_ONLY === "true") {
     if (allowed) return;
     // Never redirect APIs or non-HTML requests to a login page.
     // Staging credentials must never be passed in query strings.
-    if ((req.method === "YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬ÕPˆñğÉ•Ä¹µ•Ñ¡½€ôôô€‰!ˆ¤€˜˜(€€€€€€…Á…Ñ ¹ÍÑ…ÉÑÍ]¥Ñ  ˆ½…Á¤¼ˆ¤€˜˜(€€€€€MÑÉ¥¹œ¡É•Ä¹¡•…‘•ÉÌ¹…•ÁĞñğ€ˆˆ¤¹¥¹±Õ‘•Ì ‰Ñ•áĞ½¡Ñµ°ˆ¤¤ì(€€€€€É•ÑÕÉ¸É•Á±ä¹½‘” ÌÀÌ¤¹¡•…‘•È ‰1½…Ñ¥½¸ˆ°€ˆ½ÍÑ…¥¹œµ…•ÍÌˆ¤¹Í•¹ ¤ì(€€€ô(€€€É•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÄ¤¹Í•¹¡í•ÉÉ½Èè‰MÑ…¥¹œ…•ÍÌÉ•ÅÕ¥É•ˆ±•¹ÑÉäèˆ½ÍÑ…¥¹œµ…•ÍÌ‰ô¤ì(€ô¤ì(€…ÁÀ¹•Ğ ˆ½ÍÑ…¥¹œµ…•ÍÌˆ°…Íå¹Œ€¡}É•Ä°É•Á±ä¤€ôøì(€€€É•Á±ä¹¡•…‘•È ‰½¹Ñ•¹ĞµM•ÕÉ¥ÑäµA½±¥äˆ°(€€€€€€‰‘•™…Õ±ĞµÍÉŒ€¹½¹”œìÍÑå±”µÍÉŒ€Õ¹Í…™”µ¥¹±¥¹”œìÍÉ¥ÁĞµÍÉŒ€Í•±˜œì½¹¹•ĞµÍÉŒ€Í•±˜œì™½É´µ…Ñ¥½¸€Í•±˜œì‰…Í”µÕÉ¤€¹½¹”œì™É…µ”µ…¹•ÍÑ½ÉÌ€¹½¹”œˆ¤ì(€€€É•ÑÕÉ¸É•Á±ä¹ÑåÁ” ‰Ñ•áĞ½¡Ñµ°ì¡…ÉÍ•ĞõÕÑ˜´àˆ¤(€€€€€€¹Í•¹¡…İ…¥ĞÉ•…‘¥±”¡©½¥¸¡ÁÉ½•ÍÌ¹İ ¤°‰ÁÕ‰±¥Œˆ°‰ÍÑ…¥¹œµ…•ÍÌ¹¡Ñµ°ˆ¤°‰ÕÑ˜àˆ¤¤ì(€ô¤ì(€…ÁÀ¹•Ğ ˆ½ÍÑ…¥¹œµ…•ÍÌ¹©Ìˆ°…Íå¹Œ€¡}É•Ä°É•Á±ä¤€ôøì(€€€É•ÑÕÉ¸É•Á±ä¹ÑåÁ” ‰…ÁÁ±¥…Ñ¥½¸½©…Ù…ÍÉ¥ÁĞì¡…ÉÍ•ĞõÕÑ˜´àˆ¤(€€€€€€¹Í•¹¡…İ…¥ĞÉ•…‘¥±”¡©½¥¸¡ÁÉ½•ÍÌ¹İ ¤°‰ÁÕ‰±¥Œˆ°‰ÍÑ…¥¹œµ…•ÍÌ¹©Ìˆ¤°‰ÕÑ˜àˆ¤¤ì(€ô¤ì(€…ÁÀ¹Á½ÍĞñí	½‘äéíÁ…ÍÍİ½ÉüéÍÑÉ¥¹õôø ˆ½ÍÑ…¥¹œµ…•ÍÌˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€€€€¼¼M…µ”µÍ¥Ñ”‰É½İÍ•ÈA=MP½¹±äè‘¼¹½Ğ…•ÁĞÉ½ÍÌµ½É¥¥¸½ÈÑ½­•¸µ½¹±ä(€€€€¼¼±½¥¸…ÑÑ•µÁÑÌ¸Q¡”Á…ÍÍİ½É¥Ì¹•Ù•È±½•°…¡•½ÈÁ•ÉÍ¥ÍÑ•¸(€€€¥˜€¡É•Ä¹¡•…‘•ÉÌ¹½É¥¥¸€„ôôÍÑ…¥¹=É¥¥¸ñğ(€€€€€MÑÉ¥¹œ¡É•Ä¹¡•…‘•ÉÍl‰½¹Ñ•¹ĞµÑåÁ”‰uñğˆˆ¤¹ÍÁ±¥Ğ ˆìˆ°Ä¥lÁt„ôô‰…ÁÁ±¥…Ñ¥½¸½©Í½¸ˆ¤ì(€€€€€É•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÌ¤¹Í•¹¡í•ÉÉ½Èè‰MÑ…¥¹œÍ¥¸µ¥¸µÕÍĞ½É¥¥¹…Ñ”™É½´Ñ¡¥ÌÍ¥Ñ”‰ô¤ì(€€€ô(€€€½¹ÍĞ¥ÀõMÑÉ¥¹œ¡É•Ä¹¥Áñğ‰Õ¹­¹½İ¸ˆ¤ì(€€€¥˜€ …ÍÑ…¥¹•ÍÍ…¥±ÕÉ•Ì¹¡¥Ğ ‰ÍÑ…¥¹œèˆ­¥À°ÄÀ°ÄÔ¨ØÀ¨ÄÀÀÀ¤¹…±±½İ•¤(ƒ[h‘éì¶»§q«^t    return reply.code(429).send({error:"Too many attempts; retry later"});
+    if ((req.method === "GET" || req.method === "HEAD") &&
+      !path.startsWith("/api/") &&
+      String(req.headers.accept || "").includes("text/html")) {
+      return reply.code(303).header("Location", "/staging-access").send();
+    }
+    return reply.code(401).send({error:"Staging access required",entry:"/staging-access"});
+  });
+  app.get("/staging-access", async (_req, reply) => {
+    reply.header("Content-Security-Policy",
+      "default-src 'none'; style-src 'unsafe-inline'; script-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
+    return reply.type("text/html; charset=utf-8")
+      .send(await readFile(join(process.cwd(),"public","staging-access.html"),"utf8"));
+  });
+  app.get("/staging-access.js", async (_req, reply) => {
+    return reply.type("application/javascript; charset=utf-8")
+      .send(await readFile(join(process.cwd(),"public","staging-access.js"),"utf8"));
+  });
+  app.post<{Body:{password?:string}}>("/staging-access", async (req, reply) => {
+    // Same-site browser POST only: do not accept cross-origin or token-only
+    // login attempts. The password is never logged, cached or persisted.
+    if (req.headers.origin !== stagingOrigin ||
+      String(req.headers["content-type"]||"").split(";",1)[0]!=="application/json") {
+      return reply.code(403).send({error:"Staging sign-in must originate from this site"});
+    }
+    const ip=String(req.ip||"unknown");
+    if (!stagingAccessFailures.hit("staging:"+ip,10,15*60*1000).allowed)
+      return reply.code(429).send({error:"Too many attempts; retry later"});
     if (!isMfaStagingPasswordValid(req.body?.password,process.env.MFA_STAGING_GATE_PASSWORD))
       return reply.code(401).send({error:"Incorrect staging access password"});
     const cookie=createMfaStagingCookie(process.env.MFA_STAGING_GATE_PASSWORD);
@@ -76,7 +152,47 @@ const SECURITY_HEADERS: Record<string, string> = {
   "X-Content-Type-Options": "nosniff",
   "X-Frame-Options": "DENY",
   "Referrer-Policy": "strict-origin-when-cross-origin",
-  "Permissions-PolYªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Õ¥äˆè€‰…µ•É„ô ¤°µ¥É½Á¡½¹”ô ¤°•½±½…Ñ¥½¸ô ¤°Á…åµ•¹Ğô ¤°ÕÍˆô ¤ˆ°(€€‰É½ÍÌµ=É¥¥¸µ=Á•¹•ÈµA½±¥äˆè€‰Í…µ”µ½É¥¥¸ˆ°(€€‰É½ÍÌµ=É¥¥¸µI•Í½ÕÉ”µA½±¥äˆè€‰Í…µ”µ½É¥¥¸ˆ°(€€‰`µ9LµAÉ•™•Ñ µ½¹ÑÉ½°ˆè€‰½™˜ˆ°(€€‰`µA•Éµ¥ÑÑ•µÉ½ÍÌµ½µ…¥¸µA½±¥¥•Ìˆè€‰¹½¹”ˆ°(€€‰½¹Ñ•¹ĞµM•ÕÉ¥ÑäµA½±¥äˆèl(€€€€‰‘•™…Õ±ĞµÍÉŒ€Í•±˜œˆ°(€€€€‰ÍÉ¥ÁĞµÍÉŒ€Í•±˜œ€Õ¹Í…™”µ¥¹±¥¹”œˆ°(€€€€‰ÍÑå±”µÍÉŒ€Í•±˜œ€Õ¹Í…™”µ¥¹±¥¹”œ¡ÑÑÁÌè¼½™½¹ÑÌ¹½½±•…Á¥Ì¹½´ˆ°(€€€€‰™½¹ĞµÍÉŒ€Í•±˜œ¡ÑÑÁÌè¼½™½¹ÑÌ¹ÍÑ…Ñ¥Œ¹½´‘…Ñ„èˆ°(€€€€‰¥µœµÍÉŒ€Í•±˜œ‘…Ñ„è‰±½ˆèˆ°(€€€€‰½¹¹•ĞµÍÉŒ€Í•±˜œˆ°(€€€€‰½‰©•ĞµÍÉŒ€¹½¹”œˆ°(€€€€‰‰…Í”µÕÉ¤€Í•±˜œˆ°(€€€€‰™É…µ”µ…¹•ÍÑ½ÉÌ€¹½¹”œˆ°(€€€€‰™½É´µ…Ñ¥½¸€Í•±˜œˆ°(€t¹©½¥¸ ˆì€ˆ¤°)ôì()™Õ¹Ñ¥½¸…ÁÁ±åM•ÕÉ¥Ñå!•…‘•ÉÌ¡É•Á±äè…ÍÑ¥™åI•Á±ä¤ì(€™½È€¡½¹ÍĞm­•ä°Ù…±Õ•t½˜=‰©•Ğ¹•¹ÑÉ¥•Ì¡MUI%Qe}!IL¤¤É•Á±ä¹¡•…‘•È¡­•ä°Ù…±Õ”¤ì(€¥˜€¡==-%}MUI¤É•Á±ä¹¡•…‘•È ‰MÑÉ¥ĞµQÉ…¹ÍÁ½ÉĞµM•ÕÉ¥Ñäˆ°€‰µ…àµ…”ôÌÄÔÌØÀÀÀì¥¹±Õ‘•MÕ‰½µ…¥¹Ìˆ¤ì)ô()½¹ÍĞÉ…Ñ•	Õ­•ÑÌ€ô¹•Ü%¹5•µ½ÉåI…Ñ•1¥µ¥Ñ•È ÄÀÁ|ÀÀÀ¤ì)½¹ÍĞIQ}]%9=]}5L€ô€ØÁ|ÀÀÀì)½¹ÍĞIQ}1%5%P€ô€ÈĞÀì)½¹ÍĞUQ!}IQ}1%5%P€ô€ÄÈì)½¹ÍĞUQ!}]%9=]}5L€ô€ÄÀ€¨€ØÁ|ÀÀÀì)™Õ¹Ñ¥½¸É…Ñ•1¥µ¥Ğ¡É•Á±äè…ÍÑ¥™åI•Á±ä°­•äèÍÑÉ¥¹œ°±¥µ¥Ğè¹Õµ‰•È°İ¥¹‘½İ5Ìè¹Õµ‰•È¤è‰½½±•…¸ì(€½¹ÍĞ‘•¥Í¥½¸€ôÉ…Ñ•	Õ­•ÑÌ¹¡¥Ğ¡­•ä°±¥µ¥Ğ°İ¥¹‘½İ5Ì¤ì(€¥˜€ …‘•¥Í¥½¸¹…±±½İ•¤ì(€€€É•Á±ä¹¡•…‘•È ‰I•ÑÉäµ™Ñ•Èˆ°‘•¥Í¥½¸¹É•ÑÉå™Ñ•ÉM•½¹‘Ì¤ì(€€€É•Á±ä¹½‘” ĞÈä¤¹Í•¹¡ì•ÉÉ½Èè€‰Ñ½¼µ…¹äÉ•ÅÕ•ÍÑÌìÑÉä……¥¸±…Ñ•Èˆô¤ì(€€€É•ÑÕÉ¸™…±Í”ì(€ô(€É•ÑÕÉ¸ÑÉÕ”ì)ô()…ÁÀ¹Í•ÑÉÉ½É!…¹‘±•È ¡•ÉÉ½È°É•Ä°É•Á±ä¤€ôøì(€½¹ÍĞ…ÕÍ”€ô•ÉÉ½Èƒ[h‘éì¶»§q«^us { statusCode?: number; message?: string };
+  "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
+  "Cross-Origin-Opener-Policy": "same-origin",
+  "Cross-Origin-Resource-Policy": "same-origin",
+  "X-DNS-Prefetch-Control": "off",
+  "X-Permitted-Cross-Domain-Policies": "none",
+  "Content-Security-Policy": [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com data:",
+    "img-src 'self' data: blob:",
+    "connect-src 'self'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "frame-ancestors 'none'",
+    "form-action 'self'",
+  ].join("; "),
+};
+
+function applySecurityHeaders(reply: FastifyReply) {
+  for (const [key, value] of Object.entries(SECURITY_HEADERS)) reply.header(key, value);
+  if (COOKIE_SECURE) reply.header("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+}
+
+const rateBuckets = new InMemoryRateLimiter(100_000);
+const RATE_WINDOW_MS = 60_000;
+const RATE_LIMIT = 240;
+const AUTH_RATE_LIMIT = 12;
+const AUTH_WINDOW_MS = 10 * 60_000;
+function rateLimit(reply: FastifyReply, key: string, limit: number, windowMs: number): boolean {
+  const decision = rateBuckets.hit(key, limit, windowMs);
+  if (!decision.allowed) {
+    reply.header("Retry-After", decision.retryAfterSeconds);
+    reply.code(429).send({ error: "too many requests; try again later" });
+    return false;
+  }
+  return true;
+}
+
+app.setErrorHandler((error, req, reply) => {
+  const cause = error as { statusCode?: number; message?: string };
   const status = cause.statusCode && cause.statusCode >= 400 && cause.statusCode <= 599 ? cause.statusCode : 500;
   req.log.error({ err: error, requestId: req.id }, "Request failed");
   return reply.code(status).send({
@@ -103,7 +219,32 @@ app.addHook("onRequest", async (req, reply) => {
   let assetPath: string;
   try { assetPath = decodeURIComponent(path); } catch { return reply.code(400).send({ error: "invalid URL" }); }
   if ((assetPath.startsWith("/static/") || assetPath.startsWith("/react/")) &&
-      (/\.(?:html?|map)(?:\/|$)/i.test(assetPath) || /(YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Ôüéyñp¼¥p¹mx½t¼¹Ñ•ÍĞ¡…ÍÍ•ÑA…Ñ ¤¤¤ì(€€€É•ÑÕÉ¸É•Á±ä¹½‘” ĞÀĞ¤¹Í•¹¡ì•ÉÉ½Èè€‰¹½Ğ™½Õ¹ˆô¤ì(€ô(€¥˜€¡Á…Ñ ¹ÍÑ…ÉÑÍ]¥Ñ  ˆ½…Á¤¼ˆ¤¤ì(€€€É•Á±ä¹¡•…‘•È ‰…¡”µ½¹ÑÉ½°ˆ°€‰¹¼µÍÑ½É”ˆ¤ì(€€€É•Á±ä¹¡•…‘•È ‰AÉ…µ„ˆ°€‰¹¼µ…¡”ˆ¤ì(€ô(€½¹ÍĞ¥À€ôÉ•Ä¹¥Àñğ€‰Õ¹­¹½İ¸ˆì(€€¼¼ÁÁ±ä„•¹•É…°‰Õ‘•Ğ™¥ÉÍĞìÍ•¹Í¥Ñ¥Ù”A%Ì¡…Ù”¥¹‘•Á•¹‘•¹Ğ°Ñ¥¡Ñ•È±¥µ¥ÑÌ¸(€¥˜€ …É…Ñ•1¥µ¥Ğ¡É•Á±ä°…Á¤è‘í¥Áõ€°IQ}1%5%P°IQ}]%9=]}5L¤¤É•ÑÕÉ¸ì(€½¹ÍĞ…ÕÑ¡A…Ñ €ô€½yp½…Á¥p½…ÕÑ¡p¼ üé±½¥¹ñ™½É½ĞµÁ…ÍÍİ½É‘ñÍ•ĞµÁ…ÍÍİ½É¤ üép½ğ¤¼¹Ñ•ÍĞ¡Á…Ñ ¤ì(€¥˜€¡…ÕÑ¡A…Ñ €˜˜€…É…Ñ•1¥µ¥Ğ¡É•Á±ä°…ÕÑ è‘í¥Áõ€°UQ!}IQ}1%5%P°UQ!}]%9=]}5L¤¤É•ÑÕÉ¸ì(€€¼¼-••ÀÉ•ÍÑÉ¥Ñ¥Ù”Á•Èµ%@‰Õ‘•ÑÌ™½ÈÁÉ½½˜½Ù•É¥™¥…Ñ¥½¸…±±Ì°‰ÕĞ‘¼(€€¼¼¹½Ğ±•ĞÉ½ÕÑ¥¹”ÍÑ…ÑÕÌÉ•™É•Í ½È…ÕÑ¡•¹Ñ¥…Ñ½È…ÁÀ½¹‰½…É‘¥¹œ½¹ÍÕµ”(€€¼¼Ñ¡”]•‰ÕÑ¡¸•É•µ½¹ä‰Õ‘•Ğ™½È½±±•…Õ•Ì‰•¡¥¹Ñ¡”Í…µ”9P¸(€€¼¼Q=Q@…±Í¼¡…Ì„Á•ÉÍ¥ÍÑ•¹ĞÁ•Èµ…½Õ¹Ğ™…¥±•µ…ÑÑ•µÁĞ±½­½ÕĞ¸(€¥˜€¡Á…Ñ ¹ÍÑ…ÉÑÍ]¥Ñ  ˆ½…Á¤½…ÕÑ ½µ™„¼ˆ¤¤ì(€€€½¹ÍĞ‰Õ­•Ğ€ôÁ…Ñ €ôôô€ˆ½…Á¤½…ÕÑ ½µ™„½ÍÑ…ÑÕÌˆ€ü€‰µ™„µÍÑ…ÑÕÌˆ€è(€€€€€Á…Ñ ¹ÍÑ…ÉÑÍ]¥Ñ  ˆ½…Á¤½…ÕÑ ½µ™„½Ñ½ÑÀ¼ˆ¤€ü€‰µ™„µÑ½ÑÀˆ€è€‰µ™„µÁ…ÍÍ­•äˆì(€€€½¹ÍĞ±¥µ¥Ğ€ô‰Õ­•Ğ€ôôô€‰µ™„µÍÑ…ÑÕÌˆ€ü€ØÀ€èÁ…Ñ €ôôô€ˆ½…Á¤½…ÕÑ ½µ™„½É•½Ù•Éä½Í•±˜ˆ€ü€à€è€ÄØì(€€€¥˜€ …É…Ñ•1¥µ¥Ğ¡É•Á±ä°€‘í‰Õ­•Ñôè‘í¥Áõ€°±¥µ¥Ğ°€Ô€¨€ØÁ|ÀÀÀ¤¤É•ÑÕÉ¸ì(€ô(€¥˜€¡Á…Ñ €ôôô€ˆ½…Á¤½½¹Ñ…Ğˆ€˜˜€…É…Ñ•1¥µ¥Ğ¡É•Á±ä°½¹Ñ…Ğè‘í¥Áõ€°€Ø°€ÄÀ€¨€ØÁ|ÀÀÀ¤¤É•ÑÕÉ¸ì(€¥˜€ ½p¼ üéÕÁ±½…‘ñ¥µÁ½ÉÑñ‰…Ñ¡ñÍå¹ñÍÑ…¥¹ñ‘…Ñ…Í•Ğ¤ üéÍñp½ğµğ¤¼¹Ñ•ÍĞ¡Á…Ñ ¤€˜˜(€€€€€€…É…Ñ•1¥µ¥Ğ¡É•Á±ä°‰Õ±¬è‘í¥Áõ€°€ÈÀ°€ÄÀ€¨€ØÁ|ÀÀÀ¤¤É•ÑÕÉ¸ì(€¥˜€ ½p¼ üéÉ—[h‘éì¶»§q«^tort|export|analytics)(?:s|\/|-|$)/.test(path) &&
+      (/\.(?:html?|map)(?:\/|$)/i.test(assetPath) || /(?:^|\/)\.[^/]/.test(assetPath))) {
+    return reply.code(404).send({ error: "not found" });
+  }
+  if (path.startsWith("/api/")) {
+    reply.header("Cache-Control", "no-store");
+    reply.header("Pragma", "no-cache");
+  }
+  const ip = req.ip || "unknown";
+  // Apply a general budget first; sensitive APIs have independent, tighter limits.
+  if (!rateLimit(reply, `api:${ip}`, RATE_LIMIT, RATE_WINDOW_MS)) return;
+  const authPath = /^\/api\/auth\/(?:login|forgot-password|set-password)(?:\/|$)/.test(path);
+  if (authPath && !rateLimit(reply, `auth:${ip}`, AUTH_RATE_LIMIT, AUTH_WINDOW_MS)) return;
+  // Keep restrictive per-IP budgets for proof/verification calls, but do
+  // not let routine status refresh or authenticator app onboarding consume
+  // the WebAuthn ceremony budget for colleagues behind the same NAT.
+  // TOTP also has a persistent per-account failed-attempt lockout.
+  if (path.startsWith("/api/auth/mfa/")) {
+    const bucket = path === "/api/auth/mfa/status" ? "mfa-status" :
+      path.startsWith("/api/auth/mfa/totp/") ? "mfa-totp" : "mfa-passkey";
+    const limit = bucket === "mfa-status" ? 60 : path === "/api/auth/mfa/recovery/self" ? 8 : 16;
+    if (!rateLimit(reply, `${bucket}:${ip}`, limit, 5 * 60_000)) return;
+  }
+  if (path === "/api/contact" && !rateLimit(reply, `contact:${ip}`, 6, 10 * 60_000)) return;
+  if (/\/(?:upload|import|batch|sync|staging|dataset)(?:s|\/|-|$)/.test(path) &&
+      !rateLimit(reply, `bulk:${ip}`, 20, 10 * 60_000)) return;
+  if (/\/(?:report|export|analytics)(?:s|\/|-|$)/.test(path) &&
       !rateLimit(reply, `reports:${ip}`, 40, 60_000)) return;
 
   // Cookie-authenticated state-changing API calls must originate from this
@@ -125,7 +266,40 @@ app.addHook("onRequest", async (req, reply) => {
         try {
           const parsed = new URL(suppliedOrigin);
           return parsed.host.toLowerCase() === requestHost &&
-            (parsed.protocol === "https:" || (req.protocol === "http" && parseYªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Õ¹ÁÉ½Ñ½½°€ôôô€‰¡ÑÑÀèˆ¤¤ì(€€€€€€€ô…Ñ ìÉ•ÑÕÉ¸™…±Í”ìô(€€€€€ô¤ ¤ì(€€€€€€¼¼	É½İÍ•ÈÍ•ÍÍ¥½¸É•ÅÕ•ÍÑÌµÕÍĞÁÉ½Ù”Í…µ”µ½É¥¥¸¸	•…É•ÈµÑ½­•¸±¥•¹ÑÌ(€€€€€€¼¼É•µ…¥¸ÕÍ…‰±”İ¥Ñ¡½ÕĞ=É¥¥¸½I•™•É•È‰•…ÕÍ”Ñ¡•ä¡…Ù”¹¼‰É½İÍ•È½½­¥”¸(€€€€€¥˜€¡¡…ÍM•ÍÍ¥½¹½½­¥”€˜˜€…ÍÕÁÁ±¥•‘=É¥¥¸¤É•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÌ¤¹Í•¹¡ì•ÉÉ½Èè€‰Í…µ”µ½É¥¥¸É•ÅÕ•ÍĞÉ•ÅÕ¥É•ˆô¤ì(€€€€€€¼¼ÕÍÑ½´‘½µ…¥¸Á±ÕÌÑ¡”Á±…Ñ™½É´‘½µ…¥¸€¡½È„ÁÉ•Ù¥•ÜUI0¤…É”‰½Ñ ±•¥Ñ¥µ…Ñ”ì„É½ÍÌµÍ¥Ñ”(€€€€€€¼¼…ÑÑ…­•ÈÌ=É¥¥¸…¸¹•Ù•È•ÅÕ…°Ñ¡”¡½ÍĞÑ¡¥ÌÉ•ÅÕ•ÍĞİ…Ì…‘‘É•ÍÍ•Ñ¼¸(€€€€€¥˜€¡ÍÕÁÁ±¥•‘=É¥¥¸€˜˜€…Í…µ•!½ÍÑ=É¥¥¸¤ì(€€€€€€€É•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÌ¤¹Í•¹¡ì•ÉÉ½Èè€‰É½ÍÌµ½É¥¥¸É•ÅÕ•ÍĞÉ•©•Ñ•ˆô¤ì(€€€€€ô(€€€ô(€ô)ô¤ì(((¼¼M•¹Í¥Ñ¥Ù”…ÁÁ±¥…Ñ¥½¸µ‘…Ñ„…•ÍÌ…Õ‘¥Ğ¸Q¡¥Ì¥Ì¥¹Ñ•¹Ñ¥½¹…±±äÍ½Á•Ñ¼(¼¼…ÕÑ¡•¹Ñ¥…Ñ•…‘µ¥¸½‘…Ñ„ÍÕÉ™…•Ì…¹‘½•Ì¹½Ğ±½œÉ•ÅÕ•ÍĞ‰½‘¥•Ì½ÈÁ…å±½…‘Ì¸)…ÁÀ¹…‘‘!½½¬ ‰½¹I•ÍÁ½¹Í”ˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€½¹ÍĞÁ…Ñ €ôÉ•Ä¹ÕÉ°¹ÍÁ±¥Ğ ˆüˆ°€Ä¥lÁtì(€½¹ÍĞÍ•¹Í¥Ñ¥Ù”€ôÁ…Ñ ¹ÍÑ…ÉÑÍ]¥Ñ  ˆ½…Á¤½…‘µ¥¸¼ˆ¤ñğÁ…Ñ ¹ÍÑ…ÉÑÍ]¥Ñ  ˆ½…Á¤½‘…Í¡‰½…Éˆ¤ñğÁ…Ñ ¹ÍÑ…ÉÑÍ]¥Ñ  ˆ½…Á¤½Á½ÉÑ™½±¥¼ˆ¤ì(€¥˜€ …Í•¹Í¥Ñ¥Ù”¤É•ÑÕÉ¸ì(€ÑÉäì(€€€€¼¼I•ÕÍ”Ñ¡”Á•ÈµÉ•ÅÕ•ÍĞ…ÕÑ¡•¹Ñ¥…Ñ¥½¸É•ÍÕ±Ğì¹•Ù•ÈÅÕ•ÉäÍ•ÍÍ¥½¸½ÕÍ•È½±¥¹­Ì(€€€€¼¼Ñİ¥”©ÕÍĞÑ¼İÉ¥Ñ”Ñ¡”‘…Ñ„µ…•ÍÌ…Õ‘¥ĞÑÉ…¥°¸(€€€½¹ÍĞÕÍ•È€ô…İ…¥ĞÕÉÉ•¹ÑUÍ•È¡É•Ä¤ì(€€€¥˜€ …ÕÍ•È¤É•ÑÕÉ¸ì(€€€½¹ÍĞ½¹Ñ•áĞ€ôÉ•ÅÕ•ÍÑM•ÕÉ¥Ñå½¹Ñ•áĞ¡É•Ä¤ì(€€€…İ…¥ĞÉ•½É‘…Ñ…•ÍÍÙ•¹Ğ¡ì(€€€€€ÕÍ•É%èÕÍ•È¹¥°(€€€€€…Ñ½Éµ…¥°èÕÍ•È¹•µ…¥°°(€€€€€µ•Ñ¡½èÉ•Ä¹µ•Ñ¡½°(€€€€€É½ÕÑ”èÁ…Ñ °(€€€€€É•Í½ÕÉ”èƒ[h‘éì¶»§q«^tath.split("/").filter(Boolean).slice(1, 3).join("/"),
+            (parsed.protocol === "https:" || (req.protocol === "http" && parsed.protocol === "http:"));
+        } catch { return false; }
+      })();
+      // Browser session requests must prove same-origin. Bearer-token clients
+      // remain usable without Origin/Referer because they have no browser cookie.
+      if (hasSessionCookie && !suppliedOrigin) return reply.code(403).send({ error: "same-origin request required" });
+      // A custom domain plus the platform domain (or a preview URL) are both legitimate; a cross-site
+      // attacker's Origin can never equal the host this request was addressed to.
+      if (suppliedOrigin && !sameHostOrigin) {
+        return reply.code(403).send({ error: "cross-origin request rejected" });
+      }
+    }
+  }
+});
+
+
+// Sensitive application-data access audit. This is intentionally scoped to
+// authenticated admin/data surfaces and does not log request bodies or payloads.
+app.addHook("onResponse", async (req, reply) => {
+  const path = req.url.split("?", 1)[0];
+  const sensitive = path.startsWith("/api/admin/") || path.startsWith("/api/dashboard") || path.startsWith("/api/portfolio");
+  if (!sensitive) return;
+  try {
+    // Reuse the per-request authentication result; never query session/user/links
+    // twice just to write the data-access audit trail.
+    const user = await currentUser(req);
+    if (!user) return;
+    const context = requestSecurityContext(req);
+    await recordDataAccessEvent({
+      userId: user.id,
+      actorEmail: user.email,
+      method: req.method,
+      route: path,
+      resource: path.split("/").filter(Boolean).slice(1, 3).join("/"),
       context,
       statusCode: reply.statusCode,
       durationMs: undefined,
@@ -165,7 +339,26 @@ app.register(fastifyStatic, {
       res.header("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
       res.header("Pragma", "no-cache");
       res.header("Expires", "0");
-    } else if (/\.(?:png|jpg|jpeg|weYªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Õ‰Áñ¥½ñÍÙñİ½™˜Èü¤½¤¹Ñ•ÍĞ¡™¥±•A…Ñ ¤¤ì(€€€€€€¼¼UI1Ì…É”¹½Ğ½¹Ñ•¹Ğµ¡…Í¡•°Í¼­••ÀÑ¡¥ÌÍ¡½ÉĞè„É•Á±…•±½¼½=¥µ…”É•…¡•ÌÕÍ•ÉÌİ¥Ñ¡¥¸„‘…ä¸(€€€€€É•Ì¹¡•…‘•È ‰…¡”µ½¹ÑÉ½°ˆ°€‰ÁÕ‰±¥Œ°µ…àµ…”ôàØĞÀÀ°ÍÑ…±”µİ¡¥±”µÉ•Ù…±¥‘…Ñ”ôØÀĞàÀÀˆ¤ì(€€€ô(€ô°)ô¤ì()½¹ÍĞA=IP€ô9Õµ‰•È¡ÁÉ½•ÍÌ¹•¹Ø¹A=IP€üü€ÌÀÀÀ¤ì)½¹ÍĞÕÉÉ•¹ÑA•É¥½€ô€ ¤€ôø¹•Ü…Ñ” ¤¹Ñ½%M=MÑÉ¥¹œ ¤¹Í±¥” À°€Ü¤ì)½¹ÍĞY1%}M!	=I}I9L€ô¹•ÜM•Ğ¡lˆÌÁˆ°€‰ÅÕ…ÉÑ•Èˆ°€‰…±°ˆ°€‰µ½¹Ñ ˆ°€ˆÌÀˆ°€‰Äˆ°€‰±…Ñ•ÍĞ‰t¤ì)½¹ÍĞY1%}%9=5}	9L€ô¹•ÜM•Ğ¡l‰U9I|Õ,ˆ°€‰	9|Õ|ÄÁ,ˆ°€‰	9|ÄÁ|ÈÁ,ˆ°€‰	9|ÈÁ|ĞÁ,ˆ°€‰=YI|ĞÁ,‰t¤ì)™Õ¹Ñ¥½¸‘…Í¡‰½…É‘EÕ•ÉåÉÉ½È¡ÅÕ•ÉäèìÁ•É¥½üèÍÑÉ¥¹œìÅÕ…ÉÑ•ÈüèÍÑÉ¥¹œìÉ…¹”üèÍÑÉ¥¹œì¥¹½µ”üèÍÑÉ¥¹œô¤èÍÑÉ¥¹œğ¹Õ±°ì(€½¹ÍĞÕÉÉ•¹Ğ€ôÕÉÉ•¹ÑA•É¥½ ¤ì(€¥˜€¡ÅÕ•Éä¹Á•É¥½€˜˜€„½yq‘ìÑô´ ÁlÄ´åuğÅlÀ´Ét¤¼¹Ñ•ÍĞ¡ÅÕ•Éä¹Á•É¥½¤¤É•ÑÕÉ¸€‰Á•É¥½µÕÍĞ‰”eeedµ54ˆì(€¥˜€¡ÅÕ•Éä¹Á•É¥½€˜˜ÅÕ•Éä¹Á•É¥½€øÕÉÉ•¹Ğ¤É•ÑÕÉ¸Á•É¥½…¹¹½Ğ‰”±…Ñ•ÈÑ¡…¸€‘íÕÉÉ•¹Ñõ€ì(€¥˜€¡ÅÕ•Éä¹ÅÕ…ÉÑ•È€˜˜€„½yq‘ìÑôµElÄ´Ñt¼¹Ñ•ÍĞ¡ÅÕ•Éä¹ÅÕ…ÉÑ•È¤¤É•ÑÕÉ¸€‰ÅÕ…ÉÑ•ÈµÕÍĞ‰”eeedµDÄ¸¹eeedµDĞˆì(€¥˜€¡ÅÕ•Éä¹É…¹”€˜˜€…Y1%}M!	=I}I9L¹¡…Ì¡ÅÕ•Éä¹É…¹”¤¤É•ÑÕÉ¸€‰É…¹”µÕÍĞ‰”€ÌÁ°ÅÕ…ÉÑ•È°…±°½Èµ½¹Ñ ˆì(€¥˜€¡mÅÕ•Éä¹Á•É¥½°ÅÕ•Éä¹ÅÕ…ÉÑ•È°ÅÕ•Éä¹É…¹•t¹™¥±Ñ•È ¡Ø¤€ôøØ€„ô¹Õ±°¤¹±•¹Ñ €ø€Ä¤É•ÑÕÉ¸€‰ÕÍ”Á•É¥½°ÅÕ…ÉÑ•È°½ÈÉ…¹”ƒŠP¹½Ğµ½É”Ñ¡…¸½¹”ˆì(€¥˜€ …ÅÕ•Éä¹Á•É¥½€˜˜ÅÕ•Éä¹É…¹”€ôôô€‰µ½¹Ñ ˆ¤É•ÑÕÉ¸€‰É…¹”õµ½¹Ñ É•ÅÕ¥É•ÌÁ•É¥½õeeedµ54ˆì(€¥˜€¡ÅÕ•Éä¹¥¹½µ”€˜˜ÅÕ•Éä¹¥¹½µ”€„ôô€‰…±°ˆ€˜˜€…Y1%}%9=5}	9L¹¡…Ì¡ÅÕ•Éä¹¥¹½µ”¤¤É•ÑÕÉ¸€‰¥¹½µ”¥Ì¹½Ó[h‘éì¶»§q«^ta supported income-band code";
+    } else if (/\.(?:png|jpg|jpeg|webp|ico|svg|woff2?)$/i.test(filePath)) {
+      // URLs are not content-hashed, so keep this short: a replaced logo/OG image reaches users within a day.
+      res.header("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
+    }
+  },
+});
+
+const PORT = Number(process.env.PORT ?? 3000);
+const currentPeriod = () => new Date().toISOString().slice(0, 7);
+const VALID_DASHBOARD_RANGES = new Set(["30d", "quarter", "all", "month", "30", "q", "latest"]);
+const VALID_INCOME_BANDS = new Set(["UNDER_5K", "BAND_5_10K", "BAND_10_20K", "BAND_20_40K", "OVER_40K"]);
+function dashboardQueryError(query: { period?: string; quarter?: string; range?: string; income?: string }): string | null {
+  const current = currentPeriod();
+  if (query.period && !/^\d{4}-(0[1-9]|1[0-2])$/.test(query.period)) return "period must be YYYY-MM";
+  if (query.period && query.period > current) return `period cannot be later than ${current}`;
+  if (query.quarter && !/^\d{4}-Q[1-4]$/.test(query.quarter)) return "quarter must be YYYY-Q1..YYYY-Q4";
+  if (query.range && !VALID_DASHBOARD_RANGES.has(query.range)) return "range must be 30d, quarter, all or month";
+  if ([query.period, query.quarter, query.range].filter((v) => v != null).length > 1) return "use period, quarter, or range â€” not more than one";
+  if (!query.period && query.range === "month") return "range=month requires period=YYYY-MM";
+  if (query.income && query.income !== "all" && !VALID_INCOME_BANDS.has(query.income)) return "income is not a supported income-band code";
   return null;
 }
 const escAttr = (v: string) => v.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
@@ -186,7 +379,35 @@ const siteVars = (req: FastifyRequest): Record<string, string> => ({
   CONTACT_EMAIL: CONTACT_EMAIL || "Contact details",
   CONTACT_AVAILABILITY: CONTACT_EMAIL ? "available" : "unavailable",
   CONTACT_INTRO: CONTACT_EMAIL ? "Tell us about your organisation and what you need. We reply within two business days." : "Contact requests are temporarily unavailable while support contact details are being configured.",
-  PRIVACY_EMAIL: contactEmail(process.env.PRIVACY_EMAIL) || "privacy YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Õ½¹Ñ…Ğ‘•Ñ…¥±Ìˆ°(€11}5%0è½¹Ñ…Ñµ…¥°¡ÁÉ½•ÍÌ¹•¹Ø¹11}5%0¤ñğ€‰±•…°½¹Ñ…Ğ‘•Ñ…¥±Ìˆ°(€%9=I5Q%=9}=%Hè€¡ÁÉ½•ÍÌ¹•¹Ø¹%9=I5Q%=9}=%Hñğ€‰½ÕÈ‘•Í¥¹…Ñ•%¹™½Éµ…Ñ¥½¸=™™¥•Èˆ¤¹ÑÉ¥´ ¤°(€=9QQ}IMLè€¡ÁÉ½•ÍÌ¹•¹Ø¹=9QQ}IMLñğ€‰	ÕÍ¥¹•ÍÌ…‘‘É•ÍÌ…Ù…¥±…‰±”½¸É•ÅÕ•ÍĞˆ¤¹ÑÉ¥´ ¤°)ô¤ì)½¹ÍĞÍ•ÉÙ•!Ñµ°€ô…Íå¹Œ€¡É•Á±äè…ÍÑ¥™åI•Á±ä°™¥±”èÍÑÉ¥¹œ°ÍÑ…ÑÕÌ€ô€ÈÀÀ¤€ôøì(€½¹ÍĞÙ…ÉÌ€ôÍ¥Ñ•Y…ÉÌ¡É•Á±ä¹É•ÅÕ•ÍĞ¤ì(€¥˜€¡™¥±”€ôôô€‰Í•ĞµÁ…ÍÍİ½É¹¡Ñµ°ˆ¤É•Á±ä¹¡•…‘•È ‰I•™•ÉÉ•ÈµA½±¥äˆ°€‰¹¼µÉ•™•ÉÉ•Èˆ¤ì(€½¹ÍĞ¡Ñµ°€ô€¡…İ…¥ĞÉ•…‘¥±”¡©½¥¸¡AU	1%}%H°™¥±”¤°€‰ÕÑ˜´àˆ¤¤¹É•Á±…” ½qíqì¡mµi}t¬¥qõqô½œ°€¡´°¬¤€ôø€¡¬¥¸Ù…ÉÌ€ü•ÍÑÑÈ¡Ù…ÉÍm­t¤€è´¤¤ì(€É•ÑÕÉ¸É•Á±ä(€€€€¹½‘”¡ÍÑ…ÑÕÌ¤(€€€€¹¡•…‘•È ‰…¡”µ½¹ÑÉ½°ˆ°€‰¹¼µÍÑ½É”°¹¼µ…¡”°µÕÍĞµÉ•Ù…±¥‘…Ñ”°ÁÉ½áäµÉ•Ù…±¥‘…Ñ”ˆ¤(€€€€¹¡•…‘•È ‰AÉ…µ„ˆ°€‰¹¼µ…¡”ˆ¤(€€€€¹¡•…‘•È ‰áÁ¥É•Ìˆ°€ˆÀˆ¤(€€€€¹¡•…‘•È ‰`µQ¡”µ¥á•ÈµA½ÉÑ…°µ	Õ¥±ˆ°€ˆÀ¸ÄÀ¸Àˆ¤(€€€€¹ÑåÁ” ‰Ñ•áĞ½¡Ñµ°ì¡…ÉÍ•ĞõÕÑ˜´àˆ¤(€€€€¹Í•¹¡¡Ñµ°¤ì)ôì((¼¼ƒŠRŠR …ÕÑ ¡•±Á•ÉÌƒŠRŠR (¼¼I•ÅÕ•ÍĞµÍ½Á•½¹±äè¹¼É½ÍÌµÉ•ÅÕ•ÍĞÁ•Éµ¥ÍÍ¥½¸…¡”°Í¼É•Ù½…Ñ¥½¹Ì(¼¼…¹•µÁ±½å•È…•ÍÌ¡…¹•Ì…É”½‰Í•ÉÙ•‰äÑ¡”¹•áĞ!QQ@É•ÅÕ•ÍĞ¸)½¹ÍĞ…ÕÑ¡•¹Ñ¥…Ñ•‘I•ÅÕ•ÍÑÌ€ô¹•Ü]•…­5…Àñ…ÍÑ¥™åI•ÅÕ•ÍĞ°AÉ½µ¥Í”ñÕÑ¡UÍ•Èğ¹Õ±°øø ¤ì)…Íå¹Œ™Õ¹Ñ¥½¸ÕÉÉ•¹ÑUÍ•È¡É•Äè…ÍÑ¥™åI•ÅÕ•ÍĞ¤èAÉ½µ¥Í”ñÕÑ¡UÍ•Èğ¹Õ±°øì(€±•ĞÁ•¹‘¥¹œ€ô…ÕÑ¡•¹Ñ¥…Ñ•‘I•ÅÕ•ÍÑÌ¹•Ğ¡É•Ä¤ì(€¥˜€ …Á•¹‘¥¹œ¤ì(€€€½¹ÍĞÑ½­•¸€ô€¡É•Ä¹½½­¥•Ì€˜˜É•Ä¹½½­¥•Ì¹Í•ÍÍ¥½¸¤ñğ€¡É•Ä¹¡•…‘•ÉÌ¹…ÕÑ¡½É¥é…Ñ¥½¸ü¹É•Á±…” ‰	•…É•È€ˆ°€ˆˆ¤¤ì(€€€Á•¹‘¥¹œ€ôÉ•Í½±Ù•M•ÍÍ¥½¸¡Ñ½­•¸¤ì(€€€…×[h‘éì¶»§q«^thenticatedRequests.set(req, pending);
+  PRIVACY_EMAIL: contactEmail(process.env.PRIVACY_EMAIL) || "privacy contact details",
+  LEGAL_EMAIL: contactEmail(process.env.LEGAL_EMAIL) || "legal contact details",
+  INFORMATION_OFFICER: (process.env.INFORMATION_OFFICER || "our designated Information Officer").trim(),
+  CONTACT_ADDRESS: (process.env.CONTACT_ADDRESS || "Business address available on request").trim(),
+});
+const serveHtml = async (reply: FastifyReply, file: string, status = 200) => {
+  const vars = siteVars(reply.request);
+  if (file === "set-password.html") reply.header("Referrer-Policy", "no-referrer");
+  const html = (await readFile(join(PUBLIC_DIR, file), "utf-8")).replace(/\{\{([A-Z_]+)\}\}/g, (m, k) => (k in vars ? escAttr(vars[k]) : m));
+  return reply
+    .code(status)
+    .header("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate")
+    .header("Pragma", "no-cache")
+    .header("Expires", "0")
+    .header("X-The-Fixer-Portal-Build", "0.10.0")
+    .type("text/html; charset=utf-8")
+    .send(html);
+};
+
+// â”€â”€ auth helpers â”€â”€
+// Request-scoped only: no cross-request permission cache, so revocations
+// and employer access changes are observed by the next HTTP request.
+const authenticatedRequests = new WeakMap<FastifyRequest, Promise<AuthUser | null>>();
+async function currentUser(req: FastifyRequest): Promise<AuthUser | null> {
+  let pending = authenticatedRequests.get(req);
+  if (!pending) {
+    const token = (req.cookies && req.cookies.session) || (req.headers.authorization?.replace("Bearer ", ""));
+    pending = resolveSession(token);
+    authenticatedRequests.set(req, pending);
   }
   return pending;
 }
@@ -214,7 +435,35 @@ if (MFA_ENFORCE) {
   let validConfig = false;
   try {
     const parsed = new URL(expectedOrigin);
-    validConfig = Boolean(rpID) && parsed.origin =YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Ôôô•áÁ•Ñ•‘=É¥¥¸€˜˜(€€€€€€¡Á…ÉÍ•¹ÁÉ½Ñ½½°€ôôô€‰¡ÑÑÁÌèˆñğÁ…ÉÍ•¹¡½ÍÑ¹…µ”€ôôô€‰±½…±¡½ÍĞˆ¤€˜˜(€€€€€€¡Á…ÉÍ•¹¡½ÍÑ¹…µ”€ôôôÉÁ%ñğÁ…ÉÍ•¹¡½ÍÑ¹…µ”¹•¹‘Í]¥Ñ  ˆ¸ˆ€¬ÉÁ%¤¤ì(€ô…Ñ ì€¼¨¥¹Ù…±¥½¹™¥ÕÉ…Ñ¥½¸€¨¼ô(€¥˜€ …Ù…±¥‘½¹™¥œ¤Ñ¡É½Ü¹•ÜÉÉ½È ‰5•¹™½É•µ•¹ĞÉ•ÅÕ¥É•Ì„Ù…±¥5}IA}%…¹5}aAQ}=I%%8ˆ¤ì)ô)…ÁÀ¹…‘‘!½½¬ ‰ÁÉ•!…¹‘±•Èˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€¥˜€ …5}9=I¤É•ÑÕÉ¸ì(€½¹ÍĞÍ½Á”€ôÉ•ÅÕ¥É•Í‘µ¥¹5™…MÑ•ÁUÀ¡É•Ä¹µ•Ñ¡½°É•Ä¹ÕÉ°¤ì(€€¼¼±°…½Õ¹ĞÉ½±•ÌµÕÍĞ½µÁ±•Ñ”5‰•™½É”…•ÍÍ¥¹œÁÉ½Ñ•Ñ•‰ÕÍ¥¹•ÍÌ(€€¼¼A%Ì¸ÕÑ¡•¹Ñ¥…Ñ¥½¸…¹5É½ÕÑ•ÌÍÑ…ä…Ù…¥±…‰±”Ñ¼™¥¹¥Í •¹É½±±µ•¹Ğ¸(€½¹ÍĞÁ…Ñ €ôÉ•Ä¹ÕÉ°¹ÍÁ±¥Ğ ˆüˆ°€Ä¥lÁtì(€½¹ÍĞÁÉ½Ñ•Ñ•‘ÁÁI•…€ôÁ…Ñ ¹ÍÑ…ÉÑÍ]¥Ñ  ˆ½…Á¤¼ˆ¤€˜˜(€€€€…Á…Ñ ¹ÍÑ…ÉÑÍ]¥Ñ  ˆ½…Á¤½…ÕÑ ¼ˆ¤€˜˜(€€€Á…Ñ €„ôô€ˆ½…Á¤½½¹Ñ…Ğˆ€˜˜(€€€€…Á…Ñ ¹ÍÑ…ÉÑÍ]¥Ñ  ˆ½…Á¤½ÁÕ‰±¥Œ¼ˆ¤€˜˜(€€€€…Á…Ñ ¹ÍÑ…ÉÑÍ]¥Ñ  ˆ½…Á¤½Á…ÉÑ¹•ÈµÑ¡•µ”¼ˆ¤ì(€¥˜€ …Í½Á”¹…‘µ¥¹=¹±ä€˜˜€…Í½Á”¹…‘µ¥¹5ÕÑ…Ñ¥½¸€˜˜€…ÁÉ½Ñ•Ñ•‘ÁÁI•…¤É•ÑÕÉ¸ì(€½¹ÍĞÕÍ•È€ô…İ…¥ĞÕÉÉ•¹ÑUÍ•È¡É•Ä¤ì(€¥˜€ …ÕÍ•È¤ì(€€€¥˜€¡Í½Á”¹…‘µ¥¹=¹±ä¤É•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÌ¤¹Í•¹¡í•ÉÉ½Èè‰‘µ¥¹¥ÍÑÉ…Ñ½ÈÍ•ÍÍ¥½¸É•ÅÕ¥É•‰ô¤ì(€€€É•ÑÕÉ¸ì(€ô(€¥˜€¡Í½Á”¹…‘µ¥¹=¹±ä€˜˜€…¥Í‘µ¥¹I½±”¡ÕÍ•È¤¤(€€€É•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÌ¤¹Í•¹¡í•ÉÉ½Èè‰‘µ¥¹¥ÍÑÉ…Ñ½ÈÍ•ÍÍ¥½¸É•ÅÕ¥É•‰ô¤ì(€¥˜€ ……İ…¥Ğ¡…ÍÉ•Í¡‘µ¥¹5™„¡É•Ä°ÕÍ•È¹¥¤¤(€€€É•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÌ¤¹Í•¹¡í•ÉÉ½Èè‰É•Í 5Ù•É¥™¥…Ñ¥½¸É•ÅÕ¥É•ˆ°½‘”è‰5}IEU%I‰ô¤ì(€¥˜€¡ÕÍ•È¹É½±”€ôôô€‰MUAI5%8ˆ€˜˜€……İ…¥Ğ¡…Í%ÍÍÕ•‘‘µ¥¹I•½Ù•Éå-•ä¡ÕÍ•È¹¥¤¤(€€€É•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÌ¤¹Í•¹¡í•ÉÉ½Èè‰M…Ù”å½ÕÈ‡[h‘éì¶»§q«^wcount recovery key before continuing",code:"RECOVERY_KEY_REQUIRED"});
+    validConfig = Boolean(rpID) && parsed.origin === expectedOrigin &&
+      (parsed.protocol === "https:" || parsed.hostname === "localhost") &&
+      (parsed.hostname === rpID || parsed.hostname.endsWith("." + rpID));
+  } catch { /* invalid configuration */ }
+  if (!validConfig) throw new Error("MFA enforcement requires a valid MFA_RP_ID and MFA_EXPECTED_ORIGIN");
+}
+app.addHook("preHandler", async (req, reply) => {
+  if (!MFA_ENFORCE) return;
+  const scope = requiresAdminMfaStepUp(req.method, req.url);
+  // All account roles must complete MFA before accessing protected business
+  // APIs. Authentication and MFA routes stay available to finish enrollment.
+  const path = req.url.split("?", 1)[0];
+  const protectedAppRead = path.startsWith("/api/") &&
+    !path.startsWith("/api/auth/") &&
+    path !== "/api/contact" &&
+    !path.startsWith("/api/public/") &&
+    !path.startsWith("/api/partner-theme/");
+  if (!scope.adminOnly && !scope.adminMutation && !protectedAppRead) return;
+  const user = await currentUser(req);
+  if (!user) {
+    if (scope.adminOnly) return reply.code(403).send({error:"Administrator session required"});
+    return;
+  }
+  if (scope.adminOnly && !isAdminRole(user))
+    return reply.code(403).send({error:"Administrator session required"});
+  if (!await hasFreshAdminMfa(req, user.id))
+    return reply.code(403).send({error:"Fresh MFA verification required", code:"MFA_REQUIRED"});
+  if (user.role === "SUPERADMIN" && !await hasIssuedAdminRecoveryKey(user.id))
+    return reply.code(403).send({error:"Save your account recovery key before continuing",code:"RECOVERY_KEY_REQUIRED"});
 });
 registerAdminMfaRoutes(app);
 function redactAuditDetail(value: unknown): unknown {
@@ -249,7 +498,36 @@ app.get("/react/", async (req, reply) => {
 });
 app.get("/react/admin", async (req, reply) => {
   const user = await currentUser(req);
-YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Ô€¥˜€ …ÕÍ•È¤É•ÑÕÉ¸É•Á±ä¹É•‘¥É•Ğ ˆ½±½¥¸ˆ¤ì(€¥˜€ ……¹•ÍÍ5½‘Õ±”¡ÕÍ•È°€‰…‘µ¥¸ˆ¤¤É•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÌ¤¹Í•¹¡ì•ÉÉ½Èè€‰…‘µ¥¸½¹±äˆô¤ì(€¥˜€¡5}9=I€˜˜€……İ…¥Ğ¡…ÍÉ•Í¡‘µ¥¹5™„¡É•Ä°ÕÍ•È¹¥¤¤É•ÑÕÉ¸É•Á±ä¹É•‘¥É•Ğ ˆ½µ™„ˆ¤ì(€¥˜€¡5}9=I€˜˜ÕÍ•È¹É½±”€ôôô€‰MUAI5%8ˆ€˜˜(€€€€€€……İ…¥Ğ¡…Í%ÍÍÕ•‘‘µ¥¹I•½Ù•Éå-•ä¡ÕÍ•È¹¥¤¤É•ÑÕÉ¸É•Á±ä¹É•‘¥É•Ğ ˆ½µ™„ˆ¤ì(€ÑÉäì(€€€½¹ÍĞ¡Ñµ°€ô…İ…¥ĞÉ•…‘¥±”¡©½¥¸¡AU	1%}%H°€‰É•…Ğˆ°€‰¥¹‘•à¹¡Ñµ°ˆ¤°€‰ÕÑ˜´àˆ¤ì(€€€É•ÑÕÉ¸É•Á±ä¹ÑåÁ” ‰Ñ•áĞ½¡Ñµ°ì¡…ÉÍ•ĞõÕÑ˜´àˆ¤¹¡•…‘•È ‰…¡”µ½¹ÑÉ½°ˆ°€‰¹¼µÍÑ½É”ˆ¤¹Í•¹¡¡Ñµ°¤ì(€ô…Ñ ì(€€€É•ÑÕÉ¸É•Á±ä¹½‘” ÔÀÌ¤¹Í•¹¡ì•ÉÉ½Èè€‰I•…Ğ™É½¹Ñ•¹¡…Ì¹½Ğ‰••¸‰Õ¥±Ğå•Ğˆô¤ì(€ô)ô¤ì)…ÁÀ¹•Ğ ˆ½É•…Ğ½‘…Í¡‰½…Éˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€½¹ÍĞÕÍ•È€ô…İ…¥ĞÕÉÉ•¹ÑUÍ•È¡É•Ä¤ì(€¥˜€ …ÕÍ•È¤É•ÑÕÉ¸É•Á±ä¹É•‘¥É•Ğ ˆ½±½¥¸ˆ¤ì(€¥˜€ ……¹•ÍÍ5½‘Õ±”¡ÕÍ•È°€‰‘…Í¡‰½…Éˆ¤¤É•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÌ¤¹Í•¹¡ì•ÉÉ½Èè€‰¹¼‘…Í¡‰½…É…•ÍÌˆô¤ì(€¥˜€¡5}9=I€˜˜€……İ…¥Ğ¡…ÍÉ•Í¡‘µ¥¹5™„¡É•Ä°ÕÍ•È¹¥¤¤(€€€É•ÑÕÉ¸É•Á±ä¹É•‘¥É•Ğ ˆ½µ™„ˆ¤ì(€¥˜€¡5}9=I€˜˜ÕÍ•È¹É½±”€ôôô€‰MUAI5%8ˆ€˜˜(€€€€€€……İ…¥Ğ¡…Í%ÍÍÕ•‘‘µ¥¹I•½Ù•Éå-•ä¡ÕÍ•È¹¥¤¤(€€€É•ÑÕÉ¸É•Á±ä¹É•‘¥É•Ğ ˆ½µ™„ˆ¤ì(€ÑÉäì(€€€½¹ÍĞ¡Ñµ°€ô…İ…¥ĞÉ•…‘¥±”¡©½¥¸¡AU	1%}%H°€‰É•…Ğˆ°€‰¥¹‘•à¹¡Ñµ°ˆ¤°€‰ÕÑ˜´àˆ¤ì(€€€É•ÑÕÉ¸É•Á±ä¹ÑåÁ” ‰Ñ•áĞ½¡Ñµ°ì¡…ÉÍ•ĞõÕÑ˜´àˆ¤¹¡•…‘•È ‰…¡”µ½¹ÑÉ½°ˆ°€‰¹¼µÍÑ½É”ˆ¤¹Í•¹¡¡Ñµ°¤ì(€ô…Ñ ì(€€€É•ÑÕÉ¸É•Á±ä¹½‘” ÔÀÌ¤¹Í•¹¡ì•ÉÉ½Èè€‰I•…Ğ™É½¹Ñ•¹¡…Ì¹½Ğ‰••¸‰Õ¥±Ğå•Ğˆô¤ì(€ô)ô¤ì()…ÁÀ¹•Ğ ˆ½™…Ù¥½¸¹¥¼ˆ°…Íå¹Œ€¡}É•Ä°É•Á±ä¤€ôøÉ•Á±ä¹É•‘¥É•Ğ ˆ½ÍÑ…Ñ¥Œ½™…Ù¥¿[h‘éì¶»§q«^v.ico"));
+  if (!user) return reply.redirect("/login");
+  if (!canAccessModule(user, "admin")) return reply.code(403).send({ error: "admin only" });
+  if (MFA_ENFORCE && !await hasFreshAdminMfa(req, user.id)) return reply.redirect("/mfa");
+  if (MFA_ENFORCE && user.role === "SUPERADMIN" &&
+      !await hasIssuedAdminRecoveryKey(user.id)) return reply.redirect("/mfa");
+  try {
+    const html = await readFile(join(PUBLIC_DIR, "react", "index.html"), "utf-8");
+    return reply.type("text/html; charset=utf-8").header("Cache-Control", "no-store").send(html);
+  } catch {
+    return reply.code(503).send({ error: "React frontend has not been built yet" });
+  }
+});
+app.get("/react/dashboard", async (req, reply) => {
+  const user = await currentUser(req);
+  if (!user) return reply.redirect("/login");
+  if (!canAccessModule(user, "dashboard")) return reply.code(403).send({ error: "no dashboard access" });
+  if (MFA_ENFORCE && !await hasFreshAdminMfa(req, user.id))
+    return reply.redirect("/mfa");
+  if (MFA_ENFORCE && user.role === "SUPERADMIN" &&
+      !await hasIssuedAdminRecoveryKey(user.id))
+    return reply.redirect("/mfa");
+  try {
+    const html = await readFile(join(PUBLIC_DIR, "react", "index.html"), "utf-8");
+    return reply.type("text/html; charset=utf-8").header("Cache-Control", "no-store").send(html);
+  } catch {
+    return reply.code(503).send({ error: "React frontend has not been built yet" });
+  }
+});
+
+app.get("/favicon.ico", async (_req, reply) => reply.redirect("/static/favicon.ico"));
 app.get("/contact", async (_req, reply) => serveHtml(reply, "contact.html"));
 app.get("/thank-you", async (_req, reply) => serveHtml(reply, "thank-you.html"));
 app.get("/robots.txt", async (req, reply) => reply.type("text/plain; charset=utf-8").header("Cache-Control", "public, max-age=3600").send(
@@ -267,7 +545,29 @@ app.get("/sitemap.xml", async (req, reply) => {
 // custom 404: branded page for browsers, JSON for API clients
 app.setNotFoundHandler(async (req, reply) => {
   const path = req.url.split("?", 1)[0];
-  if (path.startsWith("/api/")) return reply.code(404).seYªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Õ¹¡ì•ÉÉ½Èè€‰¹½Ğ™½Õ¹ˆô¤ì(€É•ÑÕÉ¸Í•ÉÙ•!Ñµ°¡É•Á±ä°€ˆĞÀĞ¹¡Ñµ°ˆ°€ĞÀĞ¤ì)ô¤ì((¼¼ÁÕ‰±¥Œ½¹Ñ…Ğ€¼É•ÅÕ•ÍĞµ…•ÍÌ™½É´¸Q¡É½ÑÑ±•°¡½¹•åÁ½ĞµÁÉ½Ñ•Ñ•°Ù…±¥‘…Ñ•ì(¼¼‘•±¥Ù•É•‰äM5Q@Ñ¼=9QQ}5%0¸9½Ñ¡¥¹œ¥ÌÍÑ½É•‰•å½¹Ñ¡”½ÕÑ½¥¹œ•µ…¥°¸)…ÁÀ¹Á½ÍĞñì	½‘äèì¹…µ”üèÕ¹­¹½İ¸ì•µ…¥°üèÕ¹­¹½İ¸ì½É…¹¥Í…Ñ¥½¸üèÕ¹­¹½İ¸ìµ•ÍÍ…”üèÕ¹­¹½İ¸ìİ•‰Í¥Ñ”üèÕ¹­¹½İ¸ôôø ˆ½…Á¤½½¹Ñ…Ğˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€½¹ÍĞˆ€ôÉ•Ä¹‰½‘ä€üüíôì(€¥˜€¡ÑåÁ•½˜ˆ¹İ•‰Í¥Ñ”€ôôô€‰ÍÑÉ¥¹œˆ€˜˜ˆ¹İ•‰Í¥Ñ”¹ÑÉ¥´ ¤¤É•ÑÕÉ¸ì½¬èÑÉÕ”ôì€¼¼¡½¹•åÁ½ĞèÁÉ•Ñ•¹ÍÕ•ÍÌÑ¼‰½ÑÌ(€½¹ÍĞÍÑÈ€ô€¡ØèÕ¹­¹½İ¸°µ…àè¹Õµ‰•È¤€ôø€¡ÑåÁ•½˜Ø€ôôô€‰ÍÑÉ¥¹œˆ€üØ¹ÑÉ¥´ ¤¹Í±¥” À°µ…à¤€è€ˆˆ¤ì(€½¹ÍĞ¹…µ”€ôÍÑÈ¡ˆ¹¹…µ”°€ÄÈÀ¤°•µ…¥°€ôÍÑÈ¡ˆ¹•µ…¥°°€ÈÔĞ¤°½É…¹¥Í…Ñ¥½¸€ôÍÑÈ¡ˆ¹½É…¹¥Í…Ñ¥½¸°€ÄÈÀ¤°µ•ÍÍ…”€ôÍÑÈ¡ˆ¹µ•ÍÍ…”°€ÈÀÀÀ¤ì(€¥˜€ …¹…µ”¤É•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÀ¤¹Í•¹¡ì•ÉÉ½Èè€‰A±•…Í”•¹Ñ•Èå½ÕÈ¹…µ”¸ˆô¤ì(€¥˜€ „½ymyqÍt­myqÍt­p¹myqÍuìÈ±ô¼¹Ñ•ÍĞ¡•µ…¥°¤¤É•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÀ¤¹Í•¹¡ì•ÉÉ½Èè€‰A±•…Í”•¹Ñ•È„Ù…±¥•µ…¥°…‘‘É•ÍÌ¸ˆô¤ì(€¥˜€¡µ•ÍÍ…”¹±•¹Ñ €ğ€ÄÀ¤É•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÀ¤¹Í•¹¡ì•ÉÉ½Èè€‰A±•…Í”İÉ¥Ñ”…Ğ±•…ÍĞ€ÄÀ¡…É…Ñ•ÉÌ¸ˆô¤ì(€¥˜€ …=9QQ}5%0¤É•ÑÕÉ¸É•Á±ä¹½‘” ÔÀÌ¤¹Í•¹¡ì•ÉÉ½Èè€‰Q¡”½¹Ñ…Ğ™½É´¥Ì¹½Ğ…Ù…¥±…‰±”å•Ğ¸A±•…Í”ÑÉä……¥¸±…Ñ•È¸ˆô¤ì(€ÑÉäì(€€€½¹ÍĞìÍ•¹‘5…¥°ô€ô…İ…¥Ğ¥µÁ½ÉĞ ˆ¸½Í•ÉÙ¥•Ì½É•Á½ÉÑM¡•‘Õ±•È¹©Ìˆ¤ì(€€€½¹ÍĞ”€ô•ÍÑÑÈì(€€€…İ…¥ĞÍ•¹‘5…¥°¡ì(€€€€€Ñ¼è=9QQ}5%0°É•Á±åQ¼è•µ…¥°°(€€€€€ÍÕ‰©•ĞèA½ÉÑ…°½¹Ñ…ĞÉ•ÅÕ•ÍĞ™É½´€‘í¹…µ”¹É•Á±…” ½mqÉq¹t¬½œ°€ˆ€ˆ¥õ€°(€€€€€¡Ñµ°èl(€€€€€€€€œñ‘¥ØÍÑå±”÷[h‘éì¶»§q«^vfont-family:Arial,sans-serif;color:#241536"><h2 style="color:#32217c">New contact request</h2><p><b>Name:</b> ',
+  if (path.startsWith("/api/")) return reply.code(404).send({ error: "not found" });
+  return serveHtml(reply, "404.html", 404);
+});
+
+// public contact / request-access form. Throttled, honeypot-protected, validated;
+// delivered by SMTP to CONTACT_EMAIL. Nothing is stored beyond the outgoing email.
+app.post<{ Body: { name?: unknown; email?: unknown; organisation?: unknown; message?: unknown; website?: unknown } }>("/api/contact", async (req, reply) => {
+  const b = req.body ?? {};
+  if (typeof b.website === "string" && b.website.trim()) return { ok: true }; // honeypot: pretend success to bots
+  const str = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
+  const name = str(b.name, 120), email = str(b.email, 254), organisation = str(b.organisation, 120), message = str(b.message, 2000);
+  if (!name) return reply.code(400).send({ error: "Please enter your name." });
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return reply.code(400).send({ error: "Please enter a valid email address." });
+  if (message.length < 10) return reply.code(400).send({ error: "Please write at least 10 characters." });
+  if (!CONTACT_EMAIL) return reply.code(503).send({ error: "The contact form is not available yet. Please try again later." });
+  try {
+    const { sendMail } = await import("./services/reportScheduler.js");
+    const e = escAttr;
+    await sendMail({
+      to: CONTACT_EMAIL, replyTo: email,
+      subject: `Portal contact request from ${name.replace(/[\r\n]+/g, " ")}`,
+      html: [
+        '<div style="font-family:Arial,sans-serif;color:#241536"><h2 style="color:#32217c">New contact request</h2><p><b>Name:</b> ',
         e(name), '<br><b>Email:</b> ', e(email), '<br><b>Organisation:</b> ', e(organisation || "â€”"),
         '</p><p style="white-space:pre-wrap">', e(message), "</p></div>",
       ].join(""),
@@ -298,7 +598,35 @@ app.get("/mfa", async (req, reply) => {
   // This is a second-factor step, not a landing page. After successful
   // authentication there is no reason to present enrollment again.
   if (MFA_ENFORCE && await hasFreshAdminMfa(req, user.id) &&
- YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Ô€€€€€¡ÕÍ•È¹É½±”€„ôô€‰MUAI5%8ˆñğ…İ…¥Ğ¡…Í%ÍÍÕ•‘‘µ¥¹I•½Ù•Éå-•ä¡ÕÍ•È¹¥¤¤¤(€€€É•ÑÕÉ¸É•Á±ä¹É•‘¥É•Ğ ˆ½‘…Í¡‰½…Éˆ¤ì(€É•ÑÕÉ¸Í•ÉÙ•!Ñµ°¡É•Á±ä°€‰…‘µ¥¸µµ™„¹¡Ñµ°ˆ¤ì)ô¤ì(¼¼ÕÑ¡•¹Ñ¥…Ñ•µ•Ñ¡½µ…¹…•µ•¹Ğè¹•Ù•ÈÍ•ÉÙ”•¹É½±±µ•¹Ğ½¹ÑÉ½±ÌÑ¼„(¼¼Á…ÍÍİ½Éµ½¹±äÍ•ÍÍ¥½¸¸á¥ÍÑ¥¹œÙ•É¥™¥•™…Ñ½ÉÌ…¸…ÕÑ¡½É¥é”…‘‘¥¹œ…¹½Ñ¡•È¸)…ÁÀ¹•Ğ ˆ½µ™„½µ…¹…”ˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€½¹ÍĞÕÍ•È€ô…İ…¥ĞÕÉÉ•¹ÑUÍ•È¡É•Ä¤ì(€¥˜€ …ÕÍ•È¤É•ÑÕÉ¸É•Á±ä¹É•‘¥É•Ğ ˆ½±½¥¸ˆ¤ì(€¥˜€ ……İ…¥Ğ¡…ÍÉ•Í¡‘µ¥¹5™„¡É•Ä°ÕÍ•È¹¥¤¤É•ÑÕÉ¸É•Á±ä¹É•‘¥É•Ğ ˆ½µ™„ˆ¤ì(€É•ÑÕÉ¸Í•ÉÙ•!Ñµ°¡É•Á±ä°€‰…‘µ¥¸µµ™„¹¡Ñµ°ˆ¤ì)ô¤ì)…ÁÀ¹•Ğ ˆ½Í•ĞµÁ…ÍÍİ½Éˆ°…Íå¹Œ€¡}É•Ä°É•Á±ä¤€ôøÍ•ÉÙ•!Ñµ°¡É•Á±ä°€‰Í•ĞµÁ…ÍÍİ½É¹¡Ñµ°ˆ¤¤ì)…ÁÀ¹•Ğ ˆ½ÁÉ¥Ù…äˆ°…Íå¹Œ€¡}É•Ä°É•Á±ä¤€ôøÍ•ÉÙ•!Ñµ°¡É•Á±ä°€‰ÁÉ¥Ù…ä¹¡Ñµ°ˆ¤¤ì)…ÁÀ¹•Ğ ˆ½Ñ•ÉµÌˆ°…Íå¹Œ€¡}É•Ä°É•Á±ä¤€ôøÍ•ÉÙ•!Ñµ°¡É•Á±ä°€‰Ñ•ÉµÌ¹¡Ñµ°ˆ¤¤ì)…ÁÀ¹•Ğ ˆ½½½­¥•Ìˆ°…Íå¹Œ€¡}É•Ä°É•Á±ä¤€ôøÍ•ÉÙ•!Ñµ°¡É•Á±ä°€‰½½­¥•Ì¹¡Ñµ°ˆ¤¤ì((¼¼ƒŠRŠR ÁÉ½Ñ•Ñ•Á…•ÌèÉ•‘¥É•ĞÑ¼€½±½¥¸¥˜¹½Ğ…±±½İ•ƒŠRŠR )…ÁÀ¹•Ğ ˆ½‘…Í¡‰½…Éˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€½¹ÍĞÕÍ•È€ô…İ…¥ĞÕÉÉ•¹ÑUÍ•È¡É•Ä¤ì(€¥˜€ …ÕÍ•È¤É•ÑÕÉ¸É•Á±ä¹É•‘¥É•Ğ ˆ½±½¥¸ˆ¤ì(€¥˜€ ……¹•ÍÍ5½‘Õ±”¡ÕÍ•È°€‰‘…Í¡‰½…Éˆ¤¤É•ÑÕÉ¸É•Á±ä¹É•‘¥É•Ğ ˆ½±½¥¸ˆ¤ì(€¥˜€¡5}9=I€˜˜€……İ…¥Ğ¡…ÍÉ•Í¡‘µ¥¹5™„¡É•Ä°ÕÍ•È¹¥¤¤(€€€É•ÑÕÉ¸É•Á±ä¹É•‘¥É•Ğ ˆ½µ™„ˆ¤ì(€¥˜€¡5}9=I€˜˜ÕÍ•È¹É½±”€ôôô€‰MUAI5%8ˆ€˜˜(€€€€€€……İ…¥Ğ¡…Í%ÍÍÕ•‘‘µ¥¹I•½Ù•Éå-•ä¡ÕÍ•È¹¥¤¤(€€€É•ÑÕÉ¸É•Á±ä¹É•‘¥É•Ğ ˆ½µ™„ˆ¤ì(€€¼¼-••ÀÑ¡”…¹½¹¥…°‘…Í¡‰½…ÉÉ½ÕÑ”½¸Ñ¡”½É¥¥¹…°ÁÉ½‘ÕÑ¥½¸‘…Í¡‰½…É¸(€€¼¼Q¡”I•…Ğ™Ë[h‘éì¶»§q«^wntend remains available separately at /react/dashboard while
+      (user.role !== "SUPERADMIN" || await hasIssuedAdminRecoveryKey(user.id)))
+    return reply.redirect("/dashboard");
+  return serveHtml(reply, "admin-mfa.html");
+});
+// Authenticated method management: never serve enrollment controls to a
+// password-only session. Existing verified factors can authorize adding another.
+app.get("/mfa/manage", async (req, reply) => {
+  const user = await currentUser(req);
+  if (!user) return reply.redirect("/login");
+  if (!await hasFreshAdminMfa(req, user.id)) return reply.redirect("/mfa");
+  return serveHtml(reply, "admin-mfa.html");
+});
+app.get("/set-password", async (_req, reply) => serveHtml(reply, "set-password.html"));
+app.get("/privacy", async (_req, reply) => serveHtml(reply, "privacy.html"));
+app.get("/terms", async (_req, reply) => serveHtml(reply, "terms.html"));
+app.get("/cookies", async (_req, reply) => serveHtml(reply, "cookies.html"));
+
+// â”€â”€ protected pages: redirect to /login if not allowed â”€â”€
+app.get("/dashboard", async (req, reply) => {
+  const user = await currentUser(req);
+  if (!user) return reply.redirect("/login");
+  if (!canAccessModule(user, "dashboard")) return reply.redirect("/login");
+  if (MFA_ENFORCE && !await hasFreshAdminMfa(req, user.id))
+    return reply.redirect("/mfa");
+  if (MFA_ENFORCE && user.role === "SUPERADMIN" &&
+      !await hasIssuedAdminRecoveryKey(user.id))
+    return reply.redirect("/mfa");
+  // Keep the canonical dashboard route on the original production dashboard.
+  // The React frontend remains available separately at /react/dashboard while
   // the original dashboard remains the visual source of truth for /dashboard.
   return serveHtml(reply, "dashboard.html");
 });
@@ -325,7 +653,30 @@ app.get("/health", async () => ({ ok: true }));
 // Load balancers must only send authenticated traffic to a DB-ready instance.
 app.get("/ready", async (_req, reply) => {
   try {
-    await prisma.$queryRaw`SYªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Õ1P€Å€ì(€€€É•ÑÕÉ¸ì½¬èÑÉÕ”°‘…Ñ…‰…Í”è€‰É•…¡…‰±”ˆôì(€ô…Ñ €¡•ÉÈ¤ì(€€€…ÁÀ¹±½œ¹İ…É¸¡ì•ÉÈô°€‰É•…‘¥¹•ÍÌ™…¥±•è…ÁÁ±¥…Ñ¥½¸A½ÍÑÉ•ME0Õ¹…Ù…¥±…‰±”ˆ¤ì(€€€É•ÑÕÉ¸É•Á±ä¹½‘” ÔÀÌ¤¹Í•¹¡ì½¬è™…±Í”°‘…Ñ…‰…Í”è€‰Õ¹…Ù…¥±…‰±”ˆô¤ì(€ô)ô¤ì(¼¼±•ÑÌå½Ô½¹™¥É´Ñ¡”9\‰Õ¥±¥Ì±¥Ù”èÍ¡½Õ±É•Á½ÉĞÑ¡”±¥Ù”µ‘…Í¡‰½…ÉÙ•ÉÍ¥½¸)…ÁÀ¹•Ğ ˆ½Ù•ÉÍ¥½¸ˆ°…Íå¹Œ€ ¤€ôø€¡ìÁÉ½‘ÕĞè€‰Q¡”¥á•È€¡AÑä¤1Ñ…Í¡‰½…ÉA½ÉÑ…°ˆ°Ù•ÉÍ¥½¸è€ˆÀ¸ÄÀ¸Àˆô¤¤ì((¼¼ƒŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠV@UQ ƒŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠV@)½¹ÍĞ==-%}MUI€ô€…lˆÀˆ°€‰™…±Í”ˆ°€‰¹¼‰t¹¥¹±Õ‘•Ì¡MÑÉ¥¹œ¡ÁÉ½•ÍÌ¹•¹Ø¹==-%}MUI€üü€‰ÑÉÕ”ˆ¤¹Ñ½1½İ•É…Í” ¤¤ì)½¹ÍĞ==-%€ôì¡ÑÑÁ=¹±äèÑÉÕ”°Í…µ•M¥Ñ”è€‰±…àˆ…Ì½¹ÍĞ°Í•ÕÉ”è==-%}MUI°Á…Ñ è€ˆ¼ˆôì)½¹ÍĞI55	I}==-%€ôì€¸¸¹==-%°µ…á”è€ÌÀ€¨€àØĞÀÀôì()…ÁÀ¹Á½ÍĞñì	½‘äèì•µ…¥°èÍÑÉ¥¹œìÁ…ÍÍİ½ÉèÍÑÉ¥¹œìÉ•µ•µ‰•Èüè‰½½±•…¸ôôø ˆ½…Á¤½…ÕÑ ½±½¥¸ˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€½¹ÍĞì•µ…¥°°Á…ÍÍİ½É°É•µ•µ‰•Èô€ôÉ•Ä¹‰½‘ä€üü€¡íô…Ì…¹ä¤ì(€¥˜€¡ÑåÁ•½˜•µ…¥°€„ôô€‰ÍÑÉ¥¹œˆñğÑåÁ•½˜Á…ÍÍİ½É€„ôô€‰ÍÑÉ¥¹œˆñğ•µ…¥°¹±•¹Ñ €ø€ÈÔĞñğÁ…ÍÍİ½É¹±•¹Ñ €ø€ÈÔØ¤ì(€€€É•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÀ¤¹Í•¹¡ì•ÉÉ½Èè€‰•µ…¥°…¹Á…ÍÍİ½É…É”É•ÅÕ¥É•ˆô¤ì(€ô(€€¼¼A•Èµ…½Õ¹ĞÑ¡É½ÑÑ±”€¡¥¸…‘‘¥Ñ¥½¸Ñ¼Á•Èµ%@¤Ñ¼‰±Õ¹Ğ‘¥ÍÑÉ¥‰ÕÑ•Õ•ÍÍ¥¹œ¸(€¥˜€ …É…Ñ•1¥µ¥Ğ¡É•Á±ä°±½¥¸è‘í•µ…¥°¹Ñ½1½İ•É…Í” ¤¹ÑÉ¥´ ¥õ€°€ÄÀ°UQ!}]%9=]}5L¤¤É•ÑÕÉ¸ì(€½¹ÍĞÍ•ÕÉ¥Ñå½¹Ñ•áĞ€ô…İ…¥Ğ•¹É¥¡M•ÕÉ¥Ñå½¹Ñ•áĞ¡É•Ä¤ì(€½¹ÍĞÉ•ÍÕ±Ğ€ô…İ…¥Ğ±½¥¸¡•µ…¥°°Á…ÍÍİ½É°€„…É•µ•µ‰•Ë[h‘éì¶»§q«^t securityContext);
+    await prisma.$queryRaw`SELECT 1`;
+    return { ok: true, database: "reachable" };
+  } catch (err) {
+    app.log.warn({ err }, "readiness failed: application PostgreSQL unavailable");
+    return reply.code(503).send({ ok: false, database: "unavailable" });
+  }
+});
+// lets you confirm the NEW build is live: should report the live-dashboard version
+app.get("/version", async () => ({ product: "The Fixer (Pty) Ltd Dashboard Portal", version: "0.10.0" }));
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• AUTH â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+const COOKIE_SECURE = !["0", "false", "no"].includes(String(process.env.COOKIE_SECURE ?? "true").toLowerCase());
+const COOKIE = { httpOnly: true, sameSite: "lax" as const, secure: COOKIE_SECURE, path: "/" };
+const REMEMBER_COOKIE = { ...COOKIE, maxAge: 30 * 86400 };
+
+app.post<{ Body: { email: string; password: string; remember?: boolean } }>("/api/auth/login", async (req, reply) => {
+  const { email, password, remember } = req.body ?? ({} as any);
+  if (typeof email !== "string" || typeof password !== "string" || email.length > 254 || password.length > 256) {
+    return reply.code(400).send({ error: "email and password are required" });
+  }
+  // Per-account throttle (in addition to per-IP) to blunt distributed guessing.
+  if (!rateLimit(reply, `login:${email.toLowerCase().trim()}`, 10, AUTH_WINDOW_MS)) return;
+  const securityContext = await enrichSecurityContext(req);
+  const result = await login(email, password, !!remember, securityContext);
   await recordLoginEvent({
     userId: result?.user.id,
     email,
@@ -357,7 +708,41 @@ app.get("/api/auth/me", async (req, reply) => {
       !await hasIssuedAdminRecoveryKey(user.id);
     if (!verified || recoveryKeyRequired) {
       // Do not reveal employer records or module entitlements while the
-      // account still needs MFA or its rYªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Õ•ÅÕ¥É•É•½Ù•Éä­•ä¸(€€€€€É•Á±ä¹¡•…‘•È ‰…¡”µ½¹ÑÉ½°ˆ°‰¹¼µÍÑ½É”ˆ¤ì(€€€€€É•ÑÕÉ¸í¹…µ”éÕÍ•È¹¹…µ”±É½±”éÕÍ•È¹É½±”±µ™…I•ÅÕ¥É•è…Ù•É¥™¥•°(€€€€€€€É•½Ù•Éå-•åI•ÅÕ¥É•°(€€€€€€€µ½‘Õ±•Ìéí…‘µ¥¸é™…±Í”±‘…Í¡‰½…Éé™…±Í”±Á½ÉÑ™½±¥¼é™…±Í”±ÕÍ•ÉÌé™…±Í•ô°(€€€€€€€Í•Ñ¥½¹Ìémt±•µÁ±½å•ÉÌémuôì(€€€ô(€ô(€½¹ÍĞ¥‘Ì€ô…±±½İ•‘µÁ±½å•É%‘Ì¡ÕÍ•È¤ì(€½¹ÍĞÍå¹MÑ…ÑÕÌ€ô…İ…¥Ğ‘…Í¡‰½…É‘Må¹MÑ…Ñ”¡É•Ä¤ì(€½¹ÍĞÁÕ‰±¥Í¡•‘…±±‰…¬€ô‘…Í¡‰½…É‘UÍ•ÍAÕ‰±¥Í¡•‘M¹…ÁÍ¡½Ğ¡Íå¹MÑ…ÑÕÌ¤ì(€½¹ÍĞÁÕ‰±¥Í¡•‘%‘Ì€ôÁÕ‰±¥Í¡•‘…±±‰…¬€ü…İ…¥ĞÁÕ‰±¥Í¡•‘…Í¡‰½…É‘µÁ±½å•É%‘Ì ¤€è¹Õ±°ì(€½¹ÍĞÙ¥Í¥‰±•%‘Ì€ô¥‘Ì€ôôô¹Õ±°(€€€€üÁÕ‰±¥Í¡•‘%‘Ì(€€€€è€¡ÁÕ‰±¥Í¡•‘%‘Ì€ü¥‘Ì¹™¥±Ñ•È ¡¥¤€ôøÁÕ‰±¥Í¡•‘%‘Ì¹¥¹±Õ‘•Ì¡¥¤¤€è¥‘Ì¤ì(€±•Ğ•µÁ±½å•ÉÌì(€¥˜€¡¥‘Ì€ôôô¹Õ±°€˜˜€…ÁÕ‰±¥Í¡•‘…±±‰…¬¤ì(€€€•µÁ±½å•ÉÌ€ô…İ…¥ĞÁÉ¥Íµ„¹•µÁ±½å•È¹™¥¹‘5…¹ä¡ìİ¡•É”èìÍ½ÕÉ••±•Ñ•‘Ğè¹Õ±°ô°Í•±•Ğèì¥èÑÉÕ”°¹…µ”èÑÉÕ”ô°½É‘•É	äèì¹…µ”è€‰…ÍŒˆôô¤ì(€ô•±Í”ì(€€€•µÁ±½å•ÉÌ€ô…İ…¥ĞÁÉ¥Íµ„¹•µÁ±½å•È¹™¥¹‘5…¹ä¡ìİ¡•É”èì¥èì¥¸èÙ¥Í¥‰±•%‘Ì€üümtôô°Í•±•Ğèì¥èÑÉÕ”°¹…µ”èÑÉÕ”ô°½É‘•É	äèì¹…µ”è€‰…ÍŒˆôô¤ì(€ô(€É•ÑÕÉ¸ì(€€€¹…µ”èÕÍ•È¹¹…µ”°•µ…¥°èÕÍ•È¹•µ…¥°°É½±”èÕÍ•È¹É½±”°(€€€Íå¹Ñ¡•Ñ¥…Ñ…5½‘”è	½½±•…¸ ¡…İ…¥ĞÁÕ‰±¥µ…¥±½¹™¥œ ¤¤¹Íå¹Ñ¡•Ñ¥…Ñ…5½‘”¤°(€€€µ½‘Õ±•Ìèì(€€€€€…‘µ¥¸è…¹•ÍÍ5½‘Õ±”¡ÕÍ•È°€‰…‘µ¥¸ˆ¤°(€€€€€‘…Í¡‰½…Éè…¹•ÍÍ5½‘Õ±”¡ÕÍ•È°€‰‘…Í¡‰½…Éˆ¤°(€€€€€Á½ÉÑ™½±¥¼è…¹•ÍÍ5½‘Õ±”¡ÕÍ•È°€‰Á½ÉÑ™½±¥¼ˆ¤°(€€€€€ÕÍ•ÉÌè¥Í‘µ¥¹I½±”¡ÕÍ•È¤°(€€€ô°(€€€Í•Ñ¥½¹Ìè…İ…¥ĞÍ•Ñ¥½¹Í½ÉUÍ•È¡ÕÍ•È¤°(€€€•µÁ±½å•ÉÌ°(€€€Ñ¡•µ”è…İ…¥ĞÑ¡•µ•½ÉUÍ•È¡ÕÍ•È¹¥¤°(€ôì)ô§[h‘éì¶»§q«^w
+      // account still needs MFA or its required recovery key.
+      reply.header("Cache-Control","no-store");
+      return {name:user.name,role:user.role,mfaRequired:!verified,
+        recoveryKeyRequired,
+        modules:{admin:false,dashboard:false,portfolio:false,users:false},
+        sections:[],employers:[]};
+    }
+  }
+  const ids = allowedEmployerIds(user);
+  const syncStatus = await dashboardSyncState(req);
+  const publishedFallback = dashboardUsesPublishedSnapshot(syncStatus);
+  const publishedIds = publishedFallback ? await publishedDashboardEmployerIds() : null;
+  const visibleIds = ids === null
+    ? publishedIds
+    : (publishedIds ? ids.filter((id) => publishedIds.includes(id)) : ids);
+  let employers;
+  if (ids === null && !publishedFallback) {
+    employers = await prisma.employer.findMany({ where: { sourceDeletedAt: null }, select: { id: true, name: true }, orderBy: { name: "asc" } });
+  } else {
+    employers = await prisma.employer.findMany({ where: { id: { in: visibleIds ?? [] } }, select: { id: true, name: true }, orderBy: { name: "asc" } });
+  }
+  return {
+    name: user.name, email: user.email, role: user.role,
+    syntheticDataMode: Boolean((await publicEmailConfig()).syntheticDataMode),
+    modules: {
+      admin: canAccessModule(user, "admin"),
+      dashboard: canAccessModule(user, "dashboard"),
+      portfolio: canAccessModule(user, "portfolio"),
+      users: isAdminRole(user),
+    },
+    sections: await sectionsForUser(user),
+    employers,
+    theme: await themeForUser(user.id),
+  };
+});
 
 // complete the set-password link
 app.post<{ Body: { token: string; password: string } }>("/api/auth/set-password", async (req, reply) => {
@@ -382,7 +767,44 @@ app.post<{ Body: { email: string } }>("/api/auth/forgot-password", async (req, r
   if (!email) return { ok: true };
   if (forgotPasswordThrottle.size > 5000) {
     const cutoff = Date.now() - 60_000;
-    for (const [k, t] of forgotPasswordThrottle) if (t < cutoff) forgotPasswordThrottle.delete(kYªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Ô¤ì(€ô(€½¹ÍĞ±…ÍĞ€ô™½É½ÑA…ÍÍİ½É‘Q¡É½ÑÑ±”¹•Ğ¡•µ…¥°¤ñğ€Àì(€¥˜€¡…Ñ”¹¹½Ü ¤€´±…ÍĞ€ğ€ØÁ|ÀÀÀ¤É•ÑÕÉ¸ì½¬èÑÉÕ”ôì€¼¼Í¥±•¹Ñ±ä¹¼µ½À¥˜É•ÅÕ•ÍÑ•€ğØÁÌ…¼(€™½É½ÑA…ÍÍİ½É‘Q¡É½ÑÑ±”¹Í•Ğ¡•µ…¥°°…Ñ”¹¹½Ü ¤¤ì(€ÑÉäì…İ…¥ĞÉ•ÅÕ•ÍÑA…ÍÍİ½É‘I•Í•Ğ¡•µ…¥°¤ìô…Ñ ì€¼¨¹•Ù•È±•…¬•ÉÉ½ÉÌ¡•É”€¨¼ô(€É•ÑÕÉ¸ì½¬èÑÉÕ”ôì)ô¤ì((¼¼1¥Ù”½¹”µİ…ä…‘µ¥¸•Ù•¹ÑÌ¸MM¥ÌÕÍ•™½È©½ˆÁÉ½É•ÍÌì…±°¹½Éµ…°A$ÑÉ…™™¥ŒÍÑ…åÌ½¸™•Ñ  ¤¸)…ÁÀ¹•Ğ ˆ½…Á¤½…‘µ¥¸½•Ù•¹ÑÌˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€½¹ÍĞ…‘µ¥¸€ô…İ…¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä°É•Á±ä¤ì(€¥˜€ ……‘µ¥¸¤É•ÑÕÉ¸ì((€½¹ÍĞÅÕ•Éä€ô€¡É•Ä¹ÅÕ•Éä€üüíô¤…Ìì©½‰%üèÍÑÉ¥¹œôì(€½¹ÍĞ©½‰%€ôÑåÁ•½˜ÅÕ•Éä¹©½‰%€ôôô€‰ÍÑÉ¥¹œˆ€üÅÕ•Éä¹©½‰%¹ÑÉ¥´ ¤¹Í±¥” À°€ÄÈÀ¤€è€ˆˆì(€¥˜€ …©½‰%¤É•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÀ¤¹Í•¹¡ì•ÉÉ½Èè€‰©½‰%¥ÌÉ•ÅÕ¥É•ˆô¤ì((€É•Á±ä¹¡¥©…¬ ¤ì(€½¹ÍĞÉ•Ì€ôÉ•Á±ä¹É…Üì(€É•Ì¹İÉ¥Ñ•!•… ÈÀÀ°ì(€€€€‰½¹Ñ•¹ĞµQåÁ”ˆè€‰Ñ•áĞ½•Ù•¹ĞµÍÑÉ•…´ì¡…ÉÍ•ĞõÕÑ˜´àˆ°(€€€€‰…¡”µ½¹ÑÉ½°ˆè€‰¹¼µ…¡”°¹¼µÑÉ…¹Í™½É´ˆ°(€€€€‰½¹¹•Ñ¥½¸ˆè€‰­••Àµ…±¥Ù”ˆ°(€€€€‰`µ•°µ	Õ™™•É¥¹œˆè€‰¹¼ˆ°(€ô¤ì((€½¹ÍĞÍ•¹€ô€¡•Ù•¹Ğèì¥èÍÑÉ¥¹œìÑåÁ”èÍÑÉ¥¹œì©½‰%üèÍÑÉ¥¹œìÁ…å±½…èI•½ÉñÍÑÉ¥¹œ°Õ¹­¹½İ¸øô¤€ôøì(€€€É•Ì¹İÉ¥Ñ”¡¥è€‘í•Ù•¹Ğ¹¥‘õq¹•Ù•¹Ğè€‘í•Ù•¹Ğ¹ÑåÁ•õq¹‘…Ñ„è€‘í)M=8¹ÍÑÉ¥¹¥™ä¡•Ù•¹Ğ¹Á…å±½…¥õq¹q¹€¤ì(€ôì((€É•Ì¹İÉ¥Ñ” ‰É•ÑÉäè€ÌÀÀÁq¹q¸ˆ¤ì(€É•Ì¹İÉ¥Ñ” ˆè½¹¹•Ñ•‘q¹q¸ˆ¤ì((€½¹ÍĞÕ¹ÍÕ‰ÍÉ¥‰”€ôÍÕ‰ÍÉ¥‰•‘µ¥¹Ù•¹ÑÌ¡©½‰%°Í•¹¤ì(€½¹ÍĞ¡•…ÉÑ‰•…Ğ€ôÍ•Ñ%¹Ñ•ÉÙ…°  ¤€ôøì(€€€ÑÉäìÉ•Ì¹İÉ¥Ñ”¡€è¡•…ÉÑ‰•…Ğ€‘í…Ñ”¹¹½Ü ¥õq¹q¹€¤ìô…Ñ ì€¼¨%¹½É”İÉ¥Ñ•Ì…™Ñ•ÈÑ¡”MM½¹¹•Ñ¥½¸±½Í•Ì¸€¨¼ô(ƒ[h‘éì¶»§q«^t}, 15000);
+    for (const [k, t] of forgotPasswordThrottle) if (t < cutoff) forgotPasswordThrottle.delete(k);
+  }
+  const last = forgotPasswordThrottle.get(email) || 0;
+  if (Date.now() - last < 60_000) return { ok: true }; // silently no-op if requested <60s ago
+  forgotPasswordThrottle.set(email, Date.now());
+  try { await requestPasswordReset(email); } catch { /* never leak errors here */ }
+  return { ok: true };
+});
+
+// Live one-way admin events. SSE is used for job progress; all normal API traffic stays on fetch().
+app.get("/api/admin/events", async (req, reply) => {
+  const admin = await requireAdmin(req, reply);
+  if (!admin) return;
+
+  const query = (req.query ?? {}) as { jobId?: string };
+  const jobId = typeof query.jobId === "string" ? query.jobId.trim().slice(0, 120) : "";
+  if (!jobId) return reply.code(400).send({ error: "jobId is required" });
+
+  reply.hijack();
+  const res = reply.raw;
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream; charset=utf-8",
+    "Cache-Control": "no-cache, no-transform",
+    "Connection": "keep-alive",
+    "X-Accel-Buffering": "no",
+  });
+
+  const send = (event: { id: string; type: string; jobId?: string; payload: Record<string, unknown> }) => {
+    res.write(`id: ${event.id}\nevent: ${event.type}\ndata: ${JSON.stringify(event.payload)}\n\n`);
+  };
+
+  res.write("retry: 3000\n\n");
+  res.write(": connected\n\n");
+
+  const unsubscribe = subscribeAdminEvents(jobId, send);
+  const heartbeat = setInterval(() => {
+    try { res.write(`: heartbeat ${Date.now()}\n\n`); } catch { /* Ignore writes after the SSE connection closes. */ }
+  }, 15000);
 
   const close = () => {
     clearInterval(heartbeat);
@@ -413,7 +835,27 @@ app.get("/api/admin/compliance/requests", async (req, reply) => {
   const admin = await requireAdmin(req, reply); if (!admin) return;
   return listDataSubjectRequests(100);
 });
-app.post<{ Body: Record<sYªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬ÕÑÉ¥¹œ°Õ¹­¹½İ¸øôø ˆ½…Á¤½…‘µ¥¸½½µÁ±¥…¹”½É•ÅÕ•ÍÑÌˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€½¹ÍĞ…‘µ¥¸€ô…İ…¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä°É•Á±ä¤ì¥˜€ ……‘µ¥¸¤É•ÑÕÉ¸ì(€ÑÉäì(€€€½¹ÍĞÉ•…Ñ•€ô…İ…¥ĞÉ•…Ñ•…Ñ…MÕ‰©•ÑI•ÅÕ•ÍĞ¡É•Ä¹‰½‘ä€üüíô¤ì(€€€±½‘µ¥¹Ñ¥½¸¡…‘µ¥¸°€‰½µÁ±¥…¹”¹‘…Ñ…}ÍÕ‰©•Ñ}É•ÅÕ•ÍĞ¹É•…Ñ”ˆ°É•…Ñ•€‘íÉ•…Ñ•¹É•ÅÕ•ÍÑQåÁ•ô‘…Ñ„ÍÕ‰©•ĞÉ•ÅÕ•ÍÑ€°ìÑ…É•ÑQåÁ”è€‰…Ñ…MÕ‰©•ÑI•ÅÕ•ÍĞˆ°Ñ…É•Ñ%èÉ•…Ñ•¹¥°½¹Ñ•áĞèÉ•ÅÕ•ÍÑM•ÕÉ¥Ñå½¹Ñ•áĞ¡É•Ä¤ô¤ì(€€€É•ÑÕÉ¸É•…Ñ•ì(€ô…Ñ €¡•ÉÈ¤ìÉ•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÀ¤¹Í•¹¡ì•ÉÉ½Èè•ÉÈ¥¹ÍÑ…¹•½˜ÉÉ½È€ü•ÉÈ¹µ•ÍÍ…”€è€‰¥¹Ù…±¥‘…Ñ„ÍÕ‰©•ĞÉ•ÅÕ•ÍĞˆô¤ìô)ô¤ì)…ÁÀ¹Á…Ñ ñìA…É…µÌèì¥èÍÑÉ¥¹œôì	½‘äèI•½ÉñÍÑÉ¥¹œ°Õ¹­¹½İ¸øôø ˆ½…Á¤½…‘µ¥¸½½µÁ±¥…¹”½É•ÅÕ•ÍÑÌ¼é¥ˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€½¹ÍĞ…‘µ¥¸€ô…İ…¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä°É•Á±ä¤ì¥˜€ ……‘µ¥¸¤É•ÑÕÉ¸ì(€ÑÉäì(€€€½¹ÍĞÕÁ‘…Ñ•€ô…İ…¥ĞÕÁ‘…Ñ•…Ñ…MÕ‰©•ÑI•ÅÕ•ÍĞ¡É•Ä¹Á…É…µÌ¹¥°É•Ä¹‰½‘ä€üüíô¤ì(€€€±½‘µ¥¹Ñ¥½¸¡…‘µ¥¸°€‰½µÁ±¥…¹”¹‘…Ñ…}ÍÕ‰©•Ñ}É•ÅÕ•ÍĞ¹ÕÁ‘…Ñ”ˆ°UÁ‘…Ñ•‘…Ñ„ÍÕ‰©•ĞÉ•ÅÕ•ÍĞ€‘íÉ•Ä¹Á…É…µÌ¹¥‘õ€°ìÑ…É•ÑQåÁ”è€‰…Ñ…MÕ‰©•ÑI•ÅÕ•ÍĞˆ°Ñ…É•Ñ%èÉ•Ä¹Á…É…µÌ¹¥°½¹Ñ•áĞèÉ•ÅÕ•ÍÑM•ÕÉ¥Ñå½¹Ñ•áĞ¡É•Ä¤ô¤ì(€€€É•ÑÕÉ¸ÕÁ‘…Ñ•ì(€ô…Ñ €¡•ÉÈ¤ìÉ•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÀ¤¹Í•¹¡ì•ÉÉ½Èè•ÉÈ¥¹ÍÑ…¹•½˜ÉÉ½È€ü•ÉÈ¹µ•ÍÍ…”€è€‰½Õ±¹½ĞÕÁ‘…Ñ”É•ÅÕ•ÍĞˆô¤ìô)ô¤ì)…ÁÀ¹•Ğ ˆ½…Á¤½…‘µ¥¸½½µÁ±¥…¹”½Ù•¹‘½ÉÌˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€½¹ÍĞ…‘µ¥¸€ô…İ…¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä°É•Á±ä¤ì¥˜€ ……‘µ¥¸¤É•ÑÕÉ¸ì(€É•ÑÕÉ¸±¥ÍÑ½µÁ±¥…¹•Y•¹‘½ÉÌ ÄÀÀ¤ì)ô¤ì)…ÁÀ¹Á½ÍĞñì	½‘äèI•½ÉñÍÑÉ¥¹œ°Õ¹­¹½İ¸øôø ˆ½…Á¤½…‘µ¥¸½½µÁ±¥…¹”½Ù•¹‘¿[h‘éì¶»§q«^vs", async (req, reply) => {
+app.post<{ Body: Record<string, unknown> }>("/api/admin/compliance/requests", async (req, reply) => {
+  const admin = await requireAdmin(req, reply); if (!admin) return;
+  try {
+    const created = await createDataSubjectRequest(req.body ?? {});
+    logAdminAction(admin, "compliance.data_subject_request.create", `Created ${created.requestType} data subject request`, { targetType: "DataSubjectRequest", targetId: created.id, context: requestSecurityContext(req) });
+    return created;
+  } catch (err) { return reply.code(400).send({ error: err instanceof Error ? err.message : "invalid data subject request" }); }
+});
+app.patch<{ Params: { id: string }; Body: Record<string, unknown> }>("/api/admin/compliance/requests/:id", async (req, reply) => {
+  const admin = await requireAdmin(req, reply); if (!admin) return;
+  try {
+    const updated = await updateDataSubjectRequest(req.params.id, req.body ?? {});
+    logAdminAction(admin, "compliance.data_subject_request.update", `Updated data subject request ${req.params.id}`, { targetType: "DataSubjectRequest", targetId: req.params.id, context: requestSecurityContext(req) });
+    return updated;
+  } catch (err) { return reply.code(400).send({ error: err instanceof Error ? err.message : "could not update request" }); }
+});
+app.get("/api/admin/compliance/vendors", async (req, reply) => {
+  const admin = await requireAdmin(req, reply); if (!admin) return;
+  return listComplianceVendors(100);
+});
+app.post<{ Body: Record<string, unknown> }>("/api/admin/compliance/vendors", async (req, reply) => {
   const admin = await requireAdmin(req, reply); if (!admin) return;
   try {
     const created = await createComplianceVendor(req.body ?? {});
@@ -437,7 +879,38 @@ app.get("/api/admin/compliance/incidents", async (req, reply) => {
   const admin = await requireAdmin(req, reply); if (!admin) return;
   return listSecurityIncidents(100);
 });
-app.post<{ Body: Record<string, unknYªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Õ½İ¸øôø ˆ½…Á¤½…‘µ¥¸½½µÁ±¥…¹”½¥¹¥‘•¹ÑÌˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€½¹ÍĞ…‘µ¥¸€ô…İ…¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä°É•Á±ä¤ì¥˜€ ……‘µ¥¸¤É•ÑÕÉ¸ì(€ÑÉäì(€€€½¹ÍĞÉ•…Ñ•€ô…İ…¥ĞÉ•…Ñ•M•ÕÉ¥Ñå%¹¥‘•¹Ğ¡É•Ä¹‰½‘ä€üüíô¤ì(€€€±½‘µ¥¹Ñ¥½¸¡…‘µ¥¸°€‰½µÁ±¥…¹”¹Í•ÕÉ¥Ñå}¥¹¥‘•¹Ğ¹É•…Ñ”ˆ°É•…Ñ•Í•ÕÉ¥Ñä¥¹¥‘•¹Ğ€‘íÉ•…Ñ•¹¥‘õ€°ìÑ…É•ÑQåÁ”è€‰M•ÕÉ¥Ñå%¹¥‘•¹Ğˆ°Ñ…É•Ñ%èÉ•…Ñ•¹¥°½¹Ñ•áĞèÉ•ÅÕ•ÍÑM•ÕÉ¥Ñå½¹Ñ•áĞ¡É•Ä¤ô¤ì(€€€É•ÑÕÉ¸É•…Ñ•ì(€ô…Ñ €¡•ÉÈ¤ìÉ•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÀ¤¹Í•¹¡ì•ÉÉ½Èè•ÉÈ¥¹ÍÑ…¹•½˜ÉÉ½È€ü•ÉÈ¹µ•ÍÍ…”€è€‰¥¹Ù…±¥Í•ÕÉ¥Ñä¥¹¥‘•¹Ğˆô¤ìô)ô¤ì()…ÁÀ¹•Ğ ˆ½…Á¤½…‘µ¥¸½Í•ÕÉ¥Ñä½‘…Ñ…‰…Í”ˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€½¹ÍĞ…‘µ¥¸€ô…İ…¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä°É•Á±ä¤ì¥˜€ ……‘µ¥¸¤É•ÑÕÉ¸ì(€É•ÑÕÉ¸‘…Ñ…‰…Í•M•ÕÉ¥ÑåM¹…ÁÍ¡½Ğ ¤ì)ô¤ì()…ÁÀ¹•Ğ ˆ½…Á¤½…‘µ¥¸½Í•ÕÉ¥Ñä½‘•Ù¥•Ìˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€½¹ÍĞ…‘µ¥¸€ô…İ…¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä°É•Á±ä¤ì¥˜€ ……‘µ¥¸¤É•ÑÕÉ¸ì(€É•ÑÕÉ¸±¥ÍÑM•ÕÉ¥Ñå•Ù¥•Ì ÌÀÀ¤ì)ô¤ì()…ÁÀ¹•ĞñìEÕ•ÉåÍÑÉ¥¹œèì±¥µ¥ĞüèÍÑÉ¥¹œìÕÍ•É%üèÍÑÉ¥¹œìÉ½ÕÑ”üèÍÑÉ¥¹œôôø ˆ½…Á¤½…‘µ¥¸½Í•ÕÉ¥Ñä½‘…Ñ„µ…•ÍÌˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€½¹ÍĞ…‘µ¥¸€ô…İ…¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä°É•Á±ä¤ì¥˜€ ……‘µ¥¸¤É•ÑÕÉ¸ì(€É•ÑÕÉ¸±¥ÍÑ…Ñ…•ÍÍÙ•¹ÑÌ¡ì(€€€±¥µ¥Ğè9Õµ‰•È¡É•Ä¹ÅÕ•Éä¹±¥µ¥Ğ¤ñğ€ÈÀÀ°(€€€ÕÍ•É%èÉ•Ä¹ÅÕ•Éä¹ÕÍ•É%°(€€€É½ÕÑ”èÉ•Ä¹ÅÕ•Éä¹É½ÕÑ”°(€ô¤ì)ô¤ì()…ÁÀ¹•Ğ ˆ½…Á¤½…‘µ¥¸½Í•ÕÉ¥Ñä½…Õ‘¥Ğµ±½œ¹ÍØˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€½¹ÍĞ…‘µ¥¸€ô…İ…¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä°É•Á±ä¤ì¥˜€ ……‘µ¥¸¤É•ÑÕÉ¸ì(€É•Á±ä¹¡•…‘•È ‰½¹Ñ•¹ĞµQåÁ”ˆ°€‰Ñ•áĞ½ÍØì¡…ÉÍ•ĞõÕÑ˜´àˆ¤ì(€É•Á±ä¹¡•…‘•È ‰½¹Ñ•¹Ğµ¥ÍÁ½Í¥Ñ¥½¸ˆ°…ÑÑ…£[h‘éì¶»§q«^uent; filename="security-audit-log-${new Date().toISOString().slice(0, 10)}.csv"`);
+app.post<{ Body: Record<string, unknown> }>("/api/admin/compliance/incidents", async (req, reply) => {
+  const admin = await requireAdmin(req, reply); if (!admin) return;
+  try {
+    const created = await createSecurityIncident(req.body ?? {});
+    logAdminAction(admin, "compliance.security_incident.create", `Created security incident ${created.id}`, { targetType: "SecurityIncident", targetId: created.id, context: requestSecurityContext(req) });
+    return created;
+  } catch (err) { return reply.code(400).send({ error: err instanceof Error ? err.message : "invalid security incident" }); }
+});
+
+app.get("/api/admin/security/database", async (req, reply) => {
+  const admin = await requireAdmin(req, reply); if (!admin) return;
+  return databaseSecuritySnapshot();
+});
+
+app.get("/api/admin/security/devices", async (req, reply) => {
+  const admin = await requireAdmin(req, reply); if (!admin) return;
+  return listSecurityDevices(300);
+});
+
+app.get<{ Querystring: { limit?: string; userId?: string; route?: string } }>("/api/admin/security/data-access", async (req, reply) => {
+  const admin = await requireAdmin(req, reply); if (!admin) return;
+  return listDataAccessEvents({
+    limit: Number(req.query.limit) || 200,
+    userId: req.query.userId,
+    route: req.query.route,
+  });
+});
+
+app.get("/api/admin/security/audit-log.csv", async (req, reply) => {
+  const admin = await requireAdmin(req, reply); if (!admin) return;
+  reply.header("Content-Type", "text/csv; charset=utf-8");
+  reply.header("Content-Disposition", `attachment; filename="security-audit-log-${new Date().toISOString().slice(0, 10)}.csv"`);
   return reply.send(await exportSecurityAuditLogCsv());
 });
 
@@ -460,7 +933,33 @@ app.post<{ Params: { id: string }; Body: { reason?: string } }>("/api/admin/secu
   await destroySessionById(req.params.id, admin.email);
   logAdminAction(admin, "session.revoke", `Revoked session ${req.params.id}${req.body?.reason ? ": " + String(req.body.reason).slice(0, 200) : ""}`, {
     targetType: "Session", targetId: req.params.id, context: requestSecurityContext(req),
-YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Ô€ô¤ì(€É•ÑÕÉ¸ì½¬èÑÉÕ”ôì)ô¤ì()…ÁÀ¹Á½ÍĞñìA…É…µÌèì¥èÍÑÉ¥¹œôì	½‘äèìÉ•…Í½¸üèÍÑÉ¥¹œôôø ˆ½…Á¤½…‘µ¥¸½ÕÍ•ÉÌ¼é¥½É•Ù½­”µÍ•ÍÍ¥½¹Ìˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€½¹ÍĞ…‘µ¥¸€ô…İ…¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä°É•Á±ä¤ì¥˜€ ……‘µ¥¸¤É•ÑÕÉ¸ì(€¥˜€¡É•Ä¹Á…É…µÌ¹¥€ôôô…‘µ¥¸¹¥¤É•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÀ¤¹Í•¹¡ì•ÉÉ½Èè€‰å½Ô…¹¹½ĞÉ•Ù½­”å½ÕÈ½İ¸…‘µ¥¸Í•ÍÍ¥½¹Ì¡•É”ˆô¤ì(€½¹ÍĞ½Õ¹Ğ€ô…İ…¥ĞÁÉ¥Íµ„¹Í•ÍÍ¥½¸¹½Õ¹Ğ¡ìİ¡•É”èìÕÍ•É%èÉ•Ä¹Á…É…µÌ¹¥°•¹‘•‘Ğè¹Õ±°ôô¤ì(€…İ…¥Ğ‘•ÍÑÉ½å±±M•ÍÍ¥½¹Í½ÉUÍ•È¡É•Ä¹Á…É…µÌ¹¥°…‘µ¥¸¹•µ…¥°¤ì(€±½‘µ¥¹Ñ¥½¸¡…‘µ¥¸°€‰ÕÍ•È¹É•Ù½­•}Í•ÍÍ¥½¹Ìˆ°I•Ù½­•…±°…Ñ¥Ù”Í•ÍÍ¥½¹Ì™½ÈÕÍ•È€‘íÉ•Ä¹Á…É…µÌ¹¥‘õ€°ì(€€€Ñ…É•ÑQåÁ”è€‰UÍ•Èˆ°Ñ…É•Ñ%èÉ•Ä¹Á…É…µÌ¹¥°¥µÁ…Ñ½Õ¹Ğè½Õ¹Ğ°½¹Ñ•áĞèÉ•ÅÕ•ÍÑM•ÕÉ¥Ñå½¹Ñ•áĞ¡É•Ä¤°(€ô¤ì(€É•ÑÕÉ¸ì½¬èÑÉÕ”°É•Ù½­•‘½Õ¹Ğè½Õ¹Ğôì)ô¤ì()…ÁÀ¹•ĞñìEÕ•ÉåÍÑÉ¥¹œèìÕÍ•É%üèÍÑÉ¥¹œì•µ…¥°üèÍÑÉ¥¹œì±¥µ¥ĞüèÍÑÉ¥¹œôôø ˆ½…Á¤½…‘µ¥¸½Í•ÕÉ¥Ñä½±½¥¹Ìˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€¥˜€ „¡…İ…¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä°É•Á±ä¤¤¤É•ÑÕÉ¸ì(€É•ÑÕÉ¸±¥ÍÑ1½¥¹Ù•¹ÑÌ¡ìÕÍ•É%èÉ•Ä¹ÅÕ•Éä¹ÕÍ•É%°•µ…¥°èÉ•Ä¹ÅÕ•Éä¹•µ…¥°°±¥µ¥Ğè9Õµ‰•È¡É•Ä¹ÅÕ•Éä¹±¥µ¥Ğ¤ñğ€ÈÀÀô¤ì)ô¤ì()…ÁÀ¹•ĞñìEÕ•ÉåÍÑÉ¥¹œèìÍÑ…ÑÕÌüèÍÑÉ¥¹œì±¥µ¥ĞüèÍÑÉ¥¹œôôø ˆ½…Á¤½…‘µ¥¸½Í•ÕÉ¥Ñä½…±•ÉÑÌˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€¥˜€ „¡…İ…¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä°É•Á±ä¤¤¤É•ÑÕÉ¸ì(€É•ÑÕÉ¸±¥ÍÑM•ÕÉ¥Ñå±•ÉÑÌ¡ìÍÑ…ÑÕÌèÉ•Ä¹ÅÕ•Éä¹ÍÑ…ÑÕÌ€üü€‰=A8ˆ°±¥µ¥Ğè9Õµ‰•È¡É•Ä¹ÅÕ•Éä¹±¥µ¥Ğ¤ñğ€ÄÀÀô¤ì)ô¤ì()…ÁÀ¹Á½ÍĞñìA…É…µÌèì¥èÍÑÉ¥¹œôôø ˆ½…Á¤½…‘µ¥¸½Í•ÕÉ¥Ñä½…±•ÉÑÌ¼é¥½É•Í½±Ù”ˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€½¹ÍĞ…‘µ¥¸€ô…İ…¥ĞÉ•ÅÕ¥É•“[h‘éì¶»§q«^uin(req, reply); if (!admin) return;
+  });
+  return { ok: true };
+});
+
+app.post<{ Params: { id: string }; Body: { reason?: string } }>("/api/admin/users/:id/revoke-sessions", async (req, reply) => {
+  const admin = await requireAdmin(req, reply); if (!admin) return;
+  if (req.params.id === admin.id) return reply.code(400).send({ error: "you cannot revoke your own admin sessions here" });
+  const count = await prisma.session.count({ where: { userId: req.params.id, endedAt: null } });
+  await destroyAllSessionsForUser(req.params.id, admin.email);
+  logAdminAction(admin, "user.revoke_sessions", `Revoked all active sessions for user ${req.params.id}`, {
+    targetType: "User", targetId: req.params.id, impactCount: count, context: requestSecurityContext(req),
+  });
+  return { ok: true, revokedCount: count };
+});
+
+app.get<{ Querystring: { userId?: string; email?: string; limit?: string } }>("/api/admin/security/logins", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  return listLoginEvents({ userId: req.query.userId, email: req.query.email, limit: Number(req.query.limit) || 200 });
+});
+
+app.get<{ Querystring: { status?: string; limit?: string } }>("/api/admin/security/alerts", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  return listSecurityAlerts({ status: req.query.status ?? "OPEN", limit: Number(req.query.limit) || 100 });
+});
+
+app.post<{ Params: { id: string } }>("/api/admin/security/alerts/:id/resolve", async (req, reply) => {
+  const admin = await requireAdmin(req, reply); if (!admin) return;
   return resolveSecurityAlert(req.params.id, admin.email);
 });
 
@@ -485,7 +984,26 @@ app.post<{ Body: { email: string; name: string; role: any; employerIds?: string[
       email: b.email, name: b.name, role: b.role, employerIds: b.employerIds ?? [],
       partnerId: b.partnerId, tempPassword: b.tempPassword, sendSetupLink: b.sendSetupLink, createdBy: admin.email,
     });
-    logAdminAction(adYªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Õµ¥¸°€‰ÕÍ•È¹É•…Ñ”ˆ°É•…Ñ•ÕÍ•È€‘íˆ¹¹…µ•ô€ ‘íˆ¹•µ…¥±ô¤°É½±”€‘íˆ¹É½±•õ€°ìÑ…É•ÑQåÁ”è€‰UÍ•Èˆ°Ñ…É•Ñ%è€¡É•…Ñ•…Ì…¹ä¤ü¹¥°¥µÁ…Ñ½Õ¹Ğè€Ä°½¹Ñ•áĞèÉ•ÅÕ•ÍÑM•ÕÉ¥Ñå½¹Ñ•áĞ¡É•Ä¤ô¤ì(€€€É•ÑÕÉ¸É•…Ñ•ì(€ô…Ñ €¡”è…¹ä¤ìÉ•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÀ¤¹Í•¹¡ì•ÉÉ½Èè”¹µ•ÍÍ…”ô¤ìô)ô¤ì)…ÁÀ¹Á…Ñ ñìA…É…µÌèì¥èÍÑÉ¥¹œôì	½‘äè…¹äôø ˆ½…Á¤½ÕÍ•ÉÌ¼é¥ˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€½¹ÍĞ…‘µ¥¸€ô…İ…¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä°É•Á±ä¤ì¥˜€ ……‘µ¥¸¤É•ÑÕÉ¸ì(€½¹ÍĞ¥¹ÁÕĞèI•½ÉñÍÑÉ¥¹œ°…¹äø€ôÉ•Ä¹‰½‘ä€˜˜ÑåÁ•½˜É•Ä¹‰½‘ä€ôôô€‰½‰©•Ğˆ€üÉ•Ä¹‰½‘ä€èíôì(€€¼¼=É‘¥¹…Éä…‘µ¥¹ÌµÕÍĞ¹½Ğ‰”…‰±”Ñ¼‘¥Í½Ù•È°•‘¥Ğ½ÈÁÉ½µ½Ñ”„ÕÍ•È¥¹Ñ¼(€€¼¼Ñ¡”ÁÉ¥Ù¥±••½¹ÑÉ½°µÁ±…¹”É½±”¸(€½¹ÍĞÑ…É•Ğ€ô…İ…¥ĞÁÉ¥Íµ„¹ÕÍ•È¹™¥¹‘U¹¥ÅÕ”¡ìİ¡•É”èì¥èÉ•Ä¹Á…É…µÌ¹¥ô°Í•±•ĞèìÉ½±”èÑÉÕ”ôô¤ì(€¥˜€ …Ñ…É•Ğ¤É•ÑÕÉ¸É•Á±ä¹½‘” ĞÀĞ¤¹Í•¹¡ì•ÉÉ½Èè€‰ÕÍ•È¹½Ğ™½Õ¹ˆô¤ì(€¥˜€¡…‘µ¥¸¹É½±”€„ôô€‰MUAI5%8ˆ€˜˜Ñ…É•Ğ¹É½±”€ôôô€‰MUAI5%8ˆ¤É•ÑÕÉ¸É•Á±ä¹½‘” ĞÀĞ¤¹Í•¹¡ì•ÉÉ½Èè€‰ÕÍ•È¹½Ğ™½Õ¹ˆô¤ì(€¥˜€¡…‘µ¥¸¹É½±”€„ôô€‰MUAI5%8ˆ€˜˜€¡¥¹ÁÕĞ¹É½±”€ôôô€‰MUAI5%8ˆñğ¥¹ÁÕĞ¹É½±”€ôôô€‰5%8ˆ¤¤É•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÀ¤¹Í•¹¡ì•ÉÉ½Èè€‰¥¹Ù…±¥É½±”ˆô¤ì(€€¼¼±±½Üµ±¥ÍĞ™¥•±‘Ìè¹•Ù•ÈÁ…ÍÌ…¸…É‰¥ÑÉ…Éä±¥•¹Ğ½‰©•ĞÑ¡É½Õ Ñ¼Ñ¡”±…å•È¸(€½¹ÍĞ‰½‘äèI•½ÉñÍÑÉ¥¹œ°…¹äø€ôíôì(€¥˜€¡¥¹ÁÕĞ¹¹…µ”€„ôôÕ¹‘•™¥¹•¤ì(€€€¥˜€¡ÑåÁ•½˜¥¹ÁÕĞ¹¹…µ”€„ôô€‰ÍÑÉ¥¹œˆñğ€…¥¹ÁÕĞ¹¹…µ”¹ÑÉ¥´ ¤ñğ¥¹ÁÕĞ¹¹…µ”¹±•¹Ñ €ø€ÄÈÀ¤É•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÀ¤¹Í•¹¡ì•ÉÉ½Èè€‰¹…µ”µÕÍĞ‰”€ÇŠLÄÈÀ¡…É…Ñ•ÉÌˆô¤ì(€€€‰½‘ä¹¹…µ”€ô¥¹ÁÕĞ¹¹…µ”¹ÑÉ¥´ ¤ì(€ô(€¥˜€¡¥¹ÁÕĞ¹É½±”€„ôôÕ¹‘•›[h‘éì¶»§q«^uned) {
+    logAdminAction(admin, "user.create", `Created user ${b.name} (${b.email}), role ${b.role}`, { targetType: "User", targetId: (created as any)?.id, impactCount: 1, context: requestSecurityContext(req) });
+    return created;
+  } catch (e: any) { return reply.code(400).send({ error: e.message }); }
+});
+app.patch<{ Params: { id: string }; Body: any }>("/api/users/:id", async (req, reply) => {
+  const admin = await requireAdmin(req, reply); if (!admin) return;
+  const input: Record<string, any> = req.body && typeof req.body === "object" ? req.body : {};
+  // Ordinary admins must not be able to discover, edit or promote a user into
+  // the privileged control-plane role.
+  const target = await prisma.user.findUnique({ where: { id: req.params.id }, select: { role: true } });
+  if (!target) return reply.code(404).send({ error: "user not found" });
+  if (admin.role !== "SUPERADMIN" && target.role === "SUPERADMIN") return reply.code(404).send({ error: "user not found" });
+  if (admin.role !== "SUPERADMIN" && (input.role === "SUPERADMIN" || input.role === "ADMIN")) return reply.code(400).send({ error: "invalid role" });
+  // Allow-list fields: never pass an arbitrary client object through to the DB layer.
+  const body: Record<string, any> = {};
+  if (input.name !== undefined) {
+    if (typeof input.name !== "string" || !input.name.trim() || input.name.length > 120) return reply.code(400).send({ error: "name must be 1â€“120 characters" });
+    body.name = input.name.trim();
+  }
+  if (input.role !== undefined) {
     if (!["ADMIN", "SUPERADMIN", "EMPLOYER_MANAGER", "PORTFOLIO_MANAGER", "VIEWER"].includes(input.role)) return reply.code(400).send({ error: "invalid role" });
     body.role = input.role;
   }
@@ -510,7 +1028,26 @@ app.post<{ Body: { email: string; name: string; role: any; employerIds?: string[
     body.revokedReason = body.reason || body.revokedReason || "Deactivated by admin";
   }
   let updated;
-  try { updated = await updateUseYªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬ÕÈ¡É•Ä¹Á…É…µÌ¹¥°‰½‘ä¤ìô(€…Ñ €¡”è…¹ä¤ìÉ•ÑÕÉ¸É•Á±ä¹½‘”¡”ü¹½‘”€ôôô€‰@ÈÀÈÔˆ€ü€ĞÀĞ€è€ĞÀÀ¤¹Í•¹¡ì•ÉÉ½Èè”ü¹½‘”€ôôô€‰@ÈÀÈÔˆ€ü€‰ÕÍ•È¹½Ğ™½Õ¹ˆ€è€¡”ü¹µ•ÍÍ…”ñğ€‰½Õ±¹½ĞÕÁ‘…Ñ”ÕÍ•Èˆ¤ô¤ìô(€½¹ÍĞ¡…¹•‘-•åÌ€ô=‰©•Ğ¹­•åÌ¡‰½‘ä¤¹©½¥¸ ˆ°€ˆ¤ñğ€‰¹¼™¥•±‘Ìˆì(€±½‘µ¥¹Ñ¥½¸¡…‘µ¥¸°€‰ÕÍ•È¹ÕÁ‘…Ñ”ˆ°UÁ‘…Ñ•ÕÍ•È€‘íÉ•Ä¹Á…É…µÌ¹¥‘ô€ ‘í¡…¹•‘-•åÍô¥€°ìÑ…É•ÑQåÁ”è€‰UÍ•Èˆ°Ñ…É•Ñ%èÉ•Ä¹Á…É…µÌ¹¥°‘•Ñ…¥°èÉ•‘…ÑÕ‘¥Ñ•Ñ…¥°¡‰½‘ä¤°¥µÁ…Ñ½Õ¹Ğè‰½‘ä¹•µÁ±½å•É%‘Ìü¹±•¹Ñ €üü€Ä°½¹Ñ•áĞèÉ•ÅÕ•ÍÑM•ÕÉ¥Ñå½¹Ñ•áĞ¡É•Ä¤ô¤ì(€É•ÑÕÉ¸ÕÁ‘…Ñ•ì)ô¤ì)…ÁÀ¹Á½ÍĞñìA…É…µÌèì¥èÍÑÉ¥¹œôì	½‘äèìÁ…ÍÍİ½ÉèÍÑÉ¥¹œôôø ˆ½…Á¤½ÕÍ•ÉÌ¼é¥½É•Í•ĞµÁ…ÍÍİ½Éˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€½¹ÍĞ…‘µ¥¸€ô…İ…¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä°É•Á±ä¤ì¥˜€ ……‘µ¥¸¤É•ÑÕÉ¸ì(€ÑÉäì(€€€½¹ÍĞÉ•ÍÕ±Ğ€ô…İ…¥ĞÉ•Í•ÑA…ÍÍİ½É¡É•Ä¹Á…É…µÌ¹¥°MÑÉ¥¹œ¡É•Ä¹‰½‘äü¹Á…ÍÍİ½É€üü€ˆˆ¤¤ì(€€€±½‘µ¥¹Ñ¥½¸¡…‘µ¥¸°€‰ÕÍ•È¹É•Í•Ñ}Á…ÍÍİ½Éˆ°I•Í•ĞÁ…ÍÍİ½É™½ÈÕÍ•È€‘íÉ•Ä¹Á…É…µÌ¹¥‘õ€°ìÑ…É•ÑQåÁ”è€‰UÍ•Èˆ°Ñ…É•Ñ%èÉ•Ä¹Á…É…µÌ¹¥°¥µÁ…Ñ½Õ¹Ğè€Ä°½¹Ñ•áĞèÉ•ÅÕ•ÍÑM•ÕÉ¥Ñå½¹Ñ•áĞ¡É•Ä¤ô¤ì(€€€É•ÑÕÉ¸É•ÍÕ±Ğì(€ô…Ñ €¡”è…¹ä¤ìÉ•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÀ¤¹Í•¹¡ì•ÉÉ½Èè”ü¹µ•ÍÍ…”ñğ€‰½Õ±¹½ĞÉ•Í•ĞÁ…ÍÍİ½Éˆô¤ìô)ô¤ì((¼¼Í•±˜µÍ•ÉÙ¥”è„Í¥¹•µ¥¸ÕÍ•È‘¥Í…‰±•ÌÑ¡•¥È½İ¸…½Õ¹Ğ€¡¹½Ğ„¡…É‘•±•Ñ”ƒŠP(¼¼…¸…‘µ¥¸…¸ÍÑ¥±°Í•”¥ĞÕ¹‘•ÈA…ÍĞÕÍ•ÉÌ…¹É•…Ñ¥Ù…Ñ”¥Ğ¤¸¹‘ÌÑ¡•¥È(¼¼Í•ÍÍ¥½¸¥µµ•‘¥…Ñ•±ä°Í¼Ñ¡”É•ÍÁ½¹Í”É•‘¥É•ÑÌÑ¡•´ÍÑÉ…¥¡ĞÑ¼€½±½¥¸¸)…ÁÀ¹Á½ÍĞñì	½‘äèìÉ•…Í½¸üèÍÑÉ¥¹œôôø ˆ½…Á¤½ÕÍ•ÉÌ½µ”½‘•…Ñ¥Ù…Ñ”ˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€½¹ÍĞÕÍ•È€ô…İ…§[h‘éì¶»§q«^t requireUser(req, reply); if (!user) return;
+  try { updated = await updateUser(req.params.id, body); }
+  catch (e: any) { return reply.code(e?.code === "P2025" ? 404 : 400).send({ error: e?.code === "P2025" ? "user not found" : (e?.message || "could not update user") }); }
+  const changedKeys = Object.keys(body).join(", ") || "no fields";
+  logAdminAction(admin, "user.update", `Updated user ${req.params.id} (${changedKeys})`, { targetType: "User", targetId: req.params.id, detail: redactAuditDetail(body), impactCount: body.employerIds?.length ?? 1, context: requestSecurityContext(req) });
+  return updated;
+});
+app.post<{ Params: { id: string }; Body: { password: string } }>("/api/users/:id/reset-password", async (req, reply) => {
+  const admin = await requireAdmin(req, reply); if (!admin) return;
+  try {
+    const result = await resetPassword(req.params.id, String(req.body?.password ?? ""));
+    logAdminAction(admin, "user.reset_password", `Reset password for user ${req.params.id}`, { targetType: "User", targetId: req.params.id, impactCount: 1, context: requestSecurityContext(req) });
+    return result;
+  } catch (e: any) { return reply.code(400).send({ error: e?.message || "could not reset password" }); }
+});
+
+// self-service: a signed-in user disables their own account (not a hard delete â€”
+// an admin can still see it under Past users and reactivate it). Ends their
+// session immediately, so the response redirects them straight to /login.
+app.post<{ Body: { reason?: string } }>("/api/users/me/deactivate", async (req, reply) => {
+  const user = await requireUser(req, reply); if (!user) return;
   await deactivateSelf(user.id, req.body?.reason);
   reply.clearCookie("session", { path: "/", httpOnly: true, sameSite: "lax", secure: COOKIE_SECURE });
   return { ok: true };
@@ -535,7 +1072,26 @@ app.delete<{ Params: { id: string } }>("/api/users/:id", async (req, reply) => {
 // access and why, so admins can see who once had access and why it ended.
 app.get("/api/admin/users/revoked", async (req, reply) => {
   const admin = await requireAdmin(req, reply); if (!admin) return;
-  const users =YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Ô…İ…¥Ğ±¥ÍÑI•Ù½­•‘UÍ•ÉÌ ¤ì(€€¼¼-••ÀÁÉ¥Ù¥±••½¹ÑÉ½°µÁ±…¹”…½Õ¹ÑÌ¥¹Ù¥Í¥‰±”Ñ¼½É‘¥¹…Éä…‘µ¥¹Ì¸(€É•ÑÕÉ¸…‘µ¥¸¹É½±”€ôôô€‰MUAI5%8ˆ€üÕÍ•ÉÌ€èÕÍ•ÉÌ¹™¥±Ñ•È ¡Ôè…¹ä¤€ôøÔ¹É½±”€„ôô€‰MUAI5%8ˆ¤ì)ô¤ì((¼¼ƒŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠV@959P91eQ%LƒŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠVCŠV@(¼¼¹äÍ¥¹•µ¥¸ÕÍ•È…¸Á½ÍĞÑ¡•¥È½İ¸Á…•Ù¥•Ü½ÍÉ½±°‰•…½¹Ì¸-•ÁĞ(¼¼¥¹Ñ•¹Ñ¥½¹…±±ä±¥¡Ñİ•¥¡ĞƒŠP¹¼Ñ¡¥ÉµÁ…ÉÑäÑÉ…­¥¹œ°‰•ÍĞµ•™™½ÉĞ€¡¹•Ù•È(¼¼‰±½­ÌÑ¡”Á…”¥˜¥Ğ™…¥±Ì¤¸)…ÁÀ¹Á½ÍĞñì	½‘äèìÑåÁ”è€‰AY%\ˆğ€‰MI=11}AQ ˆğ€‰MMM%=9}9ˆğ€‰Q}1%,ˆğ€‰=I5}MU	5%Pˆğ€‰=UQ	=U9}1%,ˆğ€‰1%9Q}II=HˆìÁ…Ñ èÍÑÉ¥¹œìÙ…±Õ”üè¹Õµ‰•Èôôø (€€ˆ½…Á¤½…¹…±åÑ¥Ì½•Ù•¹Ğˆ°(€…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€€€¥˜€¡ÁÉ½•ÍÌ¹•¹Ø¹QI%}MYI}5=€„ôô€‰™…±Í”ˆ¤É•ÑÕÉ¸ì½¬èÑÉÕ”ôì€¼¼•µ•É•¹äè‘¥Í…‰±”¹½¹•ÍÍ•¹Ñ¥…°…¹…±åÑ¥ÌÉ•…‘Ì½İÉ¥Ñ•Ì(€€€½¹ÍĞÕÍ•È€ô…İ…¥ĞÕÉÉ•¹ÑUÍ•È¡É•Ä¤ì€¼¼‰•ÍĞµ•™™½ÉĞƒŠP…±±½Ü…¹½¹åµ½ÕÌ‰•…½¹ÌÑ¼¹¼µ½ÀÉ…Ñ¡•ÈÑ¡…¸€ĞÀÄÍÁ…´(€€€½¹ÍĞˆ€ôÉ•Ä¹‰½‘ä€üü€¡íô…Ì…¹ä¤ì(€€€½¹ÍĞY9Q}QeAL€ôl‰AY%\ˆ°€‰MI=11}AQ ˆ°€‰MMM%=9}9ˆ°€‰Q}1%,ˆ°€‰=I5}MU	5%Pˆ°€‰=UQ	=U9}1%,ˆ°€‰1%9Q}II=H‰tì(€€€¥˜€ …Y9Q}QeAL¹¥¹±Õ‘•Ì¡ˆ¹ÑåÁ”¤ñğÑåÁ•½˜ˆ¹Á…Ñ €„ôô€‰ÍÑÉ¥¹œˆñğ€…ˆ¹Á…Ñ ¤É•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÀ¤¹Í•¹¡ì•ÉÉ½Èè€‰Ù…±¥ÑåÁ”…¹Á…Ñ …É”É•ÅÕ¥É•ˆô¤ì(€€€€¼¼¹½¹åµ½ÕÌÙ¥Í¥Ñ½ÉÌµ…ä½¹±äÉ•½É„Á…•Ù¥•Ü½¸Ñ¡”ÁÕ‰±¥Œµ…É­•Ñ¥¹œ½±•…°Á…•Ìì(€€€€¼¼•Ù•ÉåÑ¡¥¹œ•±Í”É•ÅÕ¥É•Ì„Í¥¹•µ¥¸Í•ÍÍ¥½¸Í¼Ñ¡”Ñ…‰±”…¸Ğ‰”ÍÁ…µµ•»[h‘éì¶»§q«^v    const PUBLIC_PATHS = ["/login", "/contact", "/thank-you", "/privacy", "/terms", "/cookies"];
+  const users = await listRevokedUsers();
+  // Keep privileged control-plane accounts invisible to ordinary admins.
+  return admin.role === "SUPERADMIN" ? users : users.filter((u: any) => u.role !== "SUPERADMIN");
+});
+
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• ENGAGEMENT ANALYTICS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// Any signed-in user can post their own pageview/scroll beacons. Kept
+// intentionally lightweight â€” no third-party tracking, best-effort (never
+// blocks the page if it fails).
+app.post<{ Body: { type: "PAGEVIEW" | "SCROLL_DEPTH" | "SESSION_END" | "CTA_CLICK" | "FORM_SUBMIT" | "OUTBOUND_CLICK" | "CLIENT_ERROR"; path: string; value?: number } }>(
+  "/api/analytics/event",
+  async (req, reply) => {
+    if (process.env.TRAFFIC_SAVER_MODE !== "false") return { ok: true }; // emergency: disable nonessential analytics DB reads/writes
+    const user = await currentUser(req); // best-effort â€” allow anonymous beacons to no-op rather than 401 spam
+    const b = req.body ?? ({} as any);
+    const EVENT_TYPES = ["PAGEVIEW", "SCROLL_DEPTH", "SESSION_END", "CTA_CLICK", "FORM_SUBMIT", "OUTBOUND_CLICK", "CLIENT_ERROR"];
+    if (!EVENT_TYPES.includes(b.type) || typeof b.path !== "string" || !b.path) return reply.code(400).send({ error: "valid type and path are required" });
+    // Anonymous visitors may only record a pageview on the public marketing/legal pages;
+    // everything else requires a signed-in session so the table can't be spammed.
+    const PUBLIC_PATHS = ["/login", "/contact", "/thank-you", "/privacy", "/terms", "/cookies"];
     if (!user && !(b.type === "PAGEVIEW" && PUBLIC_PATHS.includes(b.path))) return { ok: true };
     try {
       await recordEvent({ userId: user?.id ?? null, type: b.type, path: b.path, value: b.value, partnerId: (user as any)?.partnerId ?? null });
@@ -560,7 +1116,32 @@ app.get("/api/admin/sections", async (req, reply) => {
   return sections.map((s: any) => ({
     key: s.key, label: s.label, enabled: s.enabled,
     allowedRoles: s.allowedRoles.split(",").map((r: string) => r.trim()),
-    overrides:YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬ÔÌ¹½Ù•ÉÉ¥‘•Ì¹µ…À ¡¼è…¹ä¤€ôø€¡ìÕÍ•É%è¼¹ÕÍ•É%°¹…µ”è¼¹ÕÍ•È¹¹…µ”°•µ…¥°è¼¹ÕÍ•È¹•µ…¥°ô¤¤°(€ô¤¤ì)ô¤ì)…ÁÀ¹Á…Ñ ñìA…É…µÌèì­•äèÍÑÉ¥¹œôì	½‘äèì•¹…‰±•üè‰½½±•…¸ì…±±½İ•‘I½±•ÌüèÍÑÉ¥¹mtôôø (€€ˆ½…Á¤½…‘µ¥¸½Í•Ñ¥½¹Ì¼é­•äˆ°(€…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€€€½¹ÍĞ…‘µ¥¸€ô…İ…¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä°É•Á±ä¤ì¥˜€ ……‘µ¥¸¤É•ÑÕÉ¸ì(€€€ÑÉäì(€€€€€½¹ÍĞÉ•ÍÕ±Ğ€ô…İ…¥ĞÕÁ‘…Ñ•M•Ñ¥½¸¡É•Ä¹Á…É…µÌ¹­•ä°É•Ä¹‰½‘äñğíô¤ì(€€€€€±½‘µ¥¹Ñ¥½¸¡…‘µ¥¸°€‰Í•Ñ¥½¸¹ÕÁ‘…Ñ”ˆ°€‰UÁ‘…Ñ•Í•Ñ¥½¸€ˆ€¬É•Ä¹Á…É…µÌ¹­•ä°ìÑ…É•ÑQåÁ”è€‰…Í¡‰½…É‘M•Ñ¥½¸ˆ°Ñ…É•Ñ%èÉ•Ä¹Á…É…µÌ¹­•ä°‘•Ñ…¥°èÉ•‘…ÑÕ‘¥Ñ•Ñ…¥°¡É•Ä¹‰½‘ä¤°¥µÁ…Ñ½Õ¹ĞèÉÉ…ä¹¥ÍÉÉ…ä¡É•Ä¹‰½‘äü¹…±±½İ•‘I½±•Ì¤€üÉ•Ä¹‰½‘ä¹…±±½İ•‘I½±•Ì¹±•¹Ñ €è€Ä°½¹Ñ•áĞèÉ•ÅÕ•ÍÑM•ÕÉ¥Ñå½¹Ñ•áĞ¡É•Ä¤ô¤ì(€€€€€É•ÑÕÉ¸É•ÍÕ±Ğì(€€€ô(€€€…Ñ €¡”è…¹ä¤ìÉ•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÀ¤¹Í•¹¡ì•ÉÉ½Èè”ü¹µ•ÍÍ…”ñğ€‰½Õ±¹½ĞÕÁ‘…Ñ”Í•Ñ¥½¸ˆô¤ìô(€ô°(¤ì)…ÁÀ¹Á½ÍĞñìA…É…µÌèì­•äèÍÑÉ¥¹œôì	½‘äèìÕÍ•É%èÍÑÉ¥¹œôôø (€€ˆ½…Á¤½…‘µ¥¸½Í•Ñ¥½¹Ì¼é­•ä½É…¹Ğˆ°(€…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€€€½¹ÍĞ…‘µ¥¸€ô…İ…¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä°É•Á±ä¤ì¥˜€ ……‘µ¥¸¤É•ÑÕÉ¸ì(€€€¥˜€ …É•Ä¹‰½‘äü¹ÕÍ•É%¤É•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÀ¤¹Í•¹¡ì•ÉÉ½Èè€‰ÕÍ•É%É•ÅÕ¥É•ˆô¤ì(€€€½¹ÍĞÉ•ÍÕ±Ğ€ô…İ…¥ĞÉ…¹ÑUÍ•ÉM•Ñ¥½¸¡É•Ä¹‰½‘ä¹ÕÍ•É%°É•Ä¹Á…É…µÌ¹­•ä¤ì(€€€±½‘µ¥¹Ñ¥½¸¡…‘µ¥¸°€‰Í•Ñ¥½¸¹É…¹Ğˆ°€‰É…¹Ñ•Í•Ñ¥½¸€ˆ€¬É•Ä¹Á…É…µÌ¹­•ä€¬€ˆÑ¼ÕÍ•È€ˆ€¬É•Ä¹‰½‘ä¹ÕÍ•É%°ìÑ…É•ÑQåÁ”è€‰…Í¡‰½…É‘M•Ñ¥½¸ˆ°Ñ…É•Ñ%èÉ•Ä¹Á…É…µÌ¹­•ä°¥µÁ…Ñ½Õ¹Ğè€Ä°½¹Ñ•áĞèÉ•ÅÕ•ÍÑM•ÕÉ¥Ñå½¹Ñ•áĞ¡É•Ä¤ô¤ì(€€€É•ÑÕÉ¸É•ÍÕ±Ğì(€ô°(¤ì)…ÁÀ¹Á½ÍĞñìA…É…µÌèì­•äèÍÓ[h‘éì¶»§q«^ving }; Body: { userId: string } }>(
+    overrides: s.overrides.map((o: any) => ({ userId: o.userId, name: o.user.name, email: o.user.email })),
+  }));
+});
+app.patch<{ Params: { key: string }; Body: { enabled?: boolean; allowedRoles?: string[] } }>(
+  "/api/admin/sections/:key",
+  async (req, reply) => {
+    const admin = await requireAdmin(req, reply); if (!admin) return;
+    try {
+      const result = await updateSection(req.params.key, req.body || {});
+      logAdminAction(admin, "section.update", "Updated section " + req.params.key, { targetType: "DashboardSection", targetId: req.params.key, detail: redactAuditDetail(req.body), impactCount: Array.isArray(req.body?.allowedRoles) ? req.body.allowedRoles.length : 1, context: requestSecurityContext(req) });
+      return result;
+    }
+    catch (e: any) { return reply.code(400).send({ error: e?.message || "could not update section" }); }
+  },
+);
+app.post<{ Params: { key: string }; Body: { userId: string } }>(
+  "/api/admin/sections/:key/grant",
+  async (req, reply) => {
+    const admin = await requireAdmin(req, reply); if (!admin) return;
+    if (!req.body?.userId) return reply.code(400).send({ error: "userId required" });
+    const result = await grantUserSection(req.body.userId, req.params.key);
+    logAdminAction(admin, "section.grant", "Granted section " + req.params.key + " to user " + req.body.userId, { targetType: "DashboardSection", targetId: req.params.key, impactCount: 1, context: requestSecurityContext(req) });
+    return result;
+  },
+);
+app.post<{ Params: { key: string }; Body: { userId: string } }>(
   "/api/admin/sections/:key/revoke",
   async (req, reply) => {
     const admin = await requireAdmin(req, reply); if (!admin) return;
@@ -587,7 +1168,36 @@ app.get("/api/admin/audit-log.csv", async (req, reply) => {
 
 // list every report format + load order (admin UI renders from this)
 app.get("/api/admin/reports", async (req, reply) => {
-  if (!(awaYªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Õ¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä°É•Á±ä¤¤¤É•ÑÕÉ¸ì(€É•ÑÕÉ¸ì±½…‘=É‘•Èè1=}=IH°É•Á½ÉÑÌè™½Éµ…Ñ5…¹¥™•ÍĞ¡IA=IQ}=I5QL¤ôì)ô¤ì((¼¼‘½İ¹±½…„‰±…¹¬Ñ•µÁ±…Ñ”€ ı™µĞõÍÙñá±Íà¤)…ÁÀ¹•ĞñìA…É…µÌèì­•äèÍÑÉ¥¹œôìEÕ•ÉåÍÑÉ¥¹œèì™µĞüèÍÑÉ¥¹œôôø (€€ˆ½…Á¤½…‘µ¥¸½É•Á½ÉÑÌ¼é­•ä½Ñ•µÁ±…Ñ”ˆ°(€…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€€€¥˜€ „¡…İ…¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä°É•Á±ä¤¤¤É•ÑÕÉ¸ì(€€€½¹ÍĞ™½Éµ…Ğ€ô•Ñ½Éµ…Ğ¡É•Ä¹Á…É…µÌ¹­•ä¤ì(€€€¥˜€ …™½Éµ…Ğ¤É•ÑÕÉ¸É•Á±ä¹½‘” ĞÀĞ¤¹Í•¹¡ì•ÉÉ½Èè€‰Õ¹­¹½İ¸É•Á½ÉĞˆô¤ì(€€€¥˜€ ¡É•Ä¹ÅÕ•Éä¹™µĞ€üü€‰ÍØˆ¤€ôôô€‰á±Íàˆ¤ì(€€€€€É•Á±ä¹¡•…‘•È ‰½¹Ñ•¹ĞµQåÁ”ˆ°€‰…ÁÁ±¥…Ñ¥½¸½Ù¹¹½Á•¹áµ±™½Éµ…ÑÌµ½™™¥•‘½Õµ•¹Ğ¹ÍÁÉ•…‘Í¡••Ñµ°¹Í¡••Ğˆ¤ì(€€€€€É•Á±ä¹¡•…‘•È ‰½¹Ñ•¹Ğµ¥ÍÁ½Í¥Ñ¥½¸ˆ°…ÑÑ…¡µ•¹Ğì™¥±•¹…µ”ôˆ‘í™½Éµ…Ğ¹­•åõ}Ñ•µÁ±…Ñ”¹á±Íà‰€¤ì(€€€€€É•ÑÕÉ¸É•Á±ä¹Í•¹¡á±ÍáQ•µÁ±…Ñ”¡™½Éµ…Ğ¤¤ì(€€€ô(€€€É•Á±ä¹¡•…‘•È ‰½¹Ñ•¹ĞµQåÁ”ˆ°€‰Ñ•áĞ½ÍØˆ¤ì(€€€É•Á±ä¹¡•…‘•È ‰½¹Ñ•¹Ğµ¥ÍÁ½Í¥Ñ¥½¸ˆ°…ÑÑ…¡µ•¹Ğì™¥±•¹…µ”ôˆ‘í™½Éµ…Ğ¹­•åõ}Ñ•µÁ±…Ñ”¹ÍØ‰€¤ì(€€€É•ÑÕÉ¸É•Á±ä¹Í•¹¡ÍÙQ•µÁ±…Ñ”¡™½Éµ…Ğ¤¤ì(€ô°(¤ì((¼¼ÕÁ±½…„É•Á½ÉĞ™¥±”€´øÁ…ÉÍ”€¬Ù…±¥‘…Ñ”€´øÍÑ…•‰…Ñ €¡9=På•Ğ±¥Ù”¤(¼¼I•ÑÕÉ¹Ì€ÈÀÈ¥µµ•‘¥…Ñ•±ä…¹Ù…±¥‘…Ñ•Ì¥¸Ñ¡”‰…­É½Õ¹ìÑ¡”‰É½İÍ•È(¼¼Á½±±Ì€½…Á¤½…‘µ¥¸½ÕÁ±½…µ©½‰Ì¼é©½‰%€¡…‘µ¥¸¹¡Ñµ°…±É•…‘ä‘½•ÌÑ¡¥ÌƒŠPÑ¡”(¼¼É½ÕÑ”©ÕÍĞ¹••‘ÌÑ¼•á¥ÍĞ¤¸A…ÉÍ¥¹œ½Ù…±¥‘…Ñ¥¹œ„±…É”MX½a1M`¥ÌAT(¼¼…¹İ½É¬Ñ¡…Ğ…¸ÉÕ¸™½È„İ¡¥±”ì‘½¥¹œ¥Ğ¥¹±¥¹”½¸Ñ¡”É•ÅÕ•ÍĞ(¼¼‰±½­•Ñ¡”İ¡½±”!QQ@½¹¹•Ñ¥½¸€¡…¹Ñ¡”É•ÍĞ½˜Ñ¡”Í•ÉÙ•È¤Õ¹Ñ¥°¥Ğ(¼¼™¥¹¥Í¡•°İ¡¥ ¥Ìİ¡…Ğµ…‘”ÕÁ±½…‘Ì™••°±¥­”Ñ¡•äİ•É”¡…¹¥¹œ¸)…ÁÀ¹Á½ÍĞñìA…É…µÌèìƒ[h‘éì¶»§q«^wey: string } }>(
+  if (!(await requireAdmin(req, reply))) return;
+  return { loadOrder: LOAD_ORDER, reports: formatManifest(REPORT_FORMATS) };
+});
+
+// download a blank template (?fmt=csv|xlsx)
+app.get<{ Params: { key: string }; Querystring: { fmt?: string } }>(
+  "/api/admin/reports/:key/template",
+  async (req, reply) => {
+    if (!(await requireAdmin(req, reply))) return;
+    const format = getFormat(req.params.key);
+    if (!format) return reply.code(404).send({ error: "unknown report" });
+    if ((req.query.fmt ?? "csv") === "xlsx") {
+      reply.header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      reply.header("Content-Disposition", `attachment; filename="${format.key}_template.xlsx"`);
+      return reply.send(xlsxTemplate(format));
+    }
+    reply.header("Content-Type", "text/csv");
+    reply.header("Content-Disposition", `attachment; filename="${format.key}_template.csv"`);
+    return reply.send(csvTemplate(format));
+  },
+);
+
+// upload a report file -> parse + validate -> staged batch (NOT yet live)
+// Returns 202 immediately and validates in the background; the browser
+// polls /api/admin/upload-jobs/:jobId (admin.html already does this â€” the
+// route just needs to exist). Parsing/validating a large CSV/XLSX is CPU
+// and DB work that can run for a while; doing it inline on the request
+// blocked the whole HTTP connection (and the rest of the server) until it
+// finished, which is what made uploads feel like they were hanging.
+app.post<{ Params: { key: string } }>(
   "/api/admin/reports/:key/upload",
   async (req, reply) => {
     if (!(await requireAdmin(req, reply))) return;
@@ -627,7 +1237,36 @@ app.get<{ Params: { jobId: string } }>(
     }
     if (job.status === "FAILED") return { status: "FAILED", error: job.error };
     return { ...job.result, status: "DONE", result: job.result };
-  },YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Ô(¤ì((¼¼½µµ¥Ğ„Ù…±¥‘…Ñ•‰…Ñ €´øİÉ¥Ñ•Ì±¥Ù”€¬É•½µÁÕÑ•Ì…™™•Ñ•Í¹…ÁÍ¡½ÑÌ(¼¼I•ÑÕÉ¹Ì€ÈÀÈ¥µµ•‘¥…Ñ•±äìÑ¡”‰É½İÍ•ÈÁ½±±Ì€½…Á¤½…‘µ¥¸½½µµ¥Ğµ©½‰Ì¼é©½‰%¸)…ÁÀ¹Á½ÍĞñìA…É…µÌèì‰…Ñ¡%èÍÑÉ¥¹œôôø (€€ˆ½…Á¤½…‘µ¥¸½‰…Ñ¡•Ì¼é‰…Ñ¡%½½µµ¥Ğˆ°(€…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€€€½¹ÍĞ…‘µ¥¸€ô…İ…¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä°É•Á±ä¤ì¥˜€ ……‘µ¥¸¤É•ÑÕÉ¸ì(€€€½¹ÍĞ‰…Ñ €ô…İ…¥ĞÁÉ¥Íµ„¹¥µÁ½ÉÑ	…Ñ ¹™¥¹‘U¹¥ÅÕ”¡ì(€€€€€İ¡•É”èì¥èÉ•Ä¹Á…É…µÌ¹‰…Ñ¡%ô°(€€€€€Í•±•ĞèìÉ½İ½Õ¹ĞèÑÉÕ”°¥¹Í•ÉÑ•‘½Õ¹ĞèÑÉÕ”°ÕÁ‘…Ñ•‘½Õ¹ĞèÑÉÕ”°‘•±•Ñ•‘½Õ¹ĞèÑÉÕ”°É•Á½ÉÑ-•äèÑÉÕ”ô°(€€€ô¤ì(€€€¥˜€ …‰…Ñ ¤É•ÑÕÉ¸É•Á±ä¹½‘” ĞÀĞ¤¹Í•¹¡ì•ÉÉ½Èè€‰‰…Ñ ¹½Ğ™½Õ¹ˆô¤ì(€€€½¹ÍĞ¥µÁ…Ñ½Õ¹Ğ€ô‰…Ñ ¹É½İ½Õ¹Ğñğ‰…Ñ ¹¥¹Í•ÉÑ•‘½Õ¹Ğ€¬‰…Ñ ¹ÕÁ‘…Ñ•‘½Õ¹Ğ€¬‰…Ñ ¹‘•±•Ñ•‘½Õ¹Ğì(€€€½¹ÍĞ©½‰%€ôÍÑ…ÉÑ½µµ¥Ñ)½ˆ¡É•Ä¹Á…É…µÌ¹‰…Ñ¡%¤ì(€€€±½‘µ¥¹Ñ¥½¸¡…‘µ¥¸°€‰¥µÁ½ÉĞ¹½µµ¥Ğˆ°€‰½µµ¥ÑÑ•¥µÁ½ÉĞ‰…Ñ €ˆ€¬É•Ä¹Á…É…µÌ¹‰…Ñ¡%€¬€ˆ€ ˆ€¬‰…Ñ ¹É•Á½ÉÑ-•ä€¬€ˆ¤ˆ°ì(€€€€€Ñ…É•ÑQåÁ”è€‰%µÁ½ÉÑ	…Ñ ˆ°Ñ…É•Ñ%èÉ•Ä¹Á…É…µÌ¹‰…Ñ¡%°¥µÁ…Ñ½Õ¹Ğ°½¹Ñ•áĞèÉ•ÅÕ•ÍÑM•ÕÉ¥Ñå½¹Ñ•áĞ¡É•Ä¤°(€€€€€‘•Ñ…¥°èìÉ½İ½Õ¹Ğè‰…Ñ ¹É½İ½Õ¹Ğ°¥¹Í•ÉÑ•‘½Õ¹Ğè‰…Ñ ¹¥¹Í•ÉÑ•‘½Õ¹Ğ°ÕÁ‘…Ñ•‘½Õ¹Ğè‰…Ñ ¹ÕÁ‘…Ñ•‘½Õ¹Ğ°‘•±•Ñ•‘½Õ¹Ğè‰…Ñ ¹‘•±•Ñ•‘½Õ¹Ğô°(€€€ô¤ì(€€€É•ÑÕÉ¸É•Á±ä¹½‘” ÈÀÈ¤¹Í•¹¡ìÍÑ…ÑÕÌè€‰AQˆ°©½‰%°‰…Ñ¡%èÉ•Ä¹Á…É…µÌ¹‰…Ñ¡%ô¤ì(€ô°(¤ì()…ÁÀ¹•ĞñìA…É…µÌèì©½‰%èÍÑÉ¥¹œôôø (€€ˆ½…Á¤½…‘µ¥¸½½µµ¥Ğµ©½‰Ì¼é©½‰%ˆ°(€…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€€€¥˜€ „¡…İ…¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä°É•Á±ä¤¤¤É•ÑÕÉ¸ì(€€€½¹ÍĞ©½ˆ€ô•Ñ½µµ¥Ñ)½ˆ¡É•Ä¹Á…É…µÌ¹©½‰%¤ì(€€€¥˜€ …©½ˆ¤É•Ó[h‘éì¶»§q«^urn reply.code(404).send({ error: "unknown commit job" });
+  },
+);
+
+// commit a validated batch -> writes live + recomputes affected snapshots
+// Returns 202 immediately; the browser polls /api/admin/commit-jobs/:jobId.
+app.post<{ Params: { batchId: string } }>(
+  "/api/admin/batches/:batchId/commit",
+  async (req, reply) => {
+    const admin = await requireAdmin(req, reply); if (!admin) return;
+    const batch = await prisma.importBatch.findUnique({
+      where: { id: req.params.batchId },
+      select: { rowCount: true, insertedCount: true, updatedCount: true, deletedCount: true, reportKey: true },
+    });
+    if (!batch) return reply.code(404).send({ error: "batch not found" });
+    const impactCount = batch.rowCount || batch.insertedCount + batch.updatedCount + batch.deletedCount;
+    const jobId = startCommitJob(req.params.batchId);
+    logAdminAction(admin, "import.commit", "Committed import batch " + req.params.batchId + " (" + batch.reportKey + ")", {
+      targetType: "ImportBatch", targetId: req.params.batchId, impactCount, context: requestSecurityContext(req),
+      detail: { rowCount: batch.rowCount, insertedCount: batch.insertedCount, updatedCount: batch.updatedCount, deletedCount: batch.deletedCount },
+    });
+    return reply.code(202).send({ status: "ACCEPTED", jobId, batchId: req.params.batchId });
+  },
+);
+
+app.get<{ Params: { jobId: string } }>(
+  "/api/admin/commit-jobs/:jobId",
+  async (req, reply) => {
+    if (!(await requireAdmin(req, reply))) return;
+    const job = getCommitJob(req.params.jobId);
+    if (!job) return reply.code(404).send({ error: "unknown commit job" });
     if (job.status === "PENDING" || job.status === "PROCESSING") {
       return {
         status: "PROCESSING",
@@ -664,7 +1303,39 @@ app.post<{ Params: { batchId: string } }>(
 
 // import history
 app.get("/api/admin/batches", async (req, reply) => {
-  if (!(await requireAdmin(req, YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬ÕÉ•Á±ä¤¤¤É•ÑÕÉ¸ì(€½¹ÍĞ‰…Ñ¡•Ì€ô…İ…¥ĞÁÉ¥Íµ„¹¥µÁ½ÉÑ	…Ñ ¹™¥¹‘5…¹ä¡ì(€€€½É‘•É	äèìÕÁ±½…‘•‘Ğè€‰‘•ÍŒˆô°(€€€Ñ…­”è€ÄÀÀ°(€€€Í•±•Ğèì(€€€€€¥èÑÉÕ”°É•Á½ÉÑ-•äèÑÉÕ”°™¥±•¹…µ”èÑÉÕ”°™¥±•½Éµ…ĞèÑÉÕ”°(€€€€€ÍÑ…ÑÕÌèÑÉÕ”°É½İ½Õ¹ĞèÑÉÕ”°•ÉÉ½É½Õ¹ĞèÑÉÕ”°(€€€€€¥¹Í•ÉÑ•‘½Õ¹ĞèÑÉÕ”°ÕÁ‘…Ñ•‘½Õ¹ĞèÑÉÕ”°‘•±•Ñ•‘½Õ¹ĞèÑÉÕ”°(€€€€€ÕÁ±½…‘•‘ĞèÑÉÕ”°½µµ¥ÑÑ•‘ĞèÑÉÕ”°É•Ù•ÉÑ•‘ĞèÑÉÕ”°ÕÁ±½…‘•‘	äèÑÉÕ”°(€€€ô°(€ô¤ì(€É•ÑÕÉ¸‰…Ñ¡•Ì¹µ…À ¡‰…Ñ ¤€ôøì(€€€½¹ÍĞ¥¹Í•ÉÑ=¹±ä€ô‰…Ñ ¹ÕÁ‘…Ñ•‘½Õ¹Ğ€ôôô€À€˜˜‰…Ñ ¹‘•±•Ñ•‘½Õ¹Ğ€ôôô€Àì(€€€½¹ÍĞÉ•Ù•ÉÍ¥‰±•I•Á½ÉĞ€ôl‰•µÁ±½å•ÉÌˆ°€‰É…Ñ¥¹Ìˆ°€‰É•™•ÉÉ…±Ìˆ°€‰Í…±…Éå}…‘Ù…¹•Ì‰t¹¥¹±Õ‘•Ì¡‰…Ñ ¹É•Á½ÉÑ-•ä¤ì(€€€½¹ÍĞÉ•Ù•ÉÑ…‰±”€ô‰…Ñ ¹ÍÑ…ÑÕÌ€ôôô€‰=55%QQˆ€˜˜¥¹Í•ÉÑ=¹±ä€˜˜É•Ù•ÉÍ¥‰±•I•Á½ÉĞì(€€€±•ĞÉ•Ù•ÉÑI•…Í½¸€ô€ˆˆì(€€€¥˜€¡‰…Ñ ¹ÍÑ…ÑÕÌ€ôôô€‰=55%QQˆ€˜˜€…É•Ù•ÉÑ…‰±”¤ì(€€€€€É•Ù•ÉÑI•…Í½¸€ô€…¥¹Í•ÉÑ=¹±ä(€€€€€€€€ü€‰Q¡¥Ì¥µÁ½ÉĞÕÁ‘…Ñ•½È‘•±•Ñ••á¥ÍÑ¥¹œ‘…Ñ„…¹…¹¹½Ğ‰”É•Ù•ÉÍ•İ¥Ñ¡½ÕĞ„ÁÉ¥½ÈµÍÑ…Ñ”Í¹…ÁÍ¡½Ğ¸ˆ(€€€€€€€€è€‰Q¡¥Ì™••¥Ì½ÉÉ•Ñ•‰ä„¹•İ•ÈÍ½ÕÉ”Ù•ÉÍ¥½¸½Ñ½µ‰ÍÑ½¹”É…Ñ¡•ÈÑ¡…¸Á¡åÍ¥…°É½±±‰…¬¸ˆì(€€€ô(€€€É•ÑÕÉ¸ì€¸¸¹‰…Ñ °É•Ù•ÉÑ…‰±”°É•Ù•ÉÑI•…Í½¸ôì(€ô¤ì)ô¤ì((¼¼‘½İ¹±½…Ñ¡”•á…ĞÍ½ÕÉ”É½İÌÕÁ±½…‘•™½È…¸¥µÁ½ÉĞ‰…Ñ …ÌMX)…ÁÀ¹•ĞñìA…É…µÌèì‰…Ñ¡%èÍÑÉ¥¹œôôø ˆ½…Á¤½…‘µ¥¸½‰…Ñ¡•Ì¼é‰…Ñ¡%½ÍØˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€€€¥˜€ „¡…İ…¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä°É•Á±ä¤¤¤(€€€€€€€É•ÑÕÉ¸ì(€€€ÑÉäì(€€€€€€€½¹ÍĞ‰…Ñ €ô…İ…¥ĞÁÉ¥Íµ„¹¥µÁ½ÉÑ	…Ñ ¹™¥¹‘U¹¥ÅÕ”¡ì(€€€€€€€€€€€İ¡•É”èì¥èÉ•Ä¹Á…É…µÌ¹‰…Ñ¡%ô°(€€€€€€€€€€€Í•±•Ğèì¥èÑË[h‘éì¶»§q«^ue, reportKey: true },
+  if (!(await requireAdmin(req, reply))) return;
+  const batches = await prisma.importBatch.findMany({
+    orderBy: { uploadedAt: "desc" },
+    take: 100,
+    select: {
+      id: true, reportKey: true, filename: true, fileFormat: true,
+      status: true, rowCount: true, errorCount: true,
+      insertedCount: true, updatedCount: true, deletedCount: true,
+      uploadedAt: true, committedAt: true, revertedAt: true, uploadedBy: true,
+    },
+  });
+  return batches.map((batch) => {
+    const insertOnly = batch.updatedCount === 0 && batch.deletedCount === 0;
+    const reversibleReport = ["employers", "ratings", "referrals", "salary_advances"].includes(batch.reportKey);
+    const revertable = batch.status === "COMMITTED" && insertOnly && reversibleReport;
+    let revertReason = "";
+    if (batch.status === "COMMITTED" && !revertable) {
+      revertReason = !insertOnly
+        ? "This import updated or deleted existing data and cannot be reversed without a prior-state snapshot."
+        : "This feed is corrected by a newer source version/tombstone rather than physical rollback.";
+    }
+    return { ...batch, revertable, revertReason };
+  });
+});
+
+// download the exact source rows uploaded for an import batch as CSV
+app.get<{ Params: { batchId: string } }>("/api/admin/batches/:batchId/csv", async (req, reply) => {
+    if (!(await requireAdmin(req, reply)))
+        return;
+    try {
+        const batch = await prisma.importBatch.findUnique({
+            where: { id: req.params.batchId },
+            select: { id: true, reportKey: true },
         });
         if (!batch)
             return reply.code(404).send({ error: "import batch not found" });
@@ -692,7 +1363,32 @@ app.post<{ Body: { confirm?: string } }>("/api/admin/reset-all", async (req, rep
   try {
     const jobId = startSyncJob("reset");
     logAdminAction(admin, "data.reset_all.requested", "Confirmed authoritative rebuild queued", { detail: { jobId } });
-    return reply.code(2YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬ÔÀÈ¤¹Í•¹¡ì½¬èÑÉÕ”°ÍÑ…ÑÕÌè€‰AQˆ°©½‰%ô¤ì(€ô…Ñ €¡”è…¹ä¤ì(€€€É•Ä¹±½œ¹•ÉÉ½È¡ì•ÉÈè”ô°€‰…ÕÑ¡½É¥Ñ…Ñ¥Ù”É•Í•Ğ…¹É•‰Õ¥±™…¥±•ˆ¤ì(€€€É•ÑÕÉ¸É•Á±ä¹½‘” ÔÀÀ¤¹Í•¹¡ì•ÉÉ½Èè”ü¹µ•ÍÍ…”ñğ€‰I•Í•Ğ…¹É•‰Õ¥±™…¥±•¸ˆô¤ì(€ô)ô¤ì((¼¼1¥Ù”‘…Ñ…‰…Í”‘¥…¹½ÍÑ¥Ìè…‘µ¥¸µ½¹±ä¸9•Ù•È•áÁ½Í”½¹¹•Ñ¥½¸ÍÑÉ¥¹Ì½ÈÉ•‘•¹Ñ¥…±Ì¸)…ÁÀ¹•Ğ ˆ½…Á¤½…‘µ¥¸½‘…Ñ…‰…Í”µÍÑ…ÑÕÌˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€¥˜€ „¡…İ…¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä°É•Á±ä¤¤¤É•ÑÕÉ¸ì(€É•Á±ä¹¡•…‘•È ‰…¡”µ½¹ÑÉ½°ˆ°€‰¹¼µÍÑ½É”ˆ¤ì(€½¹ÍĞ½¹™¥ÕÉ•€ôÁÉ½•ÍÌ¹•¹Ø¹Q	M}UI0ì(€¥˜€ …½¹™¥ÕÉ•¤É•ÑÕÉ¸ìÍÑ…ÑÕÌè€‰É•ˆ°ÁÉ½Ù¥‘•Èè€‰U¹½¹™¥ÕÉ•ˆ°‘…Ñ…‰…Í”è€‰U¹­¹½İ¸ˆ°¡•­•‘Ğè¹•Ü…Ñ” ¤¹Ñ½%M=MÑÉ¥¹œ ¤°µ•ÍÍ…”è€‰Q	M}UI0¥Ìµ¥ÍÍ¥¹œˆôì(€±•ĞÁÉ½Ù¥‘•ÈèÍÑÉ¥¹œì(€±•Ğ•áÁ•Ñ•‘…Ñ…‰…Í”èÍÑÉ¥¹œì(€ÑÉäì(€€€½¹ÍĞÕÉ°€ô¹•ÜUI0¡½¹™¥ÕÉ•¤ì(€€€½¹ÍĞ¡½ÍÑ¹…µ”€ôÕÉ°¹¡½ÍÑ¹…µ”¹Ñ½1½İ•É…Í” ¤ì(€€€ÁÉ½Ù¥‘•È€ô¡½ÍÑ¹…µ”€ôôô€‰¹•½¸¹Ñ• ˆñğ¡½ÍÑ¹…µ”¹•¹‘Í]¥Ñ  ˆ¹¹•½¸¹Ñ• ˆ¤€ü€‰9•½¸ˆ€è(€€€€€¡½ÍÑ¹…µ”€ôôô€‰É…¥±İ…ä¹¥¹Ñ•É¹…°ˆñğ¡½ÍÑ¹…µ”¹•¹‘Í]¥Ñ  ˆ¹É…¥±İ…ä¹¥¹Ñ•É¹…°ˆ¤ñğ¡½ÍÑ¹…µ”¹•¹‘Í]¥Ñ  ˆ¹É…¥±İ…ä¹…ÁÀˆ¤ñğ¡½ÍÑ¹…µ”¹•¹‘Í]¥Ñ  ˆ¹É±İä¹¹•Ğˆ¤€ü€‰I…¥±İ…äA½ÍÑÉ•ME0ˆ€è(€€€€€¡½ÍÑ¹…µ”¹•¹‘Í]¥Ñ  ˆ¹É•¹‘•È¹½´ˆ¤ñğ¡½ÍÑ¹…µ”¹•¹‘Í]¥Ñ  ˆ¹É•¹‘•È¹¥¹Ñ•É¹…°ˆ¤€ü€‰I•¹‘•ÈA½ÍÑÉ•ME0ˆ€è€‰=Ñ¡•ÈA½ÍÑÉ•ME0ˆì(€€€•áÁ•Ñ•‘…Ñ…‰…Í”€ô‘•½‘•UI%½µÁ½¹•¹Ğ¡ÕÉ°¹Á…Ñ¡¹…µ”¹Í±¥” Ä¤¤ì(€ô…Ñ ì(€€€É•ÑÕÉ¸ìÍÑ…ÑÕÌè€‰É•ˆ°ÁÉ½Ù¥‘•Èè€‰%¹Ù…±¥½¹™¥ÕÉ…Ñ¥½¸ˆ°‘…Ñ…‰…Í”è€‰U¹­¹½İ¸ˆ°¡•­•‘Ğè¹•Ü…Ñ” ¤¹Ñ½%M=MÑÉ¥¹œ ¤°µ•ÍÍ…”è€‰Q	M}UI0…¹¹½Ğ‰”Á…ÉÍ•ˆôì(€ô(€½¹ÍĞÍÑ…ÉÑ•€ôƒ[h‘éì¶»§q«^tate.now();
+    return reply.code(202).send({ ok: true, status: "ACCEPTED", jobId });
+  } catch (e: any) {
+    req.log.error({ err: e }, "authoritative reset and rebuild failed");
+    return reply.code(500).send({ error: e?.message || "Reset and rebuild failed." });
+  }
+});
+
+// Live database diagnostics: admin-only. Never expose connection strings or credentials.
+app.get("/api/admin/database-status", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  reply.header("Cache-Control", "no-store");
+  const configured = process.env.DATABASE_URL;
+  if (!configured) return { status: "red", provider: "Unconfigured", database: "Unknown", checkedAt: new Date().toISOString(), message: "DATABASE_URL is missing" };
+  let provider: string;
+  let expectedDatabase: string;
+  try {
+    const url = new URL(configured);
+    const hostname = url.hostname.toLowerCase();
+    provider = hostname === "neon.tech" || hostname.endsWith(".neon.tech") ? "Neon" :
+      hostname === "railway.internal" || hostname.endsWith(".railway.internal") || hostname.endsWith(".railway.app") || hostname.endsWith(".rlwy.net") ? "Railway PostgreSQL" :
+      hostname.endsWith(".render.com") || hostname.endsWith(".render.internal") ? "Render PostgreSQL" : "Other PostgreSQL";
+    expectedDatabase = decodeURIComponent(url.pathname.slice(1));
+  } catch {
+    return { status: "red", provider: "Invalid configuration", database: "Unknown", checkedAt: new Date().toISOString(), message: "DATABASE_URL cannot be parsed" };
+  }
+  const started = Date.now();
   try {
     // The same Prisma client used by authentication and ordinary user requests.
     const rows = await prisma.$queryRaw<Array<{ database: string }>>`SELECT current_database() AS database`;
@@ -721,7 +1417,50 @@ app.get("/api/admin/integration", async (req, reply) => {
   )};
 });
 
-app.post<YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Õì	½‘äèì(€•¹…‰±•üè‰½½±•…¸ì(€Í½ÕÉ•5½‘”üèÍÑÉ¥¹œì(€‰…Í•UÉ°üèÍÑÉ¥¹œğ¹Õ±°ì(€…ÕÑ¡Q½­•¸üèÍÑÉ¥¹œğ¹Õ±°ì(€Í¡•‘Õ±•!½ÕÉÌüè¹Õµ‰•Èì(€ÍÅ±¥…±•ĞüèÍÑÉ¥¹œğ¹Õ±°ì(€ÍÅ±!½ÍĞüèÍÑÉ¥¹œğ¹Õ±°ì(€ÍÅ±A½ÉĞüè¹Õµ‰•Èğ¹Õ±°ì(€ÍÅ±…Ñ…‰…Í”üèÍÑÉ¥¹œğ¹Õ±°ì(€ÍÅ±M¡•µ„üèÍÑÉ¥¹œğ¹Õ±°ì(€ÍÅ±UÍ•É¹…µ”üèÍÑÉ¥¹œğ¹Õ±°ì(€ÍÅ±A…ÍÍİ½ÉüèÍÑÉ¥¹œğ¹Õ±°ì(€ÍÅ±MÍ°üè‰½½±•…¸ì(€ÍÅ±QÉÕÍÑM•ÉÙ•É•ÉÑ¥™¥…Ñ”üè‰½½±•…¸ì(€ÍÅ±Y¥•İAÉ•™¥àüèÍÑÉ¥¹œğ¹Õ±°ì(€ÍÅ±EÕ•ÉåQ¥µ•½ÕÑ5Ìüè¹Õµ‰•Èì(€ÍÅ±5…áI½İÍA•ÉI•Á½ÉĞüè¹Õµ‰•Èì(€…¹…±åÑ¥Í5½‘”üèÍÑÉ¥¹œì(€Í½ÕÉ•¹…±åÑ¥Í¹…‰±•üè‰½½±•…¸ì(€Í½ÕÉ•¹…±åÑ¥ÍI•…‘=¹±äüè‰½½±•…¸ì(€Í½ÕÉ•¹…±åÑ¥ÍUÍ•I•Á±¥„üè‰½½±•…¸ì(€Í½ÕÉ•¹…±åÑ¥Í9½Ñ”üèÍÑÉ¥¹œğ¹Õ±°ì(€Í½ÕÉ•¹…±åÑ¥ÍI•Á±¥…¹…‰±•üè‰½½±•…¸ì(€Í½ÕÉ•¹…±åÑ¥ÍI•Á±¥…!½ÍĞüèÍÑÉ¥¹œğ¹Õ±°ì(€Í½ÕÉ•¹…±åÑ¥ÍI•Á±¥…A½ÉĞüè¹Õµ‰•Èğ¹Õ±°ì(€Í½ÕÉ•¹…±åÑ¥ÍI•Á±¥……Ñ…‰…Í”üèÍÑÉ¥¹œğ¹Õ±°ì(€Í½ÕÉ•¹…±åÑ¥ÍI•Á±¥…M¡•µ„üèÍÑÉ¥¹œğ¹Õ±°ì(€Í½ÕÉ•¹…±åÑ¥ÍI•Á±¥…UÍ•É¹…µ”üèÍÑÉ¥¹œğ¹Õ±°ì(€Í½ÕÉ•¹…±åÑ¥ÍI•Á±¥…A…ÍÍİ½ÉüèÍÑÉ¥¹œğ¹Õ±°ì(€Í½ÕÉ•¹…±åÑ¥ÍI•Á±¥…MÍ°üè‰½½±•…¸ì(€Í½ÕÉ•¹…±åÑ¥ÍI•Á±¥…QÉÕÍÑM•ÉÙ•É•ÉÑ¥™¥…Ñ”üè‰½½±•…¸ì(€Í½ÕÉ•¹…±åÑ¥ÍI•Á±¥…5…á1…M•½¹‘Ìüè¹Õµ‰•Èì)ôôø (€€ˆ½…Á¤½…‘µ¥¸½¥¹Ñ•É…Ñ¥½¸ˆ°(€…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€€€¥˜€ „¡…İ…¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä°É•Á±ä¤¤¤É•ÑÕÉ¸ì(€€€½¹ÍĞ™œ€ô…İ…¥ĞÍ…Ù•Må¹½¹™¥œ¡É•Ä¹‰½‘äñğíô¤ì(€€€É•ÑÕÉ¸ÁÕ‰±¥Må¹½¹™¥œ¡™œ¤ì(€ô°(¤ì((¼¼Y…±¥‘…Ñ”„ÁÉ½ÍÁ•Ñ¥Ù”ME0½A$Í½ÕÉ”İ¥Ñ¡½ÕĞ…Ñ¥Ù…Ñ¥¹œ¥Ğ½ÈÉ•İÉ¥Ñ¥¹œ‘…Ñ„¸(¼¼…¹‘¥‘…Ñ”É•¥ÍÑÉ…Ñ¥½¸ÁÉ•Í•ÉÙ•Ì•á¥ÍÑ¥¹œÍ½ÕÉ”½¹™¥×[h‘éì¶»§q«^vation and all
+app.post<{ Body: {
+  enabled?: boolean;
+  sourceMode?: string;
+  baseUrl?: string | null;
+  authToken?: string | null;
+  scheduleHours?: number;
+  sqlDialect?: string | null;
+  sqlHost?: string | null;
+  sqlPort?: number | null;
+  sqlDatabase?: string | null;
+  sqlSchema?: string | null;
+  sqlUsername?: string | null;
+  sqlPassword?: string | null;
+  sqlSsl?: boolean;
+  sqlTrustServerCertificate?: boolean;
+  sqlViewPrefix?: string | null;
+  sqlQueryTimeoutMs?: number;
+  sqlMaxRowsPerReport?: number;
+  analyticsMode?: string;
+  sourceAnalyticsEnabled?: boolean;
+  sourceAnalyticsReadOnly?: boolean;
+  sourceAnalyticsUseReplica?: boolean;
+  sourceAnalyticsNote?: string | null;
+  sourceAnalyticsReplicaEnabled?: boolean;
+  sourceAnalyticsReplicaHost?: string | null;
+  sourceAnalyticsReplicaPort?: number | null;
+  sourceAnalyticsReplicaDatabase?: string | null;
+  sourceAnalyticsReplicaSchema?: string | null;
+  sourceAnalyticsReplicaUsername?: string | null;
+  sourceAnalyticsReplicaPassword?: string | null;
+  sourceAnalyticsReplicaSsl?: boolean;
+  sourceAnalyticsReplicaTrustServerCertificate?: boolean;
+  sourceAnalyticsReplicaMaxLagSeconds?: number;
+} }>(
+  "/api/admin/integration",
+  async (req, reply) => {
+    if (!(await requireAdmin(req, reply))) return;
+    const cfg = await saveSyncConfig(req.body || {});
+    return publicSyncConfig(cfg);
+  },
+);
+
+// Validate a prospective SQL/API source without activating it or rewriting data.
+// Candidate registration preserves existing source configuration and all
 // active integration cursors. No automatic activation or destructive reimport.
 app.post<{ Body: Record<string, unknown> }>("/api/admin/integration/stage-source", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
@@ -748,7 +1487,44 @@ app.post<{ Body: { targetGenerationId?:string; expectedActiveGenerationId?:strin
         expectedActiveGenerationId:String(req.body?.expectedActiveGenerationId||""),
         actor:admin.id,reason:String(req.body?.reason||""),confirm:String(req.body?.confirm||""),
       });
-      logAdminAction(admin,"source.equivalent_cutover",resulYªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬ÕĞ¹¹½Ñ”±í‘•Ñ…¥°éÉ•ÍÕ±Ñô¤ì(€€€€€É•ÑÕÉ¸É•ÍÕ±Ğì(€€€õ…Ñ ¡•ÉÉ½Èé…¹ä¥ì(€€€€€É•ÑÕÉ¸É•Á±ä¹½‘” ĞÀä¤¹Í•¹¡í½¬é™…±Í”±•ÉÉ½Èé•ÉÉ½Èü¹µ•ÍÍ…•ñğ‰M½ÕÉ”ÕÑ½Ù•Èİ…Ì¹½ĞÍ…™”‰ô¤ì(€€€ô(€ô°(¤ì()…ÁÀ¹Á½ÍĞñì	½‘äèìÉ•…Í½¸üéÍÑÉ¥¹œí½¹™¥É´üéÍÑÉ¥¹œôôø (€€ˆ½…Á¤½…‘µ¥¸½¥¹Ñ•É…Ñ¥½¸½‰½½ÑÍÑÉ…ÀµÍ½ÕÉ”ˆ°(€…Íå¹Œ€¡É•Ä±É•Á±ä¤ôùì(€€€½¹ÍĞ…‘µ¥¸õ…İ…¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä±É•Á±ä¤ì(€€€¥˜ ……‘µ¥¸¥É•ÑÕÉ¸ì(€€€¥˜¡…‘µ¥¸¹É½±”„ôô‰MUAI5%8ˆ¥É•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÌ¤¹Í•¹¡í•ÉÉ½Èè‰ÍÕÁ•É…‘µ¥¸½¹±ä‰ô¤ì(€€€ÑÉåì(€€€€€½¹ÍĞÉ•ÍÕ±Ğõ…İ…¥Ğ‰½½ÑÍÑÉ…Áá¥ÍÑ¥¹M½ÕÉ”¡ì(€€€€€€€…Ñ½Èé…‘µ¥¸¹¥±É•…Í½¸éMÑÉ¥¹œ¡É•Ä¹‰½‘äü¹É•…Í½¹ñğˆˆ¤±½¹™¥É´éMÑÉ¥¹œ¡É•Ä¹‰½‘äü¹½¹™¥Éµñğˆˆ¤°(€€€€€ô¤ì(€€€€€±½‘µ¥¹Ñ¥½¸¡…‘µ¥¸°‰Í½ÕÉ”¹‰½½ÑÍÑÉ…Àˆ±É•ÍÕ±Ğ¹¹½Ñ”±í‘•Ñ…¥°éÉ•ÍÕ±Ñô¤ì(€€€€€É•ÑÕÉ¸É•ÍÕ±Ğì(€€€õ…Ñ ¡•ÉÉ½Èé…¹ä¥íÉ•ÑÕÉ¸É•Á±ä¹½‘” ĞÀä¤¹Í•¹¡í½¬é™…±Í”±•ÉÉ½Èé•ÉÉ½Èü¹µ•ÍÍ…•ñğ‰	½½ÑÍÑÉ…À™…¥±•‰ô¤íô(€ô°(¤ì()…ÁÀ¹•Ğ ˆ½…Á¤½…‘µ¥¸½¥¹Ñ•É…Ñ¥½¸½•¹•É…Ñ¥½¹Ìˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€¥˜€ „¡…İ…¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä°É•Á±ä¤¤¤É•ÑÕÉ¸ì(€É•ÑÕÉ¸ì•¹•É…Ñ¥½¹Ìè…İ…¥Ğ±¥ÍÑM½ÕÉ••¹•É…Ñ¥½¹Ì ¤ôì)ô¤ì()…ÁÀ¹•ĞñìA…É…µÌèìµ…¹¥™•ÍÑ%èÍÑÉ¥¹œôôø ˆ½…Á¤½…‘µ¥¸½µ±½ÁÌ½Í•µ…¹Ñ¥ŒµÁÕ‰±¥…Ñ¥½¹Ì¼éµ…¹¥™•ÍÑ%½É•…‘¥¹•ÍÌˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€¥˜€ „¡…İ…¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä°É•Á±ä¤¤¤É•ÑÕÉ¸ì(€É•ÑÕÉ¸Í•µ…¹Ñ¥AÕ‰±¥…Ñ¥½¹I•…‘¥¹•ÍÌ¡É•Ä¹Á…É…µÌ¹µ…¹¥™•ÍÑ%¤ì)ô¤ì((¼¼A•Éµ¥ÍÍ¥½¸µÍ½Á•ÁÕ‰±¥…Ñ¥½¸Ù•ÉÍ¥½¸Á½±±¥¹œ™½ÈÍ¥¹•µ¥¸‘…Í¡‰½…ÉÕÍ•ÉÌ¸(¼¼9•Ù•ÈÉ•ÑÕÉ¹ÌÁ…å±½…‘Ì½ÈÁÉ¥Ù…Ñ”ÍÑ½É…”UI1Ì¸á¥ÍÑ¥¹œ‘…Í¡‰½…ÉÉ•…‘Ì(¼¼É•µ…¥¸Õ¹¡…¹•Õ¹Ñ¥°Ñ¡”Í•µ…¹Ñ¥ŒµÍ•ÉÙ¥¹œÉ½±±½ÕĞ¥Ì…ÁÁÉ½Ù•¸)…ÁÃ[h‘éì¶»§q«^vget("/api/dashboard/semantic-features", async (req, reply) => {
+      logAdminAction(admin,"source.equivalent_cutover",result.note,{detail:result});
+      return result;
+    }catch(error:any){
+      return reply.code(409).send({ok:false,error:error?.message||"Source cutover was not safe"});
+    }
+  },
+);
+
+app.post<{ Body: { reason?:string;confirm?:string } }>(
+  "/api/admin/integration/bootstrap-source",
+  async (req,reply)=>{
+    const admin=await requireAdmin(req,reply);
+    if(!admin)return;
+    if(admin.role!=="SUPERADMIN")return reply.code(403).send({error:"superadmin only"});
+    try{
+      const result=await bootstrapExistingSource({
+        actor:admin.id,reason:String(req.body?.reason||""),confirm:String(req.body?.confirm||""),
+      });
+      logAdminAction(admin,"source.bootstrap",result.note,{detail:result});
+      return result;
+    }catch(error:any){return reply.code(409).send({ok:false,error:error?.message||"Bootstrap failed"});}
+  },
+);
+
+app.get("/api/admin/integration/generations", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  return { generations: await listSourceGenerations() };
+});
+
+app.get<{ Params: { manifestId: string } }>("/api/admin/mlops/semantic-publications/:manifestId/readiness", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  return semanticPublicationReadiness(req.params.manifestId);
+});
+
+// Permission-scoped publication version polling for signed-in dashboard users.
+// Never returns payloads or private storage URLs. Existing dashboard reads
+// remain unchanged until the semantic-serving rollout is approved.
+app.get("/api/dashboard/semantic-features", async (req, reply) => {
   if (!(await requireUser(req, reply))) return;
   return {
     pollingEnabled: process.env.ENABLE_SEMANTIC_LIVE_NOTIFICATIONS === "true",
@@ -782,7 +1558,41 @@ app.get<{ Params: { employerId: string }; Querystring: { period?: string } }>(
     if (user.role !== "SUPERADMIN") return reply.code(403).send({ error: "superadmin diagnostic only" });
     if (!canViewEmployer(user, req.params.employerId))
       return reply.code(403).send({ error: "no access to this employer" });
-    YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Õ½¹ÍĞÁ•É¥½€ôMÑÉ¥¹œ¡É•Ä¹ÅÕ•Éäü¹Á•É¥½ñğ€ˆˆ¤ì(€€€¥˜€ „½ylÀ´åuìÑô´ ÁlÄ´åuğÅlÀ´Ét¤¼¹Ñ•ÍĞ¡Á•É¥½¤¤(€€€€€É•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÀ¤¹Í•¹¡ì•ÉÉ½Èè€‰¥¹Ù…±¥Á•É¥½ˆô¤ì(€€€¥˜€¡ÁÉ½•ÍÌ¹•¹Ø¹9	1}M59Q%}9Ie}I€„ôô€‰ÑÉÕ”ˆ¤(€€€€€É•ÑÕÉ¸É•Á±ä¹½‘” ÔÀÌ¤¹Í•¹¡ì•ÉÉ½Èè€‰…¹…Éä‘¥Í…‰±•ˆô¤ì(€€€ÑÉäì(€€€€€½¹ÍĞÉ•ÍÕ±Ğ€ô…İ…¥ĞÉ•…‘AÕ‰±¥Í¡•‘M•µ…¹Ñ¥A…ÉÑ¥Ñ¥½¸¡ì(€€€€€€€•µÁ±½å•É%èÉ•Ä¹Á…É…µÌ¹•µÁ±½å•É%°Á•É¥½°Á…ÉÑ¥Ñ¥½¹-•äè€‰…±°ˆ°(€€€€€ô¤ì(€€€€€¥˜€ …É•ÍÕ±Ğ¤É•ÑÕÉ¸É•Á±ä¹½‘” ĞÀĞ¤¹Í•¹¡ì•ÉÉ½Èè€‰¹¼ÁÕ‰±¥Í¡•Í•µ…¹Ñ¥ŒÁ…ÉÑ¥Ñ¥½¸ˆô¤ì(€€€€€É•ÑÕÉ¸É•ÍÕ±Ğì(€€€ô…Ñ €¡•ÉÉ½Èè…¹ä¤ì(€€€€€É•Ä¹±½œ¹•ÉÉ½È¡ìµ•ÍÍ…”è•ÉÉ½Èü¹µ•ÍÍ…”ô°€‰Í•µ…¹Ñ¥Œ…¹…ÉäÉ•…Õ¹…Ù…¥±…‰±”ˆ¤ì(€€€€€É•ÑÕÉ¸É•Á±ä¹½‘” ÔÀÌ¤¹Í•¹¡ì•ÉÉ½Èè€‰Í•µ…¹Ñ¥Œ…¹…ÉäÕ¹…Ù…¥±…‰±”ˆô¤ì(€€€ô(€ô°(¤ì()…ÁÀ¹•Ğ ˆ½…Á¤½…‘µ¥¸½µ±½ÁÌ½Í•µ…¹Ñ¥ŒµÍÑ½É…”µ¡•…±Ñ ˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€¥˜€ „¡…İ…¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä°É•Á±ä¤¤¤É•ÑÕÉ¸ì(€É•ÑÕÉ¸ÁÕ‰±¥M•µ…¹Ñ¥MÑ½É…•!•…±Ñ  ¤ì)ô¤ì()…ÁÀ¹•ĞñìEÕ•ÉåÍÑÉ¥¹œèì…™Ñ•É%üéÍÑÉ¥¹œì±¥µ¥ĞüéÍÑÉ¥¹œôôø ˆ½…Á¤½…‘µ¥¸½µ±½ÁÌ½Í•µ…¹Ñ¥ŒµÁÕ‰±¥…Ñ¥½¸µ¡…¹•Ìˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€¥˜€ „¡…İ…¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä°É•Á±ä¤¤¤É•ÑÕÉ¸ì(€ÑÉäìÉ•ÑÕÉ¸…İ…¥ĞÉ•…‘M•µ…¹Ñ¥AÕ‰±¥…Ñ¥½¹¡…¹•Ì¡í…™Ñ•É%éÉ•Ä¹ÅÕ•Éäü¹…™Ñ•É%±±¥µ¥Ğé9Õµ‰•È¡É•Ä¹ÅÕ•Éäü¹±¥µ¥ĞüüÔÀ¥ô¤ìô(€…Ñ ¡•ÉÉ½Èé…¹ä¤ìÉ•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÀ¤¹Í•¹¡í•ÉÉ½Èé•ÉÉ½Èü¹µ•ÍÍ…•ñğ‰%¹Ù…±¥ÕÉÍ½È‰ô¤ìô)ô¤ì()…ÁÀ¹•Ğ ˆ½…Á¤½…‘µ¥¸½µ±½ÁÌ½Í•µ…¹Ñ¥ŒµÅÕ•Õ”µ¡•…±Ñ ˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€¥˜€ „¡…İ…¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä°É•Á±ä¤¤¤É•ÑÕÉ¸ì(€É•ÑÕÉ¸•ÑM•µ…¹Ñ¥EÕ•Õ•!•…±Ñ  ¤ì)ô¤ì()…ÁÀ»[h‘éì¶»§q«^wet("/api/admin/mlops/semantic-publications", async (req, reply) => {
+    const period = String(req.query?.period || "");
+    if (!/^[0-9]{4}-(0[1-9]|1[0-2])$/.test(period))
+      return reply.code(400).send({ error: "invalid period" });
+    if (process.env.ENABLE_SEMANTIC_CANARY_READ !== "true")
+      return reply.code(503).send({ error: "canary disabled" });
+    try {
+      const result = await readPublishedSemanticPartition({
+        employerId: req.params.employerId, period, partitionKey: "all",
+      });
+      if (!result) return reply.code(404).send({ error: "no published semantic partition" });
+      return result;
+    } catch (error: any) {
+      req.log.error({ message: error?.message }, "semantic canary read unavailable");
+      return reply.code(503).send({ error: "semantic canary unavailable" });
+    }
+  },
+);
+
+app.get("/api/admin/mlops/semantic-storage-health", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  return publicSemanticStorageHealth();
+});
+
+app.get<{ Querystring: { afterId?:string; limit?:string } }>("/api/admin/mlops/semantic-publication-changes", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  try { return await readSemanticPublicationChanges({afterId:req.query?.afterId,limit:Number(req.query?.limit??50)}); }
+  catch(error:any) { return reply.code(400).send({error:error?.message||"Invalid cursor"}); }
+});
+
+app.get("/api/admin/mlops/semantic-queue-health", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  return getSemanticQueueHealth();
+});
+
+app.get("/api/admin/mlops/semantic-publications", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
   return getSemanticPublicationStatus();
 });
@@ -812,7 +1622,42 @@ app.get("/api/admin/integration/changes", async (req, reply) => {
 // fetches incremental source changes, and never resets integration cursors.
 app.post("/api/admin/integration/sync-now", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
-  // Render standby serves reads; only tYªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Õ¡”…ÕÑ¡½É¥Ñ…Ñ¥Ù”±•…‘•Èµ…ä¥µÁ½ÉĞ½ÈÉ•Í•Ğ‘…Ñ„¸(€¥˜€¡ÁÉ½•ÍÌ¹•¹Ø¹MQ9	e}5=€ôôô€‰ÑÉÕ”ˆ¤ì(€€€É•ÑÕÉ¸É•Á±ä¹½‘” ĞÈÌ¤¹Í•¹¡ì½¬è™…±Í”°•ÉÉ½Èè€‰M½ÕÉ”É•™É•Í ¥Ì‘¥Í…‰±•½¸Ñ¡¥ÌÍÑ…¹‘‰ä¸UÍ”Ñ¡”‘•Í¥¹…Ñ•¥¹•ÍÑ¥½¸±•…‘•È¸ˆô¤ì(€ô(€½¹ÍĞ©½‰%€ôÍÑ…ÉÑMå¹)½ˆ ‰µ…¹Õ…°ˆ¤ì(€É•ÑÕÉ¸É•Á±ä¹½‘” ÈÀÈ¤¹Í•¹¡ì½¬èÑÉÕ”°ÍÑ…ÑÕÌè€‰AQˆ°©½‰%ô¤ì)ô¤ì()…ÁÀ¹Á½ÍĞ ˆ½…Á¤½…‘µ¥¸½¥¹Ñ•É…Ñ¥½¸½Íå¹Œˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€¥˜€ „¡…İ…¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä°É•Á±ä¤¤¤É•ÑÕÉ¸ì(€€¼¼I•¹‘•ÈÍÑ…¹‘‰äÍ•ÉÙ•ÌÉ•…‘Ìì½¹±äÑ¡”…ÕÑ¡½É¥Ñ…Ñ¥Ù”±•…‘•Èµ…ä¥µÁ½ÉĞ½ÈÉ•Í•Ğ‘…Ñ„¸(€¥˜€¡ÁÉ½•ÍÌ¹•¹Ø¹MQ9	e}5=€ôôô€‰ÑÉÕ”ˆ¤ì(€€€É•ÑÕÉ¸É•Á±ä¹½‘” ĞÈÌ¤¹Í•¹¡ì½¬è™…±Í”°•ÉÉ½Èè€‰M½ÕÉ”É•™É•Í ¥Ì‘¥Í…‰±•½¸Ñ¡¥ÌÍÑ…¹‘‰ä¸UÍ”Ñ¡”‘•Í¥¹…Ñ•¥¹•ÍÑ¥½¸±•…‘•È¸ˆô¤ì(€ô(€½¹ÍĞ©½‰%€ôÍÑ…ÉÑMå¹)½ˆ ‰µ…¹Õ…°ˆ¤ì(€É•ÑÕÉ¸É•Á±ä¹½‘” ÈÀÈ¤¹Í•¹¡ìÍÑ…ÑÕÌè€‰AQˆ°©½‰%ô¤ì)ô¤ì()…ÁÀ¹•ĞñìA…É…µÌèì©½‰%èÍÑÉ¥¹œôôø (€€ˆ½…Á¤½…‘µ¥¸½Íå¹Œµ©½‰Ì¼é©½‰%ˆ°(€…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€€€¥˜€ „¡…İ…¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä°É•Á±ä¤¤¤É•ÑÕÉ¸ì(€€€½¹ÍĞ©½ˆ€ô•ÑMå¹)½ˆ¡É•Ä¹Á…É…µÌ¹©½‰%¤ì(€€€¥˜€ …©½ˆ¤É•ÑÕÉ¸É•Á±ä¹½‘” ĞÀĞ¤¹Í•¹¡ì•ÉÉ½Èè€‰Õ¹­¹½İ¸Íå¹Œ©½ˆˆô¤ì(€€€¥˜€¡©½ˆ¹ÍÑ…ÑÕÌ€ôôô€‰A9%9ˆñğ©½ˆ¹ÍÑ…ÑÕÌ€ôôô€‰AI=MM%9ˆ¤ì(€€€€€É•ÑÕÉ¸ì(€€€€€€€ÍÑ…ÑÕÌè€‰AI=MM%9ˆ°(€€€€€€€Á¡…Í”è©½ˆ¹Á¡…Í”°(€€€€€€€ÁÉ½É•ÍÌè©½ˆ¹ÁÉ½É•ÍÌ°(€€€€€€€µ•ÍÍ…”è©½ˆ¹µ•ÍÍ…”°(€€€€€€€‘•Ñ…¥°è©½ˆ¹‘•Ñ…¥°€üü¹Õ±°°(€€€€€€€ÕÁ‘…Ñ•‘Ğè©½ˆ¹ÕÁ‘…Ñ•‘Ğ°(€€€€€ôì(€€€ô(€€€¥˜€¡©½ˆ¹ÍÑ…ÑÕÌ€ôôô€‰%1ˆ¤É•ÑÕÉ¸ìÍÑ…ÑÕÌè€‰%1ˆ°•ÉÉ½Èè©½ˆ¹•ÉÉ½Èôì(€€€É•ÑÕÉ¸ï[h‘éì¶»§q«^t...job.result, status: "DONE", result: job.result };
+  // Render standby serves reads; only the authoritative leader may import or reset data.
+  if (process.env.STANDBY_MODE === "true") {
+    return reply.code(423).send({ ok: false, error: "Source refresh is disabled on this standby. Use the designated ingestion leader." });
+  }
+  const jobId = startSyncJob("manual");
+  return reply.code(202).send({ ok: true, status: "ACCEPTED", jobId });
+});
+
+app.post("/api/admin/integration/sync", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  // Render standby serves reads; only the authoritative leader may import or reset data.
+  if (process.env.STANDBY_MODE === "true") {
+    return reply.code(423).send({ ok: false, error: "Source refresh is disabled on this standby. Use the designated ingestion leader." });
+  }
+  const jobId = startSyncJob("manual");
+  return reply.code(202).send({ status: "ACCEPTED", jobId });
+});
+
+app.get<{ Params: { jobId: string } }>(
+  "/api/admin/sync-jobs/:jobId",
+  async (req, reply) => {
+    if (!(await requireAdmin(req, reply))) return;
+    const job = getSyncJob(req.params.jobId);
+    if (!job) return reply.code(404).send({ error: "unknown sync job" });
+    if (job.status === "PENDING" || job.status === "PROCESSING") {
+      return {
+        status: "PROCESSING",
+        phase: job.phase,
+        progress: job.progress,
+        message: job.message,
+        detail: job.detail ?? null,
+        updatedAt: job.updatedAt,
+      };
+    }
+    if (job.status === "FAILED") return { status: "FAILED", error: job.error };
+    return { ...job.result, status: "DONE", result: job.result };
   },
 );
 
@@ -841,7 +1686,30 @@ app.post<{ Body: import("./services/syncService.js").IntegrationConfigPatch }>(
     if(process.env.ENABLE_DATASET_REPLACEMENT_PREFLIGHT!=="true")
       return reply.code(403).send({error:"Dataset replacement preflight is disabled"});
     const patch=req.body??{};
-    if(patch.sourceMode!=="SQL")return reply.code(400).send({erYªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬ÕÉ½Èè‰I•Á±…•µ•¹ĞÍ½ÕÉ”µÕÍĞÕÍ”…¹½¹¥…°ME0Ù¥•İÌ‰ô¤ì(€€€ÑÉåì(€€€€€½¹ÍĞÁÉ•™±¥¡Ğõ…İ…¥ĞÁÉ•Ù¥•İM½ÕÉ•Mİ¥Ñ ¡Á…Ñ ¤ì(€€€€€¥˜ …ÁÉ•™±¥¡Ğ¹½¬¥É•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÀ¤¹Í•¹¡í½¬é™…±Í”±•ÉÉ½ÈéÁÉ•™±¥¡Ğ¹•ÉÉ½Èüü‰M½ÕÉ”ÁÉ•™±¥¡Ğ™…¥±•‰ô¤ì(€€€€€¥˜ …ÁÉ•™±¥¡Ğ¹Í½ÕÉ•¡…¹•¥É•ÑÕÉ¸É•Á±ä¹½‘” ĞÀä¤¹Í•¹¡í½¬é™…±Í”±•ÉÉ½Èè‰I•Á±…•µ•¹ĞÍ½ÕÉ”µÕÍĞ‘¥™™•È™É½´Ñ¡”ÕÉÉ•¹Ñ±ä…Ñ¥Ù”Í½ÕÉ”‰ô¤ì(€€€€€¥˜¡ÁÉ•™±¥¡Ğ¹µ½‘”„ôô‰ME0‰ññÁÉ•™±¥¡Ğ¹Ñ•ÍÑ•‘••‘Ì„ôõ1=}=IH¹±•¹Ñ¡ññÁÉ•™±¥¡Ğ¹İ…Ñ•Éµ…É­Ìü¹±•¹Ñ „ôõ1=}=IH¹±•¹Ñ ¤(€€€€€€€É•ÑÕÉ¸É•Á±ä¹½‘” ĞÀä¤¹Í•¹¡í½¬é™…±Í”±•ÉÉ½Èè‰±°Ñ•¸…¹½¹¥…°ME0™••‘ÌµÕÍĞ‰”Ù…±¥‘…Ñ•‰ô¤ì(€€€€€É•ÑÕÉ¸í½¬éÑÉÕ”±µ½‘”è‰I}=91e}M=UI}AI1%!Pˆ±•á•ÕÑ…‰±”é™…±Í”°(€€€€€€€Ñ•ÍÑ•‘••‘ÌéÁÉ•™±¥¡Ğ¹Ñ•ÍÑ•‘••‘Ì±Í½ÕÉ•¡…¹•éÑÉÕ”°(€€€€€€€¹½Ñ”è‰…¹‘¥‘…Ñ”ME0Ù¥•İÌÙ•É¥™¥•¸9¼Í½ÕÉ”Íİ¥Ñ °ÁÕÉ”°¥µÁ½ÉĞ½ÈÕÉÍ½È¡…¹”İ…ÌÁ•É™½Éµ•¸‰ôì(€€€õ…Ñ ¡•ÉÉ½Èé…¹ä¥ì(€€€€€É•Ä¹±½œ¹İ…É¸¡íÑåÁ”è‰‘…Ñ…Í•Ñ}É•Á±…•µ•¹Ñ}ÁÉ•™±¥¡Ñ}™…¥±•‰ô°‰…¹‘¥‘…Ñ”Ù…±¥‘…Ñ¥½¸‘¥¹½ĞÁ…ÍÌˆ¤ì(€€€€€É•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÀ¤¹Í•¹¡í½¬é™…±Í”±•ÉÉ½Èè‰…¹‘¥‘…Ñ”Ù…±¥‘…Ñ¥½¸™…¥±•ìÙ•É¥™ä½¹¹•Ñ¥½¸Í•ÑÑ¥¹Ì…¹…¹½¹¥…°Ù¥•İÌ‰ô¤ì(€€€ô(€ô°(¤ì((¼¼Q¡¥ÌMUAI5%8µ½¹±ä¥¹ÍÁ•Ñ¥½¸É•Á½ÉÑÌA½ÍÑÉ•ME0,…Í…‘”¡…é…É‘Ì¸)…ÁÀ¹•Ğ ˆ½…Á¤½…‘µ¥¸½¥¹Ñ•É…Ñ¥½¸½‘…Ñ…Í•ĞµÉ•Á±…•µ•¹Ğ½‘•Á•¹‘•¹¥•Ìˆ°…Íå¹Œ€¡É•Ä±É•Á±ä¤ôùì(€½¹ÍĞ…‘µ¥¸õ…İ…¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä±É•Á±ä¤ì(€¥˜ ……‘µ¥¸¥É•ÑÕÉ¸ì(€¥˜¡…‘µ¥¸¹É½±”„ôô‰MUAI5%8ˆ¥É•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÌ¤¹Í•¹¡í•ÉÉ½Èè‰ÍÕÁ•É…‘µ¥¸½¹±ä‰ô¤ì(€ÑÉåíÉ•ÑÕÉ¸…İ…¥Ğ¥¹ÍÁ•ÑI•Á±…•µ•¹Ñ•Á•¹‘•¹¥•Ì ¤íô(€ƒ[h‘éì¶»§q«^watch(error:any){req.log.error({err:error},"replacement dependency inspection failed");
+    if(patch.sourceMode!=="SQL")return reply.code(400).send({error:"Replacement source must use canonical SQL views"});
+    try{
+      const preflight=await previewSourceSwitch(patch);
+      if(!preflight.ok)return reply.code(400).send({ok:false,error:preflight.error??"Source preflight failed"});
+      if(!preflight.sourceChanged)return reply.code(409).send({ok:false,error:"Replacement source must differ from the currently active source"});
+      if(preflight.mode!=="SQL"||preflight.testedFeeds!==LOAD_ORDER.length||preflight.watermarks?.length!==LOAD_ORDER.length)
+        return reply.code(409).send({ok:false,error:"All ten canonical SQL feeds must be validated"});
+      return {ok:true,mode:"READ_ONLY_SOURCE_PREFLIGHT",executable:false,
+        testedFeeds:preflight.testedFeeds,sourceChanged:true,
+        note:"Candidate SQL views verified. No source switch, purge, import or cursor change was performed."};
+    }catch(error:any){
+      req.log.warn({type:"dataset_replacement_preflight_failed"},"candidate validation did not pass");
+      return reply.code(400).send({ok:false,error:"Candidate validation failed; verify connection settings and canonical views"});
+    }
+  },
+);
+
+// This SUPERADMIN-only inspection reports PostgreSQL FK cascade hazards.
+app.get("/api/admin/integration/dataset-replacement/dependencies", async (req,reply)=>{
+  const admin=await requireAdmin(req,reply);
+  if(!admin)return;
+  if(admin.role!=="SUPERADMIN")return reply.code(403).send({error:"superadmin only"});
+  try{return await inspectReplacementDependencies();}
+  catch(error:any){req.log.error({err:error},"replacement dependency inspection failed");
     return reply.code(500).send({error:"Unable to inspect replacement dependencies"});}
 });
 
@@ -867,7 +1735,43 @@ app.post<{ Body: { confirm?: string } }>("/api/admin/integration/full-resync", a
   }
   try {
     const jobId = startSyncJob("reset");
-    logAdminAction(admin, "data.full_refresh.requested", "CoYªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Õ¹™¥Éµ•…ÕÑ¡½É¥Ñ…Ñ¥Ù”É•‰Õ¥±ÅÕ•Õ•ˆ°ì‘•Ñ…¥°èì©½‰%ôô¤ì(€€€É•ÑÕÉ¸É•Á±ä¹½‘” ÈÀÈ¤¹Í•¹¡ì½¬èÑÉÕ”°ÍÑ…ÑÕÌè€‰AQˆ°©½‰%ô¤ì(€ô…Ñ €¡”è…¹ä¤ì(€€€É•Ä¹±½œ¹•ÉÉ½È¡ì•ÉÈè”ô°€‰™Õ±°É•Íå¹Œ™…¥±•ˆ¤ì(€€€É•ÑÕÉ¸É•Á±ä¹½‘” ÔÀÀ¤¹Í•¹¡ì•ÉÉ½Èè”ü¹µ•ÍÍ…”ñğ€‰Õ±°É•Íå¹Œ™…¥±•¸ˆô¤ì(€ô)ô¤ì()…ÁÀ¹•Ğ ˆ½…Á¤½…‘µ¥¸½¥¹Ñ•É…Ñ¥½¸½É•Á±¥„µ¡•…±Ñ ˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€¥˜€ „¡…İ…¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä°É•Á±ä¤¤¤É•ÑÕÉ¸ì(€ÑÉäì(€€€½¹ÍĞ™œ€ô…İ…¥Ğ•ÑMå¹½¹™¥œ ¤ì(€€€É•ÑÕÉ¸…İ…¥Ğ¡•­5åÍÅ±I•…‘I•Á±¥„¡™œ¤ì(€ô…Ñ €¡”è…¹ä¤ì(€€€É•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÀ¤¹Í•¹¡ì½¹™¥ÕÉ•è™…±Í”°É•…¡…‰±”è™…±Í”°•ÉÉ½Èè”ü¹µ•ÍÍ…”ñğ€‰½Õ±¹½Ğ¡•¬Í½ÕÉ”É•Á±¥„¸ˆô¤ì(€ô)ô¤ì()…ÁÀ¹•Ğ ˆ½…Á¤½…‘µ¥¸½¥¹Ñ•É…Ñ¥½¸½±½Ìˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€¥˜€ „¡…İ…¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä°É•Á±ä¤¤¤É•ÑÕÉ¸ì(€É•ÑÕÉ¸É••¹ÑMå¹1½Ì ÄÀ¤ì)ô¤ì((¼¼ƒŠRŠR ¹Ñ•ÉÁÉ¥Í”½Á•É…Ñ¥½¹Ì…¹…¹…±åÑ¥ÌÁ±…•µ•¹ĞƒŠRŠR )…ÁÀ¹•Ğ ˆ½…Á¤½…‘µ¥¸½•¹Ñ•ÉÁÉ¥Í”½½Ù•ÉÙ¥•Üˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€¥˜€ „¡…İ…¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä°É•Á±ä¤¤¤É•ÑÕÉ¸ì(€É•ÑÕÉ¸•¹Ñ•ÉÁÉ¥Í•=Á•É…Ñ¥½¹Í=Ù•ÉÙ¥•Ü ¤ì)ô¤ì)…ÁÀ¹•Ğ ˆ½…Á¤½…‘µ¥¸½•¹Ñ•ÉÁÉ¥Í”½‘…Ñ„µÅÕ…±¥Ñäˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€¥˜€ „¡…İ…¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä°É•Á±ä¤¤¤É•ÑÕÉ¸ì(€É•ÑÕÉ¸‘…Ñ…EÕ…±¥Ñå=Ù•ÉÙ¥•Ü ¤ì)ô¤ì)…ÁÀ¹•Ğ ˆ½…Á¤½…‘µ¥¸½¥¹Ñ•É…Ñ¥½¸½É½ÕÑ•Ìˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€¥˜€ „¡…İ…¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä°É•Á±ä¤¤¤É•ÑÕÉ¸ì(€É•ÑÕÉ¸±¥ÍÑ¹…±åÑ¥ÍI½ÕÑ•Ì ¤ì)ô¤ì)…ÁÀ¹Á½ÍĞñì	½‘äèìÉ•Á½ÉÑ-•äüèÍÑÉ¥¹œì•á•ÕÑ¥½¹5½‘”üèÍÑÉ¥¹œìİ½É­±½…‘±…ÍÌüèÍÑÉ¥¹œìÍ½ÕÉ•Y¥•ÜüèÍÑÉ¥¹œğ¹Õ±°ìÕÍ•I•Á±¥„üè‰½½±•…¸ì•¹…‰±•üè‰½½³[h‘éì¶»§q«^uan; rationale?: string | null } }>("/api/admin/integration/routes", async (req, reply) => {
+    logAdminAction(admin, "data.full_refresh.requested", "Confirmed authoritative rebuild queued", { detail: { jobId } });
+    return reply.code(202).send({ ok: true, status: "ACCEPTED", jobId });
+  } catch (e: any) {
+    req.log.error({ err: e }, "full resync failed");
+    return reply.code(500).send({ error: e?.message || "Full resync failed." });
+  }
+});
+
+app.get("/api/admin/integration/replica-health", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  try {
+    const cfg = await getSyncConfig();
+    return await checkMysqlReadReplica(cfg);
+  } catch (e: any) {
+    return reply.code(400).send({ configured: false, reachable: false, error: e?.message || "Could not check source replica." });
+  }
+});
+
+app.get("/api/admin/integration/logs", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  return recentSyncLogs(10);
+});
+
+// â”€â”€ Enterprise operations and analytics placement â”€â”€
+app.get("/api/admin/enterprise/overview", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  return enterpriseOperationsOverview();
+});
+app.get("/api/admin/enterprise/data-quality", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  return dataQualityOverview();
+});
+app.get("/api/admin/integration/routes", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  return listAnalyticsRoutes();
+});
+app.post<{ Body: { reportKey?: string; executionMode?: string; workloadClass?: string; sourceView?: string | null; useReplica?: boolean; enabled?: boolean; rationale?: string | null } }>("/api/admin/integration/routes", async (req, reply) => {
   const admin = await requireAdmin(req, reply); if (!admin) return;
   try {
     const result = await saveAnalyticsRoute({ reportKey: String(req.body?.reportKey || ""), executionMode: String(req.body?.executionMode || "POSTGRES"), sourceView: req.body?.sourceView, enabled: req.body?.enabled, rationale: req.body?.rationale });
@@ -890,7 +1794,29 @@ app.post<{ Body: any }>("/api/admin/email-settings", async (req, reply) => {
     logAdminAction(admin, "email_settings.update", `Updated email/automation settings (${keys})`, { targetType: "SystemEmailConfig" });
     return result;
   }
-  catch (e: any) { return reply.code(400).send({ error: e?.message || "CYªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Õ½Õ±¹½ĞÍ…Ù”•µ…¥°Í•ÑÑ¥¹Ìˆô¤ìô)ô¤ì)…ÁÀ¹Á½ÍĞñì	½‘äè…¹äôø ˆ½…Á¤½…‘µ¥¸½•µ…¥°µÍ•ÑÑ¥¹Ì½Ñ•ÍĞˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€¥˜€ „¡…İ…¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä°É•Á±ä¤¤¤É•ÑÕÉ¸ì(€ÑÉäìÉ•ÑÕÉ¸…İ…¥ĞÑ•ÍÑµ…¥±½¹¹•Ñ¥½¸¡É•Ä¹‰½‘äñğíô¤ìô(€…Ñ €¡”è…¹ä¤ìÉ•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÀ¤¹Í•¹¡ì•ÉÉ½Èè”ü¹µ•ÍÍ…”ñğ€‰µ…¥°Ñ•ÍĞ™…¥±•ˆô¤ìô)ô¤ì(¼¼µ…¹Õ…°€‰ÉÕ¸¹½Üˆ™½È…ÕÑ½µ…Ñ¥½¹ÌƒŠP±•ÑÌ…¸…‘µ¥¸Ù•É¥™ä½¹™¥œİ¥Ñ¡½ÕĞİ…¥Ñ¥¹œ™½ÈÑ¡”¡½ÕÉ±äÑ¥¬)…ÁÀ¹Á½ÍĞñì	½‘äèì­¥¹è€‰ÍÑ…±”ˆğ€‰‘¥•ÍĞˆğ€‰Ñ•ÍĞˆôôø ˆ½…Á¤½…‘µ¥¸½…ÕÑ½µ…Ñ¥½¹Ì½ÉÕ¸ˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€½¹ÍĞ…‘µ¥¸€ô…İ…¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä°É•Á±ä¤ì¥˜€ ……‘µ¥¸¤É•ÑÕÉ¸ì(€ÑÉäì(€€€½¹ÍĞ­¥¹€ôÉ•Ä¹‰½‘äü¹­¥¹ì(€€€¥˜€¡­¥¹€ôôô€‰ÍÑ…±”ˆ¤ì(€€€€€½¹ÍĞÈ€ô…İ…¥ĞÉÕ¹MÑ…±•½Õ¹Ñ¡•¬ ¤ì(€€€€€É•ÑÕÉ¸ì½¬èÑÉÕ”°µ•ÍÍ…”èÈ¹É…¸€ü¡•­•ƒŠP€‘íÈ¹‘•…Ñ¥Ù…Ñ•€üü€Áô…½Õ¹Ğ¡Ì¤…ÕÑ¼µ‘•…Ñ¥Ù…Ñ•¹€€è€‰9½ĞÉÕ¸è¹¼¥¹…Ñ¥Ù¥ÑäÑ¡É•Í¡½±¥ÌÍ•Ğ¸ˆôì(€€€ô(€€€¥˜€¡­¥¹€ôôô€‰‘¥•ÍĞˆ¤ì(€€€€€½¹ÍĞÈ€ô…İ…¥ĞÉÕ¹]••­±å¥•ÍÑ%™Õ” ¤ì(€€€€€É•ÑÕÉ¸ì½¬èÑÉÕ”°µ•ÍÍ…”èÈ¹É…¸€ü€‰¥•ÍĞÍ•¹Ğ¸ˆ€è€‰9½ĞÍ•¹Ğè‘¥•ÍĞ¥Ì‘¥Í…‰±•°½È½¹”İ…Ì…±É•…‘äÍ•¹Ğ¥¸Ñ¡”±…ÍĞ€Ü‘…åÌ¸ˆôì(€€€ô(€€€¥˜€¡­¥¹€ôôô€‰Ñ•ÍĞˆ¤ì(€€€€€½¹ÍĞÈ€ô…İ…¥Ğ¹½Ñ¥™å‘µ¥¹Ì¡ìÍÕ‰©•Ğè€‰Q•ÍĞ…±•ÉĞ™É½´Q¡”¥á•È€¡AÑä¤1Ñ…Í¡‰½…ÉA½ÉÑ…°ˆ°¡Ñµ°è€ñÀùQ¡¥Ì¥Ì„Ñ•ÍĞ…±•ÉĞÑÉ¥•É•‰ä€‘í…‘µ¥¸¹¹…µ•ô€ ‘í…‘µ¥¸¹•µ…¥±ô¤¸ğ½Àù€°Í±…­Q•áĞè€éİ…Ù”èQ•ÍĞ…±•ÉĞÑÉ¥•É•‰ä€‘í…‘µ¥¸¹¹…µ•ô¹€ô¤ì(€€€€€É•ÑÕÉ¸ì½¬èÑÉÕ”°µ•ÍÍ…”èM•¹ĞÑ¼€‘íÈ¹•µ…¥±•‘ô•µ…¥°…‘‘É•ÍÌ¡•Ì¤‘íÈ¹Í±…¬€ü€ˆ…¹M±…¬ˆ€è€ˆ‰ô¸M•Ğ…‘µ¥¸‡[h‘éì¶»§q«^tert emails and/or a Slack webhook first if nothing arrived.` };
+  catch (e: any) { return reply.code(400).send({ error: e?.message || "Could not save email settings" }); }
+});
+app.post<{ Body: any }>("/api/admin/email-settings/test", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  try { return await testEmailConnection(req.body || {}); }
+  catch (e: any) { return reply.code(400).send({ error: e?.message || "Email test failed" }); }
+});
+// manual "run now" for automations â€” lets an admin verify config without waiting for the hourly tick
+app.post<{ Body: { kind: "stale" | "digest" | "test" } }>("/api/admin/automations/run", async (req, reply) => {
+  const admin = await requireAdmin(req, reply); if (!admin) return;
+  try {
+    const kind = req.body?.kind;
+    if (kind === "stale") {
+      const r = await runStaleAccountCheck();
+      return { ok: true, message: r.ran ? `Checked â€” ${r.deactivated ?? 0} account(s) auto-deactivated.` : "Not run: no inactivity threshold is set." };
+    }
+    if (kind === "digest") {
+      const r = await runWeeklyDigestIfDue();
+      return { ok: true, message: r.ran ? "Digest sent." : "Not sent: digest is disabled, or one was already sent in the last 7 days." };
+    }
+    if (kind === "test") {
+      const r = await notifyAdmins({ subject: "Test alert from The Fixer (Pty) Ltd Dashboard Portal", html: `<p>This is a test alert triggered by ${admin.name} (${admin.email}).</p>`, slackText: `:wave: Test alert triggered by ${admin.name}.` });
+      return { ok: true, message: `Sent to ${r.emailed} email address(es)${r.slack ? " and Slack" : ""}. Set admin alert emails and/or a Slack webhook first if nothing arrived.` };
     }
     return reply.code(400).send({ error: "Unknown automation kind" });
   } catch (e: any) { return reply.code(400).send({ error: e?.message || "Could not run automation" }); }
@@ -919,7 +1845,31 @@ app.post<{ Body: ScheduleInput }>("/api/report-schedules", async (req, reply) =>
   try { return await createReportSchedule(user, req.body); }
   catch (e: any) { return reply.code(400).send({ error: e?.message || "Could not create report schedule" }); }
 });
-app.patch<{ Params: { id: string }; Body: any }>("/api/report-schedules/:id", async (rYªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Õ•Ä°É•Á±ä¤€ôøì(€½¹ÍĞÕÍ•È€ô…İ…¥ĞÉ•ÅÕ¥É•UÍ•È¡É•Ä°É•Á±ä¤ì¥˜€ …ÕÍ•È¤É•ÑÕÉ¸ì(€ÑÉäìÉ•ÑÕÉ¸…İ…¥ĞÕÁ‘…Ñ•I•Á½ÉÑM¡•‘Õ±”¡ÕÍ•È°É•Ä¹Á…É…µÌ¹¥°É•Ä¹‰½‘äñğíô¤ìô(€…Ñ €¡”è…¹ä¤ìÉ•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÀ¤¹Í•¹¡ì•ÉÉ½Èè”ü¹µ•ÍÍ…”ñğ€‰½Õ±¹½ĞÕÁ‘…Ñ”É•Á½ÉĞÍ¡•‘Õ±”ˆô¤ìô)ô¤ì)…ÁÀ¹‘•±•Ñ”ñìA…É…µÌèì¥èÍÑÉ¥¹œôôø ˆ½…Á¤½É•Á½ÉĞµÍ¡•‘Õ±•Ì¼é¥ˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€½¹ÍĞÕÍ•È€ô…İ…¥ĞÉ•ÅÕ¥É•UÍ•È¡É•Ä°É•Á±ä¤ì¥˜€ …ÕÍ•È¤É•ÑÕÉ¸ì(€ÑÉäìÉ•ÑÕÉ¸…İ…¥Ğ‘•±•Ñ•I•Á½ÉÑM¡•‘Õ±”¡ÕÍ•È°É•Ä¹Á…É…µÌ¹¥¤ìô(€…Ñ €¡”è…¹ä¤ìÉ•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÀ¤¹Í•¹¡ì•ÉÉ½Èè”ü¹µ•ÍÍ…”ñğ€‰½Õ±¹½Ğ‘•±•Ñ”É•Á½ÉĞÍ¡•‘Õ±”ˆô¤ìô)ô¤ì)…ÁÀ¹Á½ÍĞñìA…É…µÌèì¥èÍÑÉ¥¹œôôø ˆ½…Á¤½É•Á½ÉĞµÍ¡•‘Õ±•Ì¼é¥½Í•¹µ¹½Üˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€½¹ÍĞÕÍ•È€ô…İ…¥ĞÉ•ÅÕ¥É•UÍ•È¡É•Ä°É•Á±ä¤ì¥˜€ …ÕÍ•È¤É•ÑÕÉ¸ì(€ÑÉäìÉ•ÑÕÉ¸…İ…¥ĞÍ•¹‘I•Á½ÉÑ9½Ü¡ÕÍ•È°É•Ä¹Á…É…µÌ¹¥¤ìô(€…Ñ €¡”è…¹ä¤ìÉ•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÀ¤¹Í•¹¡ì•ÉÉ½Èè”ü¹µ•ÍÍ…”ñğ€‰½Õ±¹½ĞÍ•¹É•Á½ÉĞˆô¤ìô)ô¤ì((¼¼ƒŠRŠR ¡…¹¹•°Á…ÉÑ¹•ÉÌ€¡İ¡¥Ñ”µ±…‰•°¤ƒŠP…‘µ¥¸½¹±äƒŠRŠR (¼¼ƒŠRŠR 51=ÁÌ½Ù•É¹…¹”ƒŠP…‘µ¥¸½¹±äƒŠRŠR )…ÁÀ¹•ĞñìA…É…µÌèì•µÁ±½å•É%èÍÑÉ¥¹œôôø ˆ½…Á¤½…‘µ¥¸½µ±½ÁÌ½…ÍÍ•ÍÍµ•¹Ğ¼é•µÁ±½å•É%ˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€¥˜€ „¡…İ…¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä°É•Á±ä¤¤¤É•ÑÕÉ¸ì(€ÑÉäìÉ•ÑÕÉ¸…İ…¥ĞÉÕ¹51=ÁÍÍÍ•ÍÍµ•¹Ğ¡É•Ä¹Á…É…µÌ¹•µÁ±½å•É%¤ìô(€…Ñ €¡”é…¹ä¤ì…İ…¥ĞÉ•Á½ÉÑ=Á•É…Ñ¥½¹…±…¥±ÕÉ” ‰51=ALˆ¤ìÉ•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÀ¤¹Í•¹¡ì•ÉÉ½Èé”ü¹µ•ÍÍ…•ñğ‰51=ÁÌ…ÍÍ•ÍÍµ•¹Ğ™…¥±•ˆô¤ìô)ô¤ì)…ÁÀ¹•Ğ ˆ½…Á¤½…‘µ¥¸½µ±½ÁÌ½µ½‘•±Ìˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€¥˜€ „¡…İ…¥ĞÉ—[h‘éì¶»§q«^uuireAdmin(req, reply))) return;
+app.patch<{ Params: { id: string }; Body: any }>("/api/report-schedules/:id", async (req, reply) => {
+  const user = await requireUser(req, reply); if (!user) return;
+  try { return await updateReportSchedule(user, req.params.id, req.body || {}); }
+  catch (e: any) { return reply.code(400).send({ error: e?.message || "Could not update report schedule" }); }
+});
+app.delete<{ Params: { id: string } }>("/api/report-schedules/:id", async (req, reply) => {
+  const user = await requireUser(req, reply); if (!user) return;
+  try { return await deleteReportSchedule(user, req.params.id); }
+  catch (e: any) { return reply.code(400).send({ error: e?.message || "Could not delete report schedule" }); }
+});
+app.post<{ Params: { id: string } }>("/api/report-schedules/:id/send-now", async (req, reply) => {
+  const user = await requireUser(req, reply); if (!user) return;
+  try { return await sendReportNow(user, req.params.id); }
+  catch (e: any) { return reply.code(400).send({ error: e?.message || "Could not send report" }); }
+});
+
+// â”€â”€ channel partners (white-label) â€” admin only â”€â”€
+// â”€â”€ MLOps governance â€” admin only â”€â”€
+app.get<{ Params: { employerId: string } }>("/api/admin/mlops/assessment/:employerId", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  try { return await runMLOpsAssessment(req.params.employerId); }
+  catch (e:any) { await reportOperationalFailure("MLOPS"); return reply.code(400).send({ error:e?.message||"MLOps assessment failed" }); }
+});
+app.get("/api/admin/mlops/models", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
   return listMLOpsModels();
 });
 app.post<{Body:{modelKey:string;version:string;modelType:string;trainingVersion?:string;metrics?:any;featureSchema?:any}}>("/api/admin/mlops/models", async (req, reply) => {
@@ -942,7 +1892,34 @@ app.post<{Params:{modelKey:string;version:string}}>("/api/admin/mlops/models/:mo
   const admin=await requireAdmin(req, reply); if(!admin) return;
   try {
     const result=await rollbackMLOpsModel(req.params.modelKey,req.params.version);
-    logAdminAction(admYªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Õ¥¸°‰µ±½ÁÌ¹µ½‘•±}É½±±‰…¬ˆ±I½±±•‰…¬€‘íÉ•Ä¹Á…É…µÌ¹µ½‘•±-•åô€‘íÉ•Ä¹Á…É…µÌ¹Ù•ÉÍ¥½¹õ€±íÑ…É•ÑQåÁ”è‰51=ÁÍ5½‘•°ˆ±Ñ…É•Ñ%éÉ•ÍÕ±Ğ¹¥‘ô¤ì(€€€É•ÑÕÉ¸É•ÍÕ±Ğì(€ô…Ñ ¡”é…¹ä¤ìÉ•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÀ¤¹Í•¹¡í•ÉÉ½Èé”ü¹µ•ÍÍ…•ñğ‰½Õ±¹½ĞÉ½±°‰…¬µ½‘•°‰ô¤ìô)ô¤ì)…ÁÀ¹•ĞñíEÕ•ÉåÍÑÉ¥¹œéíµ½‘•±-•äüéÍÑÉ¥¹œí±¥µ¥ĞüéÍÑÉ¥¹õôø ˆ½…Á¤½…‘µ¥¸½µ±½ÁÌ½•Ù•¹ÑÌˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€¥˜€ „¡…İ…¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä°É•Á±ä¤¤¤É•ÑÕÉ¸ì(€É•ÑÕÉ¸±¥ÍÑ51=ÁÍÙ•¹ÑÌ¡É•Ä¹ÅÕ•Éä¹µ½‘•±-•ä±9Õµ‰•È¡É•Ä¹ÅÕ•Éä¹±¥µ¥ÑñğÄÀÀ¤¤ì)ô¤ì)…ÁÀ¹Á½ÍĞñí	½‘äéíµ½‘•±-•äéÍÑÉ¥¹œí•Ù•¹Ñ%üéÍÑÉ¥¹œí•µÁ±½å•É%üéÍÑÉ¥¹œí™••‘‰…¬è‰=IIP‰ğ‰%9=IIP‰ğ‰IY%]ˆí…ÑÕ…±Y…±Õ”üé¹Õµ‰•Èí¹½Ñ•ÌüéÍÑÉ¥¹õôø ˆ½…Á¤½…‘µ¥¸½µ±½ÁÌ½™••‘‰…¬ˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€½¹ÍĞ…‘µ¥¸õ…İ…¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä°É•Á±ä¤ì¥˜ ……‘µ¥¸¤É•ÑÕÉ¸ì(€ÑÉäì(€€€½¹ÍĞÉ•ÍÕ±Ğõ…İ…¥ĞÉ•½É‘51=ÁÍ••‘‰…¬¡É•Ä¹‰½‘ä¤ì(€€€±½‘µ¥¹Ñ¥½¸¡…‘µ¥¸°‰µ±½ÁÌ¹™••‘‰…¬ˆ±I•½É‘•€‘íÉ•Ä¹‰½‘ä¹™••‘‰…­ô™••‘‰…¬™½È€‘íÉ•Ä¹‰½‘ä¹µ½‘•±-•åõ€±íÑ…É•ÑQåÁ”è‰51=ÁÍÙ•¹Ğˆ±Ñ…É•Ñ%éÉ•ÍÕ±Ğ¹™••‘‰…­%‘ô¤ì(€€€É•ÑÕÉ¸É•ÍÕ±Ğì(€ô…Ñ ¡”é…¹ä¤ìÉ•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÀ¤¹Í•¹¡í•ÉÉ½Èé”ü¹µ•ÍÍ…•ñğ‰½Õ±¹½ĞÉ•½É™••‘‰…¬‰ô¤ìô)ô¤ì()…ÁÀ¹•Ğ ˆ½…Á¤½…‘µ¥¸½Á…ÉÑ¹•ÉÌˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€¥˜€ „¡…İ…¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä°É•Á±ä¤¤¤É•ÑÕÉ¸ì(€É•ÑÕÉ¸±¥ÍÑA…ÉÑ¹•ÉÌ ¤ì)ô¤ì()…ÁÀ¹•Ğ ˆ½…Á¤½…‘µ¥¸½‰É…¹µ±•…É¹¥¹œ½ÁÉ½™¥±”ˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€¥˜€ „¡…İ…¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä°É•Á±ä¤¤¤É•ÑÕÉ¸ì(€É•ÑÕÉ¸•Ñ	É…¹‘1•…É¹¥¹AÉ½™¥±” ¤ì)ô¤ì()…ÁÀ¹Á½ÍĞñì	½‘äèì•¹¥¹•Y•ÉÍ¥½¸üèÍÑÉ¥¹œìÁ…±•ÑÑ”üè…¹åmtì½¹™¥‘•¹”üè¹Õµ‰•Èì…•ÁÑ•üè‰½½±•…¸ôôø ‹[h‘éì¶»§q«^wapi/admin/brand-learning/observe", async (req, reply) => {
+    logAdminAction(admin,"mlops.model_rollback",`Rolled back ${req.params.modelKey} ${req.params.version}`,{targetType:"MLOpsModel",targetId:result.id});
+    return result;
+  } catch(e:any) { return reply.code(400).send({error:e?.message||"Could not roll back model"}); }
+});
+app.get<{Querystring:{modelKey?:string;limit?:string}}>("/api/admin/mlops/events", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  return listMLOpsEvents(req.query.modelKey,Number(req.query.limit||100));
+});
+app.post<{Body:{modelKey:string;eventId?:string;employerId?:string;feedback:"CORRECT"|"INCORRECT"|"REVIEWED";actualValue?:number;notes?:string}}>("/api/admin/mlops/feedback", async (req, reply) => {
+  const admin=await requireAdmin(req, reply); if(!admin) return;
+  try {
+    const result=await recordMLOpsFeedback(req.body);
+    logAdminAction(admin,"mlops.feedback",`Recorded ${req.body.feedback} feedback for ${req.body.modelKey}`,{targetType:"MLOpsEvent",targetId:result.feedbackId});
+    return result;
+  } catch(e:any) { return reply.code(400).send({error:e?.message||"Could not record feedback"}); }
+});
+
+app.get("/api/admin/partners", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  return listPartners();
+});
+
+app.get("/api/admin/brand-learning/profile", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  return getBrandLearningProfile();
+});
+
+app.post<{ Body: { engineVersion?: string; palette?: any[]; confidence?: number; accepted?: boolean } }>("/api/admin/brand-learning/observe", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
   const b=req.body||{};
   return learnFromBrandUpload({engineVersion:String(b.engineVersion||"1.1.0"), palette:Array.isArray(b.palette)?b.palette:[], confidence:Number(b.confidence||0), accepted:Boolean(b.accepted)});
@@ -966,7 +1943,28 @@ app.get("/api/admin/brand-recognition/overview", async (req, reply) => {
     engineVersion: rows.map((r: any) => r.brandEngineVersion).filter(Boolean).sort().pop() || "1.1.0",
     totalAnalysed: rows.length,
     autoAccepted: rows.filter((r: any) => r.brandDetectionStatus === "AUTO_ACCEPTED").length,
-    needsReview: rows.filteYªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬ÕÈ ¡Èè…¹ä¤€ôøÈ¹‰É…¹‘•Ñ•Ñ¥½¹MÑ…ÑÕÌ€ôôô€‰9M}IY%\ˆ¤¹±•¹Ñ °(€€€µ…¹Õ…°èÉ½İÌ¹™¥±Ñ•È ¡Èè…¹ä¤€ôøÈ¹‰É…¹‘•Ñ•Ñ¥½¹MÑ…ÑÕÌ€ôôô€‰59U0ˆ¤¹±•¹Ñ °(€€€…Ù•É…•½¹™¥‘•¹”è…Ù•É…•½¹™¥‘•¹”€ôô¹Õ±°€ü¹Õ±°€è5…Ñ ¹É½Õ¹¡…Ù•É…•½¹™¥‘•¹”€¨€ÄÀÀ¤€¼€ÄÀÀ°(€€€±½İ½¹™¥‘•¹”è½¹™¥‘•¹”¹™¥±Ñ•È ¡Øè¹Õµ‰•È¤€ôøØ€ğ€À¸ĞÔ¤¹±•¹Ñ °(€ôì)ô¤ì)…ÁÀ¹Á½ÍĞñì	½‘äèì¹…µ”èÍÑÉ¥¹œì‘¥ÍÁ±…å9…µ”üèÍÑÉ¥¹œôôø ˆ½…Á¤½…‘µ¥¸½Á…ÉÑ¹•ÉÌˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€½¹ÍĞ…‘µ¥¸€ô…İ…¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä°É•Á±ä¤ì¥˜€ ……‘µ¥¸¤É•ÑÕÉ¸ì(€¥˜€¡ÑåÁ•½˜É•Ä¹‰½‘äü¹¹…µ”€„ôô€‰ÍÑÉ¥¹œˆñğ€…É•Ä¹‰½‘ä¹¹…µ”¹ÑÉ¥´ ¤¤É•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÀ¤¹Í•¹¡ì•ÉÉ½Èè€‰Á…ÉÑ¹•È¹…µ”É•ÅÕ¥É•ˆô¤ì(€±•ĞÉ•…Ñ•ì(€ÑÉäìÉ•…Ñ•€ô…İ…¥ĞÉ•…Ñ•A…ÉÑ¹•È¡É•Ä¹‰½‘ä¤ìô(€…Ñ €¡”è…¹ä¤ìÉ•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÀ¤¹Í•¹¡ì•ÉÉ½Èè”ü¹µ•ÍÍ…”ñğ€‰½Õ±¹½ĞÉ•…Ñ”Á…ÉÑ¹•Èˆô¤ìô(€±½‘µ¥¹Ñ¥½¸¡…‘µ¥¸°€‰Á…ÉÑ¹•È¹É•…Ñ”ˆ°É•…Ñ•¡…¹¹•°Á…ÉÑ¹•È€ˆ‘íÉ•Ä¹‰½‘ä¹¹…µ•ô‰€°ìÑ…É•ÑQåÁ”è€‰A…ÉÑ¹•Èˆ°Ñ…É•Ñ%è€¡É•…Ñ•…Ì…¹ä¤ü¹¥ô¤ì(€É•ÑÕÉ¸É•…Ñ•ì)ô¤ì)…ÁÀ¹ÁÕĞñìA…É…µÌèì¥èÍÑÉ¥¹œôì	½‘äè…¹äôø ˆ½…Á¤½…‘µ¥¸½Á…ÉÑ¹•ÉÌ¼é¥ˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€½¹ÍĞ…‘µ¥¸€ô…İ…¥ĞÉ•ÅÕ¥É•‘µ¥¸¡É•Ä°É•Á±ä¤ì¥˜€ ……‘µ¥¸¤É•ÑÕÉ¸ì(€±•ĞÕÁ‘…Ñ•ì(€ÑÉäìÕÁ‘…Ñ•€ô…İ…¥ĞÕÁ‘…Ñ•A…ÉÑ¹•È¡É•Ä¹Á…É…µÌ¹¥°É•Ä¹‰½‘äñğíô¤ìô(€…Ñ €¡”è…¹ä¤ìÉ•ÑÕÉ¸É•Á±ä¹½‘”¡”ü¹½‘”€ôôô€‰@ÈÀÈÔˆ€ü€ĞÀĞ€è€ĞÀÀ¤¹Í•¹¡ì•ÉÉ½Èè”ü¹½‘”€ôôô€‰@ÈÀÈÔˆ€ü€‰Á…ÉÑ¹•È¹½Ğ™½Õ¹ˆ€è€¡”ü¹µ•ÍÍ…”ñğ€‰½Õ±¹½ĞÕÁ‘…Ñ”Á…ÉÑ¹•Èˆ¤ô¤ìô(€½¹ÍĞ­•åÌ€ô=‰©•Ğ¹­•åÌ¡É•Ä¹‰½‘äñğíô¤¹©½¥¸ ˆ°€ˆ¤ñğ€‰¹¼™¥•±‘Ìˆì(€±½‘µ¥¹Ñ¥½¸¡…‘µ¥¸°€‰Á…ÉÓ[h‘éì¶»§q«^ver.update", `Updated channel partner ${req.params.id} (${keys})`, { targetType: "Partner", targetId: req.params.id });
+    needsReview: rows.filter((r: any) => r.brandDetectionStatus === "NEEDS_REVIEW").length,
+    manual: rows.filter((r: any) => r.brandDetectionStatus === "MANUAL").length,
+    averageConfidence: averageConfidence == null ? null : Math.round(averageConfidence * 100) / 100,
+    lowConfidence: confidence.filter((v: number) => v < 0.45).length,
+  };
+});
+app.post<{ Body: { name: string; displayName?: string } }>("/api/admin/partners", async (req, reply) => {
+  const admin = await requireAdmin(req, reply); if (!admin) return;
+  if (typeof req.body?.name !== "string" || !req.body.name.trim()) return reply.code(400).send({ error: "partner name required" });
+  let created;
+  try { created = await createPartner(req.body); }
+  catch (e: any) { return reply.code(400).send({ error: e?.message || "could not create partner" }); }
+  logAdminAction(admin, "partner.create", `Created channel partner "${req.body.name}"`, { targetType: "Partner", targetId: (created as any)?.id });
+  return created;
+});
+app.put<{ Params: { id: string }; Body: any }>("/api/admin/partners/:id", async (req, reply) => {
+  const admin = await requireAdmin(req, reply); if (!admin) return;
+  let updated;
+  try { updated = await updatePartner(req.params.id, req.body || {}); }
+  catch (e: any) { return reply.code(e?.code === "P2025" ? 404 : 400).send({ error: e?.code === "P2025" ? "partner not found" : (e?.message || "could not update partner") }); }
+  const keys = Object.keys(req.body || {}).join(", ") || "no fields";
+  logAdminAction(admin, "partner.update", `Updated channel partner ${req.params.id} (${keys})`, { targetType: "Partner", targetId: req.params.id });
   return updated;
 });
 app.delete<{ Params: { id: string } }>("/api/admin/partners/:id", async (req, reply) => {
@@ -995,7 +1993,36 @@ async function dashboardSyncState(request?: object) {
     where: { id: "default" },
     select: {
       lastSuccessfulSyncAt: true,
-      laYªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬ÕÍÑMå¹ĞèÑÉÕ”°(€€€€€±…ÍÑMå¹MÑ…ÑÕÌèÑÉÕ”°(€€€€€±…ÍÑMå¹9½Ñ”èÑÉÕ”°(€€€ô°(€ô¤ì(€€¼¼‘¥™™•É•¹ĞI…¥±İ…ä½I•¹‘•ÈÁÉ½•ÍÌµ…ä¡…Ù”ÁÕ‰±¥Í¡•¹•Ü‘…Í¡‰½…É‘…Ñ„¸(€€¼¼±•…ÈÑ¡¥Ìİ½É­•ÈÌ¥¸µµ•µ½ÉäÉ•…µ½‘•°İ¡•¸Ñ¡”‘ÕÉ…‰±”ÍÕ•ÍÍ™Õ°Ù•ÉÍ¥½¸¡…¹•Ì¸(€½¹ÍĞÁÕ‰±¥Í¡•‘Y•ÉÍ¥½¸€ôÍå¹½¹™¥œü¹±…ÍÑMÕ•ÍÍ™Õ±Må¹Ğü¹Ñ½%M=MÑÉ¥¹œ ¤€üü¹Õ±°ì(€Íå¹…Í¡‰½…É‘…¡•Y•ÉÍ¥½¸¡ÁÕ‰±¥Í¡•‘Y•ÉÍ¥½¸¤ì(€½¹ÍĞÍÑ…Ñ”€ôì(€€€±…ÍÑMÕ•ÍÍ™Õ±Må¹ĞèÁÕ‰±¥Í¡•‘Y•ÉÍ¥½¸°(€€€±…ÍÑMå¹ĞèÍå¹½¹™¥œü¹±…ÍÑMå¹Ğü¹Ñ½%M=MÑÉ¥¹œ ¤€üü¹Õ±°°(€€€±…ÍÑMå¹MÑ…ÑÕÌèÍå¹½¹™¥œü¹±…ÍÑMå¹MÑ…ÑÕÌ€üü¹Õ±°°(€€€±…ÍÑMå¹9½Ñ”èÍå¹½¹™¥œü¹±…ÍÑMå¹9½Ñ”€üü¹Õ±°°(€ôì(€¥˜€¡É•ÅÕ•ÍĞ¤‘…Í¡‰½…É‘I•…‘Y•ÉÍ¥½¹Ì¹Í•Ğ¡É•ÅÕ•ÍĞ°ÍÑ…Ñ”¤ì(€É•ÑÕÉ¸ÍÑ…Ñ”ì)ô((¼¼Í½ÕÉ”¥µÁ½ÉĞµ…äÍÑ…ÉĞ½È™¥¹¥Í İ¡¥±”„±…É”É…Ü‘…Í¡‰½…ÉÅÕ•Éä¥Ì(¼¼ÉÕ¹¹¥¹œ¸I•¡•¬¥µµ•‘¥…Ñ•±ä‰•™½É”Í•¹‘¥¹œì¹•Ù•È±…‰•°„µ¥á•É•…İ¥Ñ (¼¼Ñ¡”Ù•ÉÍ¥½¸½‰Í•ÉÙ•‰•™½É”¥Ğ‰•…¸¸%µµÕÑ…‰±”™…±±‰…¬É•ÍÁ½¹Í•Ì…É”•á•µÁĞ¸)…ÁÀ¹…‘‘!½½¬ ‰½¹M•¹ˆ°…Íå¹Œ€¡É•Ä°É•Á±ä°Á…å±½…¤€ôøì(€½¹ÍĞÁ…Ñ €ôÉ•Ä¹ÕÉ°¹ÍÁ±¥Ğ ˆüˆ°€Ä¥lÁtì(€¥˜€¡É•Ä¹µ•Ñ¡½€„ôô€‰PˆñğÉ•Á±ä¹ÍÑ…ÑÕÍ½‘”€„ôô€ÈÀÀñğÑåÁ•½˜Á…å±½…€„ôô€‰ÍÑÉ¥¹œˆñğ(€€€€€€„¡Á…Ñ €ôôô€ˆ½…Á¤½Á½ÉÑ™½±¥¼ˆñğÁ…Ñ €ôôô€ˆ½…Á¤½‘…Í¡‰½…É½™¥ÉÍĞˆñğ€½yp½…Á¥p½•µÁ±½å•ÉÍp½mx½t­p¼¡‘…Í¡‰½…É‘ñÁ•É¥½‘ÍñÍ½É”µ¡¥ÍÑ½Éä¤¼¹Ñ•ÍĞ¡Á…Ñ ¤¤¤É•ÑÕÉ¸Á…å±½…ì(€½¹ÍĞ‰½‘ä€ô)M=8¹Á…ÉÍ”¡Á…å±½…¤ì(€½¹ÍĞÍÑ…ÉÑ•€ô‰½‘ä¹Íå¹MÑ…ÑÕÌ€üü‘…Í¡‰½…É‘I•…‘Y•ÉÍ¥½¹Ì¹•Ğ¡É•Ä¤ì(€¥˜€ …ÍÑ…ÉÑ•ñğÍÑ…ÉÑ•¹Í•ÉÙ¥¹1…ÍÑMÕ•ÍÍ™Õ°ñğ‘…Í¡‰½…É‘UÍ•ÍAÕ‰±¥Í¡•‘M¹…ÁÍ¡½Ğ¡ÍÑ…ÉÑ•¤¤É•ÑÕÉ¸Á…å±½…ì(€[h‘éì¶»§q«^wnst current = await dashboardSyncState();
+      lastSyncAt: true,
+      lastSyncStatus: true,
+      lastSyncNote: true,
+    },
+  });
+  // A different Railway/Render process may have published new dashboard data.
+  // Clear this worker's in-memory read model when the durable successful version changes.
+  const publishedVersion = syncConfig?.lastSuccessfulSyncAt?.toISOString() ?? null;
+  syncDashboardCacheVersion(publishedVersion);
+  const state = {
+    lastSuccessfulSyncAt: publishedVersion,
+    lastSyncAt: syncConfig?.lastSyncAt?.toISOString() ?? null,
+    lastSyncStatus: syncConfig?.lastSyncStatus ?? null,
+    lastSyncNote: syncConfig?.lastSyncNote ?? null,
+  };
+  if (request) dashboardReadVersions.set(request, state);
+  return state;
+}
+
+// A source import may start or finish while a large raw dashboard query is
+// running. Recheck immediately before sending; never label a mixed read with
+// the version observed before it began. Immutable fallback responses are exempt.
+app.addHook("onSend", async (req, reply, payload) => {
+  const path = req.url.split("?", 1)[0];
+  if (req.method !== "GET" || reply.statusCode !== 200 || typeof payload !== "string" ||
+      !(path === "/api/portfolio" || path === "/api/dashboard/first" || /^\/api\/employers\/[^/]+\/(dashboard|periods|score-history)$/.test(path))) return payload;
+  const body = JSON.parse(payload);
+  const started = body.syncStatus ?? dashboardReadVersions.get(req);
+  if (!started || started.servingLastSuccessful || dashboardUsesPublishedSnapshot(started)) return payload;
+  const current = await dashboardSyncState();
   if (dashboardUsesPublishedSnapshot(current) || current.lastSuccessfulSyncAt !== started.lastSuccessfulSyncAt) {
     reply.code(503).header("Retry-After", "5");
     return JSON.stringify({ error: "Dashboard publication changed during this read; retrying is safe.", syncStatus: current });
@@ -1029,7 +2056,39 @@ function sendPublishedDashboardUnavailable(reply: FastifyReply, syncStatus: Awai
 // â”€â”€ dashboard: real stock/as-at + flow/in-window filtering â”€â”€
 app.get<{
   Params: { employerId: string };
-  Querystring: { period?: string; quarter?: string; range?: "30d" | "quarter" | "all" | "month" | "30" | "q" | "latest"; site?: string; iYªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Õ¹½µ”üèÍÑÉ¥¹œôì)ôø (€€ˆ½…Á¤½•µÁ±½å•ÉÌ¼é•µÁ±½å•É%½‘…Í¡‰½…Éˆ°(€…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€€€½¹ÍĞÕÍ•È€ô…İ…¥ĞÉ•ÅÕ¥É•UÍ•È¡É•Ä°É•Á±ä¤ì(€€€¥˜€ …ÕÍ•È¤É•ÑÕÉ¸ì(€€€½¹ÍĞì•µÁ±½å•É%ô€ôÉ•Ä¹Á…É…µÌì(€€€¥˜€ ……¹Y¥•İµÁ±½å•È¡ÕÍ•È°•µÁ±½å•É%¤¤É•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÌ¤¹Í•¹¡ì•ÉÉ½Èè€‰¹¼…•ÍÌÑ¼Ñ¡¥Ì•µÁ±½å•Èˆô¤ì(€€€½¹ÍĞÅÕ•ÉåÉÉ½È€ô‘…Í¡‰½…É‘EÕ•ÉåÉÉ½È¡É•Ä¹ÅÕ•Éä¤ì(€€€¥˜€¡ÅÕ•ÉåÉÉ½È¤É•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÀ¤¹Í•¹¡ì•ÉÉ½ÈèÅÕ•ÉåÉÉ½Èô¤ì(€€€½¹ÍĞÍå¹MÑ…ÑÕÌ€ô…İ…¥Ğ‘…Í¡‰½…É‘Må¹MÑ…Ñ”¡É•Ä¤ì(€€€½¹ÍĞÅÕ•Éä€ôì(€€€€€Á•É¥½èÉ•Ä¹ÅÕ•Éä¹Á•É¥½°(€€€€€ÅÕ…ÉÑ•ÈèÉ•Ä¹ÅÕ•Éä¹ÅÕ…ÉÑ•È°(€€€€€É…¹”èÉ•Ä¹ÅÕ•Éä¹É…¹”°(€€€€€Í¥Ñ”èÉ•Ä¹ÅÕ•Éä¹Í¥Ñ”°(€€€€€¥¹½µ”èÉ•Ä¹ÅÕ•Éä¹¥¹½µ”°(€€€ôì(€€€½¹ÍĞÕÍ•AÕ‰±¥Í¡•€ô‘…Í¡‰½…É‘UÍ•ÍAÕ‰±¥Í¡•‘M¹…ÁÍ¡½Ğ¡Íå¹MÑ…ÑÕÌ¤ì(€€€½¹ÍĞÁÕ‰±¥Í¡•€ôÕÍ•AÕ‰±¥Í¡•€ü…İ…¥Ğ•ÑAÕ‰±¥Í¡•‘…Í¡‰½…É‘MÑ…Ñ”¡•µÁ±½å•É%¤€è¹Õ±°ì(€€€€¼¼=ÁĞµ¥¸°•á…ĞµÁ•É¥½Í•µ…¹Ñ¥ŒÉ•…¸9•Ù•ÈÉ•Á±…”™¥±Ñ•É•‘…Í¡‰½…É‘Ì(€€€€¼¼Õ¹Ñ¥°Ñ¡•¥ÈÍ¥Ñ”°¥¹½µ”…¹¡¥ÍÑ½É¥…°Á…É¥Ñä¥Ì¥¹‘•Á•¹‘•¹Ñ±äÑ•ÍÑ•¸(€€€±•ĞÍ•µ…¹Ñ¥A…å±½…è…¹ä€ô¹Õ±°ì(€€€¥˜€ …ÕÍ•AÕ‰±¥Í¡•€˜˜(€€€€€€€ÁÉ½•ÍÌ¹•¹Ø¹9	1}M59Q%}M!	=I}MIY%9€ôôô€‰ÑÉÕ”ˆ€˜˜(€€€€€€€ÁÉ½•ÍÌ¹•¹Ø¹9	1}M59Q%}9Ie}I€ôôô€‰ÑÉÕ”ˆ€˜˜(€€€€€€€É•Ä¹ÅÕ•Éä¹Á•É¥½€˜˜€…É•Ä¹ÅÕ•Éä¹ÅÕ…ÉÑ•È€˜˜(€€€€€€€€ …É•Ä¹ÅÕ•Éä¹Í¥Ñ”ñğÉ•Ä¹ÅÕ•Éä¹Í¥Ñ”€ôôô€‰…±°ˆ¤€˜˜(€€€€€€€€ …É•Ä¹ÅÕ•Éä¹¥¹½µ”ñğÉ•Ä¹ÅÕ•Éä¹¥¹½µ”€ôôô€‰…±°ˆ¤¤ì(€€€€€ÑÉäì(€€€€€€€½¹ÍĞÍ•µ…¹Ñ¥Œ€ô…İ…¥ĞÉ•…‘AÕ‰±¥Í¡•‘M•µ…¹Ñ¥A…ÉÑ¥Ñ¥½¸¡ì(€€€€€€€€€•µÁ±½å•É%°Á•É¥½èÉ•Ä¹ÅÕ•Éä¹Á•É¥½°Á…ÉÑ¥Ñ¥½¹-•äè€‰…±°ˆ°(€ƒ[h‘éì¶»§q«^t     });
+  Querystring: { period?: string; quarter?: string; range?: "30d" | "quarter" | "all" | "month" | "30" | "q" | "latest"; site?: string; income?: string };
+}>(
+  "/api/employers/:employerId/dashboard",
+  async (req, reply) => {
+    const user = await requireUser(req, reply);
+    if (!user) return;
+    const { employerId } = req.params;
+    if (!canViewEmployer(user, employerId)) return reply.code(403).send({ error: "no access to this employer" });
+    const queryError = dashboardQueryError(req.query);
+    if (queryError) return reply.code(400).send({ error: queryError });
+    const syncStatus = await dashboardSyncState(req);
+    const query = {
+      period: req.query.period,
+      quarter: req.query.quarter,
+      range: req.query.range,
+      site: req.query.site,
+      income: req.query.income,
+    };
+    const usePublished = dashboardUsesPublishedSnapshot(syncStatus);
+    const published = usePublished ? await getPublishedDashboardState(employerId) : null;
+    // Opt-in, exact-period semantic read. Never replace filtered dashboards
+    // until their site, income and historical parity is independently tested.
+    let semanticPayload: any = null;
+    if (!usePublished &&
+        process.env.ENABLE_SEMANTIC_DASHBOARD_SERVING === "true" &&
+        process.env.ENABLE_SEMANTIC_CANARY_READ === "true" &&
+        req.query.period && !req.query.quarter &&
+        (!req.query.site || req.query.site === "all") &&
+        (!req.query.income || req.query.income === "all")) {
+      try {
+        const semantic = await readPublishedSemanticPartition({
+          employerId, period: req.query.period, partitionKey: "all",
+        });
         semanticPayload = semantic?.payload ?? null;
         if (semanticPayload) reply.header("X-Semantic-Version", semantic!.version);
       } catch (error: any) {
@@ -1059,7 +2118,34 @@ app.get<{
 app.get<{ Params: { employerId: string }; Querystring: { site?: string; income?: string } }>(
   "/api/employers/:employerId/periods",
   async (req, reply) => {
-    const user = await requireUser(req, reply); if (!user) returYªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Õ¸ì(€€€¥˜€ ……¹Y¥•İµÁ±½å•È¡ÕÍ•È°É•Ä¹Á…É…µÌ¹•µÁ±½å•É%¤¤É•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÌ¤¹Í•¹¡ì•ÉÉ½Èè€‰¹¼…•ÍÌˆô¤ì(€€€½¹ÍĞÍå¹MÑ…ÑÕÌ€ô…İ…¥Ğ‘…Í¡‰½…É‘Må¹MÑ…Ñ”¡É•Ä¤ì(€€€¥˜€¡‘…Í¡‰½…É‘UÍ•ÍAÕ‰±¥Í¡•‘M¹…ÁÍ¡½Ğ¡Íå¹MÑ…ÑÕÌ¤¤ì(€€€€€½¹ÍĞÁÕ‰±¥Í¡•€ô…İ…¥Ğ•ÑAÕ‰±¥Í¡•‘…Í¡‰½…É‘MÑ…Ñ”¡É•Ä¹Á…É…µÌ¹•µÁ±½å•É%¤ì(€€€€€¥˜€ …ÁÕ‰±¥Í¡•¤É•ÑÕÉ¸Í•¹‘AÕ‰±¥Í¡•‘…Í¡‰½…É‘U¹…Ù…¥±…‰±”¡É•Á±ä°Íå¹MÑ…ÑÕÌ¤ì(€€€€€É•ÑÕÉ¸ÁÕ‰±¥Í¡•¹Á•É¥½‘Ì¹™¥±Ñ•È ¡É½ÜèìÁ•É¥½èÍÑÉ¥¹œô¤€ôø€½yq‘ìÑô´ ÁlÄ´åuğÅlÀ´Ét¤¼¹Ñ•ÍĞ¡É½Ü¹Á•É¥½¤€˜˜É½Ü¹Á•É¥½€ğôÕÉÉ•¹ÑA•É¥½ ¤¤ì(€€€ô((€€€€¼¼-••ÀÑ¡¥Ì•¹‘Á½¥¹Ğ¡•…À¸Q¡”ÁÉ•Ù¥½ÕÌ¥µÁ±•µ•¹Ñ…Ñ¥½¸É•…‘…Ñ”½±Õµ¹Ì(€€€€¼¼™É½´Í¥à±…É”Ñ…‰±•Ì…¹Ñ¡•¸É…¸Ñ¡”™Õ±°‘…Í¡‰½…É‰Õ¥±‘•È½¹”Á•È(€€€€¼¼µ½¹Ñ ¸]¥Ñ €ÄÀÁ¬•µÁ±½å••ÌÑ¡…ĞÉ•…Ñ•Ì„¡Õ”8¬Äİ½É­±½…‰•™½É”Ñ¡”(€€€€¼¼ÕÍ•È¡…Ì•Ù•¸½Á•¹•Ñ¡”µ½¹Ñ Í•±•Ñ½È¸(€€€€¼¼(€€€€¼¼A•ÉÍ¥ÍÑ•µ½¹Ñ¡±äÍ½É•Ì…É”Ñ¡”™…ÍĞÁ…Ñ ¸I•¥½¸½%¹½µ”¥Ì…ÁÁ±¥•‰ä(€€€€¼¼Ñ¡”‘…Í¡‰½…ÉÉ•ÅÕ•ÍĞ…™Ñ•È„Á•É¥½¥ÌÍ•±•Ñ•ìÑ¡”Á•É¥½Á¥­•ÈµÕÍĞ(€€€€¼¼¹•Ù•È…±Õ±…Ñ”Ñİ•±Ù”™Õ±°½¡½ÉĞ‘…Í¡‰½…É‘Ì¸(€€€½¹ÍĞ•µÁ±½å•É%€ôÉ•Ä¹Á…É…µÌ¹•µÁ±½å•É%ì(€€€€¼¼Q¡”Á•É¥½Á¥­•È¥Ì„‘¥µ•¹Í¥½¸Í•±•Ñ½È°¹½Ğ„‘…Í¡‰½…É…±Õ±…Ñ½È¸(€€€€¼¼9•Ù•ÈÉ•‰Õ¥±Ñ¡”™Õ±°‘…Í¡‰½…É½¹”Á•Èµ½¹Ñ ©ÕÍĞÑ¼Á½ÁÕ±…Ñ”¥Ğ¸((€€€½¹ÍĞÍ¹…ÁÍ¡½ÑÌ€ô…İ…¥ĞÁÉ¥Íµ„¹Í½É•M¹…ÁÍ¡½Ğ¹™¥¹‘5…¹ä¡ì(€€€€€İ¡•É”èì•µÁ±½å•É%°Á…å±½…‘Y•ÉÍ¥½¸èìÑ”è€Ğô°Á•É¥½èì±Ñ”èÕÉÉ•¹ÑA•É¥½ ¤ôô°(€€€€€Í•±•Ğèì(€€€€€€€Á•É¥½èÑÉÕ”°(€€€€€€€½ÁÑ¥µ¥Í•M½É”èÑÉÕ”°(€€€€€€€É…İM½É”èÑÉÕ”°(€€€€€€€•¹…•µ•¹ÑO[h‘éì¶»§q«^wore: true,
+    const user = await requireUser(req, reply); if (!user) return;
+    if (!canViewEmployer(user, req.params.employerId)) return reply.code(403).send({ error: "no access" });
+    const syncStatus = await dashboardSyncState(req);
+    if (dashboardUsesPublishedSnapshot(syncStatus)) {
+      const published = await getPublishedDashboardState(req.params.employerId);
+      if (!published) return sendPublishedDashboardUnavailable(reply, syncStatus);
+      return published.periods.filter((row: { period: string }) => /^\d{4}-(0[1-9]|1[0-2])$/.test(row.period) && row.period <= currentPeriod());
+    }
+
+    // Keep this endpoint cheap. The previous implementation read date columns
+    // from six large tables and then ran the full dashboard builder once per
+    // month. With 100k employees that creates a huge N+1 workload before the
+    // user has even opened the month selector.
+    //
+    // Persisted monthly scores are the fast path. Region/Income is applied by
+    // the dashboard request after a period is selected; the period picker must
+    // never calculate twelve full cohort dashboards.
+    const employerId = req.params.employerId;
+    // The period picker is a dimension selector, not a dashboard calculator.
+    // Never rebuild the full dashboard once per month just to populate it.
+
+    const snapshots = await prisma.scoreSnapshot.findMany({
+      where: { employerId, payloadVersion: { gte: 4 }, period: { lte: currentPeriod() } },
+      select: {
+        period: true,
+        optimiseScore: true,
+        rawScore: true,
+        engagementScore: true,
         cashflowScore: true,
         debtRiskScore: true,
         insuranceScore: true,
@@ -1097,7 +2183,30 @@ app.get<{ Params: { employerId: string }; Querystring: { site?: string; income?:
       select: { observedAt: true },
       orderBy: { observedAt: "desc" },
     });
-    if (latestEmployee?.observedAt) perioYªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Õ‘M•Ğ¹…‘¡µ½¹Ñ¡-•ä¡±…Ñ•ÍÑµÁ±½å•”¹½‰Í•ÉÙ•‘Ğ¤¤ì((€€€€¼¼I•ÑÕÉ¸…Ğµ½ÍĞÑ¡”±…Ñ•ÍĞ€ÄÈÉ•…°É•Á½ÉÑ¥¹œµ½¹Ñ¡Ì¸-••ÀÑ¡”Í•±•Ñ½È(€€€€¼¼¡•…Àè½¹±äÑ¡”¥¹‘•á•½‰Í•ÉÙ…Ñ¥½¸‘¥µ•¹Í¥½¸…¹Á•ÉÍ¥ÍÑ•Í¹…ÁÍ¡½ÑÌ…É”(€€€€¼¼Ñ½Õ¡•ì¹•Ù•È¥¹Ù½­”•Ñ…Í¡‰½…É‘A…å±½…™É½´Ñ¡¥Ì•¹‘Á½¥¹Ğ¸(€€€½¹ÍĞ±…Ñ•ÍÑA•É¥½‘Ì€ôl¸¸¹Á•É¥½‘M•Ñt¹™¥±Ñ•È¡Á•É¥½€ôø€½yq‘ìÑô´ ÁlÄ´åuğÅlÀ´Ét¤¼¹Ñ•ÍĞ¡Á•É¥½¤€˜˜Á•É¥½€ğôÕÉÉ•¹ÑA•É¥½ ¤¤¹Í½ÉĞ ¤¹É•Ù•ÉÍ” ¤¹Í±¥” À°€ÄÈ¤ì(€€€½¹ÍĞÍ¹…ÁÍ¡½Ñ	åA•É¥½€ô¹•Ü5…À¡Í¹…ÁÍ¡½ÑÌ¹µ…À ¡É½Üè…¹ä¤€ôømÉ½Ü¹Á•É¥½°É½İt¤¤ì(€€€½¹ÍĞÍ¹…ÁÍ¡½ÑM½É”€ô€¡Í¹…Àè…¹ä¤è¹Õµ‰•Èğ¹Õ±°€ôøì(€€€€€¥˜€ …Í¹…À¤É•ÑÕÉ¸¹Õ±°ì(€€€€€½¹ÍĞÍÑ½É•€ô9Õµ‰•È¡Í¹…À¹½ÁÑ¥µ¥Í•M½É”¤ì(€€€€€€¼¼=±‘•È½‰É½­•¸Í¹…ÁÍ¡½ÑÌ¡…Ù”½…Í¥½¹…±±ä½¹Ñ…¥¹•„é•É¼¡•…‘±¥¹”(€€€€€€¼¼İ¡¥±”Ñ¡”™½ÕÈ‘É¥Ù•ÈÍ½É•Ìİ•É”Á½ÁÕ±…Ñ•¸I•‰Õ¥±Ñ¡”¡•…‘±¥¹”(€€€€€€¼¼™É½´Ñ¡”Á•ÉÍ¥ÍÑ•‘É¥Ù•ÈÍ½É•Ì¥¹ÍÑ•…½˜•áÁ½Í¥¹œ„™…±Í”€À¸(€€€€€½¹ÍĞ‘É¥Ù•ÉÌ€ôl(€€€€€€€m9Õµ‰•È¡Í¹…À¹•¹…•µ•¹ÑM½É”¤°9Õµ‰•È¡Í¹…À¹•¹…•µ•¹Ñ]•¥¡Ğ¥t°(€€€€€€€m9Õµ‰•È¡Í¹…À¹…Í¡™±½İM½É”¤°9Õµ‰•È¡Í¹…À¹…Í¡™±½İ]•¥¡Ğ¥t°(€€€€€€€m9Õµ‰•È¡Í¹…À¹‘•‰ÑI¥Í­M½É”¤°9Õµ‰•È¡Í¹…À¹‘•‰ÑI¥Í­]•¥¡Ğ¥t°(€€€€€€€m9Õµ‰•È¡Í¹…À¹¥¹ÍÕÉ…¹•M½É”¤°9Õµ‰•È¡Í¹…À¹¥¹ÍÕÉ…¹•]•¥¡Ğ¥t°(€€€€€tì(€€€€€½¹ÍĞİ•¥¡Ñ•€ô‘É¥Ù•ÉÌ¹•Ù•Éä ¡mÍ½É”°İ•¥¡Ñt¤€ôø9Õµ‰•È¹¥Í¥¹¥Ñ”¡Í½É”¤€˜˜9Õµ‰•È¹¥Í¥¹¥Ñ”¡İ•¥¡Ğ¤€˜˜İ•¥¡Ğ€ø€À¤(€€€€€€€€ü5…Ñ ¹É½Õ¹¡‘É¥Ù•ÉÌ¹É•‘Õ” ¡ÍÕ´°mÍ½É”°İ•¥¡Ñt¤€ôøÍÕ´€¬Í½É”€¨İ•¥¡Ğ°€À¤¤(€€€€€€€€è¹Õ±°ì(€€€€€¥˜€¡ÍÑ½É•€ø€À€˜˜ÍÑ½É•€ğô€ÄÀÀ¤É•ÑÕÉ¸5…Ñ ¹É½Õ¹¡ÍÑ½É•¤ì(€€€€€¥˜€¡İ•¥¡Ñ•€‡[h‘éì¶»§q«^u null && weighted >= 0 && weighted <= 100) return weighted;
+    if (latestEmployee?.observedAt) periodSet.add(monthKey(latestEmployee.observedAt));
+
+    // Return at most the latest 12 real reporting months. Keep the selector
+    // cheap: only the indexed observation dimension and persisted snapshots are
+    // touched; never invoke getDashboardPayload from this endpoint.
+    const latestPeriods = [...periodSet].filter(period => /^\d{4}-(0[1-9]|1[0-2])$/.test(period) && period <= currentPeriod()).sort().reverse().slice(0, 12);
+    const snapshotByPeriod = new Map(snapshots.map((row: any) => [row.period, row]));
+    const snapshotScore = (snap: any): number | null => {
+      if (!snap) return null;
+      const stored = Number(snap.optimiseScore);
+      // Older/broken snapshots have occasionally contained a zero headline
+      // while the four driver scores were populated. Rebuild the headline
+      // from the persisted driver scores instead of exposing a false 0.
+      const drivers = [
+        [Number(snap.engagementScore), Number(snap.engagementWeight)],
+        [Number(snap.cashflowScore), Number(snap.cashflowWeight)],
+        [Number(snap.debtRiskScore), Number(snap.debtRiskWeight)],
+        [Number(snap.insuranceScore), Number(snap.insuranceWeight)],
+      ];
+      const weighted = drivers.every(([score, weight]) => Number.isFinite(score) && Number.isFinite(weight) && weight > 0)
+        ? Math.round(drivers.reduce((sum, [score, weight]) => sum + score * weight, 0))
+        : null;
+      if (stored > 0 && stored <= 100) return Math.round(stored);
+      if (weighted != null && weighted >= 0 && weighted <= 100) return weighted;
       const raw = Number(snap.rawScore);
       return Number.isFinite(raw) ? Math.max(0, Math.min(100, Math.round(raw))) : null;
     };
@@ -1123,7 +2232,51 @@ app.get<{ Params: { employerId: string }; Querystring: { site?: string; income?:
         try {
           const live: any = await getDashboardPayload(employerId, { period: r.period });
           if (live?.wellness?.complete && live?.wellness?.score != null) {
-            r.optimiseScore = Math.round(Number(live.wellness.score));YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Ô(€€€€€€€€€ô(€€€€€€€ô…Ñ ì€¼¨±•…Ù”Õ¹…Ù…¥±…‰±”ƒŠPÑ¡”Á¥­•ÈÍÑ¥±°Í¡½İÌÑ¡”Á•É¥½¥ÑÍ•±˜€¨¼ô(€€€€€ô¤¤ì(€€€ô((€€€É•ÑÕÉ¸É•ÍÕ±ÑÌì(€ô°(¤ì((¼¼ƒŠRŠR Í½É”¡¥ÍÑ½Éä€¡µ½Ù•µ•¹Ğ¡…ÉĞ¤ƒŠPÍ½Á•ƒŠRŠR )…ÁÀ¹•ĞñìA…É…µÌèì•µÁ±½å•É%èÍÑÉ¥¹œôôø (€€ˆ½…Á¤½•µÁ±½å•ÉÌ¼é•µÁ±½å•É%½Í½É”µ¡¥ÍÑ½Éäˆ°(€…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€€€½¹ÍĞÕÍ•È€ô…İ…¥ĞÉ•ÅÕ¥É•UÍ•È¡É•Ä°É•Á±ä¤ì¥˜€ …ÕÍ•È¤É•ÑÕÉ¸ì(€€€¥˜€ ……¹Y¥•İµÁ±½å•È¡ÕÍ•È°É•Ä¹Á…É…µÌ¹•µÁ±½å•É%¤¤É•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÌ¤¹Í•¹¡ì•ÉÉ½Èè€‰¹¼…•ÍÌÑ¼Ñ¡¥Ì•µÁ±½å•Èˆô¤ì(€€€½¹ÍĞÍå¹MÑ…ÑÕÌ€ô…İ…¥Ğ‘…Í¡‰½…É‘Må¹MÑ…Ñ”¡É•Ä¤ì(€€€¥˜€¡‘…Í¡‰½…É‘UÍ•ÍAÕ‰±¥Í¡•‘M¹…ÁÍ¡½Ğ¡Íå¹MÑ…ÑÕÌ¤¤É•ÑÕÉ¸Í•¹‘AÕ‰±¥Í¡•‘…Í¡‰½…É‘U¹…Ù…¥±…‰±”¡É•Á±ä°Íå¹MÑ…ÑÕÌ¤ì(€€€½¹ÍĞÍ¹…ÁÌ€ô…İ…¥ĞÁÉ¥Íµ„¹Í½É•M¹…ÁÍ¡½Ğ¹™¥¹‘5…¹ä¡ì(€€€€€İ¡•É”èì•µÁ±½å•É%èÉ•Ä¹Á…É…µÌ¹•µÁ±½å•É%ô°(€€€€€½É‘•É	äèìÁ•É¥½è€‰…ÍŒˆô°(€€€€€Í•±•Ğèì(€€€€€€€Á•É¥½èÑÉÕ”°(€€€€€€€½ÁÑ¥µ¥Í•M½É”èÑÉÕ”°(€€€€€€€•¹…•µ•¹ÑM½É”èÑÉÕ”°(€€€€€€€…Í¡™±½İM½É”èÑÉÕ”°(€€€€€€€‘•‰ÑI¥Í­M½É”èÑÉÕ”°(€€€€€€€¥¹ÍÕÉ…¹•M½É”èÑÉÕ”°(€€€€€€€Á…å±½…‘Y•ÉÍ¥½¸èÑÉÕ”°(€€€€€ô°(€€€ô¤ì((€€€½¹ÍĞ¡¥ÍÑ½Éä€ômtì(€€€™½È€¡½¹ÍĞÍ¹…À½˜Í¹…ÁÌ¤ì(€€€€€¥˜€¡Í¹…À¹Á…å±½…‘Y•ÉÍ¥½¸€øô€Ğ€˜˜Í¹…À¹½ÁÑ¥µ¥Í•M½É”€„ô¹Õ±°¤ì(€€€€€€€¡¥ÍÑ½Éä¹ÁÕÍ ¡ì(€€€€€€€€€Á•É¥½èÍ¹…À¹Á•É¥½°(€€€€€€€€€½ÁÑ¥µ¥Í•M½É”èÍ¹…À¹½ÁÑ¥µ¥Í•M½É”°(€€€€€€€€€•¹…•µ•¹ÑM½É”èÍ¹…À¹•¹…•µ•¹ÑM½É”°(€€€€€€€€€…Í¡™±½İM½É”èÍ¹…À¹…Í¡™±½İM½É”°(€€€€€€€€€‘•‰ÑI¥Í­M½É”èÍ¹…À¹‘•‰ÑI¥Í­M½É”°(€€€€€€€€€¥¹ÍÕÉ…¹•M½É”èÍ¹…À¹¥¹ÍÕÉ…¹•M½É”°(€€€€€€€ô¤ì(€€€€€€€½¹Ñ¥¹Õ”ì(ƒ[h‘éì¶»§q«^t    }
+            r.optimiseScore = Math.round(Number(live.wellness.score));
+          }
+        } catch { /* leave unavailable â€” the picker still shows the period itself */ }
+      }));
+    }
+
+    return results;
+  },
+);
+
+// â”€â”€ score history (movement chart) â€” scoped â”€â”€
+app.get<{ Params: { employerId: string } }>(
+  "/api/employers/:employerId/score-history",
+  async (req, reply) => {
+    const user = await requireUser(req, reply); if (!user) return;
+    if (!canViewEmployer(user, req.params.employerId)) return reply.code(403).send({ error: "no access to this employer" });
+    const syncStatus = await dashboardSyncState(req);
+    if (dashboardUsesPublishedSnapshot(syncStatus)) return sendPublishedDashboardUnavailable(reply, syncStatus);
+    const snaps = await prisma.scoreSnapshot.findMany({
+      where: { employerId: req.params.employerId },
+      orderBy: { period: "asc" },
+      select: {
+        period: true,
+        optimiseScore: true,
+        engagementScore: true,
+        cashflowScore: true,
+        debtRiskScore: true,
+        insuranceScore: true,
+        payloadVersion: true,
+      },
+    });
+
+    const history = [];
+    for (const snap of snaps) {
+      if (snap.payloadVersion >= 4 && snap.optimiseScore != null) {
+        history.push({
+          period: snap.period,
+          optimiseScore: snap.optimiseScore,
+          engagementScore: snap.engagementScore,
+          cashflowScore: snap.cashflowScore,
+          debtRiskScore: snap.debtRiskScore,
+          insuranceScore: snap.insuranceScore,
+        });
+        continue;
+      }
       const live = await getDashboardPayload(req.params.employerId, { period: snap.period });
       history.push({
         period: snap.period,
@@ -1157,7 +2310,37 @@ async function bootstrapAdmin() {
   try {
     const count = await prisma.user.count();
     if (count > 0) return;
-    const email = process.env.ADMIN_EMAIL, password = proceYªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬ÕÍÌ¹•¹Ø¹5%9}AMM]=Iì(€€€¥˜€ …•µ…¥°ñğ€…Á…ÍÍİ½É¤ì(€€€€€…ÁÀ¹±½œ¹İ…É¸ ‰9¼ÕÍ•ÉÌå•Ğ…¹5%9}5%0½5%9}AMM]=I¹½ĞÍ•ĞƒŠPÍ•ĞÑ¡•´Ñ¼É•…Ñ”Ñ¡”™¥ÉÍĞ…‘µ¥¸¸ˆ¤ì(€€€€€É•ÑÕÉ¸ì(€€€ô(€€€¥˜€¡Á…ÍÍİ½É¹±•¹Ñ €ğ€ÄÈñğ€„½mµit¼¹Ñ•ÍĞ¡Á…ÍÍİ½É¤ñğ€„½m„µét¼¹Ñ•ÍĞ¡Á…ÍÍİ½É¤ñğ€„½lÀ´åt¼¹Ñ•ÍĞ¡Á…ÍÍİ½É¤¤ì(€€€€€…ÁÀ¹±½œ¹•ÉÉ½È ‰5%9}AMM]=I‘½•Ì¹½Ğµ••ĞÑ¡”Á…ÍÍİ½ÉÁ½±¥ä€ ÄÈ¬¡…ÉÌİ¥Ñ ÕÁÁ•È°±½İ•È°‘¥¥Ğ¤ì…‘µ¥¸¹½ĞÉ•…Ñ•¸ˆ¤ì(€€€€€É•ÑÕÉ¸ì(€€€ô(€€€½¹ÍĞì¡…Í¡A…ÍÍİ½Éô€ô…İ…¥Ğ¥µÁ½ÉĞ ˆ¸½Í•ÉÙ¥•Ì½…ÕÑ¡M•ÉÙ¥”¹©Ìˆ¤ì(€€€…İ…¥ĞÁÉ¥Íµ„¹ÕÍ•È¹É•…Ñ”¡ì‘…Ñ„èì•µ…¥°è•µ…¥°¹Ñ½1½İ•É…Í” ¤°¹…µ”è€‰‘µ¥¹¥ÍÑÉ…Ñ½Èˆ°É½±”è€‰5%8ˆ°Á…ÍÍİ½É‘!…Í è¡…Í¡A…ÍÍİ½É¡Á…ÍÍİ½É¤ôô¤ì(€€€…ÁÀ¹±½œ¹¥¹™¼¡	½½ÑÍÑÉ…ÁÁ•™¥ÉÍĞ…‘µ¥¸è€‘í•µ…¥±õ€¤ì(€ô…Ñ €¡”¤ì…ÁÀ¹±½œ¹•ÉÉ½È¡”¤ìô)ô((¼¼ƒŠRŠR Í½ÕÉ”µÍå¹Œİ…Ñ¡•ÈƒŠRŠRŠRŠRŠRŠRŠRŠRŠRŠRŠRŠRŠRŠRŠRŠRŠRŠRŠRŠRŠRŠRŠRŠRŠRŠRŠRŠRŠRŠRŠRŠRŠRŠRŠRŠRŠRŠRŠRŠRŠRŠRŠRŠRŠRŠRŠR (¼¼ME0Í½ÕÉ•Ì•Ğ±¥¡Ñİ•¥¡Ğ¡…¹”‘•Ñ•Ñ¥½¸ÕÍ¥¹œ¥¹‘•á•(¼¼5`¡Í½ÕÉ•}ÕÁ‘…Ñ•‘}…Ğ¤İ…Ñ•Éµ…É­Ì¸Q¡”½É‘¥¹…ÉäÍ¡•‘Õ±”É•µ…¥¹Ì„¡•…ÉÑ‰•…Ğ(¼¼™…±±‰…¬°Í¼A$Í½ÕÉ•Ì…¹…¹äµ¥ÍÍ••‘”…Í”ÍÑ¥±°É•½¹¥±”É•Õ±…É±ä¸)™Õ¹Ñ¥½¸ÍÑ…ÉÑMå¹M¡•‘Õ±•È¡…ÁÀè…¹ä¤ì(€½¹ÍĞ!-}5L€ôM=UI}!9}A=11}M=9L€¨€ÄÀÀÀì(€±•ĞÑ¥­IÕ¹¹¥¹œ€ô™…±Í”ì((€±•Ğ±…ÍÑ]…Ñ¡±•ÉĞôÀì(€½¹ÍĞÉ•Á½ÉÑ]…Ñ¡…¥±ÕÉ”õ…Íå¹Œ ¤ôùì(€€€¥˜¡…Ñ”¹¹½Ü ¤µ±…ÍÑ]…Ñ¡±•ÉĞğÄÔ¨ØÁ|ÀÀÀ¥É•ÑÕÉ¸ì(€€€±…ÍÑ]…Ñ¡±•ÉĞõ…Ñ”¹¹½Ü ¤ì(€€€…İ…¥ĞÉ•Á½ÉÑ=Á•É…Ñ¥½¹…±…¥±ÕÉ” ‰M=UI}Me9ˆ¤ì(€ôì((€½¹ÍĞÑ¥¬€ô‡[h‘éì¶»§q«^wync () => {
+    const email = process.env.ADMIN_EMAIL, password = process.env.ADMIN_PASSWORD;
+    if (!email || !password) {
+      app.log.warn("No users yet and ADMIN_EMAIL/ADMIN_PASSWORD not set â€” set them to create the first admin.");
+      return;
+    }
+    if (password.length < 12 || !/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
+      app.log.error("ADMIN_PASSWORD does not meet the password policy (12+ chars with upper, lower, digit); admin not created.");
+      return;
+    }
+    const { hashPassword } = await import("./services/authService.js");
+    await prisma.user.create({ data: { email: email.toLowerCase(), name: "Administrator", role: "ADMIN", passwordHash: hashPassword(password) } });
+    app.log.info(`Bootstrapped first admin: ${email}`);
+  } catch (e) { app.log.error(e); }
+}
+
+// â”€â”€ source-sync watcher â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// SQL sources get lightweight change detection using indexed
+// MAX(source_updated_at) watermarks. The ordinary schedule remains a heartbeat
+// fallback, so API sources and any missed edge case still reconcile regularly.
+function startSyncScheduler(app: any) {
+  const CHECK_MS = SOURCE_CHANGE_POLL_SECONDS * 1000;
+  let tickRunning = false;
+
+  let lastWatchAlert=0;
+  const reportWatchFailure=async()=>{
+    if(Date.now()-lastWatchAlert<15*60_000)return;
+    lastWatchAlert=Date.now();
+    await reportOperationalFailure("SOURCE_SYNC");
+  };
+
+  const tick = async () => {
     if (tickRunning) return;
     tickRunning = true;
     const startedAt=Date.now();
@@ -1185,7 +2368,39 @@ async function bootstrapAdmin() {
         recordSourceWatch({outcome:"ERROR",durationMs:Date.now()-startedAt});
         return;
       }
-      if (await pendingDashboardRetryDue(cfg)YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Ô¤ì(€€€€€€€½¹ÍĞÉ•ÍÕ±Ğ€ô…İ…¥ĞÉÕ¹Må¹Œ ‰Í¡•‘Õ±•ˆ¤ì(€€€€€€€É•Á½ÉĞ¡É•ÍÕ±Ğ¹ÍÑ…ÑÕÌ€ôôô€‰=,ˆ€ü€‰Me9}=,ˆ€è€‰Me9}%1ˆ¤ì(€€€€€€€É•ÑÕÉ¸ì(€€€€€ô(€€€€€¥˜€¡¡…¹•Ì¹ÍÕÁÁ½ÉÑ•€˜˜¡…¹•Ì¹¡…¹•¤ì(€€€€€€€…ÁÀ¹±½œ¹¥¹™¼ (€€€€€€€€€ìÉ•Á½ÉÑÌè¡…¹•Ì¹É•Á½ÉÑÌ¹µ…À ¡àè…¹ä¤€ôøà¹É•Á½ÉÑ-•ä¤ô°(€€€€€€€€€€‰M½ÕÉ”‘…Ñ…‰…Í”¡…¹•Ì‘•Ñ•Ñ•ìÉÕ¹¹¥¹œ¥¹É•µ•¹Ñ…°Íå¹Œˆ°(€€€€€€€€¤ì(€€€€€€€½¹ÍĞÈ€ô…İ…¥ĞÉÕ¹Må¹Œ ‰Í¡•‘Õ±•ˆ¤ì(€€€€€€€…ÁÀ¹±½œ¹¥¹™¼¡¡…¹”µÑÉ¥•É•Íå¹Œè€‘íÈ¹ÍÑ…ÑÕÌ€üü€‰‘½¹”‰õ€¤ì(€€€€€€€É•Á½ÉĞ¡È¹ÍÑ…ÑÕÌôôô‰=,ˆü‰Me9}=,ˆè‰Me9}%1ˆ±¡…¹•Ì¹É•Á½ÉÑÌ¹±•¹Ñ ¤ì(€€€€€€€É•ÑÕÉ¸ì(€€€€€ô((€€€€€€¼¼9•Ù•ÈÁ…ä™½È„Ñ•¸µ™••ME0•áÑÉ…Ñ¥½¸İ¡•¸„ÑÉÕÍÑ•Í½ÕÉ”(€€€€€€¼¼İ…Ñ•Éµ…É¬Í…åÌ¹½Ñ¡¥¹œ¡…Ì¡…¹•¸…É±¥•È¡½ÕÉ±ä¡•…ÉÑ‰•…ÑÌ(€€€€€€¼¼É”µÉ•…¡Õ¹‘É•‘Ì½˜Ñ¡½ÕÍ…¹‘Ì½˜Õ¹¡…¹•É½İÌè½ÍÑ±ä…¹¹••‘±•ÍÌ¸(€€€€€€¼¼™¥ÉÍĞµÑ¥µ”Í½ÕÉ”İ¥Ñ ¹¼ÍÕ•ÍÍ™Õ°¥µÁ½ÉĞÍÑ¥±°•ÑÌ‰½½ÑÍÑÉ…ÁÁ•¸(€€€€€€¼¼I•…°‘•±•Ñ¥½¹ÌµÕÍĞ…ÉÉ¥Ù”…ÌÙ•ÉÍ¥½¹•¥Í}‘•±•Ñ•Ñ½µ‰ÍÑ½¹•Ì¸(€€€€€¥˜€¡¡…¹•Ì¹ÍÕÁÁ½ÉÑ•€˜˜€…¡…¹•Ì¹¡…¹•€˜˜™œ¹±…ÍÑMÕ•ÍÍ™Õ±Må¹Ğ¤ì(€€€€€€€É•Á½ÉĞ ‰U9!9ˆ¤ì(€€€€€€€…ÁÀ¹±½œ¹¥¹™¼ ‰ME0Í½ÕÉ”İ…Ñ•Éµ…É­ÌÕ¹¡…¹•ìÍ­¥ÁÁ¥¹œ½ÍÑ±ä¡•…ÉÑ‰•…Ğ•áÑÉ…Ñ¥½¸ˆ¤ì(€€€€€€€É•ÑÕÉ¸ì(€€€€€ô((€€€€€€¼¼U¹ÍÕÁÁ½ÉÑ•Í½ÕÉ”İ…Ñ•Éµ…É¬€¡ÑåÁ¥…±±äA$¤°½È™¥ÉÍĞµÑ¥µ”ME0(€€€€€€¼¼‰½½ÑÍÑÉ…ÀèÉ•Ñ…¥¸Ñ¡”½¹™¥ÕÉ•Í¡•‘Õ±•É•½¹¥±¥…Ñ¥½¸™…±±‰…¬¸(€€€€€½¹ÍĞ‘Õ•™Ñ•È€ô™œ¹±…ÍÑMå¹Ğ(€€€€€€€€ü¹•Ü…Ñ”¡™œ¹±…ÍÑMå¹Ğ¤¹•ÑQ¥µ” ¤€¬™œ¹Í¡•‘Õ±•!½ÕÉÌ€¨€ÌØÀÀ€¨€ÄÀÀÀ(€€€€€€€€è€Àì(€€€€€¥˜€¡…Ñ”¹¹½Ü ¤€øô‘Õ—[h‘éì¶»§q«^ufter) {
+      if (await pendingDashboardRetryDue(cfg)) {
+        const result = await runSync("scheduled");
+        report(result.status === "OK" ? "SYNC_OK" : "SYNC_FAILED");
+        return;
+      }
+      if (changes.supported && changes.changed) {
+        app.log.info(
+          { reports: changes.reports.map((x: any) => x.reportKey) },
+          "Source database changes detected; running incremental sync",
+        );
+        const r = await runSync("scheduled");
+        app.log.info(`Change-triggered sync: ${r.status ?? "done"}`);
+        report(r.status==="OK"?"SYNC_OK":"SYNC_FAILED",changes.reports.length);
+        return;
+      }
+
+      // Never pay for a ten-feed SQL extraction when a trusted source
+      // watermark says nothing has changed. Earlier hourly heartbeats
+      // re-read hundreds of thousands of unchanged rows: costly and needless.
+      // A first-time source with no successful import still gets bootstrapped.
+      // Real deletions must arrive as versioned is_deleted tombstones.
+      if (changes.supported && !changes.changed && cfg.lastSuccessfulSyncAt) {
+        report("UNCHANGED");
+        app.log.info("SQL source watermarks unchanged; skipping costly heartbeat extraction");
+        return;
+      }
+
+      // Unsupported source watermark (typically API), or first-time SQL
+      // bootstrap: retain the configured scheduled reconciliation fallback.
+      const dueAfter = cfg.lastSyncAt
+        ? new Date(cfg.lastSyncAt).getTime() + cfg.scheduleHours * 3600 * 1000
+        : 0;
+      if (Date.now() >= dueAfter) {
         app.log.info("Running scheduled fallback source reconciliationâ€¦");
         const r = await runSync("scheduled");
         app.log.info(`Scheduled sync: ${r.status ?? "done"}`);
@@ -1228,7 +2443,35 @@ function startReportScheduler(app: any) {
   setTimeout(tick, 20000);
 }
 
-// â”€â”€ portfolio view: same dated calculation model as each employer dashYªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Õ‰½…ÉƒŠRŠR )…ÁÀ¹•ĞñìEÕ•ÉåÍÑÉ¥¹œèìÁ•É¥½üèÍÑÉ¥¹œìÅÕ…ÉÑ•ÈüèÍÑÉ¥¹œìÉ…¹”üè€ˆÌÁˆğ€‰ÅÕ…ÉÑ•Èˆğ€‰…±°ˆğ€‰µ½¹Ñ ˆğ€ˆÌÀˆğ€‰Äˆğ€‰±…Ñ•ÍĞˆôôø (€€ˆ½…Á¤½Á½ÉÑ™½±¥¼ˆ°(€…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€€€½¹ÍĞÕÍ•È€ô…İ…¥ĞÉ•ÅÕ¥É•UÍ•È¡É•Ä°É•Á±ä¤ì¥˜€ …ÕÍ•È¤É•ÑÕÉ¸ì(€€€¥˜€ ……¹•ÍÍ5½‘Õ±”¡ÕÍ•È°€‰Á½ÉÑ™½±¥¼ˆ¤¤É•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÌ¤¹Í•¹¡ì•ÉÉ½Èè€‰¹¼Á½ÉÑ™½±¥¼…•ÍÌˆô¤ì(€€€½¹ÍĞÍå¹MÑ…ÑÕÌ€ô…İ…¥Ğ‘…Í¡‰½…É‘Må¹MÑ…Ñ”¡É•Ä¤ì(€€€½¹ÍĞÕÍ•AÕ‰±¥Í¡•€ô‘…Í¡‰½…É‘UÍ•ÍAÕ‰±¥Í¡•‘M¹…ÁÍ¡½Ğ¡Íå¹MÑ…ÑÕÌ¤ì(€€€½¹ÍĞÅÕ•ÉåÉÉ½È€ô‘…Í¡‰½…É‘EÕ•ÉåÉÉ½È¡É•Ä¹ÅÕ•Éä¤ì(€€€¥˜€¡ÅÕ•ÉåÉÉ½È¤É•ÑÕÉ¸É•Á±ä¹½‘” ĞÀÀ¤¹Í•¹¡ì•ÉÉ½ÈèÅÕ•ÉåÉÉ½Èô¤ì(€€€½¹ÍĞ¥‘Ì€ô…±±½İ•‘µÁ±½å•É%‘Ì¡ÕÍ•È¤ì(€€€½¹ÍĞÁÕ‰±¥Í¡•‘%‘Ì€ôÕÍ•AÕ‰±¥Í¡•€ü…İ…¥ĞÁÕ‰±¥Í¡•‘…Í¡‰½…É‘µÁ±½å•É%‘Ì ¤€è¹Õ±°ì(€€€½¹ÍĞÙ¥Í¥‰±•%‘Ì€ô¥‘Ì€ôôô¹Õ±°(€€€€€€üÁÕ‰±¥Í¡•‘%‘Ì(€€€€€€è€¡ÁÕ‰±¥Í¡•‘%‘Ì€ü¥‘Ì¹™¥±Ñ•È ¡¥¤€ôøÁÕ‰±¥Í¡•‘%‘Ì¹¥¹±Õ‘•Ì¡¥¤¤€è¥‘Ì¤ì(€€€½¹ÍĞ•µÁ±½å•ÉÌ€ô…İ…¥ĞÁÉ¥Íµ„¹•µÁ±½å•È¹™¥¹‘5…¹ä¡ì(€€€€€İ¡•É”èÕÍ•AÕ‰±¥Í¡•(€€€€€€€€üì¥èì¥¸èÙ¥Í¥‰±•%‘Ì€üümtôô(€€€€€€€€è€¡¥‘Ì€ôôô¹Õ±°€üìÍ½ÕÉ••±•Ñ•‘Ğè¹Õ±°ô€èì¥èì¥¸è¥‘Ìô°Í½ÕÉ••±•Ñ•‘Ğè¹Õ±°ô¤°(€€€€€Í•±•Ğèì¥èÑÉÕ”°¹…µ”èÑÉÕ”ô°(€€€€€½É‘•É	äèì¹…µ”è€‰…ÍŒˆô°(€€€ô¤ì(€€€½¹ÍĞ½ÕĞ€ômtì(€€€±•Ğ™¥±Ñ•É½¹Ñ•áĞèÕ¹­¹½İ¸€ô¹Õ±°ì(€€€±•ĞÁÕ‰±¥Í¡•‘ĞèÍÑÉ¥¹œğ¹Õ±°€ô¹Õ±°ì(€€€™½È€¡½¹ÍĞ•µÁ±½å•È½˜•µÁ±½å•ÉÌ¤ì(€€€€€½¹ÍĞÁÕ‰±¥Í¡•€ôÕÍ•AÕ‰±¥Í¡•€ü…İ…¥Ğ•ÑAÕ‰±¥Í¡•‘…Í¡‰½…É‘MÑ…Ñ”¡•µÁ±½å•È¹¥¤€è¹Õ±°ì(€€€€€½¹ÍĞÁ…å±½…è…¹ä€ôÕÍ•AÕ‰±¥Í¡•(€€€€€€€€ü…İ…¥Ğ•ÑAÕ‰±¥Í¡•‘…Í¡‰½…É‘A…å³[h‘éì¶»§q«^wad(employer.id, req.query)
+// â”€â”€ portfolio view: same dated calculation model as each employer dashboard â”€â”€
+app.get<{ Querystring: { period?: string; quarter?: string; range?: "30d" | "quarter" | "all" | "month" | "30" | "q" | "latest" } }>(
+  "/api/portfolio",
+  async (req, reply) => {
+    const user = await requireUser(req, reply); if (!user) return;
+    if (!canAccessModule(user, "portfolio")) return reply.code(403).send({ error: "no portfolio access" });
+    const syncStatus = await dashboardSyncState(req);
+    const usePublished = dashboardUsesPublishedSnapshot(syncStatus);
+    const queryError = dashboardQueryError(req.query);
+    if (queryError) return reply.code(400).send({ error: queryError });
+    const ids = allowedEmployerIds(user);
+    const publishedIds = usePublished ? await publishedDashboardEmployerIds() : null;
+    const visibleIds = ids === null
+      ? publishedIds
+      : (publishedIds ? ids.filter((id) => publishedIds.includes(id)) : ids);
+    const employers = await prisma.employer.findMany({
+      where: usePublished
+        ? { id: { in: visibleIds ?? [] } }
+        : (ids === null ? { sourceDeletedAt: null } : { id: { in: ids }, sourceDeletedAt: null }),
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    });
+    const out = [];
+    let filterContext: unknown = null;
+    let publishedAt: string | null = null;
+    for (const employer of employers) {
+      const published = usePublished ? await getPublishedDashboardState(employer.id) : null;
+      const payload: any = usePublished
+        ? await getPublishedDashboardPayload(employer.id, req.query)
         : await getDashboardPayload(employer.id, req.query);
       if (!payload) return sendPublishedDashboardUnavailable(reply, syncStatus);
       publishedAt ??= published?.capturedAt ?? null;
@@ -1261,7 +2504,39 @@ app.get("/api/dashboard/events", async (req, reply) => {
   if (!unsubscribe) return reply.code(503).send({ error: "Live notifications busy; use version polling." });
   reply.hijack();
   reply.raw.writeHead(200, {
-    "Content-Type": "texYªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬ÕĞ½•Ù•¹ĞµÍÑÉ•…´ì¡…ÉÍ•ĞõÕÑ˜´àˆ°(€€€€‰…¡”µ½¹ÑÉ½°ˆè€‰ÁÉ¥Ù…Ñ”°¹¼µÍÑ½É”°¹¼µÑÉ…¹Í™½É´ˆ°(€€€€‰`µ•°µ	Õ™™•É¥¹œˆè€‰¹¼ˆ°(€€€€‰½¹¹•Ñ¥½¸ˆè€‰­••Àµ…±¥Ù”ˆ°(€ô¤ì(€É•…‘ä€ôÑÉÕ”ì(€É•Á±ä¹É…Ü¹İÉ¥Ñ” ‰É•ÑÉäè€ÌÀÀÁq¹q¸è½¹¹•Ñ•‘q¹q¸ˆ¤ì(€½¹ÍĞ¡•…ÉÑ‰•…Ğ€ôÍ•Ñ%¹Ñ•ÉÙ…°  ¤€ôøì(€€€¥˜€ …É•Á±ä¹É…Ü¹İÉ¥Ñ” ˆè¡•…ÉÑ‰•…Ñq¹q¸ˆ¤¤É•Á±ä¹É…Ü¹•¹ ¤ì(€ô°€ÄÔÀÀÀ¤ì(€€¼¼I•½¹¹•ĞÑ¡É½Õ É•ÅÕ¥É•UÍ•ÈÉ•Õ±…É±äì„É•Ù½­•Í•ÍÍ¥½¸…¹¹½Ğ­••À…¸(€€¼¼…ÕÑ¡•¹Ñ¥…Ñ•ÍÑÉ•…´¥¹‘•™¥¹¥Ñ•±ä¸A…å±½…A%Ì…±İ…åÌ…ÕÑ¡½É¥é”•… É•…¸(€½¹ÍĞ•áÁ¥Éä€ôÍ•ÑQ¥µ•½ÕĞ  ¤€ôøÉ•Á±ä¹É…Ü¹•¹ ¤°€ØÀÀÀÀ¤ì(€½¹ÍĞ±•…¹ÕÀ€ô€ ¤€ôøì±•…É%¹Ñ•ÉÙ…°¡¡•…ÉÑ‰•…Ğ¤ì±•…ÉQ¥µ•½ÕĞ¡•áÁ¥Éä¤ìÕ¹ÍÕ‰ÍÉ¥‰” ¤ìôì(€É•Á±ä¹É…Ü¹½¹” ‰±½Í”ˆ°±•…¹ÕÀ¤ì(€É•Ä¹É…Ü¹½¹” ‰…‰½ÉÑ•ˆ°±•…¹ÕÀ¤ì)ô¤ì()…ÁÀ¹•Ğ ˆ½…Á¤½‘…Í¡‰½…É½Ù•ÉÍ¥½¸ˆ°…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€½¹ÍĞÕÍ•È€ô…İ…¥ĞÉ•ÅÕ¥É•UÍ•È¡É•Ä°É•Á±ä¤ì¥˜€ …ÕÍ•È¤É•ÑÕÉ¸ì(€½¹ÍĞÍå¹MÑ…ÑÕÌ€ô…İ…¥Ğ‘…Í¡‰½…É‘Må¹MÑ…Ñ”¡É•Ä¤ì(€€¼¼=¹±ä…‘Ù•ÉÑ¥Í”„¹•Ü‰É½İÍ•ÈÙ•ÉÍ¥½¸…™Ñ•È¥ÑÌ…™™•Ñ•‘…Í¡‰½…ÉÍ¹…ÁÍ¡½ÑÌ(€€¼¼¡…Ù”½µÁ±•Ñ•ÍÕ•ÍÍ™Õ±±äì„Í½ÕÉ”ÕÉÍ½È…±½¹”¥Ì¹½ĞÁÕ‰±¥Í •Ù¥‘•¹”¸(€É•ÑÕÉ¸ìÙ•ÉÍ¥½¸èÍå¹MÑ…ÑÕÌ¹±…ÍÑMÕ•ÍÍ™Õ±Må¹Ğ°Íå¹MÑ…ÑÕÌôì)ô¤ì()…ÁÀ¹•ĞñìEÕ•ÉåÍÑÉ¥¹œèìÁ•É¥½üèÍÑÉ¥¹œìÅÕ…ÉÑ•ÈüèÍÑÉ¥¹œìÉ…¹”üè€ˆÌÁˆğ€‰ÅÕ…ÉÑ•Èˆğ€‰…±°ˆğ€‰µ½¹Ñ ˆğ€ˆÌÀˆğ€‰Äˆğ€‰±…Ñ•ÍĞˆìÍ¥Ñ”üèÍÑÉ¥¹œì¥¹½µ”üèÍÑÉ¥¹œôôø (€€ˆ½…Á¤½‘…Í¡‰½…É½™¥ÉÍĞˆ°(€…Íå¹Œ€¡É•Ä°É•Á±ä¤€ôøì(€€€½¹ÍĞÕÍ•È€ô…İ…¥ĞÉ•ÅÕ¥É•UÍ•È¡É•Ä°É•Á±ä¤ì(€€€¥˜€ …ÕÍ•È¤É•ÑÕÉ¸ì(€€€½¹ÍĞÅÕ•ÉåÉÉ½È€ô‘…Í¡‰½…É‘EÕ•ÉåÉÉ½È¡É•Ä¹ÅÕ•Éä¤ì(€€€¥˜€¡ÅÕ•ÉåÉÉ½Ë[h‘éì¶»§q«^u return reply.code(400).send({ error: queryError });
+    "Content-Type": "text/event-stream; charset=utf-8",
+    "Cache-Control": "private, no-store, no-transform",
+    "X-Accel-Buffering": "no",
+    "Connection": "keep-alive",
+  });
+  ready = true;
+  reply.raw.write("retry: 3000\n\n: connected\n\n");
+  const heartbeat = setInterval(() => {
+    if (!reply.raw.write(": heartbeat\n\n")) reply.raw.end();
+  }, 15000);
+  // Reconnect through requireUser regularly; a revoked session cannot keep an
+  // authenticated stream indefinitely. Payload APIs always authorize each read.
+  const expiry = setTimeout(() => reply.raw.end(), 60000);
+  const cleanup = () => { clearInterval(heartbeat); clearTimeout(expiry); unsubscribe(); };
+  reply.raw.once("close", cleanup);
+  req.raw.once("aborted", cleanup);
+});
+
+app.get("/api/dashboard/version", async (req, reply) => {
+  const user = await requireUser(req, reply); if (!user) return;
+  const syncStatus = await dashboardSyncState(req);
+  // Only advertise a new browser version after its affected dashboard snapshots
+  // have completed successfully; a source cursor alone is not publish evidence.
+  return { version: syncStatus.lastSuccessfulSyncAt, syncStatus };
+});
+
+app.get<{ Querystring: { period?: string; quarter?: string; range?: "30d" | "quarter" | "all" | "month" | "30" | "q" | "latest"; site?: string; income?: string } }>(
+  "/api/dashboard/first",
+  async (req, reply) => {
+    const user = await requireUser(req, reply);
+    if (!user) return;
+    const queryError = dashboardQueryError(req.query);
+    if (queryError) return reply.code(400).send({ error: queryError });
     const syncStatus = await dashboardSyncState(req);
     const usePublished = dashboardUsesPublishedSnapshot(syncStatus);
     const ids = allowedEmployerIds(user);
@@ -1288,7 +2563,38 @@ app.get("/api/dashboard/events", async (req, reply) => {
     const userTheme = await themeForUser(user.id);
     payload.theme = isAdminRole(user)
       ? userTheme
-      : (userTheme.branded ? userThemYªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬Õ”€è…İ…¥ĞÑ¡•µ•½ÉµÁ±½å•È¡•µÁ±½å•È¹¥¤¤ì(€€€Á…å±½…¹Íå¹MÑ…ÑÕÌ€ôÕÍ•AÕ‰±¥Í¡•(€€€€€€üÍå¹MÑ…ÑÕÍ½ÉAÕ‰±¥Í¡•‘M¹…ÁÍ¡½Ğ¡Íå¹MÑ…ÑÕÌ°ÁÕ‰±¥Í¡•ü¹…ÁÑÕÉ•‘Ğ€üü¹Õ±°¤(€€€€€€èÍå¹MÑ…ÑÕÌì(€€€É•ÑÕÉ¸Á…å±½…ì(€ô°(¤ì()ÁÉ½•ÍÌ¹½¸ ‰Õ¹¡…¹‘±•‘I•©•Ñ¥½¸ˆ°€¡É•…Í½¸¤€ôø…ÁÀ¹±½œ¹•ÉÉ½È¡ì•ÉÈèÉ•…Í½¸ô°€‰Õ¹¡…¹‘±•ÁÉ½µ¥Í”É•©•Ñ¥½¸ˆ¤¤ì)™½È€¡½¹ÍĞÍ¥œ½˜l‰M%QI4ˆ°€‰M%%9P‰t…Ì½¹ÍĞ¤ì(€ÁÉ½•ÍÌ¹½¹”¡Í¥œ°€ ¤€ôøì(€€€…ÁÀ¹±½œ¹¥¹™¼¡ìÍ¥œô°€‰Í¡ÕÑÑ¥¹œ‘½İ¸ˆ¤ì(€€€½¹ÍĞ™½É”€ôÍ•ÑQ¥µ•½ÕĞ  ¤€ôøÁÉ½•ÍÌ¹•á¥Ğ Ä¤°€ÈÕ|ÀÀÀ¤ì™½É”¹Õ¹É•˜ ¤ì(€€€…ÁÀ¹±½Í” ¤¹Ñ¡•¸  ¤€ôøÁÉ¥Íµ„¸‘‘¥Í½¹¹•Ğ ¤¤¹™¥¹…±±ä  ¤€ôøÁÉ½•ÍÌ¹•á¥Ğ À¤¤ì(€ô¤ì)ô(¼¼±½Í”•áÁ¥É•Í•ÍÍ¥½¹Ì™½È¡¥ÍÑ½Éä°Ñ¡•¸ÁÉÕ¹”½¹±ä½±•¹‘•É•½É‘Ì¸)Í•Ñ%¹Ñ•ÉÙ…°  ¤€ôøì(€¥˜€¡ÁÉ½•ÍÌ¹•¹Ø¹QI%}MYI}5=€„ôô€‰™…±Í”ˆ¤É•ÑÕÉ¸ì(€½¹ÍĞ¹½Ü€ô¹•Ü…Ñ” ¤ì(€½¹ÍĞÕÑ½™˜€ô¹•Ü…Ñ”¡…Ñ”¹¹½Ü ¤€´€ÄàÀ€¨€àØÑ”Ô¤ì(€ÁÉ¥Íµ„¹Í•ÍÍ¥½¸¹ÕÁ‘…Ñ•5…¹ä¡ìİ¡•É”èì•áÁ¥É•ÍĞèì±Ğè¹½Üô°•¹‘•‘Ğè¹Õ±°ô°‘…Ñ„èì•¹‘•‘Ğè¹½Üôô¤(€€€€¹Ñ¡•¸  ¤€ôøÁÉ¥Íµ„¹Í•ÍÍ¥½¸¹‘•±•Ñ•5…¹ä¡ìİ¡•É”èì•¹‘•‘Ğèì±ĞèÕÑ½™˜ôôô¤¤(€€€€¹…Ñ   ¤€ôøíô¤ì)ô°€ØÀ€¨€ØÁ|ÀÀÀ¤¹Õ¹É•˜ ¤ì((¼¼I•¥ÍÑ•È…±°É½ÕÑ•Ì‰•™½É”½Á•¹¥¹œÑ¡”±¥ÍÑ•¹•È¸(€¥˜€ …=9QQ}5%0¤…ÁÀ¹±½œ¹İ…É¸ ‰=9QQ}5%0¥Ì¹½ĞÍ•ĞèÑ¡”½¹Ñ…Ğ™½É´¥Ì‘¥Í…‰±•…¹±•…°Á…•ÌÍ¡½Ü„Á±…•¡½±‘•È½¹Ñ…Ğ¸ˆ¤ì(€…ÁÀ¹±½œ¹¥¹™¼¡ìÁ½ÉÑ…±Y•ÉÍ¥½¸è€ˆÀ¸ÄÀ¸Àˆ°ÁÕ‰±¥¥ÈèAU	1%}%Hô°€‰ÍÑ…ÉÑ¥¹œQ¡”¥á•È€¡AÑä¤1Ñ…Í¡‰½…ÉA½ÉÑ…°ˆ¤ì(¼¼%µÁ½ÉÑ¥¹œÑ¡”…ÁÀ™½È¥¹©•Ñ¥½¸Ñ•ÍÑÌµÕÍĞ¹•Ù•ÈÍÑ…ÉĞ¥¹•ÍÑ¥½¸½È„±¥ÍÑ•¹•È¸)•áÁ½ÉĞì…ÁÀôì)¥˜€¡ÁÉ½•ÍÌ¹…ÉÙo[h‘éì¶»§q«^u] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+      : (userTheme.branded ? userTheme : await themeForEmployer(employer.id));
+    payload.syncStatus = usePublished
+      ? syncStatusForPublishedSnapshot(syncStatus, published?.capturedAt ?? null)
+      : syncStatus;
+    return payload;
+  },
+);
+
+process.on("unhandledRejection", (reason) => app.log.error({ err: reason }, "unhandled promise rejection"));
+for (const sig of ["SIGTERM", "SIGINT"] as const) {
+  process.once(sig, () => {
+    app.log.info({ sig }, "shutting down");
+    const force = setTimeout(() => process.exit(1), 25_000); force.unref();
+    app.close().then(() => prisma.$disconnect()).finally(() => process.exit(0));
+  });
+}
+// Close expired sessions for history, then prune only old ended records.
+setInterval(() => {
+  if (process.env.TRAFFIC_SAVER_MODE !== "false") return;
+  const now = new Date();
+  const cutoff = new Date(Date.now() - 180 * 864e5);
+  prisma.session.updateMany({ where: { expiresAt: { lt: now }, endedAt: null }, data: { endedAt: now } })
+    .then(() => prisma.session.deleteMany({ where: { endedAt: { lt: cutoff } } }))
+    .catch(() => {});
+}, 60 * 60_000).unref();
+
+// Register all routes before opening the listener.
+  if (!CONTACT_EMAIL) app.log.warn("CONTACT_EMAIL is not set: the contact form is disabled and legal pages show a placeholder contact.");
+  app.log.info({ portalVersion: "0.10.0", publicDir: PUBLIC_DIR }, "starting The Fixer (Pty) Ltd Dashboard Portal");
+// Importing the app for injection tests must never start ingestion or a listener.
+export { app };
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
 app.listen({ port: PORT, host: "0.0.0.0" })
   .then(async () => {
     // Standby instances must not run independent scheduled imports, mail or

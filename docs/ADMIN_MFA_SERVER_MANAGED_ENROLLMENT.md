@@ -1,4 +1,28 @@
-YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×M5N‹Z–‹­¦ëeŠw¬ÔŒQ¡”¥á•Èè…½Õ¹Ğ5•¹É½±±µ•¹Ğ…¹…‘µ¥¹¥ÍÑÉ…Ñ½È…ÁÁÉ½Ù…°()MÑ…ÑÕÌè‘É…™ĞAH€ŒÈÄä¸€¨©9½Ğå•Ğ…ÁÁÉ½Ù•™½ÈÁÉ½‘ÕÑ¥½¸•¹™½É•µ•¹Ğ¨¨¸Q•ÍĞ½¸)Ñ¡”‘¥ÍÁ½Í…‰±”$A½ÍÑÉ•ME0Í•ÉÙ¥”…¹¥Í½±…Ñ•I•¹‘•È5ÍÑ…¥¹œ½¹±ä¸((ŒŒUÍ•È•áÁ•É¥•¹”((Ä¸Ù•Éä…½Õ¹ĞÍ¥¹Ì¥¸İ¥Ñ ¥ÑÌ•á¥ÍÑ¥¹œ…ÁÁ±¥…Ñ¥½¸Á…ÍÍİ½É¸(È¸%˜5¥Ì…±É•…‘ä•¹É½±±•°Ñ¡”‰É½İÍ•È½™™•ÉÌ„ÕÉÉ•¹ĞÍ¥àµ‘¥¥Ğ…ÕÑ¡•¹Ñ¥…Ñ½È(€€½‘”½È…¸•¹É½±±•]•‰ÕÑ¡¸Á…ÍÍ­•ä¸9¼•¹É½±±µ•¹Ğ…ÁÁÉ½Ù…°¥ÌÉ•ÅÕ¥É•¸(Ì¸%˜¹¼5µ•Ñ¡½¥Ì•¹É½±±•°€½µ™…€½™™•ÉÌÑ¡”…ÁÁÉ½ÁÉ¥…Ñ”™¥ÉÍĞµÑ¥µ”Á…Ñ è(€€É•Õ±…ÈÕÍ•ÉÌ½¹™¥É´Ñ¡•¥ÈÕÉÉ•¹ĞÁ…ÍÍİ½Éì…‘µ¥¹¥ÍÑÉ…Ñ½ÉÌÉ•ÅÕ•ÍĞ(€€¥‘•¹Ñ¥ÑäµÙ•É¥™¥•…ÁÁÉ½Ù…°¸Q¡”Í•ÉÙ•ÈÉ•…Ñ•Ì„É…¹‘½´‘…Ñ…‰…Í”É•ÅÕ•ÍĞ%(€€™½È…‘µ¥¹¥ÍÑÉ…Ñ½È…ÁÁÉ½Ù…°…¹‘½•Ì€¨©¹½Ğ¨¨É•ÑÕÉ¸„€ĞÌµ¡…É…Ñ•È•¹É½±±µ•¹Ğ(€€½‘”Ñ¼Ñ¡”ÕÍ•È¸(Ğ¸Q¡”ÕÍ•ÈÍ¡…É•ÌÑ¡”¹½¸µÍ•É•ĞÉ•ÅÕ•ÍĞ%İ¥Ñ Ñ¡”½É…¹¥é…Ñ¥½¸ÌÍ•ÕÉ¥Ñä(€€…‘µ¥¹¥ÍÑÉ…Ñ½ÉÌ½¹±ä¸%‘•¹Ñ¥ÑäµÕÍĞ‰”¡•­•¥¹‘•Á•¹‘•¹Ñ±ä‰ä‰½Ñ …ÁÁÉ½Ù•ÉÌ(€€‰•™½É”Ñ¡•ä…ÑÑ•ÍĞÑ¼Ñ¡•¥È…ÁÁÉ½Ù…°¸Á…ÍÍİ½É…±½¹”…¹¹½Ğ…ÕÑ¡½É¥é”(€€™¥ÉÍĞµ™…Ñ½ÈÍ•ÑÕÀ¸(Ô¸Qİ¼€¨©‘¥™™•É•¹Ğ¨¨MUAI5%8ÕÍ•ÉÌİ¡¼¡…Ù”Ñ¡•µÍ•±Ù•ÌÉ••¹Ñ±ä(€€…ÕÑ¡•¹Ñ¥…Ñ•İ¥Ñ ]•‰ÕÑ¡¸Á…ÍÍ­•åÌ…ÁÁÉ½Ù”¥¸€¨©‘µ¥¸½¹Í½±”ƒŠH5…¹…”(€€µä5€˜Á…ÍÍ­•åÌ¨¨€ ½µ™„½µ…¹…”¤¸9•¥Ñ¡•È…¸‰”Ñ¡”Ñ…É•Ğ…½Õ¹Ğ¸(Ø¸Q¡”…‘µ¥¹¥ÍÑÉ…Ñ½È±¥­Ì€¨©¡•¬…ÁÁÉ½Ù…°ÍÑ…ÑÕÌ¨¨¸=¸…ÁÁÉ½Ù…°°€½µ™…€(€€•¹…‰±•Ì€¨©•¹•É…Ñ”µä½¹”µÑ¥µ”Í•ÑÕÀEH½‘”¨¨½È€¨©M•ĞÕÀ‘•Ù¥”Á…ÍÍ­•ä¨¨¸(€€I•Õ±…ÈÕÍ•ÉÌÁÉ½••…™Ñ•ÈÁ…ÍÍİ½É½¹™¥Éµ…Ñ¥½¸¸¹É½±±µ•¹Ğ½µÁ±—[h‘éì¶»§q«^tes by
+# The Fixer: account MFA enrollment and administrator approval
+
+Status: draft PR #219. **Not yet approved for production enforcement**. Test on
+the disposable CI PostgreSQL service and isolated Render MFA staging only.
+
+## User experience
+
+1. Every account signs in with its existing application password.
+2. If MFA is already enrolled, the browser offers a current six-digit authenticator
+   code or an enrolled WebAuthn passkey. No enrollment approval is required.
+3. If no MFA method is enrolled, `/mfa` offers the appropriate first-time path:
+   regular users confirm their current password; administrators request
+   identity-verified approval. The server creates a random database request ID
+   for administrator approval and does **not** return a 43-character enrollment
+   code to the user.
+4. The user shares the non-secret request ID with the organization's security
+   administrators only. Identity must be checked independently by both approvers
+   before they attest to their approval. A password alone cannot authorize
+   first-factor setup.
+5. Two **different** SUPERADMIN users who have themselves recently
+   authenticated with WebAuthn passkeys approve in **Admin console â†’ Manage
+   my MFA & passkeys** (/mfa/manage). Neither can be the target account.
+6. The administrator clicks **Check approval status**. On approval, `/mfa`
+   enables **Generate my one-time setup QR code** or **Set up device passkey**.
+   Regular users proceed after password confirmation. Enrollment completes by
    verifying an actual TOTP code or signed WebAuthn registration assertion.
    Administrator approval is consumed atomically.
 7. Later logins for every role ask for the enrolled TOTP code or passkey before
