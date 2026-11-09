@@ -1,0 +1,9 @@
+FROM python:3.12-slim
+RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates && rm -rf /var/lib/apt/lists/*
+WORKDIR /scanner
+COPY scripts/ai-security-review.py /scanner/ai-security-review.py
+COPY scripts/ai-remediation-plan.py /scanner/ai-remediation-plan.py
+COPY scripts/ai-auto-remediate.py /scanner/ai-auto-remediate.py
+COPY scripts/local_ollama_transport.py /scanner/local_ollama_transport.py
+USER 65534:65534
+ENTRYPOINT ["python", "/scanner/ai-security-review.py"]

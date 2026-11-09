@@ -5,10 +5,10 @@ on:
   workflow_dispatch:
     inputs:
       run_security_scanners:
-        description: 'Opt in to pre-cached security scanners (Semgrep, Gitleaks, Trivy, npm advisory)'
+        description: 'Run security scans (Semgrep, Gitleaks, Trivy, secret checks, npm advisories; cached images needed)'
         required: false
         type: boolean
-        default: false
+        default: true
       prepare_mfa_lock:
         description: 'Resolve SimpleWebAuthn 14.0.3 lockfile (uploads files; no push or deployment)'
         required: false
@@ -26,16 +26,45 @@ jobs:
   docker-tests:
     # Dedicated personal runner. Execute only after reviewing the selected branch.
     runs-on: [self-hosted, linux, x64, newchanges-ci]
-    timeout-minutes: 90
+    timeout-minutes: 360
     env:
       CI: "true"
       NODE_ENV: test
     steps:
+      - name: Prepare private persistent local model checkpoint cache
+        shell: bash
+        run: install -d -m 700 "$HOME/.cache/the-fixer-ollama"
+
       - name: Check out selected trusted ref without persisted credentials
         uses: actions/checkout@v4
         with:
           persist-credentials: false
           fetch-depth: 0
+
+      - name: Verify scanner parser, chunk coverage and retries offline
+        shell: bash
+        run: |
+          python3 tests/ci/ollama-scanner-contract.test.py -v
+          python3 tests/ci/local-ollama-transport.test.py -v
+
+      - name: Prepare real WebAuthn package and lockfile (opt in only)
+        if: ${{ inputs.prepare_mfa_lock == true }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -v "$PWD:/workspace" -w /workspace node:24-slim npm install --save-exact --package-lock-only --ignore-scripts --no-audit --no-fund @simplewebauthn/server@14.0.3
+          git diff --check
+
+      - name: Upload lockfile for reviewed commit
+        if: ${{ inputs.prepare_mfa_lock == true }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: newchanges-mfa-locked-dependency-${{ github.run_id }}
+          path: |
+            package.json
+            package-lock.json
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Confirm expected local test assets are present
         shell: bash
@@ -58,12 +87,7 @@ jobs:
         run: |
           docker run --rm --network none --read-only \
             -v "$PWD:/workspace:ro" -w /workspace node:24-slim \
-            node --test tests/ci-docker-isolation.test.mjs
-
-      - name: Optional security scanners (requires pre-cached images and advisory access)
-        if: ${{ inputs.run_security_scanners == true }}
-        shell: bash
-        run: bash scripts/ci/run-security-scanners.sh
+            node --test tests/ci-docker-isolation.test.mjs tests/ci/test-suite-coverage-contract.test.mjs
 
       - name: Build and run synthetic Docker tests
         shell: bash
@@ -73,6 +97,120 @@ jobs:
             -f docker-compose.local-tests.yml \
             run --build --rm tests sh scripts/ci/run-docker-ci-suite.sh
 
+      - name: Rehearse committed Prisma migrations in a second disposable database
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          PROJECT="newchanges-ci-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          docker compose -p "$PROJECT" -f docker-compose.local-tests.yml \
+            exec -T db createdb -U ci_fixture newchanges_ci_migrations
+          docker compose -p "$PROJECT" -f docker-compose.local-tests.yml \
+            run --rm --no-deps \
+              -e DATABASE_URL=postgresql://ci_fixture:ci_fixture@127.0.0.1:5432/newchanges_ci_migrations \
+              tests sh -ceu '
+                test "$CI" = "true"
+                test "$DATABASE_URL" = "postgresql://ci_fixture:ci_fixture@127.0.0.1:5432/newchanges_ci_migrations"
+                node node_modules/prisma/build/index.js migrate deploy
+                node node_modules/prisma/build/index.js migrate status
+                echo "PASS isolated Prisma migration deploy and status"
+              '
+
+      - name: Drop temporary migration rehearsal database
+        if: always()
+        shell: bash
+        run: |
+          PROJECT="newchanges-ci-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          docker compose -p "$PROJECT" -f docker-compose.local-tests.yml \
+            exec -T db dropdb -U ci_fixture --if-exists --force newchanges_ci_migrations || true
+
+      - name: Verify disposable PostgreSQL backup and restore
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          docker compose -p "newchanges-ci-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            -f docker-compose.local-tests.yml exec -T db sh -ceu '
+              test "$POSTGRES_DB" = "newchanges_ci"
+              test "$POSTGRES_USER" = "ci_fixture"
+              trap "dropdb -U ci_fixture --if-exists --force newchanges_ci_restore >/dev/null 2>&1 || true; rm -f /tmp/ci-backup.dump" EXIT
+              pg_dump -U ci_fixture -d newchanges_ci -Fc -f /tmp/ci-backup.dump
+              createdb -U ci_fixture newchanges_ci_restore
+              pg_restore -U ci_fixture -d newchanges_ci_restore --no-owner --no-acl --exit-on-error /tmp/ci-backup.dump
+              original=$(psql -U ci_fixture -d newchanges_ci -tA -c "SELECT count(*) FROM pg_tables WHERE schemaname=current_schema()")
+              restored=$(psql -U ci_fixture -d newchanges_ci_restore -tA -c "SELECT count(*) FROM pg_tables WHERE schemaname=current_schema()")
+              test "$original" -ge 20
+              test "$original" = "$restored"
+              echo "PASS disposable pg_dump/pg_restore: $original public tables matched"
+            '
+
+      - name: Security scanners (requires pre-cached images and advisory access)
+        if: ${{ always() && inputs.run_security_scanners == true }}
+        shell: bash
+        run: bash scripts/ci/run-security-scanners.sh
+
+      - name: Run resumable Ollama security review of all reviewable tracked files
+        if: ${{ always() && !inputs.prepare_mfa_lock }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          mkdir -p test-reports/ai-security
+          docker compose -p "newchanges-preaudit-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            -f docker-compose.ai-security.yml run --build --rm \
+            --user "$(id -u):$(id -g)" ai-security-review
+
+      - name: Summarize pre-release AI coverage
+        if: ${{ always() && !inputs.prepare_mfa_lock }}
+        shell: bash
+        run: |
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          from pathlib import Path
+          p=Path("test-reports/ai-security/report.json")
+          if not p.exists():
+              print("FAIL: pre-release AI did not produce a report; audit incomplete")
+              raise SystemExit(1)
+          d=json.loads(p.read_text())
+          reviewed=d.get("reviewed_files",0)
+          eligible=d.get("eligible_files",0)
+          complete=d.get("complete",False)
+          print(f"Pre-release AI reviewed {reviewed}/{eligible} eligible files; complete={complete}")
+          if not complete or reviewed != eligible:
+              print("FAIL: incomplete Ollama scan; do not treat this run as a completed audit")
+              raise SystemExit(1)
+          PY
+
+      - name: Upload safe security status report
+        if: ${{ always() && inputs.run_security_scanners == true }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: newchanges-security-status-${{ github.run_id }}
+          path: test-results/security/scanner-status.txt
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Extract isolated Docker test evidence
+        if: always()
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          mkdir -p test-results
+          PROJECT="newchanges-ci-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          VOLUME="${PROJECT}_test-artifacts"
+          if docker volume inspect "$VOLUME" >/dev/null 2>&1; then
+            docker run --rm --network none \
+              -v "$VOLUME:/reports:ro" -v "$PWD/test-results:/output" \
+              --entrypoint sh node:24-slim \
+              -c 'cp -R /reports/. /output/'
+          fi
+
+      - name: Upload test failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: newchanges-docker-failure-${{ github.run_id }}
+          path: test-results/
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Clean up only this CI test project
         if: always()
         shell: bash
@@ -80,3 +218,5 @@ jobs:
           docker compose -p "newchanges-ci-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
             -f docker-compose.local-tests.yml \
             down --volumes --remove-orphans
+          docker compose -p "newchanges-preaudit-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            -f docker-compose.ai-security.yml down --volumes --remove-orphans

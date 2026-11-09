@@ -1,0 +1,85 @@
+name: The Fixer hourly runtime health (self-hosted)
+
+# Lightweight monitoring between deployments. Schedules run only from main.
+on:
+  schedule:
+    - cron: '11 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: newchanges-hourly-runtime-health
+  cancel-in-progress: false
+
+jobs:
+  health:
+    runs-on: [self-hosted, linux, x64, newchanges-ci]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Sample Render and Cloudflare health
+        id: observe
+        continue-on-error: true
+        shell: bash
+        env:
+          FIXER_RENDER_BASE_URL: ${{ vars.FIXER_RENDER_BASE_URL }}
+          FIXER_CLOUDFLARE_BASE_URL: ${{ vars.FIXER_CLOUDFLARE_BASE_URL }}
+        run: python3 scripts/ci/post-deploy-health.py
+
+      - name: Publish status in GitHub run summary
+        if: always()
+        shell: bash
+        run: |
+          echo "## The Fixer runtime health" >> "$GITHUB_STEP_SUMMARY"
+          echo "Observed state: ${{ steps.observe.outcome }}" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f test-reports/deployment/health.md ]; then
+            cat test-reports/deployment/health.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Store sanitized history snapshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fixer-runtime-health-${{ github.run_id }}
+          path: |
+            test-reports/deployment/health.json
+            test-reports/deployment/health.md
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Escalate failures and close resolved monitor issues
+        if: always()
+        uses: actions/github-script@v7
+        env:
+          OBSERVED_STATUS: ${{ steps.observe.outcome }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const title = '[monitor] The Fixer runtime health requires attention';
+            const {owner,repo} = context.repo;
+            const open = await github.paginate(github.rest.issues.listForRepo, {
+              owner, repo, state: 'open', per_page: 100
+            });
+            const existing = open.find(x => !x.pull_request && x.title === title);
+            const healthy = process.env.OBSERVED_STATUS === 'success';
+            const runUrl = context.serverUrl + '/' + owner + '/' + repo + '/actions/runs/' + context.runId;
+            if (!healthy && !existing) {
+              await github.rest.issues.create({
+                owner, repo, title,
+                body: 'A periodic read-only health check failed or its monitoring configuration is missing. Review the [latest run](' + runUrl + '). No production mutation was performed.'
+              });
+            } else if (!healthy && existing) {
+              await github.rest.issues.createComment({owner,repo,issue_number:existing.number,
+                body:'Health check still requires attention. [Latest run](' + runUrl + ').'});
+            } else if (healthy && existing) {
+              await github.rest.issues.createComment({owner,repo,issue_number:existing.number,
+                body:'Runtime health checks recovered. [Passing run](' + runUrl + ').'});
+              await github.rest.issues.update({owner,repo,issue_number:existing.number,state:'closed'});
+            }

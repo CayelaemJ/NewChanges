@@ -269,6 +269,10 @@
   .job-progress-meta strong{color:var(--brand-primary);}
   .ingestion-note{margin-top:14px;padding:12px 14px;border-radius:10px;background:#f8f5ff;border:1px solid var(--line);color:#5b6b7a;font-size:12px;line-height:1.55;max-width:1000px;}
   @media(max-width:820px){.ingestion-method-grid{grid-template-columns:1fr}.ingestion-method{width:100%}}
+/* SQL configuration fields must fit narrow mobile form tracks. */
+#integ-sql-port,#integ-sql-prefix,#integ-sql-maxrows {
+  box-sizing:border-box;min-width:0;max-width:100%;
+}
 </style>
 <link rel="stylesheet" href="/static/enterprise.css?v=2">
   <link rel="stylesheet" href="/static/enterprise-v3.css?v=4">
@@ -312,6 +316,22 @@
         <div class="security-stat"><div class="k">Successful logins 24h</div><div class="v" id="admin-sec-success">-</div></div>
       </div>
       <div id="admin-sec-copy" style="margin-top:10px;font-size:12px;color:#617486;">Loading security posture...</div>
+      <div style="margin-top:20px;border-top:1px solid var(--line-soft);padding-top:18px;">
+        <h3 style="font-size:14px;color:var(--brand-primary);margin-bottom:7px;">Identity &amp; MFA</h3>
+        <p class="muted">Manage your own authenticator or passkeys and review account access from Users &amp; Security. Security enrollment grants are individual, time-limited credentials; the server encryption key is never displayed here.</p>
+        <div class="row" style="margin-top:12px">
+          <a class="btn btn-primary" href="/mfa/manage">Manage my MFA &amp; passkeys</a>
+          <a class="btn" href="/users">Users &amp; Security</a>
+        </div>
+      </div>
+      <div style="margin-top:18px;border-top:1px solid var(--line-soft);padding-top:18px;">
+        <h3 style="font-size:14px;color:var(--brand-primary);margin-bottom:7px;">Release &amp; test operations</h3>
+        <p class="muted">Policy: dedicated self-hosted runners only. Before any security release, review the exact commit's Docker integration tests, identity regression tests, and security scanners. A green build alone does not authorize a merge.</p>
+        <div class="row" style="margin-top:12px">
+          <a class="btn" href="https://github.com/CayelaemJ/NewChanges/actions/workflows/newchanges-manual-docker-ci.yml" target="_blank" rel="noopener noreferrer">Review self-hosted test results</a>
+        </div>
+        <p class="muted" style="margin-top:9px">Runner status and deployment readiness are not automatically verified by this panel. No production secrets or credentials are sent to GitHub by these links.</p>
+      </div>
     </div>
   </section>
   <section id="admin-compliance-strip" class="card" style="margin:18px 0;border-color:#d7cde9;">
@@ -670,7 +690,8 @@
               <input id="auto-alert-emails" placeholder="admin1@company.com, admin2@company.com" style="display:block;width:100%;margin-top:5px;font:inherit;font-weight:500;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">
             </label>
             <label style="grid-column:span 2;font-size:12.5px;font-weight:700;color:#5b6b7a;">Slack webhook URL (optional)
-              <input id="auto-slack-webhook" placeholder="https://hooks.slack.com/services/…" style="display:block;width:100%;margin-top:5px;font:inherit;font-weight:500;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">
+              <input id="auto-slack-webhook" type="password" form="admin-credential-fields" autocomplete="new-password" placeholder="https://hooks.slack.com/services/…" style="display:block;width:100%;margin-top:5px;font:inherit;font-weight:500;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">
+              <span style="display:block;margin-top:5px;font-weight:500;color:#71717a;">Write-only credential: leave blank to keep the saved webhook.</span>
             </label>
             <label style="font-size:12.5px;font-weight:700;color:#5b6b7a;">Auto-deactivate after inactive for (days, blank = off)
               <input id="auto-stale-days" type="number" min="7" max="3650" placeholder="e.g. 180" style="display:block;width:100%;margin-top:5px;font:inherit;font-weight:500;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">

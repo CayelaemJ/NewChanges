@@ -1,0 +1,38 @@
+# ---- build ----
+FROM node:24-slim AS build
+RUN apt-get update -y && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY . .
+RUN npm run build \
+    && node --check scripts/admin-mfa-live-http-e2e.mjs \
+    && node --check scripts/render-mfa-staging-boot.mjs \
+    && node --check scripts/mfa-staging-seed.mjs \
+    && node --check public/admin-mfa.js \
+    && node --check public/staging-access.js \
+    && node --import tsx --test tests/security/mfa-staging-access.test.ts \
+    && node --test tests/security/mfa-login-navigation.test.mjs \
+    && node --import tsx --test tests/security/admin-totp.test.ts \
+    && node --test tests/security/admin-mfa-browser-compat.test.mjs \
+    && npm run check:production \
+    && npm prune --omit=dev
+
+# ---- runtime ----
+FROM node:24-slim
+RUN apt-get update -y && apt-get install -y --no-install-recommends openssl postgresql && rm -rf /var/lib/apt/lists/*
+ENV NODE_ENV=production
+WORKDIR /app
+COPY --from=build --chown=node:node /app/node_modules ./node_modules
+COPY --from=build --chown=node:node /app/dist ./dist
+COPY --from=build --chown=node:node /app/public ./public
+COPY --from=build --chown=node:node /app/prisma ./prisma
+COPY --from=build --chown=node:node /app/prisma.config.ts ./prisma.config.ts
+COPY --from=build --chown=node:node /app/scripts ./scripts
+COPY --from=build --chown=node:node /app/src/Migrations ./src/Migrations
+COPY --from=build --chown=node:node /app/package.json ./package.json
+USER node
+EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+CMD ["node", "scripts/render-mfa-staging-boot.mjs"]
+

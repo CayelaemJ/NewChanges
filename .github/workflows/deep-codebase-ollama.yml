@@ -1,0 +1,71 @@
+name: The Fixer deep full-codebase Ollama audit (self-hosted)
+
+# Explicit operator-controlled full AI analysis; potentially very long-running.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: newchanges-deep-ollama-audit
+  cancel-in-progress: false
+
+jobs:
+  deep-audit:
+    runs-on: [self-hosted, linux, x64, newchanges-ci]
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Verify scanner parser, chunk coverage and retries offline
+        shell: bash
+        run: python3 tests/ci/ollama-scanner-contract.test.py -v
+
+      - name: Prepare private persistent local model checkpoint cache
+        shell: bash
+        run: install -d -m 700 "$HOME/.cache/the-fixer-ollama"
+
+      - name: Inventory all tracked source and configuration files
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 scripts/ci/codebase-inventory.py
+      - name: Deep AI review of all eligible tracked implementation files
+        id: scan
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          mkdir -p test-reports/ai-security
+          docker compose -p "newchanges-deep-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            -f docker-compose.ai-security.yml run --build --rm \
+            --user "$(id -u):$(id -g)" -e MAX_FILES=0 ai-security-review
+      - name: Audit coverage accounting
+        if: always()
+        shell: bash
+        run: |
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          from pathlib import Path
+          p=Path("test-reports/ai-security/report.json")
+          print("### Deep Ollama coverage")
+          if not p.exists():
+              print("FAIL: no report; audit incomplete")
+              raise SystemExit(1)
+          d=json.loads(p.read_text())
+          print(f"Reviewed: {d.get('reviewed_files',0)}/{d.get('eligible_files',0)}")
+          print(f"Skipped: {len(d.get('skipped_files',[]))}")
+          print(f"Timeouts/errors: {len(d.get('errors',[]))}")
+          print(f"Complete: {d.get('complete',False)}")
+          print("Full source audit means eligible implementation files, not secrets, binaries or excluded generated artifacts.")
+          if not d.get("complete",False):
+              raise SystemExit(1)
+          PY
+      - name: Clean up only this deep-scan project
+        if: always()
+        shell: bash
+        run: |
+          docker compose -p "newchanges-deep-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            -f docker-compose.ai-security.yml down --volumes --remove-orphans

@@ -1,0 +1,2 @@
+# Ensure shell scripts run correctly in Linux Docker containers on Windows checkouts.
+*.sh text eol=lf

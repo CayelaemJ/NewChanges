@@ -1,0 +1,53 @@
+services:
+  ai-security-review:
+    build:
+      context: .
+      dockerfile: Dockerfile.ai-security
+    environment: &ai_env
+      OLLAMA_URL: http://host.docker.internal:11434
+      LOCAL_OLLAMA_URL: http://host.docker.internal:11434/api/generate
+      OLLAMA_MODEL: qwen2.5-coder:7b
+      OLLAMA_REQUIRE_GPU: "true"
+      SCAN_ROOT: /workspace
+      REPORT_DIR: /workspace/test-reports/ai-security
+      SCAN_CACHE_DIR: /scan-cache
+      MAX_FILES: "0"
+      AI_SCAN_CHUNK_CHARS: "3000"
+      AI_SCAN_REQUEST_TIMEOUT: "360"
+      AI_SCAN_RETRIES: "4"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./:/workspace:ro
+      - ./test-reports/ai-security:/workspace/test-reports/ai-security:rw
+      - ${HOME}/.cache/the-fixer-ollama:/scan-cache:rw
+    working_dir: /workspace
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 512m
+  ai-auto-repair:
+    build:
+      context: .
+      dockerfile: Dockerfile.ai-security
+    environment: *ai_env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./:/workspace:rw
+      - ${HOME}/.cache/the-fixer-ollama:/scan-cache:rw
+    working_dir: /workspace
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 512m
+    profiles:
+      - auto-repair

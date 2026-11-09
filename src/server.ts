@@ -1,3 +1,5 @@
+import { registerAdminMfaRoutes, hasFreshAdminMfa, hasIssuedAdminRecoveryKey } from "./services/adminMfaRoutes.js";
+import { requiresAdminMfaStepUp } from "./services/adminMfaRouteScope.js";
 import { createDashboardPublicationStream } from "./services/dashboardPublicationStream.js";
 import { inspectReplacementDependencies } from "./services/datasetReplacementDependencies.js";
 import { previewDatasetReplacement } from "./services/datasetReplacementPreview.js";
@@ -9,6 +11,7 @@ import { previewDatasetReplacement } from "./services/datasetReplacementPreview.
 // ════════════════════════════════════════════════════════════════════
 
 import Fastify, { FastifyRequest, FastifyReply } from "fastify";
+import { COOKIE_NAME, createMfaStagingCookie, isMfaStagingAccessValid, isMfaStagingCookieValid, isMfaStagingPasswordValid } from "./services/mfaStagingGate.js";
 import { Prisma } from "@prisma/client";
 import multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
@@ -77,6 +80,63 @@ const app = Fastify({
   keepAliveTimeout: 75_000,
   maxRequestsPerSocket: 1000,
 });
+
+// Staging-only gate. Show a branded entry screen instead of depending on
+// the browser's HTTP Basic popup (which can be suppressed or confusing).
+// MFA + application login remain mandatory after this independent gate.
+if (process.env.MFA_STAGING_ONLY === "true") {
+  const stagingAccessFailures = new InMemoryRateLimiter(1024);
+  const stagingOrigin = "https://newchanges-mfa-isolated-staging.onrender.com";
+  app.addHook("onRequest", async (req, reply) => {
+    reply.header("Cache-Control", "no-store");
+    reply.header("X-Robots-Tag", "noindex, nofollow");
+    reply.header("X-Content-Type-Options", "nosniff");
+    const path = req.url.split("?", 1)[0];
+    if (path === "/health" && req.method === "GET") return;
+    if (path === "/staging-access" &&
+        (req.method === "GET" || req.method === "POST")) return;
+    if (path === "/staging-access.js" && req.method === "GET") return;
+    const allowed = isMfaStagingAccessValid(req.headers.authorization, process.env.MFA_STAGING_GATE_PASSWORD) ||
+      isMfaStagingCookieValid(req.headers.cookie, process.env.MFA_STAGING_GATE_PASSWORD);
+    if (allowed) return;
+    // Never redirect APIs or non-HTML requests to a login page.
+    // Staging credentials must never be passed in query strings.
+    if ((req.method === "GET" || req.method === "HEAD") &&
+      !path.startsWith("/api/") &&
+      String(req.headers.accept || "").includes("text/html")) {
+      return reply.code(303).header("Location", "/staging-access").send();
+    }
+    return reply.code(401).send({error:"Staging access required",entry:"/staging-access"});
+  });
+  app.get("/staging-access", async (_req, reply) => {
+    reply.header("Content-Security-Policy",
+      "default-src 'none'; style-src 'unsafe-inline'; script-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
+    return reply.type("text/html; charset=utf-8")
+      .send(await readFile(join(process.cwd(),"public","staging-access.html"),"utf8"));
+  });
+  app.get("/staging-access.js", async (_req, reply) => {
+    return reply.type("application/javascript; charset=utf-8")
+      .send(await readFile(join(process.cwd(),"public","staging-access.js"),"utf8"));
+  });
+  app.post<{Body:{password?:string}}>("/staging-access", async (req, reply) => {
+    // Same-site browser POST only: do not accept cross-origin or token-only
+    // login attempts. The password is never logged, cached or persisted.
+    if (req.headers.origin !== stagingOrigin ||
+      String(req.headers["content-type"]||"").split(";",1)[0]!=="application/json") {
+      return reply.code(403).send({error:"Staging sign-in must originate from this site"});
+    }
+    const ip=String(req.ip||"unknown");
+    if (!stagingAccessFailures.hit("staging:"+ip,10,15*60*1000).allowed)
+      return reply.code(429).send({error:"Too many attempts; retry later"});
+    if (!isMfaStagingPasswordValid(req.body?.password,process.env.MFA_STAGING_GATE_PASSWORD))
+      return reply.code(401).send({error:"Incorrect staging access password"});
+    const cookie=createMfaStagingCookie(process.env.MFA_STAGING_GATE_PASSWORD);
+    if(!cookie)return reply.code(503).send({error:"Staging access unavailable"});
+    reply.header("Set-Cookie",
+      COOKIE_NAME+"="+cookie+"; Path=/; Max-Age=14400; Secure; HttpOnly; SameSite=Strict");
+    return {ok:true,redirect:"/login"};
+  });
+}
 
 // Node 20 defaults are too aggressive for slow uploads behind proxies.
 app.server.headersTimeout = 180_000;
@@ -171,6 +231,16 @@ app.addHook("onRequest", async (req, reply) => {
   if (!rateLimit(reply, `api:${ip}`, RATE_LIMIT, RATE_WINDOW_MS)) return;
   const authPath = /^\/api\/auth\/(?:login|forgot-password|set-password)(?:\/|$)/.test(path);
   if (authPath && !rateLimit(reply, `auth:${ip}`, AUTH_RATE_LIMIT, AUTH_WINDOW_MS)) return;
+  // Keep restrictive per-IP budgets for proof/verification calls, but do
+  // not let routine status refresh or authenticator app onboarding consume
+  // the WebAuthn ceremony budget for colleagues behind the same NAT.
+  // TOTP also has a persistent per-account failed-attempt lockout.
+  if (path.startsWith("/api/auth/mfa/")) {
+    const bucket = path === "/api/auth/mfa/status" ? "mfa-status" :
+      path.startsWith("/api/auth/mfa/totp/") ? "mfa-totp" : "mfa-passkey";
+    const limit = bucket === "mfa-status" ? 60 : path === "/api/auth/mfa/recovery/self" ? 8 : 16;
+    if (!rateLimit(reply, `${bucket}:${ip}`, limit, 5 * 60_000)) return;
+  }
   if (path === "/api/contact" && !rateLimit(reply, `contact:${ip}`, 6, 10 * 60_000)) return;
   if (/\/(?:upload|import|batch|sync|staging|dataset)(?:s|\/|-|$)/.test(path) &&
       !rateLimit(reply, `bulk:${ip}`, 20, 10 * 60_000)) return;
@@ -351,8 +421,51 @@ async function requireAdmin(req: FastifyRequest, reply: FastifyReply): Promise<A
   const user = await requireUser(req, reply);
   if (!user) return null;
   if (user.role !== "ADMIN" && user.role !== "SUPERADMIN") { reply.code(403).send({ error: "admin only" }); return null; }
+  if (MFA_ENFORCE && !await hasFreshAdminMfa(req, user.id)) { reply.code(403).send({error:"Fresh MFA verification required",code:"MFA_REQUIRED"}); return null; }
   return user;
 }
+// Rollout switch is OFF by default. Set only after locked dependency, migration,
+// enrollment and recovery have all passed staging acceptance.
+// MFA_ENFORCE is the preferred all-account switch. Keep the historical name
+// as an alias; either setting now applies to every active user.
+const MFA_ENFORCE = process.env.MFA_ENFORCE === "true" || process.env.ADMIN_MFA_ENFORCE === "true";
+if (MFA_ENFORCE) {
+  const rpID = String(process.env.MFA_RP_ID || "").trim();
+  const expectedOrigin = String(process.env.MFA_EXPECTED_ORIGIN || "").trim();
+  let validConfig = false;
+  try {
+    const parsed = new URL(expectedOrigin);
+    validConfig = Boolean(rpID) && parsed.origin === expectedOrigin &&
+      (parsed.protocol === "https:" || parsed.hostname === "localhost") &&
+      (parsed.hostname === rpID || parsed.hostname.endsWith("." + rpID));
+  } catch { /* invalid configuration */ }
+  if (!validConfig) throw new Error("MFA enforcement requires a valid MFA_RP_ID and MFA_EXPECTED_ORIGIN");
+}
+app.addHook("preHandler", async (req, reply) => {
+  if (!MFA_ENFORCE) return;
+  const scope = requiresAdminMfaStepUp(req.method, req.url);
+  // All account roles must complete MFA before accessing protected business
+  // APIs. Authentication and MFA routes stay available to finish enrollment.
+  const path = req.url.split("?", 1)[0];
+  const protectedAppRead = path.startsWith("/api/") &&
+    !path.startsWith("/api/auth/") &&
+    path !== "/api/contact" &&
+    !path.startsWith("/api/public/") &&
+    !path.startsWith("/api/partner-theme/");
+  if (!scope.adminOnly && !scope.adminMutation && !protectedAppRead) return;
+  const user = await currentUser(req);
+  if (!user) {
+    if (scope.adminOnly) return reply.code(403).send({error:"Administrator session required"});
+    return;
+  }
+  if (scope.adminOnly && !isAdminRole(user))
+    return reply.code(403).send({error:"Administrator session required"});
+  if (!await hasFreshAdminMfa(req, user.id))
+    return reply.code(403).send({error:"Fresh MFA verification required", code:"MFA_REQUIRED"});
+  if (user.role === "SUPERADMIN" && !await hasIssuedAdminRecoveryKey(user.id))
+    return reply.code(403).send({error:"Save your account recovery key before continuing",code:"RECOVERY_KEY_REQUIRED"});
+});
+registerAdminMfaRoutes(app);
 function redactAuditDetail(value: unknown): unknown {
   if (!value || typeof value !== "object") return value;
   if (Array.isArray(value)) return value.map(redactAuditDetail);
@@ -371,6 +484,11 @@ app.get("/react/", async (req, reply) => {
   const user = await currentUser(req);
   if (!user) return reply.redirect("/login");
   if (!canAccessModule(user, "dashboard")) return reply.code(403).send({ error: "no dashboard access" });
+  if (MFA_ENFORCE && !await hasFreshAdminMfa(req, user.id))
+    return reply.redirect("/mfa");
+  if (MFA_ENFORCE && user.role === "SUPERADMIN" &&
+      !await hasIssuedAdminRecoveryKey(user.id))
+    return reply.redirect("/mfa");
   try {
     const html = await readFile(join(PUBLIC_DIR, "react", "index.html"), "utf-8");
     return reply.type("text/html; charset=utf-8").header("Cache-Control", "no-store").send(html);
@@ -382,6 +500,9 @@ app.get("/react/admin", async (req, reply) => {
   const user = await currentUser(req);
   if (!user) return reply.redirect("/login");
   if (!canAccessModule(user, "admin")) return reply.code(403).send({ error: "admin only" });
+  if (MFA_ENFORCE && !await hasFreshAdminMfa(req, user.id)) return reply.redirect("/mfa");
+  if (MFA_ENFORCE && user.role === "SUPERADMIN" &&
+      !await hasIssuedAdminRecoveryKey(user.id)) return reply.redirect("/mfa");
   try {
     const html = await readFile(join(PUBLIC_DIR, "react", "index.html"), "utf-8");
     return reply.type("text/html; charset=utf-8").header("Cache-Control", "no-store").send(html);
@@ -393,6 +514,11 @@ app.get("/react/dashboard", async (req, reply) => {
   const user = await currentUser(req);
   if (!user) return reply.redirect("/login");
   if (!canAccessModule(user, "dashboard")) return reply.code(403).send({ error: "no dashboard access" });
+  if (MFA_ENFORCE && !await hasFreshAdminMfa(req, user.id))
+    return reply.redirect("/mfa");
+  if (MFA_ENFORCE && user.role === "SUPERADMIN" &&
+      !await hasIssuedAdminRecoveryKey(user.id))
+    return reply.redirect("/mfa");
   try {
     const html = await readFile(join(PUBLIC_DIR, "react", "index.html"), "utf-8");
     return reply.type("text/html; charset=utf-8").header("Cache-Control", "no-store").send(html);
@@ -454,10 +580,36 @@ app.post<{ Body: { name?: unknown; email?: unknown; organisation?: unknown; mess
 });
 app.get("/", async (req, reply) => {
   const user = await currentUser(req);
-  if (user && canAccessModule(user, "dashboard")) return reply.redirect("/dashboard");
+  // The isolated MFA preview is a sign-in journey, not the marketing home.
+  // Keep the normal public home unchanged in production.
+  if (process.env.MFA_STAGING_ONLY === "true" && !user)
+    return reply.redirect("/login");
+  if (user && canAccessModule(user, "dashboard")) {
+    if (MFA_ENFORCE && !await hasFreshAdminMfa(req, user.id))
+      return reply.redirect("/mfa");
+    return reply.redirect("/dashboard");
+  }
   return serveHtml(reply, "home.html");
 });
 app.get("/login", async (_req, reply) => serveHtml(reply, "login.html"));
+app.get("/mfa", async (req, reply) => {
+  const user = await currentUser(req);
+  if (!user) return reply.redirect("/login");
+  // This is a second-factor step, not a landing page. After successful
+  // authentication there is no reason to present enrollment again.
+  if (MFA_ENFORCE && await hasFreshAdminMfa(req, user.id) &&
+      (user.role !== "SUPERADMIN" || await hasIssuedAdminRecoveryKey(user.id)))
+    return reply.redirect("/dashboard");
+  return serveHtml(reply, "admin-mfa.html");
+});
+// Authenticated method management: never serve enrollment controls to a
+// password-only session. Existing verified factors can authorize adding another.
+app.get("/mfa/manage", async (req, reply) => {
+  const user = await currentUser(req);
+  if (!user) return reply.redirect("/login");
+  if (!await hasFreshAdminMfa(req, user.id)) return reply.redirect("/mfa");
+  return serveHtml(reply, "admin-mfa.html");
+});
 app.get("/set-password", async (_req, reply) => serveHtml(reply, "set-password.html"));
 app.get("/privacy", async (_req, reply) => serveHtml(reply, "privacy.html"));
 app.get("/terms", async (_req, reply) => serveHtml(reply, "terms.html"));
@@ -468,6 +620,11 @@ app.get("/dashboard", async (req, reply) => {
   const user = await currentUser(req);
   if (!user) return reply.redirect("/login");
   if (!canAccessModule(user, "dashboard")) return reply.redirect("/login");
+  if (MFA_ENFORCE && !await hasFreshAdminMfa(req, user.id))
+    return reply.redirect("/mfa");
+  if (MFA_ENFORCE && user.role === "SUPERADMIN" &&
+      !await hasIssuedAdminRecoveryKey(user.id))
+    return reply.redirect("/mfa");
   // Keep the canonical dashboard route on the original production dashboard.
   // The React frontend remains available separately at /react/dashboard while
   // the original dashboard remains the visual source of truth for /dashboard.
@@ -477,11 +634,17 @@ app.get("/admin", async (req, reply) => {
   const user = await currentUser(req);
   if (!user) return reply.redirect("/login");
   if (!canAccessModule(user, "admin")) return reply.code(403).type("text/html").send("<h2 style='font-family:sans-serif;padding:40px'>Admins only. <a href='/dashboard'>Go to dashboard</a></h2>");
+  if (MFA_ENFORCE && !await hasFreshAdminMfa(req, user.id)) return reply.redirect("/mfa");
+  if (MFA_ENFORCE && user.role === "SUPERADMIN" &&
+      !await hasIssuedAdminRecoveryKey(user.id)) return reply.redirect("/mfa");
   return serveHtml(reply, "admin.html");
 });
 app.get("/users", async (req, reply) => {
   const user = await currentUser(req);
   if (!user || (user.role !== "ADMIN" && user.role !== "SUPERADMIN")) return reply.redirect("/login");
+  if (MFA_ENFORCE && !await hasFreshAdminMfa(req, user.id)) return reply.redirect("/mfa");
+  if (MFA_ENFORCE && user.role === "SUPERADMIN" &&
+      !await hasIssuedAdminRecoveryKey(user.id)) return reply.redirect("/mfa");
   return serveHtml(reply, "users.html");
 });
 
@@ -523,7 +686,10 @@ app.post<{ Body: { email: string; password: string; remember?: boolean } }>("/ap
   });
   if (!result) return reply.code(401).send({ error: "invalid email or password" });
   reply.setCookie("session", result.token, remember ? { ...REMEMBER_COOKIE, expires: result.expiresAt } : COOKIE);
-  return { ok: true, user: { name: result.user.name, role: result.user.role } };
+  // A password login has no second-factor freshness. The client guides every
+  // account to enrollment or verification before any dashboard access.
+  return { ok: true, user: { name: result.user.name, role: result.user.role },
+    mfaRequired: MFA_ENFORCE, next: MFA_ENFORCE ? "/mfa" : undefined };
 });
 
 app.post("/api/auth/logout", async (req, reply) => {
@@ -536,6 +702,20 @@ app.post("/api/auth/logout", async (req, reply) => {
 app.get("/api/auth/me", async (req, reply) => {
   const user = await currentUser(req);
   if (!user) return reply.code(401).send({ error: "not signed in" });
+  if (MFA_ENFORCE) {
+    const verified=await hasFreshAdminMfa(req,user.id);
+    const recoveryKeyRequired=verified && user.role==="SUPERADMIN" &&
+      !await hasIssuedAdminRecoveryKey(user.id);
+    if (!verified || recoveryKeyRequired) {
+      // Do not reveal employer records or module entitlements while the
+      // account still needs MFA or its required recovery key.
+      reply.header("Cache-Control","no-store");
+      return {name:user.name,role:user.role,mfaRequired:!verified,
+        recoveryKeyRequired,
+        modules:{admin:false,dashboard:false,portfolio:false,users:false},
+        sections:[],employers:[]};
+    }
+  }
   const ids = allowedEmployerIds(user);
   const syncStatus = await dashboardSyncState(req);
   const publishedFallback = dashboardUsesPublishedSnapshot(syncStatus);
