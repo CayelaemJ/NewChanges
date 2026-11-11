@@ -136,6 +136,41 @@ Nine pure unit tests for these constraints have been run successfully in
 the author's isolated Python environment. The repository's full Docker CI
 suite and live RDS integration have not been run for these new commits.
 
+## Atomic ingest_stage transaction planning (11 November 2026)
+
+New files:
+- `simulation/runtime/ingest_stage_txn.py`: offline-only transaction planner.
+- `simulation/tests/test_ingest_stage_txn.py`: 16 pure tests for transaction
+  buffering, binlog rotation, replay, hard-delete tombstones, row limits,
+  inconsistent checkpoints and snapshot handoff refusal.
+- `simulation/tests/test_ingest_stage_txn_integration.py`: checks integration
+  between the `make_change_marker` API and atomic commit planner, using
+  fabricated records with private-value sentinels.
+
+The planner consumes **only opaque metadata markers** produced by
+`runtime.ingest_stage_contract`. Row payloads (employee, banking, debt and
+salary data) must never be copied into the planner or emitted in log output.
+It accepts up to 500 marker rows per transaction by default, rejects repeated
+event identifiers and regressing binlog coordinates, and understands binlog
+file-number rotation within the same lineage.
+
+**Checkpoint safety:** Every planner construction requires the existing
+`SnapshotHandoff` contract and a coordinate that matches it. Pending changes
+do not advance the checkpoint. `prepare_commit` produces a plan only after
+a transaction COMMIT/XID boundary, and the checkpoint stays unchanged until
+a future caller confirms that the sink transaction has durably committed the
+markers **and checkpoint together**. Abort or an oversized transaction keeps
+the previous checkpoint. Merely passing the proof object and calling
+`confirm_durable_commit` does not prove external snapshot or sink durability:
+a production reader, verified snapshot, real transaction-boundary decoder,
+durable sink and atomic checkpoint persistence are **still not implemented**.
+
+The 16 standalone planner tests passed locally against a small test double
+matching `SnapshotHandoff`'s public interface. The two full marker-to-planner
+integration tests are committed for the real repository's Docker test suite;
+their Docker result remains pending. No AWS resource, source record,
+replication grant or binlog-retention setting was touched.
+
 ## Data and time contract
 
 - A true source mutation timestamp is generated **when a change is committed**.
