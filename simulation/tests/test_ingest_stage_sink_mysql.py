@@ -106,15 +106,35 @@ class LocalIngestSink(unittest.TestCase):
         consumer = "test-ingest-duplicate"
         self.assertEqual(bootstrap_local_sink(self.db, proof(), consumer_name=consumer),
                          "BOOTSTRAPPED")
-        _, first = plan()
-        # Event markers are global within this dedicated sink. Their unique
-        # binlog-coordinate identity is deliberately shared across consumers.
-        # Reusing the same event must fail closed and preserve this consumer's checkpoint.
+        _, first = plan(500, 600, marker_pos=560)
+        self.assertEqual(persist_local_plan(self.db, first, consumer_name=consumer),
+                         "PERSISTED")
+
+        _, second = plan(600, 700, marker_pos=650)
+        change = second.changes[0]
+        # Simulate a prior conflicting marker insert, independent of other tests.
+        # Inserting the collision BEFORE persist tests all-or-nothing rollback.
+        with self.db.cursor() as cursor:
+            cursor.execute("""INSERT INTO fixer_ingest_cdc.ingest_change_markers
+                (event_key,feed,operation,opaque_row_key,source_timestamp_state,
+                 needs_tombstone,binlog_event_at_utc,captured_at_utc)
+                VALUES(%s,%s,%s,%s,%s,%s,%s,%s)""",
+                (change.event_key,change.feed,change.operation,
+                 change.opaque_row_key,change.source_timestamp_state,
+                 int(change.needs_tombstone),
+                 change.binlog_event_at_utc.replace(tzinfo=None),
+                 change.captured_at_utc.replace(tzinfo=None)))
+        self.db.commit()
+
         with self.assertRaises(Exception):
-            persist_local_plan(self.db, first, consumer_name=consumer)
+            persist_local_plan(self.db, second, consumer_name=consumer)
         self.assertEqual(
             query(self.db, "SELECT log_pos FROM fixer_ingest_cdc.ingest_checkpoint "
-                 "WHERE consumer_name=%s", (consumer,))[0][0], 500
+                 "WHERE consumer_name=%s", (consumer,))[0][0], 600
+        )
+        self.assertEqual(
+            query(self.db, "SELECT COUNT(*) FROM fixer_ingest_cdc.ingest_change_markers "
+                 "WHERE event_key=%s", (change.event_key,))[0][0], 1
         )
 
     def test_stale_checkpoint_refuses_plan_without_marker_write(self):
