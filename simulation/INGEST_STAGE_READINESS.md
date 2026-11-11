@@ -171,6 +171,43 @@ integration tests are committed for the real repository's Docker test suite;
 their Docker result remains pending. No AWS resource, source record,
 replication grant or binlog-retention setting was touched.
 
+## Offline MySQL row-event adapter (11 November 2026)
+
+Added `runtime/ingest_stage_row_adapter.py`. It accepts event objects with
+the same shape as MySQL `WriteRowsEvent`, `UpdateRowsEvent` and
+`DeleteRowsEvent`, but **does not import or instantiate the network-capable
+binlog reader**. It validates the schema and ten-table allowlist through
+`make_change_marker`, converts before/after row images into opaque metadata
+markers, stages multiple rows at a common packet position with distinct
+row indexes, and discards the entire pending transaction on invalid event
+kind, malformed row, wrong schema or oversized batch.
+
+The six adapter tests use simulated, locally constructed binlog envelopes.
+The author ran 22 offline tests successfully using a local test-double for
+the `SnapshotHandoff` and marker-construction contracts; the repository
+includes an additional 2 real-contract integration tests for Docker.
+This **is not a demonstrated MySQL binlog stream, sink write or dashboard
+update**. Both the actual CDC stream worker and durable atomic checkpoint
+storage must still be implemented after snapshot, access and retention gates.
+
+Planned event flow, once approved:
+
+```text
+MySQL binlog row event (approved ten-table source only)
+  -> convert to opaque metadata marker, no raw row persistence
+  -> buffer until actual source XID/COMMIT boundary
+  -> atomically store markers + source checkpoint in dedicated sink
+  -> acknowledge checkpoint only after durable transaction commit
+  -> refresh only changed canonical feeds in The Fixer
+```
+
+A timestamp precision caveat remains: MySQL row-binlog header time has
+second precision, and the future consumer's capture time reflects observation
+rather than an exact source modification microsecond. Achieving an exact
+manual-edit `source_updated_at` timestamp requires a separate source-write
+or approved DDL/trigger solution, after the outstanding live timestamp
+lineage query is reviewed.
+
 ## Data and time contract
 
 - A true source mutation timestamp is generated **when a change is committed**.
