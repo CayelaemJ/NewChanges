@@ -18,6 +18,7 @@ try:
             cur.execute(f"CREATE USER IF NOT EXISTS '{user}'@'%%' IDENTIFIED BY %s",(password,))
         cur.execute("GRANT SELECT, INSERT, UPDATE, DELETE ON fixer_sim.* TO 'sim_writer'@'%'")
         cur.execute("GRANT SELECT, INSERT, UPDATE, DELETE ON fixer_sim_analytics.* TO 'sim_cdc'@'%'")
+        cur.execute("GRANT SELECT, INSERT, UPDATE, DELETE ON fixer_ingest_cdc.* TO 'sim_cdc'@'%'")
         cur.execute("GRANT SELECT ON fixer_sim.* TO 'sim_repl'@'%'")
         cur.execute("GRANT REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO 'sim_repl'@'%'")
         cur.execute("FLUSH PRIVILEGES")
