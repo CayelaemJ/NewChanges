@@ -224,6 +224,46 @@ manual-edit `source_updated_at` timestamp requires a separate source-write
 or approved DDL/trigger solution, after the outstanding live timestamp
 lineage query is reviewed.
 
+## Durable local ingest CDC sink added (11 November 2026)
+
+A **separate disposable MySQL schema** `fixer_ingest_cdc` is now initialized
+by `simulation/schema/003_ingest_cdc.sql` only when
+`simulation/docker-compose.yml` starts its ephemeral MySQL 8.4 container.
+The local `sim_cdc` user is granted scoped DML there. This does **not**
+install the schema on RDS and it does not alter `ingest_stage` or existing
+`fixer_sim_analytics` tables.
+
+`simulation/runtime/ingest_stage_sink.py` adds:
+- `bootstrap_local_sink`: requires a valid snapshot handoff and refuses an
+  inconsistent existing checkpoint. It has no live production entrypoint.
+- `persist_local_plan`: validates a monotonically advancing checkpoint,
+  bounded opaque marker tuples, operation/tombstone contracts and digest.
+  It locks the expected checkpoint row with `SELECT ... FOR UPDATE` and
+  writes markers, one feed notification per changed feed, and the checkpoint
+  **in the same InnoDB transaction**, committing together or rolling back.
+- Repeating the *identical* last committed plan returns `REPLAYED` without
+  inserting new events or incrementing feed generations.
+- Only opaque HMAC row identities and change/event timestamps persist. No
+  source row image, income, debt, email, payroll or account content is stored.
+- This pilot deliberately refuses all non-disposable environments via
+  explicit `SIM_ENV`, `RUN_LOCAL_MYSQL_TESTS` and Docker-host checks.
+
+The addition includes seven **real disposable-MySQL integration tests** for
+atomic persistence, replay, stale checkpoints, unique-event conflict
+rollback, empty transactions, local-only gating and schema privacy,
+plus four host-safe guard tests for tampering and local-only initialization.
+The operator's previously verified 80/80 Docker test run predates these
+new changes, so **the updated full test suite is not yet verified**.
+The expected updated container suite has 91 tests.
+
+**Critical remaining gaps:** a real `ingest_stage` replication reader,
+source-side transaction-boundary decoding, safe initial snapshot,
+configured RDS binlog retention, privileged binlog exposure review,
+production sink provisioning and The Fixer's feed/dashboard notification
+integration. Persisting opaque markers alone does not update The Fixer's
+canonical records or dashboards. Do not deploy the local sink as a
+production CDC service.
+
 ## Data and time contract
 
 - A true source mutation timestamp is generated **when a change is committed**.
