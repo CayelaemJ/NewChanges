@@ -8,6 +8,7 @@ services:
     volumes:
       - ./schema/001_source.sql:/docker-entrypoint-initdb.d/01-source.sql:ro
       - ./schema/002_analytics.sql:/docker-entrypoint-initdb.d/02-analytics.sql:ro
+      - ./schema/003_ingest_cdc.sql:/docker-entrypoint-initdb.d/03-ingest-cdc.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
       interval: 3s
