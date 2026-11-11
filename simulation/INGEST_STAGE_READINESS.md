@@ -99,6 +99,43 @@ CDC event feed, or both are needed.
    CDC -> idempotent sync -> dashboard freshness. Distinguish change time,
    capture time and dashboard publish time.
 
+## Staged CDC event contract implemented (11 November 2026)
+
+The new pure module `simulation/runtime/ingest_stage_contract.py` is
+**offline-only**. It does not open MySQL connections, start a replication stream,
+write to an analytics database or change production configuration.
+
+It defines a distinct ten-table `ingest_stage` allowlist (excluding
+`import_manifest`) and uses the audited source primary key `_ingest_id`,
+not the unrelated `fixer_sim.id`. A validated INSERT/UPDATE/DELETE event
+produces only an opaque, deterministic event key, an HMAC-protected row token,
+an operation, a feed name and timestamps. The raw row, payroll identifiers,
+financial balances and other PII do not appear in the resulting marker.
+This is a **planning contract**, not a production data-masking guarantee:
+the real MySQL replication reader could still see other schemas' row data
+because replication privileges are global.
+
+Every marker keeps two clocks separate:
+- `binlog_event_at_utc` is the MySQL row-binlog event timestamp at **second
+  precision**. It is not a guarantee of the exact commit microsecond.
+- `captured_at_utc` is the time a future CDC consumer processes the event;
+  it may be later than the actual database mutation.
+The actual source's `source_updated_at` must be independently maintained
+by its writer or an approved schema change. When an UPDATE leaves that
+field unchanged, the contract marks `NOT_ADVANCED_ON_UPDATE` rather than
+pretending it is fresh. Hard DELETE emits a tombstone marker.
+
+For **nonempty** existing tables, `validate_snapshot_handoff` rejects a
+bootstrap without a consistent and imported source snapshot, a verifiable
+manifest digest, an explicit binlog coordinate and positive configured
+retention. Passing a Python proof object alone does not establish that the
+real-world snapshot was performed. A real consumer still needs a verified,
+atomic checkpoint, durable idempotency and crash recovery.
+
+Nine pure unit tests for these constraints have been run successfully in
+the author's isolated Python environment. The repository's full Docker CI
+suite and live RDS integration have not been run for these new commits.
+
 ## Data and time contract
 
 - A true source mutation timestamp is generated **when a change is committed**.
