@@ -51,9 +51,9 @@ bash ops/ci-docker.sh
 
 The script first runs pure unit tests, then creates a disposable MySQL 8.4 instance, installs isolated schemas, grants synthetic test accounts, establishes a binlog checkpoint while source tables are empty, runs simulation, checks FK/idempotency/rollback, exercises INSERT/DELETE row transformations and **attempts an actual binlog read**. It tears down its own Docker project including ephemeral data.
 
-The simulation rechecks the emergency-stop flag before every committed business event, retains the original run anchor for retries, and recomputes Gold metrics using indexed affected-day SQL ranges. The MySQL integration suite asserts real binlog DELETE events and replay idempotency. The operator reported a successful `ci-docker.sh` exit code **0** after the Docker MySQL 8.4 issues were patched. The final per-test transcript has not been independently reviewed.
+The simulation rechecks the emergency-stop flag before every committed business event, retains the original run anchor for retries, and recomputes Gold metrics using indexed affected-day SQL ranges. The MySQL integration suite asserts real binlog DELETE events and replay idempotency. The operator supplied the complete final test transcript on **11 November 2026** for commit `5358685a`: 80/80 tests passed in the disposable Docker MySQL 8.4 environment, no skips, final test container exit code `0`. The host-only phase separately passed with 9 expected environment skips.
 
-Pure Python tests alone do **not** establish CDC integration. The operator-reported exit code 0 is evidence of the latest Docker integration run, but it is not evidence of end-to-end connectivity to **this AWS RDS instance**. The dependency `mysql-replication==1.0.17` is pinned; production binlog and TLS access remain unverified.
+Pure Python tests alone do **not** establish CDC integration. The final operator Docker transcript verifies **local** binlog consumption, physical DELETE events, replay deduplication, timestamp updates and historical-date handling. It does not verify connectivity to **this AWS RDS instance**, nor a live `ingest_stage` source consumer. The dependency `mysql-replication==1.0.17` is pinned; production binlog and TLS access remain unverified.
 
 For the existing self-hosted `newchanges-ci` GitHub runner, copy these files under `NewChanges/simulation/` and copy `repo-integration/.github/workflows/aws-sim-docker-ci.yml` to the repository's `.github/workflows/`. Dispatch that workflow manually. It does not use GitHub-hosted runners and does not deploy.
 
@@ -258,17 +258,17 @@ The existing repository has `src/services/sourceAdapter.ts`, `syncService.ts`, `
 
 ## Test and verification record
 
-| Gate | Status, 2026-11-06 |
+| Gate | Latest status (11 November 2026) |
 |---|---|
 | AWS RDS metadata inspection | PASS, read-only |
 | SG not world-open on 3306 | PASS, one non-global IPv4 CIDR rule |
 | Existing repo source/sync inspection | PASS, read-only |
-| Python pure logic/guard tests | PASS, 13/13 |
+| Python pure logic/guard tests | PASS, host phase 80 tests, 9 environment-dependent skips |
 | Python compile check | To be recorded after final packaging |
-| Disposable MySQL 8.4 integration tests | NOT RUN, Docker absent in authoring environment |
-| Binlog INSERT/UPDATE/DELETE on MySQL 8.4 | NOT VERIFIED |
-| Live RDS table/schema inventory & PII classification | BLOCKED, MySQL SQL credentials unavailable |
-| Live RDS CDC parameter/retention inspection | BLOCKED, SQL access unavailable |
+| Disposable MySQL 8.4 integration tests | PASS, operator full Docker transcript, 80/80, no skips, exit 0, commit `5358685a` |
+| Binlog INSERT/UPDATE/DELETE on MySQL 8.4 | PASS in local disposable Docker MySQL, NOT on AWS RDS |
+| Live RDS table/schema inventory & PII classification | PARTIAL: operator verified 11 base tables + 10 views, 59 required feed columns; sensitive-row classification still outstanding |
+| Live RDS CDC parameter/retention inspection | PARTIAL: operator confirmed ROW/FULL binlog and NULL/unconfigured retention; no live CDC consumer |
 | AWS RDS source/sink schema deployment | NOT ATTEMPTED, requires approval |
 | Lambda connectivity and trigger test | NOT ATTEMPTED, requires approval |
 | The Fixer application-dashboard wiring | NOT CHANGED, awaits integration contract |
