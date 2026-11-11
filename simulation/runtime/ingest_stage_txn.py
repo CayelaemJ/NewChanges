@@ -96,11 +96,17 @@ class CommitPlan:
 class TransactionPlanner:
     """Only one in-flight transaction; no checkpoint before durable ACK."""
 
-    def __init__(self, checkpoint, *, max_rows=500):
+    def __init__(self, checkpoint, *, handoff, max_rows=500):
         if not isinstance(checkpoint, LogCoordinate):
             raise ValueError("Verified initial checkpoint required")
         if isinstance(max_rows, bool) or not isinstance(max_rows, int) or not 1 <= max_rows <= 1000:
             raise ValueError("Invalid transaction row limit")
+        # A plain SHOW BINARY LOG STATUS coordinate is never a valid seed
+        # for populated ingest_stage tables without verified snapshot handoff.
+        from .ingest_stage_contract import validate_snapshot_handoff
+        validate_snapshot_handoff(handoff)
+        if checkpoint.file != handoff.binlog_file or checkpoint.position != handoff.binlog_position:
+            raise ValueError("Checkpoint does not match verified snapshot handoff")
         self.checkpoint = checkpoint
         self.max_rows = max_rows
         self._active = False
