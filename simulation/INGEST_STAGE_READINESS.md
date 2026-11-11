@@ -5,6 +5,26 @@ Repository branch: `feature/aws-rds-mysql-synthetic-cdc-20261106`.
 This document applies to the EXISTING AWS RDS MySQL database, not the
 disposable `fixer_sim` schema.
 
+## Local Docker verification completed (11 November 2026)
+
+The operator provided the full output from
+`bash simulation/ops/ci-docker.sh` after fetching commit `5358685a`.
+The host phase completed `80 tests` with `9` expected environment skips.
+The container phase bootstrapped disposable MySQL 8.4, passed all
+`80 tests` with **no errors or skips**, and exited with code **0**.
+
+Verified locally: MySQL SHA-2 auth, ROW/FULL binlog prerequisites,
+real simulated binlog read, INSERT/UPDATE/DELETE, durable simulation sink
+deduplication and replay, microsecond manual-updated timestamps,
+late business-date separation, privacy-safe ingest_stage marker contracts,
+transaction planning and checkpoint refusal tests.
+
+**Not yet verified on live RDS:** a working `ingest_stage` binlog consumer,
+source snapshot/handoff, global replication-privilege safety, data
+classification, configured binlog retention, dedicated durable sink,
+or automatic update-time maintenance in existing feed tables.
+The local simulation suite passing does **not** authorize deployment.
+
 ## What already exists
 
 The database contains `ingest_stage` with 11 base tables and 10 views,
@@ -132,9 +152,7 @@ retention. Passing a Python proof object alone does not establish that the
 real-world snapshot was performed. A real consumer still needs a verified,
 atomic checkpoint, durable idempotency and crash recovery.
 
-Nine pure unit tests for these constraints have been run successfully in
-the author's isolated Python environment. The repository's full Docker CI
-suite and live RDS integration have not been run for these new commits.
+These contract tests are included in the operator's complete **80/80 Docker MySQL 8.4 test pass** on 11 November 2026 (tested commit `5358685a`). The live RDS `ingest_stage` replication integration has **not** been run.
 
 ## Atomic ingest_stage transaction planning (11 November 2026)
 
@@ -165,10 +183,9 @@ the previous checkpoint. Merely passing the proof object and calling
 a production reader, verified snapshot, real transaction-boundary decoder,
 durable sink and atomic checkpoint persistence are **still not implemented**.
 
-The 16 standalone planner tests passed locally against a small test double
-matching `SnapshotHandoff`'s public interface. The two full marker-to-planner
-integration tests are committed for the real repository's Docker test suite;
-their Docker result remains pending. No AWS resource, source record,
+The 16 planner tests and the two marker-to-planner integration tests passed
+inside the operator's isolated Docker suite (80/80 tests; exit code 0,
+11 November 2026). No AWS resource, source record,
 replication grant or binlog-retention setting was touched.
 
 ## Offline MySQL row-event adapter (11 November 2026)
@@ -183,10 +200,9 @@ row indexes, and discards the entire pending transaction on invalid event
 kind, malformed row, wrong schema or oversized batch.
 
 The six adapter tests use simulated, locally constructed binlog envelopes.
-The author ran 22 offline tests successfully using a local test-double for
-the `SnapshotHandoff` and marker-construction contracts; the repository
-includes an additional 2 real-contract integration tests for Docker.
-This **is not a demonstrated MySQL binlog stream, sink write or dashboard
+All of these tests and the real-contract marker/planner integration tests
+passed within the operator's 80/80 Docker test run (11 November 2026).
+This **is not a demonstrated `ingest_stage` MySQL binlog stream, sink write or dashboard
 update**. Both the actual CDC stream worker and durable atomic checkpoint
 storage must still be implemented after snapshot, access and retention gates.
 
