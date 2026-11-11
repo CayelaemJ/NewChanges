@@ -89,8 +89,9 @@ class LocalMySQL(unittest.TestCase):
         # but updated_at is still the actual insertion/manipulation time.
         run(run_key='test:timing:late',seed='timing-fixture',max_orders=12)
         rows = query(self.db,"""SELECT ordered_at,updated_at FROM orders
-            WHERE order_key LIKE 'SYN-ORDER-test:timing:late-%'
-              AND ordered_at < UTC_TIMESTAMP(6) - INTERVAL 1 DAY""")
+            WHERE order_key LIKE %s
+              AND ordered_at < UTC_TIMESTAMP(6) - INTERVAL 1 DAY""",
+              ('SYN-ORDER-test:timing:late-%',))
         self.assertGreater(len(rows),0)
         for ordered_at, updated_at in rows:
             self.assertGreater(updated_at,ordered_at)
