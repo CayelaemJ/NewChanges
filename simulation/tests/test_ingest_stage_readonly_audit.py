@@ -50,6 +50,13 @@ class IngestStageReadOnlyContract(unittest.TestCase):
                 )
                 self.assertIn("AS current_utc_datetime", sql)
 
+    def test_preflight_sql_is_packaged_in_docker_image(self):
+        # Without this COPY the timestamp alias regression test passes on
+        # the host but crashes with FileNotFoundError inside Docker.
+        dockerfile = (ROOT / "Dockerfile.test").read_text(encoding="utf-8")
+        self.assertIn("COPY ops/preflight.sql ops/preflight.sql", dockerfile)
+        self.assertTrue((ROOT / "ops" / "preflight.sql").is_file())
+
     def test_expected_canonical_views_match_ten_feed_names(self):
         raw, _ = query_statements()
         first_cte = raw.split("-- 2. Missing required canonical columns")[0]
