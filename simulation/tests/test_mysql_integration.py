@@ -20,6 +20,18 @@ class LocalMySQL(unittest.TestCase):
         with cls.db.cursor() as c:c.execute('UPDATE sim_control SET enabled=TRUE WHERE control_id=1')
         cls.db.commit()
 
+    def setUp(self):
+        # MySQL/PyMySQL defaults to REPEATABLE READ with autocommit=False.
+        # A previous SELECT can leave cls.db on a stale MVCC snapshot while
+        # the generator commits fresh rows through a separate connection.
+        # Reset the read view before every test; never share read transactions.
+        self.db.rollback()
+
+    def tearDown(self):
+        # Prevent tests that only SELECT from leaking a REPEATABLE READ
+        # snapshot into the next test method.
+        self.db.rollback()
+
     @classmethod
     def tearDownClass(cls):
         with cls.db.cursor() as c:c.execute('UPDATE sim_control SET enabled=FALSE WHERE control_id=1')
@@ -87,12 +99,21 @@ class LocalMySQL(unittest.TestCase):
     def test_late_business_date_preserved_with_fresh_write_timestamp(self):
         # Seeded simulator writes a historical business date for late arrivals,
         # but updated_at is still the actual insertion/manipulation time.
-        run(run_key='test:timing:late',seed='timing-fixture',max_orders=12)
-        rows = query(self.db,"""SELECT ordered_at,updated_at FROM orders
-            WHERE order_key LIKE %s
-              AND ordered_at < UTC_TIMESTAMP(6) - INTERVAL 1 DAY""",
-              ('SYN-ORDER-test:timing:late-%',))
-        self.assertGreater(len(rows),0)
+        result = run(run_key='test:timing:late',seed='timing-fixture',max_orders=12)
+        self.assertEqual(result['status'], 'SUCCEEDED')
+        self.assertGreater(result['statistics']['late'], 0)
+        # Use a fresh read transaction AFTER the writer commits. The shared
+        # cls.db may have observed rows before this simulator run.
+        reader = connect('writer')
+        try:
+            rows = query(reader,"""SELECT ordered_at,updated_at FROM orders
+                WHERE order_key LIKE %s
+                  AND ordered_at < UTC_TIMESTAMP(6) - INTERVAL 1 DAY""",
+                  ('SYN-ORDER-test:timing:late-%',))
+        finally:
+            reader.rollback()
+            reader.close()
+        self.assertGreater(len(rows), 0, 'Generated late orders not visible to a fresh reader')
         for ordered_at, updated_at in rows:
             self.assertGreater(updated_at,ordered_at)
             self.assertLess(abs((datetime.now(timezone.utc).replace(
