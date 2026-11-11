@@ -9,7 +9,7 @@ from datetime import timezone
 from hashlib import sha256
 
 from .ingest_stage_contract import validate_snapshot_handoff
-from .ingest_stage_txn import CommitPlan, LogCoordinate, OpaqueChange
+from .ingest_stage_txn import CommitPlan, LogCoordinate, OpaqueChange, _cmp
 
 CONSUMER = "ingest-stage-local-pilot-v1"
 _DIGEST = re.compile(r"^[0-9a-f]{64}$")
@@ -94,11 +94,17 @@ def persist_local_plan(db, plan, *, consumer_name=CONSUMER):
         raise ValueError("Invalid source transaction checkpoint")
     if not isinstance(plan.changes, tuple) or len(plan.changes) > 1000:
         raise ValueError("Unsafe CDC transaction length")
+    if _cmp(plan.next_checkpoint, plan.previous) <= 0:
+        raise ValueError("Source checkpoint must advance beyond the previous commit")
+    # Validate the marker *before* digesting it, including source privacy,
+    # allowed operations, opaque HMAC identifiers and aware UTC timestamps.
+    if not all(isinstance(change, OpaqueChange) for change in plan.changes):
+        raise ValueError("Raw source row payload rejected")
+    for change in plan.changes:
+        OpaqueChange.from_marker(change)
     if (not isinstance(plan.digest, str) or _DIGEST.fullmatch(plan.digest) is None
             or plan.digest != _plan_checksum(plan)):
         raise ValueError("Invalid source transaction digest")
-    if not all(isinstance(change, OpaqueChange) for change in plan.changes):
-        raise ValueError("Raw source row payload rejected")
     db.begin()
     try:
         _, rows = _execute(db, """SELECT log_file,log_pos,last_plan_digest
