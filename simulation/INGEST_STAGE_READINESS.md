@@ -50,6 +50,61 @@ an active real `ingest_stage` binlog reader on RDS, a verified snapshot,
 configured retention or safe replication privilege scope. No AWS database
 or production configuration was changed as part of this test run.
 
+## Explicit XID-gated local stream prototype (12 November 2026)
+
+The `simulation/runtime/ingest_stage_stream.py` module now connects
+the existing `ingest_stage` row-event adapter and transaction planner to
+the isolated durable `fixer_ingest_cdc` sink. It is **local-Docker only**,
+requiring `SIM_ENV=local`, `RUN_LOCAL_MYSQL_TESTS=yes`, the three MySQL
+connection hosts set to `mysql`, and matching bootstrap snapshot metadata.
+It has no production CLI entrypoint or AWS connection path.
+
+The pilot reads MySQL `WriteRowsEvent`, `UpdateRowsEvent`,
+`DeleteRowsEvent` and **`XidEvent`** explicitly from the binlog;
+no checkpoint advances before the XID. On commit it durably persists
+the opaque event markers and checkpoint together in the existing
+transactional sink. Incomplete transactions, invalid event kinds, stale
+positions and failed sink commits abort without checkpoint advancement.
+XID commits for foreign tables / the sink itself are ignored when no
+allowed rows are buffered, preventing self-induced infinite event loops.
+Processing is bounded by packet, time and transaction limits.
+
+`simulation/schema/004_ingest_stage_fixture.sql` defines two **empty,
+synthetic** source tables `ingest_stage.employees` and
+`ingest_stage.debt_accounts` with the same `_ingest_id` primary-key and
+nullable TEXT `source_updated_at` shape as the operator-inspected RDS source.
+This script is mounted only in the internal, ephemeral Docker MySQL service.
+The disposable `sim_writer` receives fixture-only DML, and `sim_repl`
+receives fixture SELECT for metadata; the local `sim_cdc` sink account is
+unchanged. No AWS or production permissions have been granted.
+
+Added tests:
+- Ten host-safe `test_ingest_stage_stream.py` cases: XID-gated commits,
+  no checkpoint movement on failure, incomplete/unknown events, correct
+  inserts/updates/deletes, binlog rotation, foreign-only XIDs, schema
+  isolation, replay checks and refusal outside Docker.
+- One `test_ingest_stage_real_binlog.py` Docker test: writes an isolated
+  source transaction into the synthetic fixture, uses an actual
+  `BinLogStreamReader` including `XidEvent`, then checks atomic marker
+  and checkpoint storage and flags an UPDATE with an unchanged source
+  timestamp. This test **does not** insert into the real RDS tables.
+- Updated the scoped-grant assertion and fixture-copy safety contracts.
+
+**Verification status:** Source files, Docker mounts, local privilege
+allowlist and all new test definitions have been statically inspected.
+The previous **91/91 Docker pass** predates these changes. The expected
+updated suite is **102 tests** (host: 17 environment skips; Docker: no
+skips). No Docker daemon is available in the authoring environment, so
+the operator's WSL `bash simulation/ops/ci-docker.sh` run is required
+before claiming the new MySQL XID integration actually passes.
+
+**Still blocked for live AWS:** genuine consistent snapshot/import manifest,
+proven MySQL binlog retention, safe replication privileges on a
+mixed-schema instance, actual timestamp/view lineage, full ten-table
+live source consumer, restart-from-verified-checkpoint beyond bootstrap,
+and app analytics publication. This local pilot is NOT a deployable
+production worker and is deliberately unable to connect to RDS.
+
 ## What already exists
 
 The database contains `ingest_stage` with 11 base tables and 10 views,
