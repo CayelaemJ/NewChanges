@@ -77,6 +77,14 @@ class IngestSinkSafetyContracts(unittest.TestCase):
         self.assertIn("03-ingest-cdc.sql:ro",compose)
         # Keep all referenced safety-fixture files in the test image.
         # Prevent another host-green/container-FileNotFoundError regression.
+        self.assertIn("04-ingest-stage-fixture.sql:ro", compose)
+        fixture=(ROOT / "schema" / "004_ingest_stage_fixture.sql").read_text(encoding="utf-8")
+        self.assertIn("CREATE DATABASE IF NOT EXISTS ingest_stage", fixture)
+        self.assertIn("_ingest_id BIGINT UNSIGNED NOT NULL PRIMARY KEY", fixture)
+        self.assertIn("source_updated_at TEXT NULL", fixture)
+        self.assertNotIn("AWS_HOST", fixture)
+        self.assertIn("COPY schema/004_ingest_stage_fixture.sql schema/004_ingest_stage_fixture.sql",
+                      dockerfile)
         self.assertIn("COPY docker-compose.yml docker-compose.yml", dockerfile)
         self.assertIn("COPY schema/003_ingest_cdc.sql schema/003_ingest_cdc.sql",
                       dockerfile)
