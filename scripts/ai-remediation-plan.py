@@ -3,7 +3,7 @@
 import json
 import os
 from pathlib import Path
-from urllib.request import Request, urlopen
+from local_ollama_http import request_local_ollama
 
 folder = Path(os.environ.get("REPORT_DIR", "/reports"))
 report_file = folder / "report.json"
@@ -32,10 +32,9 @@ prompt = (
 )
 payload = json.dumps({"model": model, "prompt": prompt, "stream": False,
                       "options": {"temperature": 0, "num_predict": 1800}}).encode()
-req = Request(url + "/api/generate", data=payload,
-              headers={"Content-Type": "application/json"}, method="POST")
-with urlopen(req, timeout=240) as response:
-    result = json.loads(response.read())
+result = json.loads(request_local_ollama(
+    url + "/api/generate", method="POST", body=payload, timeout=240
+))
 plan = result.get("response", "")
 (folder / "remediation-plan.md").write_text(
     "# Draft remediation plan (unverified AI suggestions)\n\n" + plan + "\n",
