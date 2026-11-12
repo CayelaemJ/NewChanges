@@ -75,6 +75,9 @@ class IngestSinkSafetyContracts(unittest.TestCase):
         self.assertNotIn("USE ingest_stage",ddl)
         self.assertNotIn("ALTER TABLE ingest_stage",ddl)
         self.assertIn("03-ingest-cdc.sql:ro",compose)
+        # Keep all referenced safety-fixture files in the test image.
+        # Prevent another host-green/container-FileNotFoundError regression.
+        self.assertIn("COPY docker-compose.yml docker-compose.yml", dockerfile)
         self.assertIn("COPY schema/003_ingest_cdc.sql schema/003_ingest_cdc.sql",
                       dockerfile)
 
