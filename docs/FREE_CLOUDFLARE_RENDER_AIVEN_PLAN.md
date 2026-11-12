@@ -572,3 +572,18 @@ test "$rc" -eq 0
 Manual self-hosted workflow `.github/workflows/free-edge-manual.yml` also runs these checks with separate disposable Docker environments and cleanup. The new Docker build intentionally copies only selected repo source directories, not `.env`, private archives, auth cookies or real database URL files. E2E shares only the DB container's localhost namespace on an internal-only Docker network; no ports published. Build requires normal npm/Playwright dependency downloads, but runtime has no external network.
 
 **Status:** Code port is committed on the isolated branch, but Node/TypeScript compile, Docker unit and full E2E have **not yet run** in the operator's WSL environment. Do not merge this branch into PR #234 or mark MFA auth/tenant-isolation checks completed until the runs are green, conflicts reviewed, and current production-specific secrets are configured securely. Even a passing synthetic MFA flow does not prove live Aiven account or tenant isolation; those require separate checks without modifying real users.
+
+
+## 2026-11-12 all-account MFA candidate validation update
+
+This section supersedes the earlier 2026-11-06 status above that said the WSL integration run had not yet happened.
+
+On integration branch `integration/mfa-aiven-free-cutover-20261106`, commit `b1bcad3baf8f33db43fc3028e99364aaa0ea8acd`:
+
+- Operator reported `bash scripts/run-mfa-integration-checks.sh` passed all four stages, including disposable MFA HTTP, authenticator and recovery E2E.
+- The disposable RLS pilot denied missing tenant context and cross-tenant writes.
+- Offline encrypted archive restore recovered all 57 public tables into disposable PostgreSQL 18. This does not establish full Neon disaster-recovery readiness or production parity.
+- Gitleaks history scan, tracked credential exposure scan, Trivy, Semgrep, dependency audit, verify, source quality and browser checks passed.
+- Snyk remains unavailable because the account exhausted its credits; no Snyk pass is claimed.
+
+The pull request remains a draft. No production MFA enrollment, Aiven/Neon writes, Render secret changes, or Cloudflare traffic activation has occurred. Remaining cutover gates are encryption-key backup and recovery evidence, production RP/origin and consent review, Render configuration review, full Neon disaster-recovery verification, final source delta and writer-exclusivity checks. Do not merge or deploy until those gates have been reviewed and explicitly authorized.
