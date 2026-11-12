@@ -8,7 +8,7 @@ import json
 import os
 import re
 from pathlib import Path
-from local_ollama_http import request_local_ollama
+from local_ollama_transport import local_ollama_url, request_local_ollama
 
 root = Path(os.getenv("GITHUB_WORKSPACE", ".")).resolve()
 reports = root / "test-reports" / "ai-security"
@@ -62,8 +62,11 @@ else:
                     "model": "qwen2.5-coder:7b", "prompt": prompt, "stream": False,
                     "format": "json", "options": {"temperature": 0, "num_predict": 700}
                 }).encode()
-                # This endpoint is constrained by local_ollama_http to the local Ollama API.
-                ollama_url = os.getenv("LOCAL_OLLAMA_URL", "http://localhost:11434/api/generate")
+                # The runner may select loopback or Docker's host alias, but
+                # cannot redirect source findings to an arbitrary network host.
+                ollama_url = local_ollama_url(
+                    os.getenv("LOCAL_OLLAMA_URL", "http://localhost:11434/api/generate"),
+                    "/api/generate")
                 try:
                     envelope = json.loads(request_local_ollama(
                         ollama_url, method="POST", body=payload, timeout=180

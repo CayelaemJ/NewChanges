@@ -43,7 +43,9 @@ jobs:
 
       - name: Verify scanner parser, chunk coverage and retries offline
         shell: bash
-        run: python3 tests/ci/ollama-scanner-contract.test.py -v
+        run: |
+          python3 tests/ci/ollama-scanner-contract.test.py -v
+          python3 tests/ci/local-ollama-transport.test.py -v
 
       - name: Prepare real WebAuthn package and lockfile (opt in only)
         if: ${{ inputs.prepare_mfa_lock == true }}

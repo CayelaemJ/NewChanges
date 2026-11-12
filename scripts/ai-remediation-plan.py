@@ -3,7 +3,7 @@
 import json
 import os
 from pathlib import Path
-from local_ollama_http import request_local_ollama
+from local_ollama_transport import local_ollama_url, request_local_ollama
 
 folder = Path(os.environ.get("REPORT_DIR", "/reports"))
 report_file = folder / "report.json"
@@ -19,7 +19,7 @@ if not findings:
 if os.environ.get("OLLAMA_MODEL", "").endswith(":cloud"):
     raise SystemExit("Cloud model disallowed")
 model = os.environ.get("OLLAMA_MODEL", "qwen2.5-coder:7b")
-url = os.environ.get("OLLAMA_URL", "http://host.docker.internal:11434").rstrip("/")
+url = local_ollama_url(os.environ.get("OLLAMA_URL", "http://host.docker.internal:11434"), "/api/generate")
 summary = [{k: x.get(k) for k in ("file", "line", "severity", "title", "evidence", "recommendation")}
            for x in findings[:40]]
 prompt = (
@@ -33,7 +33,7 @@ prompt = (
 payload = json.dumps({"model": model, "prompt": prompt, "stream": False,
                       "options": {"temperature": 0, "num_predict": 1800}}).encode()
 result = json.loads(request_local_ollama(
-    url + "/api/generate", method="POST", body=payload, timeout=240
+    url, method="POST", body=payload, timeout=240
 ))
 plan = result.get("response", "")
 (folder / "remediation-plan.md").write_text(

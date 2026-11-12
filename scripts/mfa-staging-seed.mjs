@@ -7,9 +7,8 @@ import { hashPassword } from '../dist/services/authService.js';
 import {approvedStagingDatabaseEnvironment} from './mfa-staging-db-target.mjs';
 
 const guard = approvedStagingDatabaseEnvironment(process.env) &&
-  (process.env.ADMIN_MFA_ENFORCE==='false' ||
-   (process.env.ADMIN_MFA_ENFORCE==='true' &&
-    process.env.MFA_STAGING_ENFORCEMENT_APPROVED==='true'));
+  ((process.env.MFA_ENFORCE!=='true' && process.env.ADMIN_MFA_ENFORCE!=='true') ||
+    process.env.MFA_STAGING_ENFORCEMENT_APPROVED==='true');
 
 if (!guard) throw new Error('Synthetic-only staging fixture provisioning refused');
 const passwordNames=['MFA_STAGING_ADMIN_A_PASSWORD','MFA_STAGING_ADMIN_B_PASSWORD',

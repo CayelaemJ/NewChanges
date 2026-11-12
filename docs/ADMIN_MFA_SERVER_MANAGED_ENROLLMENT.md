@@ -1,30 +1,32 @@
-# The Fixer: server-managed first-time administrator MFA
+# The Fixer: account MFA enrollment and administrator approval
 
 Status: draft PR #219. **Not yet approved for production enforcement**. Test on
 the disposable CI PostgreSQL service and isolated Render MFA staging only.
 
 ## User experience
 
-1. Administrator signs in with the existing application password.
+1. Every account signs in with its existing application password.
 2. If MFA is already enrolled, the browser offers a current six-digit authenticator
    code or an enrolled WebAuthn passkey. No enrollment approval is required.
-3. If no MFA method is enrolled, /mfa offers **Request MFA setup approval**.
-   The server creates a random database request ID and associates it with the
-   password-authenticated session. It does **not** return a 43-character
-   enrollment code to the user.
+3. If no MFA method is enrolled, `/mfa` offers the appropriate first-time path:
+   regular users confirm their current password; administrators request
+   identity-verified approval. The server creates a random database request ID
+   for administrator approval and does **not** return a 43-character enrollment
+   code to the user.
 4. The user shares the non-secret request ID with the organization's security
-   administrators. Identity must be checked independently by both approvers
+   administrators only. Identity must be checked independently by both approvers
    before they attest to their approval. A password alone cannot authorize
    first-factor setup.
 5. Two **different** SUPERADMIN users who have themselves recently
    authenticated with WebAuthn passkeys approve in **Admin console → Manage
    my MFA & passkeys** (/mfa/manage). Neither can be the target account.
-6. The requester clicks **Check approval status**. On approval, /mfa enables
-   **Generate my one-time setup QR code** or **Set up device passkey**.
-   Enrollment completes by verifying an actual TOTP code or signed WebAuthn
-   registration assertion. The approval is consumed atomically.
-7. Later logins ask only for the enrolled TOTP code or passkey, and go to
-   the dashboard. Adding another method requires fresh MFA at /mfa/manage.
+6. The administrator clicks **Check approval status**. On approval, `/mfa`
+   enables **Generate my one-time setup QR code** or **Set up device passkey**.
+   Regular users proceed after password confirmation. Enrollment completes by
+   verifying an actual TOTP code or signed WebAuthn registration assertion.
+   Administrator approval is consumed atomically.
+7. Later logins for every role ask for the enrolled TOTP code or passkey before
+   protected access. Adding another method requires fresh MFA at `/mfa/manage`.
 
 ## Security properties
 

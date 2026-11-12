@@ -205,3 +205,31 @@ titles. Full findings remain in the local `report.json`. The PDF intentionally
 omits model evidence excerpts and raw source. The local PDF and JSON may still
 contain sensitive filenames, so keep them private; do not upload as public
 GitHub artifacts. The exporter does not write to production or alter source.
+
+## Full detailed PDF (no finding or page-count cap)
+
+The exporter now writes a comprehensive PDF named
+`The_Fixer_Full_Detailed_Security_Audit_YYYYMMDD_HHMMSS.pdf` into the
+signed-in Windows user's Downloads folder. There is **no finding-count cap**:
+every entry from the local `report.json` is included, even when this
+produces hundreds or thousands of pages.
+
+Included sections: exact scan coverage/metadata, model severity distribution,
+per-file observation index, **every finding** with path, line, title, model
+evidence and model recommendation, every failed chunk with reason, every
+excluded path with reason, and every recorded truncation. Repeated findings
+are preserved because this is intended to be a faithful, auditable record.
+A concise summary remains at the beginning.
+
+```bash
+cd ~/NewChanges-pr219
+git pull --ff-only origin chore/manual-self-hosted-docker-ci-20261029
+python3 tests/ci/export-ollama-pdf.test.py -v
+python3 scripts/ci/export-ollama-pdf.py
+```
+
+**Security:** The PDF may include model-generated excerpts of internal code.
+It is saved locally, not sent to GitHub, and must be kept private. The PDF
+does not attest that AI claims are verified, nor that unreviewed code is safe.
+A large PDF is not equivalent to a validated security audit. Review file paths,
+line references and evidence against the actual code and deterministic tests.

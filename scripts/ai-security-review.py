@@ -15,13 +15,13 @@ import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from local_ollama_http import request_local_ollama
+from local_ollama_transport import local_ollama_url, request_local_ollama
 
 VERSION = 6
 ROOT = Path(os.getenv("SCAN_ROOT", "/workspace")).resolve()
 REPORTS = Path(os.getenv("REPORT_DIR", "/workspace/test-reports/ai-security")).resolve()
 MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5-coder:7b")
-URL = os.getenv("OLLAMA_URL", "http://host.docker.internal:11434").rstrip("/")
+URL = local_ollama_url(os.getenv("OLLAMA_URL", "http://host.docker.internal:11434"), "")
 MAX_FILES = max(0, int(os.getenv("MAX_FILES", "0")))
 CHUNK_CHARS = max(1000, min(12000, int(os.getenv("AI_SCAN_CHUNK_CHARS", "3000"))))
 TIMEOUT = max(60, min(1200, int(os.getenv("AI_SCAN_REQUEST_TIMEOUT", "360"))))

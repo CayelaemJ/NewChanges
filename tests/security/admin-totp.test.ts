@@ -74,20 +74,21 @@ test('successful authenticator QR confirmation shows completion, not another ver
  assert.match(html,/href="\/dashboard" id="mfa-continue"/);
  assert.match(js,/success\.hidden=!state\.verified/);
  assert.match(js,/totp-verify-panel'\)\.hidden=!state\.totpEnrolled \|\| !!state\.verified/);
- assert.match(js,/new six-digit code/i);
+ assert.match(js,/fresh six-digit code/i);
 });
-test('existing administrator MFA is required on read-only business APIs as well as dashboard pages',()=>{
+test('MFA is required for every signed-in account on protected APIs and pages',()=>{
  const server=readFileSync('src/server.ts','utf8');
- assert.match(server,/protectedAdminRead = path\.startsWith\("\/api\/"\)/);
- assert.match(server,/!scope\.adminOnly && !scope\.adminMutation && !protectedAdminRead/);
- assert.match(server,/if \(MFA_ENFORCE && isAdminRole\(user\) && !await hasFreshAdminMfa\(req,user\.id\)\)/);
- assert.match(server,/mfaRequired:true/);
+ assert.match(server,/protectedAppRead = path\.startsWith\("\/api\/"\)/);
+ assert.match(server,/!scope\.adminOnly && !scope\.adminMutation && !protectedAppRead/);
+ assert.match(server,/if \(!await hasFreshAdminMfa\(req, user\.id\)\)/);
+ assert.match(server,/mfaRequired:\s*MFA_ENFORCE/);
+ assert.match(server,/const MFA_ENFORCE = process\.env\.MFA_ENFORCE === "true" \|\| process\.env\.ADMIN_MFA_ENFORCE === "true"/);
  assert.match(server,/sections:\[\],employers:\[\]/);
 });
 test('TOTP and passkey rate limits have separate tight buckets and status is read-only',()=>{
  const server=readFileSync('src/server.ts','utf8');
  assert.match(server,/path\.startsWith\("\/api\/auth\/mfa\/totp\/"\) \? "mfa-totp"/);
- assert.match(server,/bucket === "mfa-status" \? 60 : 16/);
+ assert.match(server,/bucket === "mfa-status" \? 60 : path === "\/api\/auth\/mfa\/recovery\/self" \? 8 : 16/);
  assert.match(server,/!rateLimit\(reply, `\$\{bucket\}:\$\{ip\}`, limit, 5 \* 60_000\)/);
 });
 test('the live TOTP verification query only uses valid Prisma fields and never mislabels database failures',()=>{

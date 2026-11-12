@@ -123,7 +123,7 @@ The draft staging branch now supports `ADMIN_MFA_TOTP_ENABLED=true` with a **uni
 7. Confirm passkey enrollment remains an option. To approve two-superadmin recovery, use **fresh passkey verification**—TOTP-only verified sessions are intentionally insufficient. Recovery must revoke the target's enrolled TOTP and passkeys and require a fresh, approved enrollment grant.
 8. Repeat after the web service spins down and wakes. Because this staging uses managed PostgreSQL, neither passkey nor TOTP enrollment should disappear when only the free web process sleeps.
 
-For all existing active ADMIN and SUPERADMIN accounts in production, MFA must be enforced after the prerequisites and enrollment grants are ready. **Do not enable the production flag or copy staging keys.** See `docs/ADMIN_MFA_TOTP_ROLLOUT.md` for safe first-enrollment grant distribution and mandatory enrollment requirements.
+For all active accounts in production, MFA must be enforced after the role-specific enrollment and recovery prerequisites are ready. **Do not enable the production flag or copy staging keys.** See `docs/ADMIN_MFA_TOTP_ROLLOUT.md` for regular-user password-confirmed enrollment and administrator approval requirements.
 
 ## Controlled first-run synthetic administrator fixtures
 The initial isolated database is empty. The optional `scripts/mfa-staging-seed.mjs` provisions two synthetic SUPERADMIN users, `mfa-superadmin-a@example.invalid` and `mfa-superadmin-b@example.invalid`, plus a distinct ADMIN recovery target, `mfa-recovery-target@example.invalid`. Each receives a separate password and one-time enrollment grant. **No live user account or dataset is copied.**
@@ -148,7 +148,7 @@ Never set these flags on production without separate approval. A staged test sho
 - Expired/replayed challenges, revoked credentials and stale sessions fail closed
 - Two distinct passkey-verified superadmins can approve recovery; no self-approval
 - Audit events are persisted; passkey private keys and raw one-time grant values never are
-- Ordinary (non-admin) users can still perform their approved actions
+- Ordinary (non-admin) accounts must also enroll or verify MFA before protected actions; use a synthetic regular-user account to exercise password-confirmed enrollment and self-recovery before staging acceptance
 
 ## Validation and cleanup
 - Run the dedicated self-hosted Docker CI with offline disposable Postgres before manual staging deployments.
