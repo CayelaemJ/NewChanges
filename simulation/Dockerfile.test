@@ -20,6 +20,7 @@ COPY Dockerfile.test Dockerfile.test
 COPY docker-compose.yml docker-compose.yml
 COPY schema/001_source.sql schema/001_source.sql
 COPY schema/003_ingest_cdc.sql schema/003_ingest_cdc.sql
+COPY schema/004_ingest_stage_fixture.sql schema/004_ingest_stage_fixture.sql
 RUN useradd --create-home --uid 10001 testuser && chown -R testuser:testuser /app
 USER testuser
 CMD ["python","-m","unittest","discover","-s","tests","-v"]
