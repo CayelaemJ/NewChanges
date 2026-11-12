@@ -57,17 +57,20 @@ class LocalAccountSetupTests(unittest.TestCase):
         self.assertEqual(len(creations), 3)
         self.assertTrue(all("@'%' IDENTIFIED BY" in sql for sql in creations))
         # Verify exact least-privilege grants, not a brittle statement count.
-        # The dedicated local CDC account needs the isolated marker sink;
-        # it must never get access to the real ingest_stage schema.
+        # Only the disposable Docker MySQL uses the local ingest_stage
+        # fixture. These are NEVER live-RDS grants.
         grants = [sql for sql in statements if sql.startswith("GRANT ")]
         self.assertCountEqual(grants, [
             "GRANT SELECT, INSERT, UPDATE, DELETE ON fixer_sim.* TO 'sim_writer'@'%'",
             "GRANT SELECT, INSERT, UPDATE, DELETE ON fixer_sim_analytics.* TO 'sim_cdc'@'%'",
             "GRANT SELECT, INSERT, UPDATE, DELETE ON fixer_ingest_cdc.* TO 'sim_cdc'@'%'",
+            "GRANT SELECT, INSERT, UPDATE, DELETE ON ingest_stage.* TO 'sim_writer'@'%'",
+            "GRANT SELECT ON ingest_stage.* TO 'sim_repl'@'%'",
             "GRANT SELECT ON fixer_sim.* TO 'sim_repl'@'%'",
             "GRANT REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO 'sim_repl'@'%'",
         ])
-        self.assertFalse(any("ingest_stage." in grant for grant in grants))
+        self.assertFalse(any("TO 'sim_cdc'" in grant and "ingest_stage." in grant for grant in grants))
+        self.assertFalse(any(" ON *.* TO 'sim_writer'" in grant for grant in grants))
         self.assertEqual(statements[-1], "FLUSH PRIVILEGES")
 
     def test_bootstrap_fails_closed_outside_local(self):
