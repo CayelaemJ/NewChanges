@@ -1,9 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
 const script=new URL('../scripts/verify-render-aiven-config.mjs',import.meta.url).pathname;
 const base={
-  DATABASE_URL:'postgresql://newchanges_app_runtime:synthetic@the-fixer-postgres-cay-bed7.b.aivencloud.com:26029/defaultdb?sslmode=require&connection_limit=2',
+  DATABASE_URL:(()=>{const url=new URL('postgresql://the-fixer-postgres-cay-bed7.b.aivencloud.com:26029/defaultdb?sslmode=require&connection_limit=2');url.username='newchanges_app_runtime';url.password=randomBytes(32).toString('base64url');return url.toString();})(),
   STANDBY_MODE:'true',
   NEWCHANGES_EDGE_ORIGIN_GUARD_ENABLED:'true',
   NEWCHANGES_EDGE_ORIGIN_SHARED_SECRET:'synthetic-only-unguessable-token-32-chars',
@@ -22,7 +23,7 @@ test('missing URL, wrong host, admin role and unbounded pool all fail',()=>{
   {DATABASE_URL:base.DATABASE_URL.replace('newchanges_app_runtime','avnadmin')},
   {DATABASE_URL:base.DATABASE_URL.replace('connection_limit=2','connection_limit=20')},
   {DATABASE_URL:base.DATABASE_URL.replace('sslmode=require','sslmode=prefer')},
- ]){const r=run(add);assert.equal(r.status,2,r.stderr);assert.match(r.stderr,/BLOCKED/);assert.doesNotMatch(r.stderr,/synthetic@/);}
+ ]){const r=run(add);assert.equal(r.status,2,r.stderr);assert.match(r.stderr,/BLOCKED/);assert.doesNotMatch(r.stderr,new RegExp(`${new URL(base.DATABASE_URL).password}@`));}
 });
 test('backend remains fenced without authenticated private edge and cutover',()=>{
  for(const add of [
