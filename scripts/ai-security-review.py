@@ -15,8 +15,7 @@ import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+from local_ollama_http import request_local_ollama
 
 VERSION = 6
 ROOT = Path(os.getenv("SCAN_ROOT", "/workspace")).resolve()
@@ -219,11 +218,10 @@ def ask_model(name, start, end, block):
             "stream": False, "format": FINDINGS_SCHEMA, "keep_alive": "30m",
             "options": {"temperature": 0, "num_predict": 2048, "num_ctx": 8192}
         }).encode()
-        req = Request(URL + "/api/generate", data=payload,
-                      headers={"Content-Type": "application/json"}, method="POST")
         try:
-            with urlopen(req, timeout=TIMEOUT) as resp:
-                envelope = json.load(resp)
+            envelope = json.loads(request_local_ollama(
+                URL + "/api/generate", method="POST", body=payload, timeout=TIMEOUT
+            ))
             if envelope.get("done_reason") == "length":
                 raise ValueError("Model response truncated by output length")
             candidates = parse_answer(envelope["response"])
@@ -247,9 +245,9 @@ def ask_model(name, start, end, block):
                     fields[field] = value
                 valid.append({"file": name, "line": line, "severity": severity, **fields})
             return valid, attempt
-        except (HTTPError, URLError, TimeoutError, OSError, ValueError, KeyError,
+        except (TimeoutError, OSError, ValueError, KeyError,
                 json.JSONDecodeError) as exc:
-            last = f"HTTP_{exc.code}" if isinstance(exc, HTTPError) else f"{type(exc).__name__}: {str(exc)[:110]}"
+            last = f"{type(exc).__name__}: {str(exc)[:110]}"
             if isinstance(exc, (ValueError, KeyError, json.JSONDecodeError)):
                 retry_guidance = (
                     "\nRETRY CONSTRAINT: Your previous output failed strict JSON or "
@@ -286,17 +284,17 @@ def require_local_gpu():
     body = json.dumps({"model": MODEL, "prompt": "Respond OK.", "stream": False,
                        "keep_alive": "30m",
                        "options": {"num_predict": 8, "num_ctx": 8192}}).encode()
-    request = Request(URL + "/api/generate", data=body,
-                      headers={"Content-Type": "application/json"}, method="POST")
     try:
-        with urlopen(request, timeout=TIMEOUT) as response:
-            reply = json.load(response)
+        reply = json.loads(request_local_ollama(
+            URL + "/api/generate", method="POST", body=body, timeout=TIMEOUT
+        ))
         if reply.get("error"):
             raise RuntimeError("Ollama warm-up failed")
-        with urlopen(URL + "/api/ps", timeout=30) as response:
-            status = json.load(response)
+        status = json.loads(request_local_ollama(
+            URL + "/api/ps", method="GET", timeout=30
+        ))
         vram = gpu_residency(status.get("models", []))
-    except (HTTPError, URLError, TimeoutError, OSError, KeyError, ValueError) as exc:
+    except (TimeoutError, OSError, KeyError, ValueError) as exc:
         raise RuntimeError(f"Cannot verify RTX GPU acceleration: {type(exc).__name__}") from exc
     if vram <= 0:
         raise RuntimeError(
