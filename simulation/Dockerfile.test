@@ -16,6 +16,8 @@ COPY ops/preflight.sql ops/preflight.sql
 COPY tests/ tests/
 # Contract tests verify the same Dockerfile used for this image build.
 COPY Dockerfile.test Dockerfile.test
+# Safety contract also inspects the Compose mount configuration.
+COPY docker-compose.yml docker-compose.yml
 COPY schema/001_source.sql schema/001_source.sql
 COPY schema/003_ingest_cdc.sql schema/003_ingest_cdc.sql
 RUN useradd --create-home --uid 10001 testuser && chown -R testuser:testuser /app
