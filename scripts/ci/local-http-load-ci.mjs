@@ -22,6 +22,8 @@ const task=async()=>{
   const start=performance.now();
   try{
    const signal=AbortSignal.timeout(5000);
+   // Intentional cleartext test traffic: the app binds only to 127.0.0.1; no credentials are sent.
+   // nosemgrep: typescript.react.security.react-insecure-request.react-insecure-request
    const res=await fetch(origin+'/health',{signal,headers:{'Accept':'application/json'}});
    latencies.push(performance.now()-start);
    if(res.status!==200)errors.push('Unexpected health status: '+res.status);
@@ -40,6 +42,8 @@ try{
  assert.deepEqual(errors,[],'No 5xx errors, timeouts or dropped health responses');
  assert.ok(p95<3000,'Local health p95 latency exceeded 3000ms: '+p95.toFixed(1));
  assert.ok(after-before<128*1024*1024,'Excessive heap growth for bounded health load');
+ // Intentional cleartext test traffic to this same-process loopback listener; this probe is unauthenticated.
+ // nosemgrep: typescript.react.security.react-insecure-request.react-insecure-request
  const unauth=await fetch(origin+'/api/admin/reports',{signal:AbortSignal.timeout(5000)});
  assert.ok([401,403].includes(unauth.status),'Unauthenticated reports must be denied');
  console.log('[http-load] PASS',JSON.stringify({requests:count,concurrent:workers,p95Ms:Math.round(p95),heapDeltaMiB:Math.round((after-before)/1048576)}));
