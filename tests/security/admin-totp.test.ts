@@ -28,7 +28,7 @@ test('generated secrets are unique 160-bit Base32 and encrypted with authenticat
  assert.doesNotMatch(ciphertext,new RegExp(a));
  assert.equal(decryptTotpSecret(ciphertext,key),a);
  assert.throws(()=>decryptTotpSecret(ciphertext,randomBytes(32)));
- const bad=ciphertext.slice(0,-1)+(ciphertext.endsWith('A')?'B':'A');
+ const bad=ciphertext.slice(0,-2)+(ciphertext.at(-2)==='A'?'B':'A')+ciphertext.slice(-1);
  assert.throws(()=>decryptTotpSecret(bad,key));
 });
 test('TOTP is feature-gated and requires distinct random configured encryption key',()=>{

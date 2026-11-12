@@ -121,7 +121,14 @@ function applySecurityHeaders(reply: FastifyReply) {
 
 const rateBuckets = new InMemoryRateLimiter(100_000);
 const RATE_WINDOW_MS = 60_000;
-const RATE_LIMIT = 240;
+const MFA_E2E_FIXTURE_URL =
+  "postgresql://ci_fixture:ci_fixture@127.0.0.1:5432/newchanges_ci";
+const IS_DISPOSABLE_MFA_E2E =
+  process.env.MFA_E2E_TEST_RATE_LIMIT === "true" &&
+  process.env.CI === "true" &&
+  process.env.CI_RLS_PROBE_APPROVED === "CI_DISPOSABLE_ONLY" &&
+  process.env.DATABASE_URL === MFA_E2E_FIXTURE_URL;
+const RATE_LIMIT = IS_DISPOSABLE_MFA_E2E ? 1000 : 240;
 const AUTH_RATE_LIMIT = 12;
 const AUTH_WINDOW_MS = 10 * 60_000;
 function rateLimit(reply: FastifyReply, key: string, limit: number, windowMs: number): boolean {
@@ -189,7 +196,8 @@ app.addHook("onRequest", async (req, reply) => {
   if (path.startsWith("/api/auth/mfa/")) {
     const bucket = path === "/api/auth/mfa/status" ? "mfa-status" :
       path.startsWith("/api/auth/mfa/totp/") ? "mfa-totp" : "mfa-passkey";
-    const limit = bucket === "mfa-status" ? 60 : path === "/api/auth/mfa/recovery/self" ? 8 : 16;
+    let limit = bucket === "mfa-status" ? 60 : path === "/api/auth/mfa/recovery/self" ? 8 : 16;
+    if (bucket === "mfa-passkey" && IS_DISPOSABLE_MFA_E2E) limit = 100;
     if (!rateLimit(reply, `${bucket}:${ip}`, limit, 5 * 60_000)) return;
   }
   if (path === "/api/contact" && !rateLimit(reply, `contact:${ip}`, 6, 10 * 60_000)) return;
