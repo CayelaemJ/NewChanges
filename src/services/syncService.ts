@@ -18,6 +18,7 @@ import { notifyAdmins, notifyScoreChangeIfCurrentPeriod } from "./automationServ
 import { commitBatch, commitSyncRows, SYNC_BULK_CHUNK_SIZE, type CommitProgress } from "./importService.js";
 import { assessIncomingRows } from "./dataQualityService.js";
 import { createSourceAdapter, configuredSourceMode, effectiveSourceConfig, sourceEnvironmentLocked, sourceIsConfigured } from "./sourceAdapter.js";
+import { safeSourceConnectionFailure } from "./sourceConnectionFailure.js";
 import { runMLOpsAssessment } from "./mlopsService.js";
 
 import { prisma } from "./database.js";
@@ -1037,7 +1038,7 @@ export async function previewSourceSwitch(patch: IntegrationConfigPatch = {}) {
       details: test.details ?? null,
     };
   } catch (error: any) {
-    return { ok: false, sourceChanged, requiresCutover: sourceChanged, error: error?.message ?? String(error) };
+    return { ok: false, sourceChanged, requiresCutover: sourceChanged, error: safeSourceConnectionFailure(error) };
   } finally {
     await adapter?.close().catch(() => {});
   }
@@ -1055,7 +1056,7 @@ export async function testConnection(patch: IntegrationConfigPatch = {}) {
     const result = await adapter.test();
     return { ...result, sourceMode: adapter.mode };
   } catch (error: any) {
-    return { ok: false, error: error?.message ?? String(error), sourceMode: (() => { try { return configuredSourceMode(config); } catch { return "UNKNOWN"; } })() };
+    return { ok: false, error: safeSourceConnectionFailure(error), sourceMode: (() => { try { return configuredSourceMode(config); } catch { return "UNKNOWN"; } })() };
   } finally {
     if (adapter) {
       try { await adapter.close(); } catch { /* Optional cleanup or diagnostics failure; retain previous state. */ }

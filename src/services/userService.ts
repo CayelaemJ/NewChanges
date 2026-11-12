@@ -5,9 +5,11 @@
 // ════════════════════════════════════════════════════════════════════
 
 import { randomBytes } from "node:crypto";
-import { prisma, hashPassword, destroyAllSessionsForUser, digestSetupToken } from "./authService.js";
+import { prisma, hashPassword, digestSetupToken } from "./authService.js";
 import { sendMail, portalBaseUrl } from "./reportScheduler.js";
 import { notifyAdmins } from "./automationService.js";
+import { assertSuperadminRetirementAllowed } from "./superadminAvailabilityPolicy.js";
+import { safeEmailDeliveryFailure } from "./emailDeliveryFailure.js";
 
 type Role = "ADMIN" | "SUPERADMIN" | "EMPLOYER_MANAGER" | "PORTFOLIO_MANAGER" | "VIEWER";
 
@@ -85,7 +87,9 @@ export async function createUser(opts: {
       });
       emailSent = true;
     } catch (e: any) {
-      emailError = String(e?.message || e).slice(0, 300);
+      // Invite-link delivery failures are returned to the admin UI. Never
+      // surface SMTP banners, transport credentials, or remote API bodies.
+      emailError = safeEmailDeliveryFailure(e);
     }
   }
 
@@ -106,7 +110,13 @@ export async function requestPasswordReset(email: string) {
   const rawSetupToken = randomBytes(32).toString("hex");
   const setupToken = digestSetupToken(rawSetupToken);
   const setupExpires = new Date(Date.now() + 2 * 3600e3); // 2 hours — shorter than the 3-day admin invite link
-  await prisma.user.update({ where: { id: user.id }, data: { setupToken, setupExpires } });
+  // Active state is checked at the write boundary too. An administrator
+  // may have revoked the account after the initial lookup.
+  const issued = await prisma.user.updateMany({
+    where: { id: user.id, active: true },
+    data: { setupToken, setupExpires },
+  });
+  if (issued.count !== 1) return { ok: true };
   const setupPath = `/set-password?token=${rawSetupToken}`;
   try {
     const base = (await portalBaseUrl()) || "";
@@ -154,27 +164,16 @@ export async function listUsers() {
 export async function updateUser(userId: string, patch: {
   name?: string; role?: Role; active?: boolean; employerIds?: string[]; partnerId?: string | null;
   revokedReason?: string; revokedBy?: string;
-}) {
-  // Invalidate every session before modifying authorisation scope. This fails
-  // closed even if a later database write fails partway through the update.
-  // Affected users must authenticate again after their permissions change.
+}, options: { forbidSuperadminTarget?: boolean } = {}) {
   const accessChanged = patch.role !== undefined ||
     patch.active !== undefined ||
     patch.employerIds !== undefined ||
     Object.prototype.hasOwnProperty.call(patch, "partnerId");
-  if (accessChanged) await destroyAllSessionsForUser(userId);
-  if (patch.employerIds) {
-    // replace links wholesale
-    await prisma.userEmployer.deleteMany({ where: { userId } });
-    const valid = await prisma.employer.findMany({ where: { id: { in: patch.employerIds } }, select: { id: true } });
-    await prisma.userEmployer.createMany({ data: valid.map((e: any) => ({ userId, employerId: e.id })), skipDuplicates: true });
-  }
-  // `active` transitions carry a revocation audit trail: who revoked access and
-  // why, kept even after re-enabling so history isn't lost. Cleared once the
-  // account is reactivated (a fresh deactivation writes a fresh reason).
   const revokeFields: Record<string, unknown> = {};
   if (patch.active === false) {
     revokeFields.revokedAt = new Date();
+    revokeFields.setupToken = null;
+    revokeFields.setupExpires = null;
     revokeFields.revokedReason = patch.revokedReason || "No reason given";
     revokeFields.revokedBy = patch.revokedBy || "admin";
   } else if (patch.active === true) {
@@ -182,26 +181,102 @@ export async function updateUser(userId: string, patch: {
     revokeFields.revokedReason = null;
     revokeFields.revokedBy = null;
   }
-  const user = await prisma.user.update({
-    where: { id: userId },
-    data: {
-      name: patch.name, role: patch.role as any, active: patch.active,
-      ...("partnerId" in patch ? { partnerId: patch.partnerId || null } : {}),
-      ...revokeFields,
-    },
-    include: { links: { include: { employer: { select: { id: true, name: true } } } } },
+
+  return prisma.$transaction(async tx => {
+    if (patch.role !== undefined || patch.active !== undefined) {
+      // Serialize *all* role/active-state changes in this account service.
+      // Without a transaction-wide lock, two concurrent demotions could each
+      // see two active superadmins and together remove the entire control plane.
+      // The query projects an integer, not PostgreSQL's unsupported void type.
+      await tx.$queryRaw`SELECT 1 AS locked FROM pg_advisory_xact_lock(761231, 20261105)`;
+      const current = await tx.user.findUnique({
+        where: { id: userId }, select: { role: true, active: true },
+      });
+      if (!current) throw new Error("user not found or no longer editable");
+      const activeSuperadmins = await tx.user.count({
+        where: { role: "SUPERADMIN", active: true },
+      });
+      assertSuperadminRetirementAllowed(current, patch, activeSuperadmins);
+    }
+    let validEmployerIds: string[] | undefined;
+    if (patch.employerIds !== undefined) {
+      if (!Array.isArray(patch.employerIds) || patch.employerIds.length > 5000 ||
+        patch.employerIds.some(id => typeof id !== "string" || !id || id.length > 128))
+        throw new Error("Invalid employerIds");
+      const requested = [...new Set(patch.employerIds)];
+      const existing = await tx.employer.findMany({
+        where: { id: { in: requested } }, select: { id: true },
+      });
+      if (existing.length !== requested.length)
+        throw new Error("One or more employer IDs do not exist");
+      validEmployerIds = requested;
+    }
+
+    // This role predicate is enforced by the same database write that applies
+    // the change. A pre-request role lookup may become stale under concurrent
+    // promotion; an ordinary admin may never edit a SUPERADMIN target.
+    const updated = await tx.user.updateMany({
+      where: {
+        id: userId,
+        ...(options.forbidSuperadminTarget ? { role: { not: "SUPERADMIN" as const } } : {}),
+      },
+      data: {
+        name: patch.name, role: patch.role as any, active: patch.active,
+        ...("partnerId" in patch ? { partnerId: patch.partnerId || null } : {}),
+        ...revokeFields,
+      },
+    });
+    if (updated.count !== 1) throw new Error("user not found or no longer editable");
+
+    if (validEmployerIds !== undefined) {
+      await tx.userEmployer.deleteMany({ where: { userId } });
+      if (validEmployerIds.length) {
+        await tx.userEmployer.createMany({
+          data: validEmployerIds.map(employerId => ({ userId, employerId })),
+          skipDuplicates: true,
+        });
+      }
+    }
+
+    if (accessChanged) {
+      const now = new Date();
+      await tx.session.updateMany({
+        where: { userId, endedAt: null },
+        data: {
+          endedAt: now, revokedAt: now, revokedBy: "admin_permission_changed",
+        },
+      });
+    }
+
+    const user = await tx.user.findUniqueOrThrow({
+      where: { id: userId },
+      include: { links: { include: { employer: { select: { id: true, name: true } } } } },
+    });
+    return sanitize(user);
   });
-  return sanitize(user);
 }
 
 // self-service: a user disables their own account. Ends their own session too,
 // since the deactivation should take effect immediately.
 export async function deactivateSelf(userId: string, reason?: string) {
-  const user = await prisma.user.update({
-    where: { id: userId },
-    data: { active: false, revokedAt: new Date(), revokedReason: reason || "Deactivated by the user", revokedBy: "self" },
+  const now = new Date();
+  // A superadmin cannot retire their own control-plane access through the
+  // general user endpoint. Privileged account retirement requires another
+  // authorized admin and the final-superadmin availability check.
+  const user = await prisma.$transaction(async tx => {
+    const disabled = await tx.user.updateMany({
+      where: { id: userId, active: true, role: { not: "SUPERADMIN" } },
+      data: { active: false, setupToken: null, setupExpires: null, revokedAt: now,
+        revokedReason: reason || "Deactivated by the user", revokedBy: "self" },
+    });
+    if (disabled.count !== 1)
+      throw new Error("Account cannot self-deactivate; contact a superadministrator");
+    await tx.session.updateMany({
+      where: { userId, endedAt: null },
+      data: { endedAt: now, revokedAt: now, revokedBy: "self_deactivation" },
+    });
+    return tx.user.findUniqueOrThrow({ where: { id: userId } });
   });
-  await destroyAllSessionsForUser(userId);
   notifyAdmins({
     subject: "A user deactivated their own account",
     html: `<div style="font-family:Arial,sans-serif;color:#241536"><h2 style="color:#32217c">Self-deactivation</h2><p><b>${escapeHtml(user.name)}</b> (${escapeHtml(user.email)}) deactivated their own account.</p>${reason ? `<p>Reason given: "${escapeHtml(String(reason).slice(0, 300))}"</p>` : ""}<p style="color:#6b7280;font-size:13px">Reactivate from Past users if this wasn't intended.</p></div>`,
@@ -228,38 +303,88 @@ export async function listRevokedUsers() {
 
 // admin-only: permanent delete. Only allowed on an already-deactivated account,
 // so nobody is removed without first going through the revoke/audit step.
-export async function deleteUserPermanently(userId: string) {
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user) throw new Error("user not found");
-  if (user.active) throw new Error("deactivate the account before deleting it permanently");
-  await destroyAllSessionsForUser(userId);
-  await prisma.user.delete({ where: { id: userId } });
+export async function deleteUserPermanently(
+  userId: string,
+  options: { forbidSuperadminTarget?: boolean } = {},
+) {
+  // Both conditions are checked at the actual DELETE boundary, not only by
+  // a preceding route-level lookup. Cascading session deletion is governed by
+  // the Session.user FK in the database and rolls back on any FK failure.
+  const deleted = await prisma.user.deleteMany({
+    where: {
+      id: userId,
+      active: false,
+      ...(options.forbidSuperadminTarget ? { role: { not: "SUPERADMIN" as const } } : {}),
+    },
+  });
+  if (deleted.count !== 1)
+    throw new Error("account must be deactivated and editable before deletion");
   return { ok: true };
 }
 
-export async function resetPassword(userId: string, newPassword: string) {
+export async function resetPassword(
+  userId: string,
+  newPassword: string,
+  options: { forbidSuperadminTarget?: boolean } = {},
+) {
   validatePassword(newPassword);
-  await prisma.user.update({ where: { id: userId }, data: { passwordHash: hashPassword(newPassword), setupToken: null, setupExpires: null } });
-  await destroyAllSessionsForUser(userId);
+  const passwordHash = hashPassword(newPassword);
+  const now = new Date();
+  await prisma.$transaction(async tx => {
+    // The role guard must be in the password UPDATE predicate. An ordinary
+    // admin cannot reset a privileged account, even across role-change races.
+    const updated = await tx.user.updateMany({
+      where: {
+        id: userId,
+        ...(options.forbidSuperadminTarget ? { role: { not: "SUPERADMIN" as const } } : {}),
+      },
+      data: { passwordHash, setupToken: null, setupExpires: null },
+    });
+    if (updated.count !== 1) throw new Error("user not found or no longer editable");
+    await tx.session.updateMany({
+      where: { userId, endedAt: null },
+      data: { endedAt: now, revokedAt: now, revokedBy: "password_changed" },
+    });
+  });
   return { ok: true };
 }
 
 // set-password flow (user clicks the emailed link)
 export async function completeSetup(token: string, newPassword: string) {
   validatePassword(newPassword);
-  if (typeof token !== "string" || token.length < 32 || token.length > 256) throw new Error("this setup link is invalid or has expired");
-  const digest = digestSetupToken(token);
-  const user = await prisma.user.findFirst({
-    where: { OR: [{ setupToken: digest }, { setupToken: token }] },
-  });
-  if (!user || !user.setupExpires || user.setupExpires < new Date()) {
+  if (typeof token !== "string" || token.length < 32 || token.length > 256)
     throw new Error("this setup link is invalid or has expired");
-  }
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { passwordHash: hashPassword(newPassword), setupToken: null, setupExpires: null, active: true },
+  const digest = digestSetupToken(token);
+  const passwordHash = hashPassword(newPassword);
+  const invalid = () => new Error("this setup link is invalid or has expired");
+  await prisma.$transaction(async tx => {
+    // The initial lookup is only to identify the account. It does NOT grant
+    // permission to change its password; the conditional write below does.
+    const account = await tx.user.findFirst({
+      where: { OR: [{ setupToken: digest }, { setupToken: token }] },
+      select: { id: true },
+    });
+    if (!account) throw invalid();
+    const now = new Date();
+    // A concurrent request that already consumed/expired the token must
+    // lose at the DATABASE write boundary, not at a stale application read.
+    const used = await tx.user.updateMany({
+      where: {
+        id: account.id,
+        active: true, // An old invitation/reset link must NEVER revive a revoked user.
+        OR: [{ setupToken: digest }, { setupToken: token }],
+        setupExpires: { gt: now },
+      },
+      data: { passwordHash, setupToken: null, setupExpires: null },
+    });
+    if (used.count !== 1) throw invalid();
+    // Existing sessions cannot survive a password reset. Commit this
+    // revocation atomically with the password change, including MFA sessions.
+    await tx.session.updateMany({
+      where: { userId: account.id, endedAt: null },
+      data: { endedAt: now, revokedAt: now, revokedBy: "password_changed" },
+    });
   });
-  await destroyAllSessionsForUser(user.id);
   return { ok: true };
 }
 

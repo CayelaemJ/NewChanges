@@ -3,6 +3,15 @@ import nodemailer from "nodemailer";
 import { DateTime } from "luxon";
 import { prisma, getDashboardPayload } from "./snapshotBuilder.js";
 import { themeForEmployer } from "./partnerService.js";
+import { allowedSlackWebhookUrl } from "./slackWebhookPolicy.js";
+import { notificationPlainText, safeEmailColor, safePortalBaseUrl, safeSenderDisplayName } from "./notificationTextSafety.js";
+import { reportDeliveryAllowed } from "./reportDeliveryPolicy.js";
+import { assertSecureSmtpTls } from "./smtpTlsPolicy.js";
+import { resolveEmailProviderConfig } from "./emailProviderConfig.js";
+import { safeEmailDeliveryFailure } from "./emailDeliveryFailure.js";
+import { validNotificationEmailAddress } from "./notificationEmailAddress.js";
+import { parseAlertEmailRecipients } from "./alertEmailRecipients.js";
+import { strictEmailSettingBoolean, strictSmtpPort, strictStaleDeactivateDays } from "./emailSettingsInputPolicy.js";
 
 export type ReportFilters = {
   period?: string;
@@ -54,7 +63,6 @@ const boolEnv = (name: string): boolean | undefined => {
   return !["0", "false", "no", "off"].includes(raw.toLowerCase());
 };
 const clean = (value: unknown) => typeof value === "string" && value.trim() ? value.trim() : null;
-const emailOk = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 const escapeHtml = (value: unknown) => String(value ?? "")
   .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 
@@ -68,10 +76,9 @@ function withEnv(cfg: any, draft: EmailDraft = {}) {
   const draftString = (key: keyof EmailDraft) => draft[key] === undefined ? undefined : clean(draft[key]);
   const envString = (name: string) => process.env[name] === undefined ? undefined : clean(process.env[name]);
   const envPort = process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : undefined;
+  const provider = resolveEmailProviderConfig(cfg, draft);
   return {
-    emailProvider: pick(draft.emailProvider, (envString("EMAIL_PROVIDER") || "smtp") as "smtp" | "resend", cfg.emailProvider || "smtp"),
-    resendApiKey: pick(draftString("resendApiKey") as any, envString("RESEND_API_KEY") as any, undefined),
-    resendFromEmail: pick(draftString("resendFromEmail") as any, envString("RESEND_FROM_EMAIL") as any, undefined),
+    ...provider,
     smtpHost: pick(draftString("smtpHost") as any, envString("SMTP_HOST") as any, cfg.smtpHost),
     smtpPort: pick(draft.smtpPort ?? undefined, Number.isFinite(envPort) ? envPort : undefined, cfg.smtpPort),
     smtpSecure: pick(draft.smtpSecure, boolEnv("SMTP_SECURE"), cfg.smtpSecure),
@@ -121,7 +128,8 @@ export async function publicEmailConfig() {
     updatedAt: cfg.updatedAt,
     // automations — not secret, safe to return as-is
     alertEmails: (cfg as any).alertEmails,
-    alertSlackWebhookUrl: (cfg as any).alertSlackWebhookUrl,
+    // Webhook URLs are bearer credentials. Never echo them back to the browser.
+    hasAlertSlackWebhook: Boolean((cfg as any).alertSlackWebhookUrl),
     digestEnabled: (cfg as any).digestEnabled,
     lastDigestSentAt: (cfg as any).lastDigestSentAt,
     staleDeactivateDays: (cfg as any).staleDeactivateDays,
@@ -139,35 +147,53 @@ export async function saveEmailConfig(input: EmailDraft) {
     data.emailProvider = input.emailProvider;
   }
   if ("resendApiKey" in input && clean(input.resendApiKey)) data.resendApiKey = clean(input.resendApiKey);
-  if ("resendFromEmail" in input) data.resendFromEmail = clean(input.resendFromEmail);
   if ("smtpHost" in input) data.smtpHost = clean(input.smtpHost);
-  if ("smtpPort" in input && input.smtpPort != null) data.smtpPort = Math.max(1, Math.min(65535, Number(input.smtpPort)));
-  if ("smtpSecure" in input) data.smtpSecure = Boolean(input.smtpSecure);
-  if ("smtpRequireTls" in input) data.smtpRequireTls = Boolean(input.smtpRequireTls);
-  if ("smtpRejectUnauthorized" in input) data.smtpRejectUnauthorized = Boolean(input.smtpRejectUnauthorized);
+  if ("smtpPort" in input && input.smtpPort != null) data.smtpPort = strictSmtpPort(input.smtpPort);
+  if ("smtpSecure" in input) data.smtpSecure = strictEmailSettingBoolean(input.smtpSecure, "smtpSecure");
+  if ("smtpRequireTls" in input) data.smtpRequireTls = strictEmailSettingBoolean(input.smtpRequireTls, "smtpRequireTls");
+  if ("smtpRejectUnauthorized" in input) data.smtpRejectUnauthorized = strictEmailSettingBoolean(input.smtpRejectUnauthorized, "smtpRejectUnauthorized");
   if ("smtpUsername" in input) data.smtpUsername = clean(input.smtpUsername);
   if (clean(input.smtpPassword)) data.smtpPassword = clean(input.smtpPassword);
   if ("fromName" in input) data.fromName = clean(input.fromName) || "The Fixer (Pty) Ltd Dashboard Portal";
   if ("fromEmail" in input) data.fromEmail = clean(input.fromEmail);
+  if ("resendFromEmail" in input && clean(input.resendFromEmail) &&
+      (input.emailProvider ?? current.emailProvider) === "resend") {
+    // Prisma SystemEmailConfig has one persisted fromEmail column, not a
+    // separate resendFromEmail column. Reuse it for the selected provider.
+    data.fromEmail = clean(input.resendFromEmail);
+  }
   if ("replyTo" in input) data.replyTo = clean(input.replyTo);
   if ("defaultTimezone" in input) {
     const zone = clean(input.defaultTimezone) || "Africa/Johannesburg";
     if (!DateTime.now().setZone(zone).isValid) throw new Error("default timezone is not a valid IANA timezone");
     data.defaultTimezone = zone;
   }
-  if ("portalBaseUrl" in input) data.portalBaseUrl = clean(input.portalBaseUrl);
-  if ("alertEmails" in input) data.alertEmails = clean(input.alertEmails);
-  if ("alertSlackWebhookUrl" in input) data.alertSlackWebhookUrl = clean(input.alertSlackWebhookUrl);
-  if ("digestEnabled" in input) data.digestEnabled = Boolean(input.digestEnabled);
-  if ("staleDeactivateDays" in input) {
-    const n = input.staleDeactivateDays;
-    data.staleDeactivateDays = n == null || Number(n) <= 0 ? null : Math.round(Math.max(7, Math.min(3650, Number(n))));
+  if ("portalBaseUrl" in input) {
+    const base = clean(input.portalBaseUrl);
+    if (base && !safePortalBaseUrl(base)) throw new Error("Portal base URL must be a secure HTTPS origin");
+    data.portalBaseUrl = base;
   }
-  if ("scoreChangeAlertsEnabled" in input) data.scoreChangeAlertsEnabled = Boolean(input.scoreChangeAlertsEnabled);
-  if ("syntheticDataMode" in input) data.syntheticDataMode = Boolean(input.syntheticDataMode);
-  if (data.fromEmail && !emailOk(data.fromEmail)) throw new Error("from email is not valid");
-  if (data.replyTo && !emailOk(data.replyTo)) throw new Error("reply-to email is not valid");
-  if (data.resendFromEmail && !emailOk(data.resendFromEmail)) throw new Error("Resend From email is not valid");
+  if ("alertEmails" in input) {
+    const recipients = parseAlertEmailRecipients(input.alertEmails);
+    data.alertEmails = recipients.length ? recipients.join(",") : null;
+  }
+  if ("alertSlackWebhookUrl" in input) {
+    const webhook = input.alertSlackWebhookUrl;
+    if (webhook == null || webhook === "") data.alertSlackWebhookUrl = null;
+    else if (!allowedSlackWebhookUrl(webhook)) throw new Error("Slack webhook must be an HTTPS Slack incoming-webhook URL");
+    else data.alertSlackWebhookUrl = webhook;
+  }
+  if ("digestEnabled" in input) data.digestEnabled = strictEmailSettingBoolean(input.digestEnabled, "digestEnabled");
+  if ("staleDeactivateDays" in input) data.staleDeactivateDays = strictStaleDeactivateDays(input.staleDeactivateDays);
+  if ("scoreChangeAlertsEnabled" in input) data.scoreChangeAlertsEnabled = strictEmailSettingBoolean(input.scoreChangeAlertsEnabled, "scoreChangeAlertsEnabled");
+  if ("syntheticDataMode" in input) data.syntheticDataMode = strictEmailSettingBoolean(input.syntheticDataMode, "syntheticDataMode");
+  if (data.fromEmail && !validNotificationEmailAddress(data.fromEmail)) throw new Error("from email is not valid");
+  if (data.replyTo && !validNotificationEmailAddress(data.replyTo)) throw new Error("reply-to email is not valid");
+  if (data.resendFromEmail && !validNotificationEmailAddress(data.resendFromEmail)) throw new Error("Resend From email is not valid");
+  if (process.env.NODE_ENV === "production" &&
+      ["smtpSecure", "smtpRequireTls", "smtpRejectUnauthorized"].some(key => key in data)) {
+    assertSecureSmtpTls(withEnv({ ...current, ...data }));
+  }
   await prisma.systemEmailConfig.update({ where: { id: current.id }, data });
   return publicEmailConfig();
 }
@@ -175,9 +201,10 @@ export async function saveEmailConfig(input: EmailDraft) {
 async function smtpTransport(draft: EmailDraft = {}) {
   const saved = await getEmailConfig();
   const cfg = withEnv(saved, draft);
+  assertSecureSmtpTls(cfg);
   if (!cfg.smtpHost) throw new Error("SMTP host is required");
   if (!cfg.smtpPort) throw new Error("SMTP port is required");
-  if (!cfg.fromEmail || !emailOk(cfg.fromEmail)) throw new Error("A valid From email is required");
+  if (!cfg.fromEmail || !validNotificationEmailAddress(cfg.fromEmail)) throw new Error("A valid From email is required");
   if (cfg.smtpUsername && !cfg.smtpPassword) throw new Error("SMTP password is required when an SMTP username is supplied");
   const transporter = nodemailer.createTransport({
     host: cfg.smtpHost,
@@ -194,17 +221,28 @@ async function smtpTransport(draft: EmailDraft = {}) {
 }
 
 async function sendEmail(opts: { to: string | string[]; subject: string; html: string; replyTo?: string }, draft: EmailDraft = {}) {
+  // Every delivery path, including transactional emails and legacy persisted
+  // schedules, must validate addresses before invoking SMTP or Resend.
+  const addresses = Array.isArray(opts.to) ? opts.to : [opts.to];
+  if (!addresses.length || addresses.some(address => !validNotificationEmailAddress(address)))
+    throw new Error("invalid recipient email");
   const saved = await getEmailConfig();
   const cfg = withEnv(saved, draft);
   const fromEmail = cfg.resendFromEmail || cfg.fromEmail;
+  if (opts.replyTo && !validNotificationEmailAddress(opts.replyTo))
+    throw new Error("reply-to email is not valid");
+  if (cfg.replyTo && !validNotificationEmailAddress(cfg.replyTo))
+    throw new Error("reply-to email is not valid");
   if (cfg.emailProvider === "resend") {
     if (!cfg.resendApiKey) throw new Error("RESEND_API_KEY is required when EMAIL_PROVIDER=resend");
-    if (!fromEmail || !emailOk(fromEmail)) throw new Error("A valid Resend From email is required");
+    if (!validNotificationEmailAddress(fromEmail)) throw new Error("A valid Resend From email is required");
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
+      redirect: "error",
+      signal: AbortSignal.timeout(20_000),
       headers: { "Authorization": `Bearer ${cfg.resendApiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        from: `${cfg.fromName || "The Fixer (Pty) Ltd Dashboard Portal"} <${fromEmail}>`,
+        from: `${safeSenderDisplayName(cfg.fromName)} <${fromEmail}>`,
         to: Array.isArray(opts.to) ? opts.to : [opts.to],
         reply_to: opts.replyTo || cfg.replyTo || undefined,
         subject: opts.subject,
@@ -212,14 +250,15 @@ async function sendEmail(opts: { to: string | string[]; subject: string; html: s
       }),
     });
     if (!response.ok) {
-      const detail = await response.text();
-      throw new Error(`Resend request failed (${response.status}): ${detail.slice(0, 500)}`);
+      // Never capture an untrusted provider response body in an exception:
+      // the admin test route persists error messages and exposes them again.
+      throw new Error(`Resend request failed (HTTP ${response.status})`);
     }
     return cfg;
   }
   const { transporter } = await smtpTransport(draft);
   await transporter.sendMail({
-    from: { name: cfg.fromName || "The Fixer (Pty) Ltd Dashboard Portal", address: cfg.fromEmail! },
+    from: { name: safeSenderDisplayName(cfg.fromName), address: cfg.fromEmail! },
     to: opts.to,
     replyTo: opts.replyTo || cfg.replyTo || undefined,
     subject: opts.subject,
@@ -237,13 +276,16 @@ export async function sendMail(opts: { to: string; subject: string; html: string
 
 export async function portalBaseUrl(): Promise<string | null> {
   const cfg = await publicEmailConfig();
-  return clean((cfg as any).portalBaseUrl) || null;
+  return safePortalBaseUrl((cfg as any).portalBaseUrl);
 }
 
 export async function testEmailConnection(draft: EmailDraft & { recipient?: string | null }) {
   const recipient = clean(draft.recipient);
-  if (!recipient || !emailOk(recipient)) throw new Error("Enter a valid test recipient email");
+  if (!validNotificationEmailAddress(recipient)) throw new Error("Enter a valid test recipient email");
   const now = new Date();
+  // Separate transport acceptance from audit persistence. A database write
+  // failure after successful delivery must not report a failed send and prompt
+  // an operator to repeat an email that already reached the provider.
   try {
     const saved = await getEmailConfig();
     const cfg = withEnv(saved, draft);
@@ -253,12 +295,32 @@ export async function testEmailConnection(draft: EmailDraft & { recipient?: stri
       subject: "The Fixer (Pty) Ltd Dashboard Portal — email test",
       html: `<div style="font-family:Arial,sans-serif;color:#241536;max-width:620px"><h2 style="color:#32217c">Email delivery is working</h2><p>This test was sent successfully by the <strong>The Fixer (Pty) Ltd Dashboard Portal</strong>.</p><p style="color:#6b7280;font-size:13px">${escapeHtml(now.toISOString())}</p></div>`,
     }, draft);
-    await prisma.systemEmailConfig.update({ where: { id: "default" }, data: { lastTestAt: now, lastTestStatus: "SUCCESS", lastTestNote: `Test email sent to ${recipient}` } });
-    return { ok: true, recipient };
-  } catch (error: any) {
-    await prisma.systemEmailConfig.update({ where: { id: "default" }, data: { lastTestAt: now, lastTestStatus: "FAILED", lastTestNote: String(error?.message || error).slice(0, 500) } });
-    throw error;
+  } catch (error: unknown) {
+    const safeMessage = safeEmailDeliveryFailure(error);
+    try {
+      await prisma.systemEmailConfig.update({
+        where: { id: "default" },
+        data: { lastTestAt: now, lastTestStatus: "FAILED", lastTestNote: safeMessage },
+      });
+    } catch {
+      // Preserve the classified transport failure and never log raw DB errors.
+      console.error("Email test failure status could not be persisted");
+    }
+    // Raw provider/driver causes may contain credentials; expose only the classified message.
+    // eslint-disable-next-line preserve-caught-error
+    throw new Error(safeMessage);
   }
+  let trackingWarning = false;
+  try {
+    await prisma.systemEmailConfig.update({
+      where: { id: "default" },
+      data: { lastTestAt: now, lastTestStatus: "SUCCESS", lastTestNote: `Test email sent to ${recipient}` },
+    });
+  } catch {
+    trackingWarning = true;
+    console.error("Email test accepted but delivery status could not be persisted");
+  }
+  return { ok: true, recipient, trackingWarning };
 }
 
 function parseTime(sendTime: string) {
@@ -309,8 +371,8 @@ function normalizeRecipients(input: unknown, fallbackEmail: string, allowAdditio
   if (!recipients.length) recipients.push(fallbackEmail.toLowerCase());
   const unique = [...new Set(recipients)];
   if (unique.length > 10) throw new Error("a report can be sent to a maximum of 10 recipients");
-  const invalid = unique.find((email) => !emailOk(email));
-  if (invalid) throw new Error(`invalid recipient email: ${invalid}`);
+  const invalid = unique.find((email) => !validNotificationEmailAddress(email));
+  if (invalid) throw new Error("invalid recipient email");
   return unique;
 }
 
@@ -377,9 +439,14 @@ export async function listReportSchedules(user: any, all = false) {
 export async function updateReportSchedule(user: any, id: string, patch: any) {
   const current = await prisma.reportSchedule.findUnique({ where: { id }, include: { user: { select: { email: true } } } });
   if (!current) throw new Error("schedule not found");
-  if (user.role !== "ADMIN" && current.userId !== user.id) throw new Error("you cannot edit this schedule");
-  if (Object.keys(patch || {}).every((key) => ["active"].includes(key))) {
-    return prisma.reportSchedule.update({ where: { id }, data: { active: Boolean(patch.active) } });
+  if (!isAdminRole(user) && current.userId !== user.id) throw new Error("you cannot edit this schedule");
+  if (patch && Object.keys(patch).length === 1 && typeof patch.active === "boolean") {
+    if (patch.active) {
+      const owner = await currentReportOwner(current.userId);
+      if (!reportDeliveryAllowed(owner, current.employerId, current.recipients))
+        throw new Error("Cannot reactivate a report whose owner lacks access or has invalid recipients");
+    }
+    return prisma.reportSchedule.update({ where: { id }, data: { active: patch.active } });
   }
   throw new Error("To change report filters or frequency, delete the schedule and create a new one.");
 }
@@ -387,19 +454,19 @@ export async function updateReportSchedule(user: any, id: string, patch: any) {
 export async function deleteReportSchedule(user: any, id: string) {
   const current = await prisma.reportSchedule.findUnique({ where: { id } });
   if (!current) return { deleted: true };
-  if (user.role !== "ADMIN" && current.userId !== user.id) throw new Error("you cannot delete this schedule");
+  if (!isAdminRole(user) && current.userId !== user.id) throw new Error("you cannot delete this schedule");
   await prisma.reportSchedule.delete({ where: { id } });
   return { deleted: true };
 }
 
 function money(value: unknown) {
   if (value == null || value === "") return "—";
-  return typeof value === "number" ? `R ${value.toLocaleString("en-ZA")}` : String(value);
+  return typeof value === "number" ? `R ${value.toLocaleString("en-ZA")}` : escapeHtml(value);
 }
 
 function reportHtml(payload: any, schedule: any, theme: any) {
-  const primary = `#${String(theme?.primaryColor || "32217C").replace(/^#/, "")}`;
-  const accent = `#${String(theme?.accentColor || "B15BE8").replace(/^#/, "")}`;
+  const primary = safeEmailColor(theme?.primaryColor, "32217C");
+  const accent = safeEmailColor(theme?.accentColor, "B15BE8");
   const label = payload.filterContext?.label || "Programme to date";
   const site = payload.filterContext?.site || "All regions";
   const income = payload.filterContext?.incomeLabel || "All income bands";
@@ -407,7 +474,7 @@ function reportHtml(payload: any, schedule: any, theme: any) {
   const outcomeRows = (payload.outcomes || []).map((row: any) => `<tr><td style="padding:9px 8px;border-bottom:1px solid #eee">${escapeHtml(row.name)}</td><td style="padding:9px 8px;border-bottom:1px solid #eee;text-align:right">${Number(row.count || 0).toLocaleString("en-ZA")}</td><td style="padding:9px 8px;border-bottom:1px solid #eee;text-align:right;font-weight:700">${escapeHtml(row.stat)} ${escapeHtml(row.statL)}</td></tr>`).join("");
   const drivers = (payload.wellness?.drivers || []).map((row: any) => `<tr><td style="padding:7px 8px">${escapeHtml(row.name)}</td><td style="padding:7px 8px;text-align:right;font-weight:700">${row.available ? escapeHtml(row.score) : "Data not loaded"}</td></tr>`).join("");
   const warnings = payload.dataQuality?.warnings || [];
-  const portalBase = clean((schedule as any).portalBaseUrl);
+  const portalBase = safePortalBaseUrl((schedule as any).portalBaseUrl);
   const portal = portalBase ? `${portalBase.replace(/\/$/, "")}/dashboard?employer=${encodeURIComponent(schedule.employerId)}` : null;
   return `<!doctype html><html><body style="margin:0;background:#f5f4fa;font-family:Arial,Helvetica,sans-serif;color:#241536"><div style="max-width:760px;margin:0 auto;padding:28px 16px">
     <div style="background:${primary};padding:22px 26px;border-radius:16px 16px 0 0;color:white"><div style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#e6dcff;font-weight:700">${escapeHtml(theme?.name || "The Fixer (Pty) Ltd Dashboard Portal")}</div><h1 style="font-size:26px;margin:8px 0 4px">${escapeHtml(payload.employer)} — Financial Wellbeing Report</h1><div style="font-size:13px;color:#e6dcff">${escapeHtml(label)} · ${escapeHtml(site)} · ${escapeHtml(income)}</div></div>
@@ -431,12 +498,63 @@ function reportHtml(payload: any, schedule: any, theme: any) {
 async function assertDashboardPublishable() {
   const state = await prisma.integrationConfig.findUnique({
     where: { id: "default" },
-    select: { lastSyncStatus: true, lastSyncNote: true },
+    select: { lastSyncStatus: true },
   });
   if (["REBUILDING", "PARTIAL", "FAILED", "FULL_REFRESH_FAILED", "FULL_REFRESH_PRECHECK_FAILED"].includes(String(state?.lastSyncStatus || ""))) {
-    throw new Error(`Dashboard source state is ${state?.lastSyncStatus}; scheduled/manual report delivery is deferred until a complete successful source sync publishes consistent data. ${state?.lastSyncNote || ""}`.trim());
+    // The free-text sync note can contain upstream database/HTTP diagnostics.
+    // Do not reflect it into report delivery responses or error logs.
+    throw new Error("Dashboard source is not ready; report delivery is deferred until a successful sync.");
   }
   return state;
+}
+
+const REPORT_DELIVERY_BLOCKED = "Report delivery blocked: owner access or recipient settings have changed.";
+
+async function currentReportOwner(userId: string) {
+  // A stored schedule is not an authorization grant. Always re-read current
+  // active status, role and employer links, including after a role downgrade.
+  return prisma.user.findUnique({
+    where: { id: userId },
+    select: { active: true, role: true, email: true, links: { select: { employerId: true } } },
+  });
+}
+
+async function assertScheduleDeliveryAuthorized(
+  schedule: { id: string; userId: string; employerId: string; recipients: unknown },
+  triggeredBy: "scheduled" | "manual",
+) {
+  const owner = await currentReportOwner(schedule.userId);
+  if (reportDeliveryAllowed(owner, schedule.employerId, schedule.recipients)) return;
+  // Pause permanently rather than repeatedly attempting an unauthorized
+  // delivery. Do not persist old external recipients in the blocked audit row.
+  try {
+    await prisma.reportSchedule.update({
+      where: { id: schedule.id },
+      data: { active: false, lastStatus: "BLOCKED", lastError: REPORT_DELIVERY_BLOCKED },
+    });
+  } catch {
+    // A failed pause must not expose DB diagnostics or allow a send.
+    throw new Error(REPORT_DELIVERY_BLOCKED);
+  }
+  try {
+    await prisma.reportDeliveryLog.create({
+      data: { scheduleId: schedule.id, triggeredBy, status: "BLOCKED", recipients: [], error: REPORT_DELIVERY_BLOCKED },
+    });
+  } catch {
+    // Keep the schedule paused even when the audit store is unavailable.
+  }
+  throw new Error(REPORT_DELIVERY_BLOCKED);
+}
+
+async function assertScheduledReportStillActive(scheduleId: string): Promise<void> {
+  // A user can pause a schedule while dashboard generation is running.
+  // The claimed next-run timestamp is not permission to deliver anyway.
+  const current = await prisma.reportSchedule.findUnique({
+    where: { id: scheduleId },
+    select: { active: true },
+  });
+  if (current?.active !== true)
+    throw new Error("Report schedule was paused or deleted before delivery.");
 }
 
 async function sendSchedule(scheduleId: string, triggeredBy: "scheduled" | "manual") {
@@ -445,6 +563,8 @@ async function sendSchedule(scheduleId: string, triggeredBy: "scheduled" | "manu
     include: { employer: { select: { id: true, name: true } }, user: { select: { id: true, email: true, name: true } } },
   });
   if (!schedule) throw new Error("schedule not found");
+  if (triggeredBy === "scheduled") await assertScheduledReportStillActive(schedule.id);
+  await assertScheduleDeliveryAuthorized(schedule, triggeredBy);
   await assertDashboardPublishable();
   const filters = (schedule.filters || {}) as ReportFilters;
   const payload = await getDashboardPayload(schedule.employerId, filters as any);
@@ -452,30 +572,69 @@ async function sendSchedule(scheduleId: string, triggeredBy: "scheduled" | "manu
   const saved = await getEmailConfig();
   const cfg = withEnv(saved);
   const recipients = (Array.isArray(schedule.recipients) ? schedule.recipients : [schedule.user.email]).map(String);
-  const subject = `${schedule.employer.name} — ${payload.filterContext?.label || "Financial Wellbeing Report"}`;
+  const subject = notificationPlainText(`${schedule.employer.name} — ${payload.filterContext?.label || "Financial Wellbeing Report"}`);
   const html = reportHtml(payload, { ...schedule, portalBaseUrl: cfg.portalBaseUrl }, theme);
+  // A dashboard refresh can take time. Recheck immediately before external
+  // delivery so role changes during report generation cannot go unnoticed.
+  await assertScheduleDeliveryAuthorized(schedule, triggeredBy);
+  if (triggeredBy === "scheduled") await assertScheduledReportStillActive(schedule.id);
+  // Only transport failures are eligible for a retry. Once the provider
+  // accepts the email, a later database/audit failure must never resend it.
   try {
     await sendEmail({ to: recipients, subject, html });
-    await prisma.reportDeliveryLog.create({ data: { scheduleId: schedule.id, triggeredBy, status: "SENT", recipients: recipients as any, subject, filters: filters as any } });
-    await prisma.reportSchedule.update({ where: { id: schedule.id }, data: { lastSentAt: new Date(), lastStatus: "SENT", lastError: null, consecutiveFailures: 0 } });
-    return { ok: true, subject, recipients };
-  } catch (error: any) {
-    const message = String(error?.message || error).slice(0, 1000);
-    await prisma.reportDeliveryLog.create({ data: { scheduleId: schedule.id, triggeredBy, status: "FAILED", recipients: recipients as any, subject, filters: filters as any, error: message } });
+  } catch (error: unknown) {
+    // Delivery records may be visible to report owners. Persist only safe,
+    // classified errors, never raw provider responses or SMTP banners.
+    const message = safeEmailDeliveryFailure(error);
     const failed = schedule.consecutiveFailures + 1;
     // Only an automatic scheduled delivery may move the persisted next-run time
     // into the retry window. A user clicking “Send now” must never alter the
     // schedule they originally configured.
     const retry = triggeredBy === "scheduled" && failed <= 3 ? new Date(Date.now() + 30 * 60 * 1000) : undefined;
-    await prisma.reportSchedule.update({ where: { id: schedule.id }, data: { lastStatus: "FAILED", lastError: message, consecutiveFailures: failed, ...(retry ? { active: true, nextRunAt: retry } : {}) } });
-    throw error;
+    try {
+      await prisma.reportDeliveryLog.create({ data: { scheduleId: schedule.id, triggeredBy, status: "FAILED", recipients: recipients as any, subject, filters: filters as any, error: message } });
+    } catch {
+      // The transport has already failed. Try the schedule update regardless.
+    }
+    try {
+      if (triggeredBy === "scheduled") {
+        // Do not reactivate a schedule the owner paused during an in-flight
+        // transport attempt. The database predicate is checked atomically.
+        await prisma.reportSchedule.updateMany({
+          where: { id: schedule.id, active: true },
+          data: { lastStatus: "FAILED", lastError: message, consecutiveFailures: failed, ...(retry ? { nextRunAt: retry } : {}) },
+        });
+      } else {
+        await prisma.reportSchedule.update({
+          where: { id: schedule.id },
+          data: { lastStatus: "FAILED", lastError: message, consecutiveFailures: failed },
+        });
+      }
+    } catch {
+      throw new Error("Email delivery failed; retry status could not be persisted");
+    }
+    // Raw provider/driver causes may contain credentials; expose only the classified message.
+    // eslint-disable-next-line preserve-caught-error
+    throw new Error(message);
   }
+  let trackingWarning = false;
+  try {
+    await prisma.reportDeliveryLog.create({ data: { scheduleId: schedule.id, triggeredBy, status: "SENT", recipients: recipients as any, subject, filters: filters as any } });
+  } catch { trackingWarning = true; }
+  try {
+    await prisma.reportSchedule.update({ where: { id: schedule.id }, data: { lastSentAt: new Date(), lastStatus: "SENT", lastError: null, consecutiveFailures: 0, ...(triggeredBy === "scheduled" && schedule.frequency === "ONCE" ? { active: false } : {}) } });
+  } catch { trackingWarning = true; }
+  if (trackingWarning) {
+    // Do not log raw DB exceptions or mark a successfully sent email as FAILED.
+    console.error("Report email accepted but delivery tracking could not be fully persisted", { scheduleId: schedule.id });
+  }
+  return { ok: true, subject, recipients, trackingWarning };
 }
 
 export async function sendReportNow(user: any, id: string) {
   const schedule = await prisma.reportSchedule.findUnique({ where: { id } });
   if (!schedule) throw new Error("schedule not found");
-  if (user.role !== "ADMIN" && schedule.userId !== user.id) throw new Error("you cannot send this schedule");
+  if (!isAdminRole(user) && schedule.userId !== user.id) throw new Error("you cannot send this schedule");
   return sendSchedule(id, "manual");
 }
 
@@ -501,13 +660,18 @@ export async function runDueReports(logger?: { info?: Function; error?: Function
       const next = row.frequency === "ONCE" ? new Date(now.getTime() + 3650 * 864e5) : nextRunFor(input, new Date(now.getTime() + 1000));
       const claim = await prisma.reportSchedule.updateMany({
         where: { id: row.id, active: true, nextRunAt: { lte: now } },
-        data: { lastRunAt: now, nextRunAt: next, ...(row.frequency === "ONCE" ? { active: false } : {}) },
+        // Keep ONCE active until its send is accepted, so a concurrent user
+        // pause can be enforced by the final pre-delivery check.
+        data: { lastRunAt: now, nextRunAt: next },
       });
       if (!claim.count) continue;
-      logger?.info?.({ scheduleId: row.id, name: row.name }, "sending scheduled report");
+      logger?.info?.({ scheduleId: row.id }, "sending scheduled report");
       await sendSchedule(row.id, "scheduled");
-    } catch (error) {
-      logger?.error?.({ err: error, scheduleId: row.id }, "scheduled report failed");
+    } catch {
+      // A scheduled send may fail in Prisma, SMTP, a source adapter or email
+      // template generation. Raw exceptions can carry server credentials,
+      // connection strings or private report content: never forward them.
+      logger?.error?.({ scheduleId: row.id, reason: "SCHEDULE_DELIVERY_FAILED" }, "scheduled report failed");
     }
   }
   return { checked: due.length };

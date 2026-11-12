@@ -18,10 +18,20 @@ assert.match(auth, /\^\[0-9a-fA-F\]\{128\}\$/, 'stored digest must be strictly v
 assert.match(auth, /catch \{\s*return false;\s*\}/, 'scrypt failures must fail authentication safely');
 assert.match(auth, /digestSetupToken/);
 assert.match(users, /password must be at least 12 characters/);
-assert.match(users, /destroyAllSessionsForUser\(userId\)/);
-assert.match(users, /const accessChanged = patch\.role !== undefined/, 'role changes must revoke sessions');
-assert.match(users, /patch\.employerIds !== undefined/, 'employer scope changes must revoke sessions');
-assert.match(users, /if \(accessChanged\) await destroyAllSessionsForUser\(userId\);/, 'session revocation must precede permission changes');
+// Permissions and session revocation must commit together. The old test
+// expected revocation before the update, which left a partial-failure window.
+const updateStart = users.indexOf("export async function updateUser(");
+const updateEnd = users.indexOf("// self-service: a user disables", updateStart);
+assert.ok(updateStart >= 0 && updateEnd > updateStart, "updateUser boundary must exist");
+const updateUserBody = users.slice(updateStart, updateEnd);
+assert.match(updateUserBody, /const accessChanged = patch\.role !== undefined/, 'role changes must revoke sessions');
+assert.match(updateUserBody, /patch\.employerIds !== undefined/, 'employer scope changes must revoke sessions');
+assert.match(updateUserBody, /return prisma\.\$transaction\(async tx =>/, 'permission updates must be transactional');
+assert.match(updateUserBody, /await tx\.user\.updateMany\(/, 'role update must occur in the transaction');
+assert.match(updateUserBody, /await tx\.userEmployer\.deleteMany\(/, 'employer replacement must occur in the transaction');
+assert.match(updateUserBody, /if \(accessChanged\) \{[\s\S]*?await tx\.session\.updateMany\(/, 'access changes must revoke sessions in the same transaction');
+assert.match(updateUserBody, /revokedBy: "admin_permission_changed"/, 'session revocation must be attributable');
+assert.doesNotMatch(updateUserBody, /await destroyAllSessionsForUser\(/, 'session revocation must not be a separate non-atomic operation');
 assert.match(dashboard, /dashboard\.css/);
 assert.doesNotMatch(dashboard, /responsive-v1\.css|responsive-v2\.css|ui-enhance-v1\.css|ui-enhance-v2\.css/);
 assert.match(server, /trustProxy/);
@@ -61,7 +71,14 @@ console.log('Security regression checks passed.');
 
 assert.match(fs.readFileSync("src/services/sourceAdapter.ts", "utf8"), /SOURCE_API_ALLOWED_HOSTS/);
 assert.match(fs.readFileSync("src/services/sourceAdapter.ts", "utf8"), /privateOrLocalAddress/);
-assert.match(fs.readFileSync("src/services/sourceAdapter.ts", "utf8"), /redirect: "error"/);
+// Source API now uses Node HTTPS with DNS answers pinned into the TLS
+// connection. The previous fetch redirect flag is no longer the protection.
+const sourceAdapter = fs.readFileSync("src/services/sourceAdapter.ts", "utf8");
+const pinnedHttps = fs.readFileSync("src/services/pinnedSourceHttps.ts", "utf8");
+assert.match(sourceAdapter, /readPinnedSourceApiJson\(url, token\)/, "API reads must use the pinned HTTPS transport");
+assert.match(pinnedHttps, /lookup: pinnedSourceLookup\(hostname, answers\)/, "TLS must use validated DNS answers");
+assert.match(pinnedHttps, /rejectUnauthorized: true/, "source TLS verification must remain enabled");
+assert.match(pinnedHttps, /url\.protocol !== "https:"/, "source API must reject non-HTTPS URLs");
 
 assert.match(fs.readFileSync("public/dashboard.css", "utf8"), /Canonical mobile stabilization/);
 assert.match(fs.readFileSync("public/dashboard.css", "utf8"), /max-width: 640px/);

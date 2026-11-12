@@ -10,10 +10,14 @@
 //  calculations.
 // ════════════════════════════════════════════════════════════════════
 
-import { readSourceJson } from "./boundedSourceJson.js";
+import { readPinnedSourceApiJson } from "./pinnedSourceHttps.js";
+import { assertSecureSourceSqlTransport } from "./sourceSqlTlsPolicy.js";
+import { safeSourceConnectionFailure } from "./sourceConnectionFailure.js";
+import { closeSourceConnections } from "./sourceConnectionCleanup.js";
+import { assertSourceApiBaseUrlHasNoQuery } from "./sourceApiBaseUrlPolicy.js";
 import { LOAD_ORDER, getFormat } from "./reportFormats.js";
 import { lookup } from "node:dns/promises";
-import { isIP } from "node:net";
+import { isBlockedSourceAddress as privateOrLocalAddress } from "./sourceAddressPolicy.js";
 
 export type SourceMode = "API" | "SQL";
 export type SqlDialect = "POSTGRESQL" | "MSSQL" | "MYSQL";
@@ -54,6 +58,18 @@ export interface IntegrationSourceConfig {
   sqlReplicaSsl?: boolean | null;
   sqlReplicaTrustServerCertificate?: boolean | null;
   sqlReplicaMaxLagSeconds?: number | null;
+  // IntegrationConfig's persisted Prisma column names differ from the
+  // internal sqlReplica* adapter fields. Normalize both forms at the boundary.
+  sourceAnalyticsReplicaEnabled?: boolean | null;
+  sourceAnalyticsReplicaHost?: string | null;
+  sourceAnalyticsReplicaPort?: number | null;
+  sourceAnalyticsReplicaDatabase?: string | null;
+  sourceAnalyticsReplicaSchema?: string | null;
+  sourceAnalyticsReplicaUsername?: string | null;
+  sourceAnalyticsReplicaPassword?: string | null;
+  sourceAnalyticsReplicaSsl?: boolean | null;
+  sourceAnalyticsReplicaTrustServerCertificate?: boolean | null;
+  sourceAnalyticsReplicaMaxLagSeconds?: number | null;
 }
 
 export interface SourceAdapter {
@@ -84,19 +100,6 @@ function intSetting(value: number | null | undefined, fallback: number, min: num
   const n = Number(value ?? fallback);
   if (!Number.isInteger(n) || n < min || n > max) return fallback;
   return n;
-}
-
-function boolEnv(name: string): boolean | undefined {
-  const raw = process.env[name];
-  if (raw == null || raw === "") return undefined;
-  return !["0", "false", "no", "off"].includes(raw.toLowerCase());
-}
-
-function numberEnv(name: string): number | undefined {
-  const raw = process.env[name];
-  if (raw == null || raw === "") return undefined;
-  const n = Number(raw);
-  return Number.isFinite(n) ? n : undefined;
 }
 
 export function sourceEnvironmentLocked(): boolean {
@@ -140,16 +143,16 @@ export function effectiveSourceConfig(config: IntegrationSourceConfig): Integrat
     sqlViewPrefix: chooseSourceSetting("SOURCE_SQL_VIEW_PREFIX", config.sqlViewPrefix, text),
     sqlQueryTimeoutMs: chooseSourceSetting("SOURCE_SQL_QUERY_TIMEOUT_MS", config.sqlQueryTimeoutMs, integer),
     sqlMaxRowsPerReport: chooseSourceSetting("SOURCE_SQL_MAX_ROWS_PER_REPORT", config.sqlMaxRowsPerReport, integer),
-    sqlReplicaEnabled: chooseSourceSetting("SOURCE_SQL_REPLICA_ENABLED", config.sqlReplicaEnabled, bool),
-    sqlReplicaHost: chooseSourceSetting("SOURCE_SQL_REPLICA_HOST", config.sqlReplicaHost, text),
-    sqlReplicaPort: chooseSourceSetting("SOURCE_SQL_REPLICA_PORT", config.sqlReplicaPort, integer),
-    sqlReplicaDatabase: chooseSourceSetting("SOURCE_SQL_REPLICA_DATABASE", config.sqlReplicaDatabase, text),
-    sqlReplicaSchema: chooseSourceSetting("SOURCE_SQL_REPLICA_SCHEMA", config.sqlReplicaSchema, text, { allowEmptySaved: true }),
-    sqlReplicaUsername: chooseSourceSetting("SOURCE_SQL_REPLICA_USERNAME", config.sqlReplicaUsername, text),
-    sqlReplicaPassword: chooseSourceSetting("SOURCE_SQL_REPLICA_PASSWORD", config.sqlReplicaPassword, text),
-    sqlReplicaSsl: chooseSourceSetting("SOURCE_SQL_REPLICA_SSL", config.sqlReplicaSsl, bool),
-    sqlReplicaTrustServerCertificate: chooseSourceSetting("SOURCE_SQL_REPLICA_TRUST_SERVER_CERTIFICATE", config.sqlReplicaTrustServerCertificate, bool),
-    sqlReplicaMaxLagSeconds: chooseSourceSetting("SOURCE_SQL_REPLICA_MAX_LAG_SECONDS", config.sqlReplicaMaxLagSeconds, integer),
+    sqlReplicaEnabled: chooseSourceSetting("SOURCE_SQL_REPLICA_ENABLED", (config.sqlReplicaEnabled ?? config.sourceAnalyticsReplicaEnabled), bool),
+    sqlReplicaHost: chooseSourceSetting("SOURCE_SQL_REPLICA_HOST", (config.sqlReplicaHost ?? config.sourceAnalyticsReplicaHost), text),
+    sqlReplicaPort: chooseSourceSetting("SOURCE_SQL_REPLICA_PORT", (config.sqlReplicaPort ?? config.sourceAnalyticsReplicaPort), integer),
+    sqlReplicaDatabase: chooseSourceSetting("SOURCE_SQL_REPLICA_DATABASE", (config.sqlReplicaDatabase ?? config.sourceAnalyticsReplicaDatabase), text),
+    sqlReplicaSchema: chooseSourceSetting("SOURCE_SQL_REPLICA_SCHEMA", (config.sqlReplicaSchema ?? config.sourceAnalyticsReplicaSchema), text, { allowEmptySaved: true }),
+    sqlReplicaUsername: chooseSourceSetting("SOURCE_SQL_REPLICA_USERNAME", (config.sqlReplicaUsername ?? config.sourceAnalyticsReplicaUsername), text),
+    sqlReplicaPassword: chooseSourceSetting("SOURCE_SQL_REPLICA_PASSWORD", (config.sqlReplicaPassword ?? config.sourceAnalyticsReplicaPassword), text),
+    sqlReplicaSsl: chooseSourceSetting("SOURCE_SQL_REPLICA_SSL", (config.sqlReplicaSsl ?? config.sourceAnalyticsReplicaSsl), bool),
+    sqlReplicaTrustServerCertificate: chooseSourceSetting("SOURCE_SQL_REPLICA_TRUST_SERVER_CERTIFICATE", (config.sqlReplicaTrustServerCertificate ?? config.sourceAnalyticsReplicaTrustServerCertificate), bool),
+    sqlReplicaMaxLagSeconds: chooseSourceSetting("SOURCE_SQL_REPLICA_MAX_LAG_SECONDS", (config.sqlReplicaMaxLagSeconds ?? config.sourceAnalyticsReplicaMaxLagSeconds), integer),
   };
 }
 
@@ -225,18 +228,6 @@ function normalizeSqlRows(reportKey: string, rows: Record<string, unknown>[]): R
   });
 }
 
-function privateOrLocalAddress(address: string): boolean {
-  if (isIP(address) === 6) {
-    const a = address.toLowerCase();
-    return a === "::1" || a.startsWith("fc") || a.startsWith("fd") || a.startsWith("fe8") || a.startsWith("fe9") || a.startsWith("fea") || a.startsWith("feb") || a.startsWith("::ffff:127.") || a.startsWith("::ffff:10.") || a.startsWith("::ffff:192.168.") || a.startsWith("::ffff:172.16.");
-  }
-  if (isIP(address) === 4) {
-    const [a,b] = address.split(".").map(Number);
-    return a === 10 || a === 127 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127) || a === 0;
-  }
-  return false;
-}
-
 async function assertSafeApiBaseUrl(raw: string): Promise<string> {
   let url: URL;
   try { url = new URL(raw); } catch { throw new Error("API base URL must be a valid URL."); }
@@ -268,8 +259,11 @@ async function assertSafeApiBaseUrl(raw: string): Promise<string> {
 async function createApiAdapter(config: IntegrationSourceConfig): Promise<SourceAdapter> {
   const rawBaseUrl = String(config.baseUrl ?? "").trim();
   if (!rawBaseUrl) throw new Error("No API base URL configured.");
+  let parsedBase: URL;
+  try { parsedBase = new URL(rawBaseUrl); } catch { throw new Error("API base URL must be a valid URL."); }
+  assertSourceApiBaseUrlHasNoQuery(parsedBase);
   const baseUrl = await assertSafeApiBaseUrl(rawBaseUrl);
-  const token = process.env.SOURCE_API_TOKEN || config.authToken || null;
+  const token = config.authToken || null;
 
   async function fetchPage(reportKey: string, window?: SourceWindow, cursor?:string): Promise<SourceFetchResult & {nextCursor?:string}> {
     const root = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
@@ -279,19 +273,11 @@ async function createApiAdapter(config: IntegrationSourceConfig): Promise<Source
 
     url.searchParams.set("limit", "5000");
     if(cursor)url.searchParams.set("cursor",cursor);
-    // Revalidate immediately before each request; a pinned connection or egress firewall
-    // is still required to eliminate the DNS lookup-to-connect race completely.
+    // Validate each page URL, then resolve and pin the vetted DNS answers
+    // inside the actual HTTPS socket connection. Native TLS still verifies the
+    // configured hostname; no redirect or second DNS lookup can override it.
     await assertSafeApiBaseUrl(url.toString());
-    const response = await fetch(url, {
-      headers: token
-        ? { Authorization: `Bearer ${token}`, Accept: "application/json" }
-        : { Accept: "application/json" },
-      signal: AbortSignal.timeout(60_000),
-      redirect: "error",
-    });
-    if (!response.ok) throw new Error(`HTTP ${response.status} from ${reportKey} endpoint`);
-
-    const body: any = await readSourceJson(response);
+    const body: any = await readPinnedSourceApiJson(url, token);
     const records = Array.isArray(body) ? body : body?.records;
     if (!Array.isArray(records)) throw new Error(`${reportKey}: response missing "records" array`);
     const nextCursor=Array.isArray(body)?undefined:body?.nextCursor;
@@ -366,25 +352,32 @@ function qualifiedView(dialect: SqlDialect, config: IntegrationSourceConfig, rep
 }
 
 async function openPostgresExecutor(config: IntegrationSourceConfig): Promise<SqlExecutor> {
+  // effectiveSourceConfig already applied the environment-lock precedence.
   const pg: any = await import("pg");
   const Client = pg.Client ?? pg.default?.Client;
   if (!Client) throw new Error("The pg driver could not be loaded.");
 
   const queryTimeout = intSetting(config.sqlQueryTimeoutMs, 60_000, 1_000, 600_000);
-  const sslEnabled = boolEnv("SOURCE_SQL_SSL") ?? config.sqlSsl ?? true;
-  const trust = boolEnv("SOURCE_SQL_TRUST_SERVER_CERTIFICATE") ?? config.sqlTrustServerCertificate ?? false;
+  const sslEnabled = config.sqlSsl ?? true;
+  const trust = config.sqlTrustServerCertificate ?? false;
+  assertSecureSourceSqlTransport(sslEnabled, trust, "PostgreSQL source");
   const client = new Client({
     host: config.sqlHost,
     port: intSetting(config.sqlPort, 5432, 1, 65535),
     database: config.sqlDatabase,
     user: config.sqlUsername,
-    password: process.env.SOURCE_SQL_PASSWORD || config.sqlPassword,
+    password: config.sqlPassword,
     ssl: sslEnabled ? { rejectUnauthorized: !trust } : false,
     connectionTimeoutMillis: Math.min(queryTimeout, 60_000),
     statement_timeout: queryTimeout,
     application_name: "empower-fin-dashboard-source",
   });
-  await client.connect();
+  try { await client.connect(); }
+  catch (error) {
+    // The driver may have allocated a socket before authentication failed.
+    await Promise.allSettled([Promise.resolve().then(() => client.end())]);
+    throw error;
+  }
 
   return {
     dialect: "POSTGRESQL",
@@ -429,19 +422,21 @@ async function openPostgresExecutor(config: IntegrationSourceConfig): Promise<Sq
 }
 
 async function openMysqlExecutor(config: IntegrationSourceConfig): Promise<SqlExecutor> {
+  // Replica settings must never inherit primary-source credentials or TLS flags.
   const mysql: any = await import("mysql2/promise");
   const createConnection = mysql.createConnection ?? mysql.default?.createConnection;
   if (!createConnection) throw new Error("The mysql2 driver could not be loaded.");
 
   const queryTimeout = intSetting(config.sqlQueryTimeoutMs, 60_000, 1_000, 600_000);
-  const sslEnabled = boolEnv("SOURCE_SQL_SSL") ?? config.sqlSsl ?? true;
-  const trust = boolEnv("SOURCE_SQL_TRUST_SERVER_CERTIFICATE") ?? config.sqlTrustServerCertificate ?? false;
+  const sslEnabled = config.sqlSsl ?? true;
+  const trust = config.sqlTrustServerCertificate ?? false;
+  assertSecureSourceSqlTransport(sslEnabled, trust, "MySQL source");
   const connection = await createConnection({
     host: config.sqlHost,
     port: intSetting(config.sqlPort, 3306, 1, 65535),
     database: config.sqlDatabase,
     user: config.sqlUsername,
-    password: process.env.SOURCE_SQL_PASSWORD || config.sqlPassword,
+    password: config.sqlPassword,
     connectTimeout: Math.min(queryTimeout, 60_000),
     ssl: sslEnabled ? { rejectUnauthorized: !trust } : undefined,
     dateStrings: false,
@@ -497,24 +492,32 @@ async function openMysqlExecutor(config: IntegrationSourceConfig): Promise<SqlEx
 }
 
 async function openMssqlExecutor(config: IntegrationSourceConfig): Promise<SqlExecutor> {
+  // Use only the selected effective configuration, not raw primary env values.
   const mssql: any = await import("mssql");
   const ConnectionPool = mssql.ConnectionPool ?? mssql.default?.ConnectionPool;
   if (!ConnectionPool) throw new Error("The mssql driver could not be loaded.");
 
   const queryTimeout = intSetting(config.sqlQueryTimeoutMs, 60_000, 1_000, 600_000);
-  const encrypt = boolEnv("SOURCE_SQL_SSL") ?? config.sqlSsl ?? true;
-  const trust = boolEnv("SOURCE_SQL_TRUST_SERVER_CERTIFICATE") ?? config.sqlTrustServerCertificate ?? false;
-  const pool = await new ConnectionPool({
+  const encrypt = config.sqlSsl ?? true;
+  const trust = config.sqlTrustServerCertificate ?? false;
+  assertSecureSourceSqlTransport(encrypt, trust, "SQL Server source");
+  const pool = new ConnectionPool({
     server: config.sqlHost,
     port: intSetting(config.sqlPort, 1433, 1, 65535),
     database: config.sqlDatabase,
     user: config.sqlUsername,
-    password: process.env.SOURCE_SQL_PASSWORD || config.sqlPassword,
+    password: config.sqlPassword,
     connectionTimeout: Math.min(queryTimeout, 60_000),
     requestTimeout: queryTimeout,
     pool: { max: 3, min: 0, idleTimeoutMillis: 30_000 },
     options: { encrypt, trustServerCertificate: trust, enableArithAbort: true, useUTC: true },
-  }).connect();
+  });
+  try { await pool.connect(); }
+  catch (error) {
+    // Close a partially initialized pool before surfacing a sanitized error.
+    await Promise.allSettled([Promise.resolve().then(() => pool.close())]);
+    throw error;
+  }
 
   let snapshot:any=null;
   return {
@@ -564,18 +567,23 @@ async function openMssqlExecutor(config: IntegrationSourceConfig): Promise<SqlEx
 }
 
 function effectiveReplicaEnabled(config: IntegrationSourceConfig): boolean {
-  return Boolean(config.sqlReplicaEnabled || process.env.SOURCE_SQL_REPLICA_ENABLED === "true");
+  return config.sqlReplicaEnabled === true;
 }
 
 export async function checkMysqlReadReplica(config: IntegrationSourceConfig): Promise<{ configured: boolean; reachable: boolean; readOnly: boolean | null; lagSeconds: number | null; lagWithinThreshold: boolean | null; host: string | null; database: string | null; note: string }> {
   const effective = effectiveSourceConfig(config);
-  if (!effective.sqlReplicaHost || !effective.sqlReplicaUsername || !(process.env.SOURCE_SQL_REPLICA_PASSWORD || effective.sqlReplicaPassword)) {
+  if (!effective.sqlReplicaHost || !effective.sqlReplicaUsername || !effective.sqlReplicaPassword) {
     return { configured: false, reachable: false, readOnly: null, lagSeconds: null, lagWithinThreshold: null, host: effective.sqlReplicaHost ?? null, database: effective.sqlReplicaDatabase ?? effective.sqlDatabase ?? null, note: "No read replica is configured." };
   }
   if (sqlDialect(effective) !== "MYSQL") return { configured: true, reachable: false, readOnly: null, lagSeconds: null, lagWithinThreshold: null, host: effective.sqlReplicaHost, database: effective.sqlReplicaDatabase ?? effective.sqlDatabase ?? null, note: "Replica health currently supports MySQL source replicas only." };
+  // Health probes authenticate with the same source credentials as ingestion.
+  // Do not let this secondary connection bypass the production TLS policy.
+  const replicaSslEnabled = effective.sqlReplicaSsl ?? true;
+  const replicaTrustServerCertificate = effective.sqlReplicaTrustServerCertificate ?? false;
+  assertSecureSourceSqlTransport(replicaSslEnabled, replicaTrustServerCertificate, "MySQL read-replica health");
   const mysql: any = await import("mysql2/promise");
   const createConnection = mysql.createConnection ?? mysql.default?.createConnection;
-  const connection = await createConnection({ host: effective.sqlReplicaHost, port: intSetting(effective.sqlReplicaPort, 3306, 1, 65535), database: effective.sqlReplicaDatabase ?? effective.sqlDatabase, user: effective.sqlReplicaUsername, password: process.env.SOURCE_SQL_REPLICA_PASSWORD || effective.sqlReplicaPassword, connectTimeout: 15000, ssl: (effective.sqlReplicaSsl ?? true) ? { rejectUnauthorized: !(effective.sqlReplicaTrustServerCertificate ?? false) } : undefined });
+  const connection = await createConnection({ host: effective.sqlReplicaHost, port: intSetting(effective.sqlReplicaPort, 3306, 1, 65535), database: effective.sqlReplicaDatabase ?? effective.sqlDatabase, user: effective.sqlReplicaUsername, password: effective.sqlReplicaPassword, connectTimeout: 15000, ssl: replicaSslEnabled ? { rejectUnauthorized: !replicaTrustServerCertificate } : undefined });
   try {
     await connection.query("SELECT 1");
     const [vars]: any = await connection.query("SHOW VARIABLES WHERE Variable_name IN ('read_only','super_read_only')");
@@ -610,7 +618,7 @@ async function createSqlAdapter(config: IntegrationSourceConfig): Promise<Source
   if (!config.sqlHost) throw new Error("SQL host is required.");
   if (!config.sqlDatabase) throw new Error("SQL database/catalog is required.");
   if (!config.sqlUsername) throw new Error("SQL read-only username is required.");
-  if (!(process.env.SOURCE_SQL_PASSWORD || config.sqlPassword)) throw new Error("SQL password is required. Set it in Admin or SOURCE_SQL_PASSWORD.");
+  if (!config.sqlPassword) throw new Error("SQL password is required. Set it in Admin or SOURCE_SQL_PASSWORD.");
 
   const dialect = sqlDialect(config);
   // This is a per-query extraction page size, NOT a total feed limit.
@@ -620,11 +628,13 @@ async function createSqlAdapter(config: IntegrationSourceConfig): Promise<Source
   // 20k bulk chunks.
   const extractionPageSize = Math.min(5000, intSetting(config.sqlMaxRowsPerReport, 5000, 1000, 250_000));
   let executor: SqlExecutor;
+  let openedPrimary: SqlExecutor | null = null;
   let replicaExecutor: SqlExecutor | null = null;
   try {
     if (dialect === "POSTGRESQL") executor = await openPostgresExecutor(config);
     else if (dialect === "MYSQL") executor = await openMysqlExecutor(config);
     else executor = await openMssqlExecutor(config);
+    openedPrimary = executor;
 
     if (effectiveReplicaEnabled(config)) {
       const replicaConfig: IntegrationSourceConfig = {
@@ -638,22 +648,23 @@ async function createSqlAdapter(config: IntegrationSourceConfig): Promise<Source
         sqlSsl: config.sqlReplicaSsl,
         sqlTrustServerCertificate: config.sqlReplicaTrustServerCertificate,
       };
-      if (!replicaConfig.sqlHost || !replicaConfig.sqlUsername || !(process.env.SOURCE_SQL_REPLICA_PASSWORD || replicaConfig.sqlPassword)) {
+      if (!replicaConfig.sqlHost || !replicaConfig.sqlUsername || !replicaConfig.sqlPassword) {
         throw new Error("Source analytics read replica is enabled but host, username or password is missing.");
       }
       if (dialect === "MYSQL") replicaExecutor = await openMysqlExecutor(replicaConfig);
       else if (dialect === "POSTGRESQL") replicaExecutor = await openPostgresExecutor(replicaConfig);
       else replicaExecutor = await openMssqlExecutor(replicaConfig);
     }
-  } catch (error: any) {
-    // A raw driver/protocol error here (garbled bytes, "unexpected message
-    // from backend", immediate connection reset, etc.) almost always means
-    // the configured dialect doesn't match what's actually listening on
-    // sqlHost:sqlPort — e.g. the Postgres driver was used against a MySQL
-    // server, or vice versa. Surface that plainly instead of the raw
-    // driver internals, which read as an unexplained crash.
-    const note = error?.message ?? String(error);
-    throw new Error(`Could not open a ${dialect} connection to ${config.sqlHost}:${config.sqlPort ?? "(default port)"} — ${note}. If this looks like a protocol/handshake error rather than an auth or network error, double-check that "SQL platform" in Admin is actually set to the database engine you're running (and that Save settings was clicked after changing it), then re-test.`, { cause: error });
+  } catch (error: unknown) {
+    // Replica setup can fail after the primary authenticated successfully.
+    // Always release any opened handles before returning the sanitized error.
+    await closeSourceConnections(openedPrimary, replicaExecutor, true);
+    // Driver errors may include connection URLs, SQL text, credentials and
+    // private hostnames. Never send raw errors or attach them as API causes.
+    const reason = safeSourceConnectionFailure(error);
+    // Raw provider/driver causes may contain credentials; expose only the classified message.
+    // eslint-disable-next-line preserve-caught-error
+    throw new Error(`Could not open ${dialect} source connection. ${reason}`);
   }
 
   async function* iterateReportPages(reportKey: string, window: SourceWindow = {}, sourceViewOverride?: string | null, options?: { useReplica?: boolean; authoritative?: boolean }): AsyncGenerator<SourceFetchResult> {
@@ -735,7 +746,7 @@ async function createSqlAdapter(config: IntegrationSourceConfig): Promise<Source
         details,
       };
     },
-    async close() { await executor.close(); if (replicaExecutor) await replicaExecutor.close(); },
+    async close() { await closeSourceConnections(executor, replicaExecutor); },
   };
 }
 

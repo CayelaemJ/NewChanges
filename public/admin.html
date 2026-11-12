@@ -645,7 +645,7 @@
             <label style="font-size:12.5px;font-weight:700;color:#5b6b7a;">Resend API key
               <input id="mail-resend-key" type="password" form="admin-credential-fields" autocomplete="new-password" placeholder="leave blank to keep existing" style="display:block;width:100%;margin-top:5px;font:inherit;font-weight:500;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">
             </label>
-            <label style="font-size:12.5px;font-weight:700;color:#5b6b7a;">Resend From email
+            <label style="font-size:12.5px;font-weight:700;color:#5b6b7a;">Resend From email (shares the saved From email address)
               <input id="mail-resend-from" type="email" placeholder="reports@verified-domain.com" style="display:block;width:100%;margin-top:5px;font:inherit;font-weight:500;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">
             </label>
             <label style="display:flex;align-items:center;gap:9px;font-size:13px;font-weight:700;color:#32217c;cursor:pointer;"><input id="mail-secure" type="checkbox" style="width:17px;height:17px;"> TLS from connection start (normally port 465)</label>
@@ -693,6 +693,7 @@
               <input id="auto-slack-webhook" type="password" form="admin-credential-fields" autocomplete="new-password" placeholder="https://hooks.slack.com/services/…" style="display:block;width:100%;margin-top:5px;font:inherit;font-weight:500;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">
               <span style="display:block;margin-top:5px;font-weight:500;color:#71717a;">Write-only credential: leave blank to keep the saved webhook.</span>
             </label>
+            <label style="grid-column:span 2;font-size:12.5px;color:#5b6b7a;"><input id="auto-slack-remove" type="checkbox"> Remove the saved Slack webhook</label>
             <label style="font-size:12.5px;font-weight:700;color:#5b6b7a;">Auto-deactivate after inactive for (days, blank = off)
               <input id="auto-stale-days" type="number" min="7" max="3650" placeholder="e.g. 180" style="display:block;width:100%;margin-top:5px;font:inherit;font-weight:500;padding:9px 12px;border:1px solid #e8e1f7;border-radius:9px;">
             </label>
@@ -1248,7 +1249,11 @@ async function loadEmailSettings(){
     const provider=c.emailProvider==='resend'?'Resend API':'SMTP';
     st.textContent=c.configured?`${provider} is configured for scheduled report delivery.`:`${provider} setup is incomplete. Scheduled reports cannot send until the required fields are configured.`;
     if(c.lastTestAt) st.textContent+=` Last test: ${c.lastTestStatus||'—'} · ${fmtDate(c.lastTestAt)}${c.lastTestNote?' — '+c.lastTestNote:''}`;
-    $('#auto-alert-emails').value=c.alertEmails||''; $('#auto-slack-webhook').value=c.alertSlackWebhookUrl||'';
+    $('#auto-alert-emails').value=c.alertEmails||'';
+    const slackInput=$('#auto-slack-webhook');
+    slackInput.value='';
+    slackInput.placeholder=c.hasAlertSlackWebhook?'•••••• (saved; leave blank to keep)':'https://hooks.slack.com/services/…';
+    $('#auto-slack-remove').checked=false;
     $('#auto-stale-days').value=c.staleDeactivateDays||''; $('#auto-digest-enabled').checked=!!c.digestEnabled;
     $('#auto-score-enabled').checked=c.scoreChangeAlertsEnabled!==false;
     $('#synthetic-data-mode').checked=!!c.syntheticDataMode;
@@ -1285,12 +1290,16 @@ async function saveAutomations(){
   try{
     const body={
       alertEmails: $('#auto-alert-emails').value.trim(),
-      alertSlackWebhookUrl: $('#auto-slack-webhook').value.trim(),
       staleDeactivateDays: $('#auto-stale-days').value ? parseInt($('#auto-stale-days').value) : null,
       digestEnabled: $('#auto-digest-enabled').checked,
       scoreChangeAlertsEnabled: $('#auto-score-enabled').checked,
       syntheticDataMode: $('#synthetic-data-mode').checked,
     };
+    const newSlack=$('#auto-slack-webhook').value.trim();
+    const removeSlack=$('#auto-slack-remove').checked;
+    if(removeSlack && newSlack) throw new Error('Choose either to replace or remove the Slack webhook.');
+    if(removeSlack) body.alertSlackWebhookUrl=null;
+    else if(newSlack) body.alertSlackWebhookUrl=newSlack;
     const r=await fetch(`${API}/api/admin/email-settings`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     const d=await r.json(); if(!r.ok) throw new Error(d.error||'Save failed');
     $('#auto-result').innerHTML='<div class="banner ok">✓ Automation settings saved.</div>'; loadEmailSettings();

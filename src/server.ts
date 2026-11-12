@@ -44,21 +44,26 @@ import { createUser, listUsers, updateUser, resetPassword, completeSetup, deacti
 import { recordEvent, engagementSummary } from "./services/analyticsService.js";
 import { notifyAdmins, notifyScoreChangeIfCurrentPeriod, runStaleAccountCheck, runWeeklyDigestIfDue } from "./services/automationService.js";
 import { logAdminAction, listAuditLog } from "./services/auditService.js";
+import { redactAuditDetail } from "./services/auditRedaction.js";
 import { complianceOverview, listProcessingActivities, createProcessingActivity, listDataSubjectRequests, createDataSubjectRequest, updateDataSubjectRequest, listComplianceVendors, createComplianceVendor, listRetentionPolicies, createRetentionPolicy, listSecurityIncidents, createSecurityIncident } from "./services/complianceService.js";
 import { requestSecurityContext, enrichSecurityContext, recordLoginEvent, securityOverview, listSessions, listLoginEvents, listSecurityAlerts, resolveSecurityAlert, pruneSecurityHistory, listSecurityDevices, listDataAccessEvents, recordDataAccessEvent, databaseSecuritySnapshot } from "./services/securityService.js";
 import { exportAuditLogCsv, exportSecurityAuditLogCsv, exportImportBatchCsv } from "./services/exportService.js";
 import { listAnalyticsRoutes, saveAnalyticsRoute } from "./services/syncService.js";
 import { enterpriseOperationsOverview, dataQualityOverview } from "./services/enterpriseOperationsService.js";
 import { checkMysqlReadReplica } from "./services/sourceAdapter.js";
+import { safeSourceConnectionFailure } from "./services/sourceConnectionFailure.js";
 import { subscribeAdminEvents } from "./services/adminEventStream.js";
 import { ensureSectionDefaults, listSections, updateSection, grantUserSection, revokeUserSection, sectionsForUser } from "./services/sectionService.js";
 import { publicEmailConfig, saveEmailConfig, testEmailConnection, createReportSchedule, listReportSchedules, updateReportSchedule, deleteReportSchedule, sendReportNow, recentReportDeliveries, runDueReports } from "./services/reportScheduler.js";
 import type { ScheduleInput } from "./services/reportScheduler.js";
+import { publicReportScheduleFailure } from "./services/reportScheduleFailure.js";
+import { publicEmailSettingsFailure } from "./services/emailSettingsFailure.js";
 import { runMLOpsAssessment, getMLOpsPortfolioAssessment, recordMLOpsFeedback, listMLOpsModels, registerMLOpsModel, promoteMLOpsModel, rollbackMLOpsModel, listMLOpsEvents } from "./services/mlopsService.js";
 import { getBrandLearningProfile, learnFromBrandUpload, recordBrandCorrection } from "./services/brandLearningService.js";
 
 import { browserSafeFailure } from "./services/browserErrorSafety.js";
 import { InMemoryRateLimiter } from "./services/inMemoryRateLimiter.js";
+import { escapeNotificationHtml, notificationPlainText } from "./services/notificationTextSafety.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = [join(__dirname, "public"), join(__dirname, "..", "public")]
@@ -466,17 +471,6 @@ app.addHook("preHandler", async (req, reply) => {
     return reply.code(403).send({error:"Save your account recovery key before continuing",code:"RECOVERY_KEY_REQUIRED"});
 });
 registerAdminMfaRoutes(app);
-function redactAuditDetail(value: unknown): unknown {
-  if (!value || typeof value !== "object") return value;
-  if (Array.isArray(value)) return value.map(redactAuditDetail);
-  const out: Record<string, unknown> = {};
-  for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
-    if (/password|token|secret|authorization|smtp/i.test(key)) out[key] = "[REDACTED]";
-    else out[key] = redactAuditDetail(val);
-  }
-  return out;
-}
-
 
 // ── public pages ──
 app.get("/react", async (_req, reply) => reply.redirect("/react/"));
@@ -1028,7 +1022,7 @@ app.patch<{ Params: { id: string }; Body: any }>("/api/users/:id", async (req, r
     body.revokedReason = body.reason || body.revokedReason || "Deactivated by admin";
   }
   let updated;
-  try { updated = await updateUser(req.params.id, body); }
+  try { updated = await updateUser(req.params.id, body, { forbidSuperadminTarget: admin.role !== "SUPERADMIN" }); }
   catch (e: any) { return reply.code(e?.code === "P2025" ? 404 : 400).send({ error: e?.code === "P2025" ? "user not found" : (e?.message || "could not update user") }); }
   const changedKeys = Object.keys(body).join(", ") || "no fields";
   logAdminAction(admin, "user.update", `Updated user ${req.params.id} (${changedKeys})`, { targetType: "User", targetId: req.params.id, detail: redactAuditDetail(body), impactCount: body.employerIds?.length ?? 1, context: requestSecurityContext(req) });
@@ -1037,7 +1031,7 @@ app.patch<{ Params: { id: string }; Body: any }>("/api/users/:id", async (req, r
 app.post<{ Params: { id: string }; Body: { password: string } }>("/api/users/:id/reset-password", async (req, reply) => {
   const admin = await requireAdmin(req, reply); if (!admin) return;
   try {
-    const result = await resetPassword(req.params.id, String(req.body?.password ?? ""));
+    const result = await resetPassword(req.params.id, String(req.body?.password ?? ""), { forbidSuperadminTarget: admin.role !== "SUPERADMIN" });
     logAdminAction(admin, "user.reset_password", `Reset password for user ${req.params.id}`, { targetType: "User", targetId: req.params.id, impactCount: 1, context: requestSecurityContext(req) });
     return result;
   } catch (e: any) { return reply.code(400).send({ error: e?.message || "could not reset password" }); }
@@ -1048,6 +1042,8 @@ app.post<{ Params: { id: string }; Body: { password: string } }>("/api/users/:id
 // session immediately, so the response redirects them straight to /login.
 app.post<{ Body: { reason?: string } }>("/api/users/me/deactivate", async (req, reply) => {
   const user = await requireUser(req, reply); if (!user) return;
+  if (user.role === "SUPERADMIN")
+    return reply.code(403).send({ error: "Superadministrator self-deactivation requires an approved account-retirement action" });
   await deactivateSelf(user.id, req.body?.reason);
   reply.clearCookie("session", { path: "/", httpOnly: true, sameSite: "lax", secure: COOKIE_SECURE });
   return { ok: true };
@@ -1061,7 +1057,7 @@ app.delete<{ Params: { id: string } }>("/api/users/:id", async (req, reply) => {
   if (!target) return reply.code(404).send({ error: "user not found" });
   if (admin.role !== "SUPERADMIN" && target.role === "SUPERADMIN") return reply.code(404).send({ error: "user not found" });
   try {
-    const result = await deleteUserPermanently(req.params.id);
+    const result = await deleteUserPermanently(req.params.id, { forbidSuperadminTarget: admin.role !== "SUPERADMIN" });
     logAdminAction(admin, "user.delete", `Permanently deleted user ${req.params.id}`, { targetType: "User", targetId: req.params.id, impactCount: 1, context: requestSecurityContext(req) });
     return result;
   }
@@ -1749,7 +1745,7 @@ app.get("/api/admin/integration/replica-health", async (req, reply) => {
     const cfg = await getSyncConfig();
     return await checkMysqlReadReplica(cfg);
   } catch (e: any) {
-    return reply.code(400).send({ configured: false, reachable: false, error: e?.message || "Could not check source replica." });
+    return reply.code(400).send({ configured: false, reachable: false, error: safeSourceConnectionFailure(e) });
   }
 });
 
@@ -1794,12 +1790,12 @@ app.post<{ Body: any }>("/api/admin/email-settings", async (req, reply) => {
     logAdminAction(admin, "email_settings.update", `Updated email/automation settings (${keys})`, { targetType: "SystemEmailConfig" });
     return result;
   }
-  catch (e: any) { return reply.code(400).send({ error: e?.message || "Could not save email settings" }); }
+  catch (e: unknown) { const safe = publicEmailSettingsFailure(e); return reply.code(safe.statusCode).send({ error: safe.message }); }
 });
 app.post<{ Body: any }>("/api/admin/email-settings/test", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
   try { return await testEmailConnection(req.body || {}); }
-  catch (e: any) { return reply.code(400).send({ error: e?.message || "Email test failed" }); }
+  catch (e: unknown) { const safe = publicEmailSettingsFailure(e); return reply.code(safe.statusCode).send({ error: safe.message }); }
 });
 // manual "run now" for automations — lets an admin verify config without waiting for the hourly tick
 app.post<{ Body: { kind: "stale" | "digest" | "test" } }>("/api/admin/automations/run", async (req, reply) => {
@@ -1815,7 +1811,7 @@ app.post<{ Body: { kind: "stale" | "digest" | "test" } }>("/api/admin/automation
       return { ok: true, message: r.ran ? "Digest sent." : "Not sent: digest is disabled, or one was already sent in the last 7 days." };
     }
     if (kind === "test") {
-      const r = await notifyAdmins({ subject: "Test alert from The Fixer (Pty) Ltd Dashboard Portal", html: `<p>This is a test alert triggered by ${admin.name} (${admin.email}).</p>`, slackText: `:wave: Test alert triggered by ${admin.name}.` });
+      const r = await notifyAdmins({ subject: "Test alert from The Fixer (Pty) Ltd Dashboard Portal", html: `<p>This is a test alert triggered by ${escapeNotificationHtml(admin.name)} (${escapeNotificationHtml(admin.email)}).</p>`, slackText: `:wave: Test alert triggered by ${notificationPlainText(admin.name)}.` });
       return { ok: true, message: `Sent to ${r.emailed} email address(es)${r.slack ? " and Slack" : ""}. Set admin alert emails and/or a Slack webhook first if nothing arrived.` };
     }
     return reply.code(400).send({ error: "Unknown automation kind" });
@@ -1843,22 +1839,22 @@ app.get("/api/report-schedules", async (req, reply) => {
 app.post<{ Body: ScheduleInput }>("/api/report-schedules", async (req, reply) => {
   const user = await requireUser(req, reply); if (!user) return;
   try { return await createReportSchedule(user, req.body); }
-  catch (e: any) { return reply.code(400).send({ error: e?.message || "Could not create report schedule" }); }
+  catch (e: unknown) { const safe = publicReportScheduleFailure(e); return reply.code(safe.statusCode).send({ error: safe.message }); }
 });
 app.patch<{ Params: { id: string }; Body: any }>("/api/report-schedules/:id", async (req, reply) => {
   const user = await requireUser(req, reply); if (!user) return;
   try { return await updateReportSchedule(user, req.params.id, req.body || {}); }
-  catch (e: any) { return reply.code(400).send({ error: e?.message || "Could not update report schedule" }); }
+  catch (e: unknown) { const safe = publicReportScheduleFailure(e); return reply.code(safe.statusCode).send({ error: safe.message }); }
 });
 app.delete<{ Params: { id: string } }>("/api/report-schedules/:id", async (req, reply) => {
   const user = await requireUser(req, reply); if (!user) return;
   try { return await deleteReportSchedule(user, req.params.id); }
-  catch (e: any) { return reply.code(400).send({ error: e?.message || "Could not delete report schedule" }); }
+  catch (e: unknown) { const safe = publicReportScheduleFailure(e); return reply.code(safe.statusCode).send({ error: safe.message }); }
 });
 app.post<{ Params: { id: string } }>("/api/report-schedules/:id/send-now", async (req, reply) => {
   const user = await requireUser(req, reply); if (!user) return;
   try { return await sendReportNow(user, req.params.id); }
-  catch (e: any) { return reply.code(400).send({ error: e?.message || "Could not send report" }); }
+  catch (e: unknown) { const safe = publicReportScheduleFailure(e); return reply.code(safe.statusCode).send({ error: safe.message }); }
 });
 
 // ── channel partners (white-label) — admin only ──

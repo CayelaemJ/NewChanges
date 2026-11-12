@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from scripts.local_ollama_transport import local_ollama_url
+from scripts.local_ollama_transport import local_ollama_url, request_local_ollama
 
 
 class LocalOllamaTransportTests(unittest.TestCase):
@@ -15,6 +15,22 @@ class LocalOllamaTransportTests(unittest.TestCase):
         ):
             with self.subTest(origin=origin):
                 self.assertEqual(local_ollama_url(origin, "/api/generate"), expected)
+
+
+    def test_request_rejects_nonlocal_schemes_hosts_and_paths(self):
+        for value in (
+            "file:///etc/passwd",
+            "http://ollama.example:11434/api/generate",
+            "http://localhost:11434/unexpected",
+        ):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                request_local_ollama(value, method="POST", body=b"{}")
+
+    def test_request_rejects_method_path_mismatch(self):
+        with self.assertRaises(ValueError):
+            request_local_ollama(
+                "http://localhost:11434/api/generate", method="GET"
+            )
 
     def test_rejects_nonlocal_or_ambiguous_destinations(self):
         for value in (

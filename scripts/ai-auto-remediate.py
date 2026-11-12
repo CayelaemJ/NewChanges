@@ -8,8 +8,7 @@ import json
 import os
 import re
 from pathlib import Path
-from urllib.request import Request, urlopen
-from local_ollama_transport import local_ollama_url
+from local_ollama_transport import local_ollama_url, request_local_ollama
 
 root = Path(os.getenv("GITHUB_WORKSPACE", ".")).resolve()
 reports = root / "test-reports" / "ai-security"
@@ -68,12 +67,11 @@ else:
                 ollama_url = local_ollama_url(
                     os.getenv("LOCAL_OLLAMA_URL", "http://localhost:11434/api/generate"),
                     "/api/generate")
-                req = Request(ollama_url, data=payload,
-                              headers={"Content-Type": "application/json"})
                 try:
-                    # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected -- URL is canonicalized to the local Ollama allowlist.
-                    with urlopen(req, timeout=180) as response:
-                        proposal = json.loads(json.loads(response.read())["response"])
+                    envelope = json.loads(request_local_ollama(
+                        ollama_url, method="POST", body=payload, timeout=180
+                    ))
+                    proposal = json.loads(envelope["response"])
                     old, new = proposal.get("old", ""), proposal.get("new", "")
                     forbidden = re.compile(
                         r"\b(?:auth|mfa|session|token|secret|password|permission|role|"
