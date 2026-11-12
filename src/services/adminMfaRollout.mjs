@@ -1,10 +1,9 @@
-// Fail-closed administrator MFA rollout policy.
-// Do not enable enforcement until the complete registration, sign-in,
-// recovery and verified-session lifecycle are proven in staging.
-export const ADMIN_MFA_ENFORCEMENT_READY = false;
+// Keep production rollout gated until the complete all-account registration,
+// sign-in, recovery and verified-session lifecycle has passed acceptance.
+export const ALL_ACCOUNT_MFA_ENFORCEMENT_READY = false;
 
-export function adminMfaGate({user, session, now=Date.now(), maxAgeMs=10*60*1000}) {
- if(!user || !['ADMIN','SUPERADMIN'].includes(user.role) || user.active!==true) return {allowed:false,reason:'role'};
+export function accountMfaGate({user, session, now=Date.now(), maxAgeMs=10*60*1000}) {
+ if(!user || user.active!==true) return {allowed:false,reason:'account'};
  if(!session || session.userId!==user.id || session.endedAt || session.revokedAt ||
     new Date(session.expiresAt).getTime()<=now) return {allowed:false,reason:'session'};
  const verified=new Date(session.mfaVerifiedAt ?? 0).getTime();

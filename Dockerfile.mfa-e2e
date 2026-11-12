@@ -20,4 +20,4 @@ RUN npm run build \
   && mkdir -p /app/test-results \
   && chown -R node:node /app /ms-playwright
 USER node
-CMD ["sh","-ec","npx prisma db push --skip-generate && node scripts/admin-mfa-live-http-e2e.mjs"]
+CMD ["sh","-ec","npx prisma db push && node scripts/admin-mfa-live-http-e2e.mjs"]

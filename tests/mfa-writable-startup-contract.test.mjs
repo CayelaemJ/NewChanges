@@ -11,8 +11,9 @@ test('writable production candidate fails closed without MFA at application star
  assert.match(gate,/ADMIN_MFA_TOTP_ENABLED/);
  assert.match(gate,/ADMIN_MFA_TOTP_ENCRYPTION_KEY/);
 });
-test('release configuration independently requires admin MFA, RP and encrypted TOTP',()=>{
- assert.match(contract,/ADMIN_MFA_ENFORCE/);
+test('release configuration independently requires all-account MFA, RP and encrypted TOTP',()=>{
+ assert.match(contract,/MFA_ENFORCE/);
+ assert.match(contract,/every account/);
  assert.match(contract,/MFA_RP_ID/);
  assert.match(contract,/MFA_EXPECTED_ORIGIN/);
  assert.match(contract,/ADMIN_MFA_TOTP_ENABLED/);

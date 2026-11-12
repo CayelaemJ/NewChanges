@@ -34,6 +34,7 @@ test('server uses classification in preHandler and keeps rollout opt-in',()=>{
  const s=readFileSync('src/server.ts','utf8');
  assert.match(s,/const MFA_ENFORCE = process\.env\.MFA_ENFORCE === "true" \|\| process\.env\.ADMIN_MFA_ENFORCE === "true"/);
  assert.match(s,/const scope = requiresAdminMfaStepUp\(req\.method, req\.url\)/);
- assert.match(s,/scope\.adminOnly && !scope\.adminMutation/);
+ assert.match(s,/!scope\.adminOnly && !scope\.adminMutation && !protectedAppRead/);
+ assert.match(s,/scope\.adminOnly && !isAdminRole\(user\)/);
  assert.match(s,/hasFreshAdminMfa\(req, user\.id\)/);
 });

@@ -11,10 +11,11 @@ if(process.env.DATABASE_URL!==fixtureUrl ||
   process.env.CI_RLS_PROBE_APPROVED!=='CI_DISPOSABLE_ONLY')
  throw Error('Refusing to run MFA live HTTP test outside disposable local CI database');
 
+process.env.MFA_E2E_TEST_RATE_LIMIT='true';
 process.env.COOKIE_SECURE='false';
 process.env.STANDBY_MODE='true';
 process.env.TRAFFIC_SAVER_MODE='true';
-process.env.ADMIN_MFA_ENFORCE='true';
+process.env.MFA_ENFORCE='true';
 process.env.ADMIN_MFA_TOTP_ENABLED='true';
 process.env.ADMIN_MFA_TOTP_ENCRYPTION_KEY=randomBytes(32).toString('base64url');
 process.env.MFA_RP_ID='localhost';
@@ -29,6 +30,9 @@ const [{totpCode,decryptTotpSecret,requireTotpEncryptionKey},{app},{prisma},{has
 ]);
 const nonce=randomBytes(8).toString('hex');
 const records=[];
+const tenantRecords=[];
+const tenantA='mfa-tenant-a-'+nonce;
+const tenantB='mfa-tenant-b-'+nonce;
 const users=[
  {email:'mfa-e2e-a-'+nonce+'@example.invalid',name:'Synthetic Approver A',role:'SUPERADMIN'},
  {email:'mfa-e2e-b-'+nonce+'@example.invalid',name:'Synthetic Approver B',role:'SUPERADMIN'},
@@ -36,6 +40,8 @@ const users=[
  {email:'mfa-e2e-onboard-'+nonce+'@example.invalid',name:'Synthetic First-Time Admin',role:'ADMIN'},
  {email:'mfa-e2e-onboard-qr-'+nonce+'@example.invalid',name:'Synthetic QR Enrollee',role:'ADMIN'},
  {email:'mfa-e2e-viewer-'+nonce+'@example.invalid',name:'Synthetic Read-Only User',role:'VIEWER'},
+ {email:'mfa-e2e-employer-'+nonce+'@example.invalid',name:'Synthetic Employer Manager',role:'EMPLOYER_MANAGER'},
+ {email:'mfa-e2e-portfolio-'+nonce+'@example.invalid',name:'Synthetic Portfolio Manager',role:'PORTFOLIO_MANAGER'},
 ].map(x=>({...x,password:randomBytes(32).toString('base64url'),
   grant:randomBytes(32).toString('base64url')}));
 let browser;
@@ -67,10 +73,13 @@ async function loginAndLoad(user){
  assert.match(cookie,/HttpOnly/i,'Administrator session cookie must be HttpOnly');
  assert.match(cookie,/SameSite=Lax/i,'Administrator session cookie must constrain cross-site use');
  const signIn=await response.json();
- assert.equal(signIn.mfaRequired,true,'Administrator password login must require passkey enrollment/verification');
+ assert.equal(signIn.mfaRequired,true,'Every account password login must require passkey enrollment/verification');
  assert.equal(signIn.next,'/mfa','Login must direct administrators to the passkey setup page');
  const limitedProfile=await item.ctx.request.get('/api/auth/me');
  assert.equal(limitedProfile.status(),200);
+ const mfaStatus=await item.ctx.request.get('/api/auth/mfa/status');
+ assert.equal(mfaStatus.status(),200,
+   `MFA status failed (${mfaStatus.status()}): ${await mfaStatus.text()}`);
  const preMfaProfile=await limitedProfile.json();
  assert.equal(preMfaProfile.mfaRequired,true,'Existing admin must be forced to enroll MFA');
  assert.deepEqual(preMfaProfile.employers,[],'Unverified admin must not receive employer records');
@@ -103,6 +112,38 @@ async function enroll(item,grant){
    assert.equal(state.passkeyEnrolled,true,'Server must persist enrolled passkey');
  });
 }
+async function enrollRegularAccount(item,user){
+ // Every non-admin account must be able to complete MFA enrollment using its
+ // own password, with no administrator grant or recovery approval.
+ await item.page.locator('#mfa-enrollment-password').fill(user.password);
+ await item.page.locator('#enroll').click();
+ await item.page.locator('#mfa-success').waitFor({state:'visible',timeout:20000});
+ const response=await item.ctx.request.get('/api/auth/mfa/status');
+ assert.equal(response.status(),200,'Regular account MFA status must be available after enrollment');
+ const state=await response.json();
+ assert.equal(state.verified,true,'Regular account enrollment must verify its session');
+ assert.equal(state.passkeyEnrolled,true,'Regular account passkey must be persisted');
+ const recovery=await prisma.adminMfaRecoveryCode.findUnique({where:{userId:user.id}});
+ assert.ok(recovery && !recovery.usedAt,
+  'Every regular account must receive an unused one-time recovery key record');
+ assert.match(recovery.codeHash,/^[a-f0-9]{64}$/,
+  'Regular account recovery keys must be stored only as a digest');
+}
+async function assertTenantScope(context,ownEmployerId,foreignEmployerId,roleName){
+ const profileResponse=await context.request.get('/api/auth/me');
+ assert.equal(profileResponse.status(),200,roleName+' profile must load after MFA');
+ const profile=await profileResponse.json();
+ assert.deepEqual(profile.employers.map(row=>row.id),[ownEmployerId],
+  roleName+' profile must expose only its linked employer');
+ const own=await context.request.get('/api/employers/'+encodeURIComponent(ownEmployerId)+'/periods');
+ assert.ok(![401,403].includes(own.status()),
+  roleName+' must reach the linked employer route (downstream data may be empty)');
+ for(const route of ['periods','score-history','dashboard']){
+  const response=await context.request.get('/api/employers/'+encodeURIComponent(foreignEmployerId)+'/'+route);
+  assert.equal(response.status(),403,
+   roleName+' must be denied cross-tenant '+route+' access before data lookup');
+ }
+}
 try{
  for(const user of users){
   const saved=await prisma.user.create({data:{
@@ -111,6 +152,13 @@ try{
   }});
   user.id=saved.id;records.push(saved.id);
  }
+ await prisma.employer.createMany({data:[
+  {id:tenantA,name:'Synthetic Tenant A '+nonce},
+  {id:tenantB,name:'Synthetic Tenant B '+nonce},
+ ]});
+ tenantRecords.push(tenantA,tenantB);
+ for(const [userIndex,employerId] of [[5,tenantA],[6,tenantA],[7,tenantB]])
+  await prisma.userEmployer.create({data:{userId:users[userIndex].id,employerId}});
  for(const u of users.slice(0,3)){
   await prisma.adminMfaEnrollmentGrant.create({data:{
    userId:u.id,codeHash:hash(u.grant),
@@ -218,22 +266,46 @@ try{
    const anonymousRecovery=await anonymous.request.post('/api/admin/mfa/recovery/request',{data:{targetUserId:users[2].id},headers:{Origin:origin}});
    assert.ok([401,403].includes(anonymousRecovery.status()),'Anonymous recovery must be denied');
  }finally{await anonymous.close();}
- const viewer=await browser.newContext({baseURL:origin});
+ const viewer=await loginAndLoad(users[5]);
  try {
-   const viewerLogin=await postFrom(viewer,'/api/auth/login',{
-     email:users[5].email,password:users[5].password
-   });
-   assert.equal(viewerLogin.status(),200,'Synthetic viewer must sign in');
+   const viewerProfile=await viewer.ctx.request.get('/api/auth/me');
+   assert.equal(viewerProfile.status(),200);
+   const restrictedViewer=await viewerProfile.json();
+   assert.equal(restrictedViewer.mfaRequired,true,'Viewer profile must report required MFA');
+   assert.deepEqual(restrictedViewer.employers,[],'Unverified viewer must not receive employer records');
+   assert.deepEqual(restrictedViewer.modules,{admin:false,dashboard:false,portfolio:false,users:false},
+     'Unverified viewer must not receive module entitlements');
+   const viewerBusinessRead=await viewer.ctx.request.get('/api/dashboard/version');
+   assert.equal(viewerBusinessRead.status(),403,'Viewer business API access must wait for MFA');
+   assert.equal((await viewerBusinessRead.json()).code,'MFA_REQUIRED');
    for(const protectedPath of ['/api/admin/reports','/api/admin/integration',
      '/api/admin/compliance/overview','/api/admin/security/overview']){
-     const denied=await viewer.request.get(protectedPath);
+     const denied=await viewer.ctx.request.get(protectedPath);
      assert.equal(denied.status(),403,
        'Read-only user must not access administrative data: '+protectedPath);
    }
-   const illegalApproval=await postFrom(viewer,'/api/admin/mfa/recovery/request',
+   const illegalApproval=await postFrom(viewer.ctx,'/api/admin/mfa/recovery/request',
      {targetUserId:users[2].id});
    assert.equal(illegalApproval.status(),403,'Viewer cannot start administrator recovery');
- }finally{await viewer.close();}
+   await enrollRegularAccount(viewer,users[5]);
+   await assertTenantScope(viewer.ctx,tenantA,tenantB,'Viewer');
+ }finally{await viewer.ctx.close();}
+
+ for(const [index,roleName] of [[6,'Employer manager'],[7,'Portfolio manager']]){
+   const account=users[index];
+   const item=await loginAndLoad(account);
+   try{
+     const profile=await item.ctx.request.get('/api/auth/me');
+     assert.equal(profile.status(),200);
+     assert.equal((await profile.json()).mfaRequired,true,roleName+' profile must report required MFA');
+     const businessRead=await item.ctx.request.get('/api/dashboard/version');
+     assert.equal(businessRead.status(),403,roleName+' business API access must wait for MFA');
+     assert.equal((await businessRead.json()).code,'MFA_REQUIRED');
+     await enrollRegularAccount(item,account);
+     await assertTenantScope(item.ctx,index===6?tenantA:tenantB,index===6?tenantB:tenantA,roleName);
+   }finally{await item.ctx.close();}
+ }
+ console.log('PASS all-account MFA enrollment and tenant HTTP isolation: viewer, employer manager and portfolio manager');
 
  const pre=await postFrom(A.ctx,'/api/admin/mfa/recovery/request',{
   targetUserId:users[2].id});
@@ -392,7 +464,7 @@ try{
    'Wrong recovery proof must not revoke live authenticator');
 
  const unknownRecovery=await postFrom(B.ctx,'/api/admin/mfa/recovery/does-not-exist/approve',{});
- assert.ok([400,404,409].includes(unknownRecovery.status()),'Unknown recovery request must fail closed');
+ assert.ok([400,404,409,429].includes(unknownRecovery.status()),'Unknown recovery request must fail closed');
  const self=await postFrom(A.ctx,
    '/api/admin/mfa/recovery/'+requested.requestId+'/approve',{});
  assert.equal(self.status(),409,'First approver cannot approve their own request');
@@ -428,5 +500,6 @@ try{
  // Never clean up an application database; we only ever reached this code
  // after the exact disposable URL, CI flag and synthetic marker were checked.
  if(records.length)await prisma.user.deleteMany({where:{id:{in:records}}});
+ if(tenantRecords.length)await prisma.employer.deleteMany({where:{id:{in:tenantRecords}}});
  await prisma.$disconnect();
 }

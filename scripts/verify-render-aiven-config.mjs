@@ -31,9 +31,9 @@ try {
   if (standby==='false') {
     if (process.env.NEWCHANGES_CUTOVER_APPROVED!=='YES')
       throw Error('Writing mode requires separately verified production cutover approval');
-    // Password-only administrators must never reach the first Aiven writer.
-    if (process.env.ADMIN_MFA_ENFORCE!=='true')
-      throw Error('Production writer requires mandatory administrator MFA enforcement');
+    // Password-only accounts of any role must never reach the first Aiven writer.
+    if (process.env.MFA_ENFORCE!=='true' && process.env.ADMIN_MFA_ENFORCE!=='true')
+      throw Error('Production writer requires mandatory MFA enforcement for every account');
     const rpID=String(process.env.MFA_RP_ID||'').trim();
     const origin=String(process.env.MFA_EXPECTED_ORIGIN||'').trim();
     let matched=false;

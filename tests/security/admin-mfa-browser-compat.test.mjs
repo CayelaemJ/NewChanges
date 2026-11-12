@@ -61,7 +61,7 @@ test('real enroll and verify button handlers use Safari-compatible options when 
   PublicKeyCredential:function(){},Uint8Array,atob,btoa,Error,JSON,
   async fetch(url,options){
    calls.push(url);
-   const value=url.endsWith('/status')?{configured:true,enrolled:true,verified:false,canManageRecovery:false}:
+   const value=url.endsWith('/status')?{configured:true,enrolled:true,verified:false,isAdministrator:true,canManageRecovery:false}:
     url.endsWith('/register/options')?{challenge:'AQID',user:{id:'BAUG',name:'Test',displayName:'Test'},excludeCredentials:[]}:
     url.endsWith('/authenticate/options')?{challenge:'BAUG',allowCredentials:[{id:'AQID',type:'public-key'}]}:
     {ok:true};
@@ -69,6 +69,7 @@ test('real enroll and verify button handlers use Safari-compatible options when 
   },
  });
  runInContext(readFileSync('public/admin-mfa.js','utf8'),context);
+ await runInContext('refresh()',context);
  await handlers.get('enroll:click')();
  await handlers.get('verify:click')();
  assert.deepEqual(calls.filter(x=>x==='create'||x==='get'),['create','get']);
