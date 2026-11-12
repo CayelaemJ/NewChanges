@@ -25,6 +25,31 @@ classification, configured binlog retention, dedicated durable sink,
 or automatic update-time maintenance in existing feed tables.
 The local simulation suite passing does **not** authorize deployment.
 
+## Final 91-test Docker verification (12 November 2026)
+
+The operator provided the complete final `bash simulation/ops/ci-docker.sh`
+transcript after pulling commit `22d7fd29`. The host phase completed
+**91 tests with 16 expected environment-dependent skips**. The test image
+built with both `docker-compose.yml` and the local-only
+`schema/003_ingest_cdc.sql` fixture, MySQL 8.4 preflight passed,
+and the Docker test container completed **91/91 tests, no failures or
+skips, exit code 0**.
+
+This verifies locally:
+- Actual isolated MySQL binlog event consumption, replay and DELETE handling
+  for the separate `fixer_sim` simulation.
+- All `ingest_stage` offline marker, privacy, snapshot and transaction contracts.
+- Seven new `fixer_ingest_cdc` database integration tests covering
+  atomic marker/checkpoint persistence, idempotent replay, rollback on
+  duplicate events, stale/uninitialized checkpoints and schema privacy.
+- Four local-only safety tests, including packaging of the exact Compose
+  mount and rejection of non-disposable execution environments.
+
+**Local Docker verification gate: PASS.** None of these tests establish
+an active real `ingest_stage` binlog reader on RDS, a verified snapshot,
+configured retention or safe replication privilege scope. No AWS database
+or production configuration was changed as part of this test run.
+
 ## What already exists
 
 The database contains `ingest_stage` with 11 base tables and 10 views,
@@ -252,9 +277,9 @@ The addition includes seven **real disposable-MySQL integration tests** for
 atomic persistence, replay, stale checkpoints, unique-event conflict
 rollback, empty transactions, local-only gating and schema privacy,
 plus four host-safe guard tests for tampering and local-only initialization.
-The operator's previously verified 80/80 Docker test run predates these
-new changes, so **the updated full test suite is not yet verified**.
-The expected updated container suite has 91 tests.
+The updated **91/91 Docker MySQL 8.4 test suite passed on
+12 November 2026** (tested code commit `22d7fd29`, exit code 0).
+This validates the disposable sink prototype, not live RDS CDC.
 
 **Critical remaining gaps:** a real `ingest_stage` replication reader,
 source-side transaction-boundary decoding, safe initial snapshot,
