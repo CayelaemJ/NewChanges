@@ -1,0 +1,19 @@
+# Disposable, networkless-at-runtime MFA integration checks.
+# Never copy .env, production credentials, Git metadata or unrelated local files.
+FROM node:24-slim
+RUN apt-get update -y && apt-get install -y --no-install-recommends openssl \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit --no-fund
+COPY prisma.config.ts ./
+COPY prisma ./prisma
+COPY src ./src
+COPY public ./public
+COPY tests ./tests
+COPY scripts ./scripts
+COPY tsconfig.json ./
+RUN npx prisma generate && npx tsc --noEmit
+USER node
+ENV CI=true
+CMD ["sh", "-ec", "node --test tests/security/admin-mfa-*.test.mjs && node --import tsx --test tests/security/admin-mfa-route-scope.test.ts tests/security/admin-totp.test.ts && node --test tests/security/mfa-login-navigation.test.mjs tests/mfa-writable-startup-contract.test.mjs && node scripts/production-auth-cutover-gate.mjs && node --test tests/verify-render-aiven-config.test.mjs"]

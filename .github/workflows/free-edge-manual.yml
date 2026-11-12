@@ -1,0 +1,68 @@
+name: Free Cloudflare and Render candidate checks
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  free-edge:
+    name: Verify free-edge routing and backend Docker build
+    runs-on: [self-hosted, Linux]
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify Node 24 on local runner
+        run: |
+          node --version
+          node -e "if(process.versions.node.split('.')[0]!=='24')process.exit(1)"
+      - name: Validate fail-closed direct-production release configuration
+        run: node --test tests/free-production-cutover-contract.test.mjs
+      - name: Offline free-edge safety and routing tests
+        run: node --test tests/cloudflare-free-render-edge.test.mjs
+      - name: Verify Aiven final synchronization guardrails (no database credentials)
+        run: node --test tests/aiven-final-sync-safety.test.mjs
+      - name: Validate read-only security schema parity guard (offline, no credentials)
+        run: node --test tests/aiven-security-parity.test.mjs
+      - name: Assert MFA cutover gate blocks an unintegrated release (offline)
+        run: node --test tests/production-auth-cutover-gate.test.mjs
+      - name: Verify production cutover evidence gate fails closed (offline only)
+        run: node --test tests/production-cutover-evidence-check.test.mjs
+      - name: Verify encrypted backup utility fails closed (no production access)
+        run: node --test tests/production-encrypted-backup.test.mjs
+      - name: Verify offline restoration scripts syntax
+        run: |
+          bash -n scripts/verify-encrypted-backup-restore.sh
+          bash -n scripts/production-recovery-drill.sh
+      - name: Validate Render Aiven secure connection policy without any live secrets
+        run: node --test tests/verify-render-aiven-config.test.mjs
+      - name: Verify standalone MFA integration runner syntax
+        run: bash -n scripts/run-mfa-integration-checks.sh
+      - name: Reject migration branch when admin MFA wiring is missing
+        run: node scripts/production-auth-cutover-gate.mjs
+      - name: Build disposable MFA test container with pinned dependencies
+        run: docker build --pull=false -f Dockerfile.mfa-integration-test -t fixer-mfa-integration:preflight .
+      - name: Run admin MFA tests without network, live DB or production credentials
+        run: docker run --rm --network none --memory 2g --cpus 2 fixer-mfa-integration:preflight
+      - name: Rehearse full MFA HTTP and Chromium virtual-passkey recovery against disposable PostgreSQL 18
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          project="fixer-mfa-e2e-${GITHUB_RUN_ID:-local}"
+          cleanup() {
+            docker compose -p "$project" -f docker-compose.mfa-e2e.yml down --remove-orphans --volumes >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+          docker compose -p "$project" -f docker-compose.mfa-e2e.yml up --build --abort-on-container-exit --exit-code-from mfa
+      - name: Verify full original application Dockerfile exists
+        run: test -s Dockerfile
+      - name: Build backend image with local Docker
+        run: docker build --pull=false -f Dockerfile -t newchanges-free-backend:preflight .
+      - name: Offline Fastify runtime, PostgreSQL readiness and private-origin security smoke
+        run: bash scripts/free-backend-runtime-smoke.sh
+      - name: Rehearse final Aiven delta transaction with disposable PG18
+        run: node scripts/aiven-final-delta-docker-rehearsal.mjs
+      - name: Confirm no secrets or production traffic were changed
+        run: |
+          echo "Local checks only: no Cloudflare deploy, no Render deploy, only local synthetic PostgreSQL; no production database access."

@@ -1,0 +1,38 @@
+# Synthetic data only. No production DB access or published ports.
+# The test container shares only the network namespace of its disposable PG18.
+services:
+  db:
+    image: postgres:18-alpine
+    restart: "no"
+    environment:
+      POSTGRES_USER: ci_fixture
+      POSTGRES_PASSWORD: ci_fixture
+      POSTGRES_DB: newchanges_ci
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -q -U ci_fixture -d newchanges_ci && PGPASSWORD=ci_fixture psql -h 127.0.0.1 -U ci_fixture -d newchanges_ci -X -q -t -A -c 'SELECT 1' | grep -qx 1"]
+      interval: 2s
+      timeout: 5s
+      retries: 45
+    networks: [offline]
+  mfa:
+    build:
+      context: .
+      dockerfile: Dockerfile.mfa-e2e
+    init: true
+    network_mode: "service:db"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://ci_fixture:ci_fixture@127.0.0.1:5432/newchanges_ci
+      NODE_ENV: test
+      CI: "true"
+      CI_RLS_PROBE_APPROVED: CI_DISPOSABLE_ONLY
+      STANDBY_MODE: "true"
+      TRAFFIC_SAVER_MODE: "true"
+      ENABLE_AUTHORITATIVE_INCREMENTAL_SCHEDULER: "false"
+      ENABLE_SEMANTIC_SHADOW_WORKER: "false"
+      ENABLE_SEMANTIC_OBJECT_PUBLISH: "false"
+networks:
+  offline:
+    internal: true
