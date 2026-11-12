@@ -8,7 +8,7 @@ import json
 import os
 import re
 from pathlib import Path
-from urllib.request import Request, urlopen
+from local_ollama_http import request_local_ollama
 
 root = Path(os.getenv("GITHUB_WORKSPACE", ".")).resolve()
 reports = root / "test-reports" / "ai-security"
@@ -62,15 +62,13 @@ else:
                     "model": "qwen2.5-coder:7b", "prompt": prompt, "stream": False,
                     "format": "json", "options": {"temperature": 0, "num_predict": 700}
                 }).encode()
-                req = Request("http://host.docker.internal:11434/api/generate",
-                              data=payload, headers={"Content-Type": "application/json"})
-                # On the WSL host, Docker's alias is not guaranteed to resolve.
-                # Host Ollama is usually accessible on localhost only when bridged.
+                # This endpoint is constrained by local_ollama_http to the local Ollama API.
                 ollama_url = os.getenv("LOCAL_OLLAMA_URL", "http://localhost:11434/api/generate")
-                req.full_url = ollama_url
                 try:
-                    with urlopen(req, timeout=180) as response:
-                        proposal = json.loads(json.loads(response.read())["response"])
+                    envelope = json.loads(request_local_ollama(
+                        ollama_url, method="POST", body=payload, timeout=180
+                    ))
+                    proposal = json.loads(envelope["response"])
                     old, new = proposal.get("old", ""), proposal.get("new", "")
                     forbidden = re.compile(
                         r"\b(?:auth|mfa|session|token|secret|password|permission|role|"
