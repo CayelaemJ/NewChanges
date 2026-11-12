@@ -9,7 +9,7 @@ const file=path=>readFileSync(new URL(path,base),'utf8');
 const checks=[
   ['MFA route wiring',()=>/registerAdminMfaRoutes\(app\)/.test(file('src/server.ts'))],
   ['Sensitive-route step-up enforcement',()=>/requiresAdminMfaStepUp\(/.test(file('src/server.ts'))&&/hasFreshAdminMfa\(/.test(file('src/server.ts'))],
-  ['Administrator enrollment and recovery gating',()=>/hasIssuedAdminRecoveryKey\(/.test(file('src/server.ts'))&&/MFA_REQUIRED|\/mfa/.test(file('src/server.ts'))],
+  ['Account enrollment and recovery gating',()=>/hasIssuedAdminRecoveryKey\(/.test(file('src/server.ts'))&&/MFA_REQUIRED|\/mfa/.test(file('src/server.ts'))],
   ['Persistent MFA credential schema',()=>/model AdminMfaTotp\s*\{/.test(file('prisma/schema.prisma'))&&/model AdminMfaCredential\s*\{/.test(file('prisma/schema.prisma'))],
   ['MFA challenge/session schema',()=>/model AdminMfaChallenge\s*\{/.test(file('prisma/schema.prisma'))&&/mfaVerifiedAt\s+DateTime\?/.test(file('prisma/schema.prisma'))]
 ];

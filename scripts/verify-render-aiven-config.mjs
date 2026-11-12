@@ -28,8 +28,26 @@ try {
     throw Error('Secure cookies and trusted edge proxy configuration required');
   const standby=process.env.STANDBY_MODE;
   if (standby!=='true' && standby!=='false') throw Error('STANDBY_MODE must be explicit');
-  if (standby==='false' && process.env.NEWCHANGES_CUTOVER_APPROVED!=='YES')
-    throw Error('Writing mode requires separately verified production cutover approval');
+  if (standby==='false') {
+    if (process.env.NEWCHANGES_CUTOVER_APPROVED!=='YES')
+      throw Error('Writing mode requires separately verified production cutover approval');
+    // Password-only accounts of any role must never reach the first Aiven writer.
+    if (process.env.MFA_ENFORCE!=='true' && process.env.ADMIN_MFA_ENFORCE!=='true')
+      throw Error('Production writer requires mandatory MFA enforcement for every account');
+    const rpID=String(process.env.MFA_RP_ID||'').trim();
+    const origin=String(process.env.MFA_EXPECTED_ORIGIN||'').trim();
+    let matched=false;
+    try {
+      const url=new URL(origin);
+      matched=url.origin===origin && url.protocol==='https:' &&
+        (url.hostname===rpID || url.hostname.endsWith('.'+rpID));
+    } catch {}
+    if (!rpID || !matched)
+      throw Error('Production MFA relying party and HTTPS origin must match');
+    if (process.env.ADMIN_MFA_TOTP_ENABLED!=='true' ||
+        !/^[A-Za-z0-9_-]{43}$/.test(process.env.ADMIN_MFA_TOTP_ENCRYPTION_KEY||''))
+      throw Error('Production MFA requires enabled TOTP with a private 32-byte encryption key');
+  }
   if (process.env.ENABLE_AUTHORITATIVE_INCREMENTAL_SCHEDULER!=='false')
     throw Error('Free Render cannot run the authoritative background scheduler');
   console.log('PASS: Render Aiven connection contract; restricted role, TLS, pool<=2, private origin guard.');

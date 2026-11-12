@@ -543,3 +543,47 @@ The synthetic tests should PASS. The standalone release gate should currently pr
 GitHub comparison of release branch `feat/free-cloudflare-render-primary-20261105` against `chore/manual-self-hosted-docker-ci-20261029` reports **diverged history (400 commits ahead, 115 behind, 113 files touched in compare)**. The MFA branch includes roughly 184 added lines in `src/server.ts`, 119 additions to `prisma/schema.prisma`, multiple Prisma MFA migrations, `src/services/adminMfaRoutes.ts`, supplementary MFA service modules, browser enrollment/recovery UI, dependency changes, and isolated tests. A blind merge/cherry-pick or copying only the UI is unsafe: it may accidentally introduce unrelated staging deployment configuration, test runners, or competing infrastructure changes. No branch merge or production migration was attempted.
 
 A reviewed MFA integration should preserve both sets of application changes; port the MFA service/schema/migrations, non-staging server route guards, and all required dependency lockfile entries; exclude unrelated Render staging configuration and infrastructure switches; then prove compiler, unit/HTTP E2E, tenant authorization, new-user and existing-admin enrollment, session revocation, recovery, recovery-key issuance, and direct-origin protections in an isolated disposable environment. The new source gate currently returns exit 2 on PR #234 by design. Full browser and API authorization behavior cannot be inferred from static presence.
+
+
+## 2026-11-06 isolated MFA integration candidate (not deployed)
+
+An isolated branch `integration/mfa-aiven-free-cutover-20261106` was created from the full free-edge migration branch specifically to port admin MFA from unmerged PR #219. It contains the ten MFA runtime service modules including TOTP/passkeys, seven additive Prisma migrations and models, admin enrollment/recovery UI and login routing, the server's MFA step-up checks, `@simplewebauthn/server` and QR packages with the pinned lockfile, and MFA unit and live HTTP/Chromium synthetic test sources. The independent staging-only access gateway, old Render staging blueprint, unrelated CI and Ollama scanner changes were **not** brought across.
+
+The candidate has a fail-closed `STANDBY_MODE=false` production startup check requiring `ADMIN_MFA_ENFORCE=true`, `ADMIN_MFA_TOTP_ENABLED=true` and a valid 43-character `ADMIN_MFA_TOTP_ENCRYPTION_KEY`. The no-connectivity Render configuration checker separately requires matching HTTPS `MFA_RP_ID`/`MFA_EXPECTED_ORIGIN` for writer mode. These are source/runtime checks, not proof the live Render environment is correctly configured. **Do not set MFA secrets or activate the application until tested and a reviewed cutover is authorized.**
+
+Run isolated tests on a WSL self-hosted Docker machine **after checking out the dedicated integration branch**, never on Neon/Aiven:
+```bash
+cd ~/NewChanges-free-edge
+git fetch origin
+git switch -c integration/mfa-aiven-free-cutover-20261106 --track origin/integration/mfa-aiven-free-cutover-20261106
+node scripts/production-auth-cutover-gate.mjs
+echo "MFA source gate: $?"
+docker build --pull=false -f Dockerfile.mfa-integration-test -t fixer-mfa-integration:preflight .
+docker run --rm --network none --memory 2g --cpus 2 fixer-mfa-integration:preflight
+echo "Offline unit/config exit: $?"
+# Full synthetic integration writes ONLY to Docker's disposable PostgreSQL.
+project="fixer-mfa-local"
+docker compose -p "$project" -f docker-compose.mfa-e2e.yml up --build --abort-on-container-exit --exit-code-from mfa
+rc=$?
+docker compose -p "$project" -f docker-compose.mfa-e2e.yml down --remove-orphans --volumes
+echo "Synthetic HTTP/Chromium MFA E2E exit: $rc"
+test "$rc" -eq 0
+```
+Manual self-hosted workflow `.github/workflows/free-edge-manual.yml` also runs these checks with separate disposable Docker environments and cleanup. The new Docker build intentionally copies only selected repo source directories, not `.env`, private archives, auth cookies or real database URL files. E2E shares only the DB container's localhost namespace on an internal-only Docker network; no ports published. Build requires normal npm/Playwright dependency downloads, but runtime has no external network.
+
+**Status:** Code port is committed on the isolated branch, but Node/TypeScript compile, Docker unit and full E2E have **not yet run** in the operator's WSL environment. Do not merge this branch into PR #234 or mark MFA auth/tenant-isolation checks completed until the runs are green, conflicts reviewed, and current production-specific secrets are configured securely. Even a passing synthetic MFA flow does not prove live Aiven account or tenant isolation; those require separate checks without modifying real users.
+
+
+## 2026-11-12 all-account MFA candidate validation update
+
+This section supersedes the earlier 2026-11-06 status above that said the WSL integration run had not yet happened.
+
+On integration branch `integration/mfa-aiven-free-cutover-20261106`, commit `b1bcad3baf8f33db43fc3028e99364aaa0ea8acd`:
+
+- Operator reported `bash scripts/run-mfa-integration-checks.sh` passed all four stages, including disposable MFA HTTP, authenticator and recovery E2E.
+- The disposable RLS pilot denied missing tenant context and cross-tenant writes.
+- Offline encrypted archive restore recovered all 57 public tables into disposable PostgreSQL 18. This does not establish full Neon disaster-recovery readiness or production parity.
+- Gitleaks history scan, tracked credential exposure scan, Trivy, Semgrep, dependency audit, verify, source quality and browser checks passed.
+- Snyk remains unavailable because the account exhausted its credits; no Snyk pass is claimed.
+
+The pull request remains a draft. No production MFA enrollment, Aiven/Neon writes, Render secret changes, or Cloudflare traffic activation has occurred. Remaining cutover gates are encryption-key backup and recovery evidence, production RP/origin and consent review, Render configuration review, full Neon disaster-recovery verification, final source delta and writer-exclusivity checks. Do not merge or deploy until those gates have been reviewed and explicitly authorized.

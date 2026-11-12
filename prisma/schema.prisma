@@ -804,6 +804,13 @@ model User {
   partner  Partner?       @relation(fields: [partnerId], references: [id])
   links    UserEmployer[]
   sessions        Session[]
+  mfaCredentials  AdminMfaCredential[]
+  mfaTotp         AdminMfaTotp?
+  mfaRecoveryCode AdminMfaRecoveryCode?
+  mfaEnrollmentGrants AdminMfaEnrollmentGrant[]
+  mfaEnrollmentRequests AdminMfaEnrollmentRequest[]
+  mfaRecoveryRequests AdminMfaRecoveryRequest[]
+  mfaChallenges   AdminMfaChallenge[]
   loginEvents     LoginEvent[]
   securityAlerts  SecurityAlert[]
   reportSchedules ReportSchedule[]
@@ -912,6 +919,9 @@ model Session {
   // Stable, privacy-conscious grouping key derived from the user-agent/device context.
   // It does not use the raw IP, so a device can be recognised when its network changes.
   deviceKey   String?
+  mfaVerifiedAt DateTime?
+  mfaMethod String? // PASSKEY or TOTP; recovery requires a verified passkey
+  mfaChallenges  AdminMfaChallenge[]
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -1518,3 +1528,112 @@ model SourceActivationAudit {
   @@index([nextGenerationId, createdAt])
 }
 
+
+// Administrator MFA credentials. Store only public WebAuthn material and counters.
+// Creation/verification flows must be implemented and validated before enforcement.
+// Independently managed TOTP factor. Secrets are AES-256-GCM encrypted by an
+// environment-specific key, never stored as plaintext or returned after setup.
+model AdminMfaTotp {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  secretCiphertext  String?
+  pendingCiphertext String?
+  pendingExpiresAt  DateTime?
+  enabledAt         DateTime?
+  lastUsedStep      BigInt?
+  failedAttempts    Int      @default(0)
+  lastFailedAt      DateTime?
+  lockedUntil       DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([enabledAt])
+}
+
+model AdminMfaCredential {
+  id               String   @id @default(cuid())
+  userId           String
+  credentialId     String   @unique
+  publicKey        String
+  signCount        BigInt   @default(0)
+  transports       String[]
+  createdAt        DateTime @default(now())
+  lastUsedAt       DateTime?
+  revokedAt        DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, revokedAt])
+}
+
+// One-time emergency account recovery material. Never save the plaintext code.
+model AdminMfaRecoveryCode {
+  id             String    @id @default(cuid())
+  userId         String    @unique
+  codeHash       String    @unique
+  failedAttempts Int       @default(0)
+  lockedUntil    DateTime?
+  createdAt      DateTime  @default(now())
+  usedAt         DateTime?
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// One-time WebAuthn challenges, scoped to the logged-in user and session.
+model AdminMfaChallenge {
+  id          String   @id @default(cuid())
+  userId      String
+  sessionId   String
+  challengeHash String @unique
+  purpose     String
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session     Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  @@index([userId, sessionId, purpose, expiresAt])
+}
+
+// Independently authorised one-time grant; never put raw grant value in database.
+model AdminMfaEnrollmentGrant {
+  id            String   @id @default(cuid())
+  userId        String
+  codeHash      String   @unique
+  expiresAt     DateTime
+  consumedAt    DateTime?
+  approvedByOne String
+  approvedByTwo String
+  createdAt     DateTime @default(now())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, expiresAt, consumedAt])
+}
+
+// Identity-approved first-time setup: never send authorization codes to the browser.
+// Approval belongs to one password-authenticated session and expires quickly.
+model AdminMfaEnrollmentRequest {
+  id            String   @id @default(cuid())
+  userId        String
+  sessionId     String
+  expiresAt     DateTime
+  approvedByOne String?
+  approvedByTwo String?
+  recoveryVerifiedAt DateTime?
+  consumedAt    DateTime?
+  createdAt     DateTime @default(now())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, sessionId, expiresAt, consumedAt], map: "AdminMfaEnroll_session_exp_idx")
+  @@index([expiresAt, approvedByTwo], map: "AdminMfaEnroll_exp_approved_idx")
+}
+
+// Recovery requires two distinct, passkey-verified SUPERADMIN approvals.
+// The one-time resulting grant code is never stored in plaintext.
+model AdminMfaRecoveryRequest {
+  id             String   @id @default(cuid())
+  targetUserId   String
+  requestedById  String
+  approvedById   String?
+  expiresAt      DateTime
+  fulfilledAt    DateTime?
+  createdAt      DateTime @default(now())
+  targetUser     User     @relation(fields: [targetUserId], references: [id], onDelete: Cascade)
+  @@index([targetUserId, expiresAt, fulfilledAt])
+  @@index([requestedById, expiresAt])
+}

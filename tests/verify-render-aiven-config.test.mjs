@@ -33,3 +33,24 @@ test('backend remains fenced without authenticated private edge and cutover',()=
   {ENABLE_AUTHORITATIVE_INCREMENTAL_SCHEDULER:'true'}
  ]){const r=run(add);assert.equal(r.status,2,r.stderr);}
 });
+
+test('writer mode rejects missing MFA enforcement, RP, HTTPS origin and TOTP key',()=>{
+ const approved={STANDBY_MODE:'false',NEWCHANGES_CUTOVER_APPROVED:'YES'};
+ for (const missing of [
+   {},
+   {MFA_ENFORCE:'true'},
+   {MFA_ENFORCE:'true',MFA_RP_ID:'thefixer.invalid',MFA_EXPECTED_ORIGIN:'http://thefixer.invalid'},
+   {MFA_ENFORCE:'true',MFA_RP_ID:'thefixer.invalid',MFA_EXPECTED_ORIGIN:'https://thefixer.invalid'},
+   {MFA_ENFORCE:'true',MFA_RP_ID:'thefixer.invalid',MFA_EXPECTED_ORIGIN:'https://thefixer.invalid',
+     ADMIN_MFA_TOTP_ENABLED:'true',ADMIN_MFA_TOTP_ENCRYPTION_KEY:'invalid'}
+ ]) {
+   const r=run({...approved,...missing});
+   assert.equal(r.status,2,r.stderr);
+   assert.match(r.stderr,/BLOCKED/);
+ }
+ const r=run({...approved,MFA_ENFORCE:'true',MFA_RP_ID:'thefixer.invalid',
+   MFA_EXPECTED_ORIGIN:'https://thefixer.invalid',ADMIN_MFA_TOTP_ENABLED:'true',
+   ADMIN_MFA_TOTP_ENCRYPTION_KEY:'a'.repeat(43)});
+ assert.equal(r.status,0,r.stderr);
+ assert.match(r.stdout,/PASS: Render Aiven connection contract/);
+});
