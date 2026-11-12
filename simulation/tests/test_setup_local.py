@@ -56,7 +56,18 @@ class LocalAccountSetupTests(unittest.TestCase):
         creations = [sql for sql in statements if sql.startswith("CREATE USER")]
         self.assertEqual(len(creations), 3)
         self.assertTrue(all("@'%' IDENTIFIED BY" in sql for sql in creations))
-        self.assertEqual(len([sql for sql in statements if sql.startswith("GRANT ")]), 4)
+        # Verify exact least-privilege grants, not a brittle statement count.
+        # The dedicated local CDC account needs the isolated marker sink;
+        # it must never get access to the real ingest_stage schema.
+        grants = [sql for sql in statements if sql.startswith("GRANT ")]
+        self.assertCountEqual(grants, [
+            "GRANT SELECT, INSERT, UPDATE, DELETE ON fixer_sim.* TO 'sim_writer'@'%'",
+            "GRANT SELECT, INSERT, UPDATE, DELETE ON fixer_sim_analytics.* TO 'sim_cdc'@'%'",
+            "GRANT SELECT, INSERT, UPDATE, DELETE ON fixer_ingest_cdc.* TO 'sim_cdc'@'%'",
+            "GRANT SELECT ON fixer_sim.* TO 'sim_repl'@'%'",
+            "GRANT REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO 'sim_repl'@'%'",
+        ])
+        self.assertFalse(any("ingest_stage." in grant for grant in grants))
         self.assertEqual(statements[-1], "FLUSH PRIVILEGES")
 
     def test_bootstrap_fails_closed_outside_local(self):
