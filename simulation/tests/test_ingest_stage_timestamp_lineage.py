@@ -72,5 +72,25 @@ class TimestampLineageAuditContract(unittest.TestCase):
         self.assertNotIn("mysql.user", sql)
 
 
+    def test_source_to_view_identity_preflight_is_metadata_only(self):
+        sql_path = ROOT / "ops" / "ingest_stage_cdc_identity_readonly.sql"
+        sql = sql_path.read_text(encoding="utf-8")
+        cleaned = re.sub(r"(?m)^\s*--[^\n]*$", "", sql).strip()
+        self.assertEqual(len([s for s in cleaned.split(";") if s.strip()]), 1)
+        self.assertRegex(cleaned, r"(?is)^WITH\s+expected\s+AS")
+        self.assertIn("information_schema.TABLES", cleaned)
+        self.assertIn("information_schema.COLUMNS", cleaned)
+        self.assertNotRegex(cleaned, r"(?i)\b(?:INSERT|UPDATE|DELETE|ALTER|DROP|CREATE|TRUNCATE|GRANT|CALL|SET)\s")
+        self.assertNotRegex(cleaned, r"(?i)\bFROM\s+ingest_stage\.")
+        self.assertNotRegex(cleaned, r"(?i)\bJOIN\s+ingest_stage\.")
+        self.assertNotIn("VIEW_DEFINITION", cleaned)
+        self.assertNotIn("ACTION_STATEMENT", cleaned)
+        for feed in FEEDS:
+            self.assertIn("'" + feed + "'", cleaned)
+        self.assertIn("base_ingest_id", cleaned)
+        self.assertIn("view_ingest_id", cleaned)
+        self.assertIn("view_watermark", cleaned)
+
+
 if __name__ == "__main__":
     unittest.main()
