@@ -48,18 +48,19 @@ test('two independently passkey verified superadmins must approve outside user s
  assert.doesNotMatch(route,/return \{[^}]*grantCode/);
 });
 
-test('authorization is session-bound, expires and is atomically single use',()=>{
+test('first-time admins may enroll with password; approved recovery authorization remains single use',()=>{
  const auth=scope('async function hasEnrollmentApproval','async function recordChallenge');
  for(const text of ['sessionId:session.id','userId:session.userId','consumedAt:null',
    'expiresAt:{gt:new Date()}','consumedAt:now','used.count!==1'])
   assert.ok(auth.includes(text),'Missing '+text);
- assert.match(source,/await consumeEnrollmentApproval\(tx,session,now,body\.grantCode\)/);
- assert.match(source,/await consumeEnrollmentApproval\(tx,session,now,req\.body\?\.grantCode\)/);
+ assert.match(source,/await consumeEnrollmentApproval\(tx,session,now,body\.grantCode,/);
+ assert.match(source,/await consumeEnrollmentApproval\(tx,session,now,req\.body\?\.grantCode,/);
+ assert.match(auth,/passkeyCount===0 && !totp\?\.enabledAt && passwordValid/);
 });
 
-test('regular accounts enroll with password proof and recover with password plus one-time key',()=>{
+test('all accounts can enroll with password; regular accounts recover with password plus one-time key',()=>{
  const auth=scope('async function isAuthorizedToEnroll','async function consumeEnrollmentApproval');
- assert.match(auth,/!\['ADMIN','SUPERADMIN'\]\.includes\(session\.user\.role\)/);
+ assert.match(auth,/passwordValid/);
  assert.match(auth,/verifyPassword\(password,session\.user\.passwordHash\)/);
  const recovery=scope("'/api/auth/mfa/recovery/self'","app.post<{Body:MfaBody}>('/api/auth/mfa/register/options'");
  for(const text of ["['ADMIN','SUPERADMIN'].includes(session.user.role)",'verifyPassword(password,session.user.passwordHash)',
@@ -71,11 +72,11 @@ test('regular accounts enroll with password proof and recover with password plus
  assert.match(browser,/api\('recovery\/self'/);
 });
 
-test('client exposes request and approval, not user-generated enrollment tokens',()=>{
+test('client exposes optional recovery approval and password-based initial enrollment',()=>{
  for(const id of ['mfa-approval-panel','mfa-approval-request','mfa-approval-admin',
    'mfa-approval-id','mfa-approval-confirm-identity'])
   assert.ok(html.includes('id="'+id+'"'),'Missing '+id);
- assert.match(browser,/enrollment\/request/);
+ assert.match(browser,/Confirm your current password below/);
  assert.match(browser,/identityConfirmed:true/);
  assert.match(browser,/enrollmentApproved/);
  assert.doesNotMatch(browser,/localStorage\.setItem\([^\n]*grantCode/);

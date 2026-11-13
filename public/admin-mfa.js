@@ -103,14 +103,14 @@ async function refresh(){
   enrollmentApproved=!!approval.approved;
   enrollmentRequestId=approval.requestId||null;
   document.getElementById('mfa-approval-panel').hidden=!firstTime || !accountIsAdministrator;
-  document.getElementById('mfa-self-enroll-form').hidden=!firstTime || accountIsAdministrator;
+  document.getElementById('mfa-self-enroll-form').hidden=!firstTime;
   document.getElementById('mfa-approval-admin').hidden=!state.canManageRecovery;
   document.getElementById('mfa-self-recovery').hidden=accountIsAdministrator || managingMethods;
   document.getElementById('mfa-approval-state').textContent=enrollmentApproved
-    ? 'Setup approved. Choose your authenticator QR code or device passkey below.'
+    ? 'Approval is ready. You can enroll with your current password or use the approved recovery grant.'
     : enrollmentRequestId
       ? 'Awaiting two independent administrator approvals. Request ID: '+enrollmentRequestId
-      : 'Request identity-verified setup approval to get started.';
+      : 'No second administrator is needed for first-time setup. Confirm your current password below.';
   document.getElementById('mfa-approval-request').disabled=!!enrollmentRequestId;
   document.getElementById('mfa-approval-check').hidden=!firstTime || !enrollmentRequestId;
   document.getElementById('recovery').hidden=!state.canManageRecovery;
@@ -137,11 +137,10 @@ async function refresh(){
   const passkeyGrantLabel=document.querySelector?.('label[for="grant"]');
   grantEl.hidden=true;
   if(passkeyGrantLabel)passkeyGrantLabel.hidden=true;
-  const adminApprovalRequired=firstTime && accountIsAdministrator && !enrollmentApproved && !legacyGrant;
-  enrollBtn.disabled=adminApprovalRequired;
+  enrollBtn.disabled=false;
   document.getElementById('totp-grant').hidden=true;
   document.getElementById('totp-start').hidden=!!state.totpEnrolled || (!!state.verified && !managingMethods);
-  document.getElementById('totp-start').disabled=adminApprovalRequired;
+  document.getElementById('totp-start').disabled=false;
   document.getElementById('totp-title').textContent=state.totpEnrolled
     ? 'Verify with your authenticator app'
     : 'Set up your authenticator app with a QR code';
@@ -149,8 +148,8 @@ async function refresh(){
   if(instructions)instructions.textContent=state.totpEnrolled
     ? 'Open the existing The Fixer entry in Google or Microsoft Authenticator and enter its current six-digit code. You only scan a QR during initial setup.'
     : managingMethods && state.verified
-      ? 'Add a second method: scan your one-time QR code and verify a six-digit code. Your verified session replaces the first-time enrollment grant.'
-      : 'First time only: request your personal QR code, open Google Authenticator or Microsoft Authenticator, tap Add account and scan the QR. Enter one code to activate the saved account.';
+      ? 'Add a second method: scan your one-time QR code and verify a six-digit code. Your verified session authorizes the change.'
+      : 'First time only: confirm your current password, open Google Authenticator or Microsoft Authenticator, tap Add account and scan your personal QR. Enter one code to activate the saved account.';
   const totpGrantLabel=document.querySelector?.('label[for="totp-grant"]');
   if(totpGrantLabel)totpGrantLabel.hidden=true;
   document.getElementById('totp-panel').hidden=!state.totpAvailable || (!!state.verified && (!managingMethods || !!state.totpEnrolled));
@@ -160,7 +159,7 @@ async function refresh(){
       ? 'Your session is verified. Add an authenticator using a QR code without another enrollment grant.'
     : state.verified
       ? 'Your account is verified. No new setup is needed to continue.'
-      : 'After your setup request is approved, choose Generate QR code and scan it using Google or Microsoft Authenticator. The Fixer handles authorization on the server.';
+      : 'Confirm your current password, choose Generate QR code, and scan it using Google or Microsoft Authenticator. No second administrator is needed for first-time setup.';
   // The setup code was already consumed by confirmation. Never prompt the
   // user to verify it again on the same freshly elevated session.
   document.getElementById('totp-verify-panel').hidden=!state.totpEnrolled || !!state.verified;
@@ -183,7 +182,7 @@ async function refresh(){
     document.getElementById('totp-qr').removeAttribute('src');
   }
   show(state.verified?'MFA verified with '+(state.verificationMethod==='TOTP'?'authenticator app.':'passkey.')+' You may continue.':
-   !state.enrolled?(accountIsAdministrator?'MFA setup required. Request identity-verified approval, then choose a passkey or authenticator QR.':'MFA setup required. Confirm your password, then choose a passkey or authenticator QR.'):
+   !state.enrolled?'MFA setup required. Confirm your current password, then choose a passkey or authenticator QR.':
    state.passkeyEnrolled&&state.totpEnrolled?'Verify your passkey or enter a six-digit authenticator code to continue.':
    state.totpEnrolled?'Authenticator app enrolled. Enter a fresh six-digit code — no enrollment grant is needed.':
    'Passkey enrolled. Verify it to continue to your account.');
@@ -200,11 +199,9 @@ async function run(kind){
   if(kind==='enroll'){
     const grantCode=grantEl.value.trim();
     const password=document.getElementById('mfa-enrollment-password').value;
-    if(!accountIsAdministrator && !managingMethods && !password)
+    if(!managingMethods && !password && !legacyGrant)
       throw Error('Enter your current password before enrolling MFA.');
-    if(accountIsAdministrator && !grantCode && !enrollmentApproved && !managingMethods)
-      throw Error('Request security enrollment approval before registering a passkey.');
-    const proof=accountIsAdministrator?{grantCode}:{password};
+    const proof=grantCode?{grantCode}:{password};
     show('Waiting for passkey registration on your device…');
     const options=await api('register/options',proof);
     const publicKey=creationOptions(options);
@@ -243,10 +240,9 @@ async function withTotpBusy(button,action){
 totpStart.addEventListener('click',()=>withTotpBusy(totpStart,async()=>{
  const grantCode=document.getElementById('totp-grant').value.trim();
  const password=document.getElementById('mfa-enrollment-password').value;
- if(!accountIsAdministrator && !managingMethods && !password)throw Error('Enter your current password before enrolling MFA.');
- if(accountIsAdministrator && !grantCode && !managingMethods && !enrollmentApproved)throw Error('Request security enrollment approval before generating your QR code.');
+ if(!managingMethods && !password && !legacyGrant)throw Error('Enter your current password before enrolling MFA.');
  show('Generating your private authenticator QR code…');
- const data=await api('totp/setup',accountIsAdministrator?{grantCode}:{password});
+ const data=await api('totp/setup',grantCode?{grantCode}:{password});
  if(typeof data.qrDataUri!=='string'||!data.qrDataUri.startsWith('data:image/svg+xml;base64,'))
    throw Error('The QR code could not be generated');
  document.getElementById('totp-qr').src=data.qrDataUri;
@@ -258,9 +254,8 @@ totpConfirm.addEventListener('click',()=>withTotpBusy(totpConfirm,async()=>{
  const code=document.getElementById('totp-confirm-code').value.trim();
  if(!/^[0-9]{6}$/.test(code))throw Error('Enter the six-digit code shown in your authenticator app.');
  const password=document.getElementById('mfa-enrollment-password').value;
- const proof=accountIsAdministrator
-   ?{grantCode:document.getElementById('totp-grant').value.trim()}
-   :{password};
+ const grantCode=document.getElementById('totp-grant').value.trim();
+ const proof=grantCode?{grantCode}:{password};
  const result=await api('totp/confirm',{...proof,code});
  displayRecoveryKey(result.recoveryKey);
  document.getElementById('mfa-enrollment-password').value='';
