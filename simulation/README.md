@@ -282,6 +282,30 @@ no failures or skips and test container exit code **0**; the host phase
 ran 107 tests with 19 expected environment skips. No RDS source read,
 live binlog reader activation or application-dashboard cutover is implied.
 
+### Live MySQL retention audit: NULL confirmed (13 November 2026)
+
+After authenticated CLI access and a successfully completed read-only SQL
+audit against the existing RDS instance, the operator verified:
+
+- `CALL mysql.rds_show_configuration`: **binlog retention hours=NULL**.
+  Per AWS RDS for MySQL, this means **0 hours guaranteed external CDC
+  retention**. It is **not** a 30-day guarantee.
+- Runtime variables: **log_bin=ON**, **binlog_format=ROW**,
+  **binlog_row_image=FULL**, **gtid_mode=OFF_PERMISSIVE**,
+  **binlog_expire_logs_seconds=2592000**.
+- `SHOW BINARY LOGS`: **four files visible**, a snapshot of the current
+  server state, not an assured recovery window.
+- No changes to the source database or configuration occurred during
+  this inspection.
+
+**Decision:** Keep live CDC activation **BLOCKED**. A proposed
+**24-hour RDS binlog-retention horizon** requires explicit operator
+approval and storage monitoring before changing RDS configuration.
+The source timestamp lineage, restricted replication access and
+verified nonempty initial snapshot are separate unresolved gates.
+See `INGEST_STAGE_READINESS.md` and the read-only SQL
+`ops/ingest_stage_rds_retention_readonly.sql` for verification details.
+
 ### Current live AWS read-only readiness inspection (13 November 2026)
 
 The connected AWS account confirmed the existing
@@ -319,7 +343,7 @@ timestamp lineage and dashboard data contracts are addressed.
 | Disposable MySQL 8.4 integration tests | **PASS, latest operator Docker transcript, 107/107 tests, no skips, exit 0, code commit `faac2fb4`** |
 | Binlog INSERT/UPDATE/DELETE on MySQL 8.4 | PASS in local disposable Docker MySQL, NOT on AWS RDS |
 | Live RDS table/schema inventory & PII classification | PARTIAL: operator verified 11 base tables + 10 views, 59 required feed columns; sensitive-row classification still outstanding |
-| Live RDS CDC parameter/retention inspection | PARTIAL: operator confirmed ROW/FULL binlog and NULL/unconfigured retention; no live CDC consumer |
+| Live RDS CDC parameter/retention inspection | **PASS inspection / BLOCKED activation:** MySQL login succeeded; ROW/FULL active, effective RDS retention=NULL (0 guaranteed hours); no live CDC consumer |
 | AWS RDS source/sink schema deployment | NOT ATTEMPTED, requires approval |
 | Lambda connectivity and trigger test | NOT ATTEMPTED, requires approval |
 | The Fixer application-dashboard wiring | NOT CHANGED, awaits integration contract |
