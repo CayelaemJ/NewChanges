@@ -102,3 +102,23 @@ The Railway production `NewChanges` service was verified to deploy `CayelaemJ/Ne
 The preflight reports `ready` for **view-schema compatibility only** and separately returns `productionCutoverReady: false`. Do not interpret a schema-ready response as authorization for `DIRECT_MYSQL_NO_REPLICATION=true`, source removal, or dashboard replacement. A cutover-ready result must require independently validated RDS network/TLS, least-privilege SELECT grants, historical completeness, employer isolation, dashboard metric parity, acceptable query plans, and a reversible operational rollout.
 
 Until those gates are satisfied, keep production on its current `main` deployment, leave the source no-replication flag disabled, and do not introduce MySQL secrets into GitHub or this document.
+
+## Verified AWS infrastructure and network cutover blocker — 2026-11-13
+
+Read-only AWS API checks of `fixer-synthetic-mysql` in `eu-north-1` confirmed:
+
+- Database status `available`, engine MySQL `8.4.11`, port `3306`, 20 GiB allocated.
+- `PubliclyAccessible=true` but attached security-group inbound port `3306` was restricted to **one /32 IPv4 address** (not general Internet access). The approved CIDR is intentionally not reproduced here. Source reachability from Railway is therefore **unproven** and should be treated as blocked unless Railway traffic uses that approved IP or an approved private network route is in place.
+- Storage encryption `true`, deletion protection `true`, RDS certificate authority `rds-ca-rsa2048-g1`; current automated backup retention 1 day. MySQL IAM database authentication disabled.
+- Production Railway `NewChanges` is on `main` with no configured MySQL source variables as of the audit. These results are **network/control-plane evidence**, not MySQL authentication or reporting-view validation.
+
+### Safe rollout checklist
+
+1. Select an intentionally restricted network route from Railway to RDS: approved stable egress IP with a /32 security-group ingress entry, or private networking through a managed connector/VPC path. **Never add `0.0.0.0/0` to port 3306** just to make the test pass.
+2. Configure MySQL connection details as Railway secrets or sealed environment variables, not source code or commit history. Use a dedicated reporting user with `SELECT` on approved views; do not reuse the RDS administrative user.
+3. Validate trusted CA, hostname and TLS certificate; compare the RDS endpoint/CA to the application configuration. Existing previews require verified TLS.
+4. From an appropriately restricted non-production runner/service, run the existing metadata-only `/api/admin/integration/direct-reporting/preflight` endpoint after enabling only the **read-only** feature gate. Capture the missing-column/view response, not business data or credentials.
+5. Verify historical observation completeness, effective-dated semantics, employer authorization, source read latency/CPU and report parity before any dashboard switch. Schema-only `ready=true` still means `productionCutoverReady=false`.
+6. Keep the no-replication flag and full customer dashboard cutover OFF; do not merge this draft PR until all required acceptance checks pass. Consider whether 1-day RDS backup retention meets the agreed recovery-point objective before production approval.
+
+No AWS resources, security groups, Railway variables or live databases were modified by the AWS read-only inspection.
