@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 import { LOAD_ORDER } from "../src/services/reportFormats.js";
 import { evaluateSourceCdcLineage } from "../src/services/sourceCdcLineagePreflight.js";
 
@@ -44,6 +45,16 @@ describe("MySQL VIEW_TABLE_USAGE dependency audit", () => {
     expect(result.feeds.find(x => x.feed === "policies")?.unresolved)
       .toContain("ingest_stage.v_policies (no visible dependencies)");
   });
+  it("requires admin authentication before reading source metadata", () => {
+    const server = readFileSync("src/server.ts", "utf8");
+    const at = server.indexOf('"/api/admin/integration/direct-reporting/cdc-lineage"');
+    expect(at).toBeGreaterThan(-1);
+    const route = server.slice(at, at + 750);
+    expect(route.indexOf("requireAdmin(req, reply)")).toBeLessThan(route.indexOf("getSyncConfig()"));
+    expect(route.indexOf("directReportingEnabled()")).toBeLessThan(route.indexOf("getSyncConfig()"));
+    expect(route).toContain("inspectSourceCdcLineage(await getSyncConfig())");
+  });
+
   it("rejects cross-database and cyclic lineage", () => {
     const cross = evaluateSourceCdcLineage(db, "v_", objects, [
       ...usages.filter(x => x.VIEW_NAME !== "v_debt_accounts"),
