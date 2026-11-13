@@ -15,6 +15,18 @@ from runtime.ingest_stage_stream import run_local_binlog
 
 SECRET = b"test-ingest-real-xid-hmac-key-is-32-bytes"
 CONSUMER = "test-ingest-real-xid-v1"
+# Explicit SQL allowlist: no dynamic table identifier from any event or input.
+# These are minimal disposable fixture tables, never the live RDS schema.
+LOCAL_FIXTURE_INSERTS = {
+    "employers": "INSERT INTO employers (_ingest_id,fixture_state,source_updated_at) VALUES(%s,%s,%s)",
+    "workforce_snapshots": "INSERT INTO workforce_snapshots (_ingest_id,fixture_state,source_updated_at) VALUES(%s,%s,%s)",
+    "platform_users": "INSERT INTO platform_users (_ingest_id,fixture_state,source_updated_at) VALUES(%s,%s,%s)",
+    "journeys": "INSERT INTO journeys (_ingest_id,fixture_state,source_updated_at) VALUES(%s,%s,%s)",
+    "policies": "INSERT INTO policies (_ingest_id,fixture_state,source_updated_at) VALUES(%s,%s,%s)",
+    "ratings": "INSERT INTO ratings (_ingest_id,fixture_state,source_updated_at) VALUES(%s,%s,%s)",
+    "referrals": "INSERT INTO referrals (_ingest_id,fixture_state,source_updated_at) VALUES(%s,%s,%s)",
+    "salary_advances": "INSERT INTO salary_advances (_ingest_id,fixture_state,source_updated_at) VALUES(%s,%s,%s)",
+}
 
 
 @unittest.skipUnless(
@@ -166,15 +178,12 @@ class LocalSourceXidIntegration(unittest.TestCase):
                     VALUES(%s,%s,%s)""",
                     (1888, "15.50", "2025-01-01T10:00:00Z"))
                 other_feeds = sorted(FEED_TABLES - {"employees", "debt_accounts"})
+                self.assertEqual(set(LOCAL_FIXTURE_INSERTS), set(other_feeds))
                 for offset, feed in enumerate(other_feeds, start=1):
-                    # Only allowlisted, fixed source identifiers can reach
-                    # this test SQL. Fixture tables share these three columns;
-                    # their real RDS source columns are NOT modelled here.
-                    self.assertRegex(feed, r"^[a-z_]+$")
+                    # Whitelisted static SQL, no f-string interpolation of
+                    # table names. No live RDS source columns are modelled.
                     cur.execute(
-                        f"INSERT INTO `{feed}` "
-                        "(_ingest_id,fixture_state,source_updated_at) "
-                        "VALUES(%s,%s,%s)",
+                        LOCAL_FIXTURE_INSERTS[feed],
                         (2000 + offset, "LOCAL_TEST_ONLY", "2025-01-01T10:00:00Z"),
                     )
             source.commit()
