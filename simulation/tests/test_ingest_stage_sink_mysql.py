@@ -219,6 +219,12 @@ class LocalIngestSink(unittest.TestCase):
                  "WHERE consumer_name=%s AND event_key=%s",
                  (consumer,change.event_key))[0][0], 1
         )
+        # The failed second source transaction must not increment a feed
+        # generation or leak a notification across consumers.
+        self.assertEqual(query(self.db, """SELECT generation
+            FROM fixer_ingest_cdc.ingest_feed_notifications
+            WHERE consumer_name=%s AND feed=%s""",
+            (consumer,"employees"))[0][0], 1)
 
     def test_stale_checkpoint_refuses_plan_without_marker_write(self):
         consumer = "test-ingest-stale"
