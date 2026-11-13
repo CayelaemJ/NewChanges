@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { readFileSync } from "node:fs";
 import { LOAD_ORDER, getFormat } from "../src/services/reportFormats.js";
 import {
   buildCdcMysqlViewQuery,
@@ -62,6 +63,7 @@ test("all ten canonical feeds allow only scoped read-only MySQL SELECT and no Po
     assert(sqlCall.sql.includes(" FROM " + String.fromCharCode(96) + "ingest_stage"));
     assert(sqlCall.sql.includes(" WHERE " + String.fromCharCode(96) + "employer_ref" + String.fromCharCode(96) + " = ?"));
     assert(!sqlCall.sql.includes("source_updated_at >"));
+    assert(!sqlCall.sql.includes("SELECT *"));
     assert.deepEqual(sqlCall.params, ["VIG", 3]);
     assert.equal(m.calls[0].sql, "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ");
     assert.equal(m.calls[1].sql, "START TRANSACTION WITH CONSISTENT SNAPSHOT, READ ONLY");
@@ -159,6 +161,17 @@ test("driver-side cross-employer rows fail closed even after SQL WHERE filter", 
     /CDC_MYSQL_VIEW_READ_FAILED/,
   );
   assert.equal(m.isEnded(), true);
+});
+
+test("MySQL driver configuration mandates TLS hostname checks and query timeouts", () => {
+  const source = readFileSync(new URL("../src/services/ingestStageCdcMysqlReader.ts", import.meta.url), "utf8");
+  assert.match(source, /verifyIdentity:\s*true/);
+  assert.match(source, /rejectUnauthorized:\s*true/);
+  assert.match(source, /multipleStatements:\s*false/);
+  assert.match(source, /START TRANSACTION WITH CONSISTENT SNAPSHOT, READ ONLY/);
+  assert.match(source, /timeout:\s*settings\.queryTimeoutMs/);
+  assert(!source.includes("ssl: false"));
+  assert(!source.includes("import { runSync }"));
 });
 
 test("connection failures are redacted before propagating to callers", async () => {
