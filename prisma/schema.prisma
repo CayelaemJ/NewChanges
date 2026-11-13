@@ -1637,3 +1637,30 @@ model AdminMfaRecoveryRequest {
   @@index([targetUserId, expiresAt, fulfilledAt])
   @@index([requestedById, expiresAt])
 }
+
+
+/// A tiny application-owned MySQL CDC position. No reporting rows stored here.
+/// Lease generation fences off a previous consumer after a new leader takes over.
+model SourceCdcCheckpoint {
+  id             String   @id
+  cursor         String   @default("")
+  leaseOwner     String?
+  leaseGeneration Int     @default(0)
+  leaseExpiresAt DateTime?
+  updatedAt      DateTime @updatedAt
+}
+
+/// Durable, replayable dashboard invalidation hints, NOT business source rows.
+/// Empty period means all periods for an employer.
+model SourceCdcOutbox {
+  id             String    @id
+  sourceId       String
+  sourceCursor   String
+  employerRef    String
+  period         String    @default("")
+  feed           String
+  createdAt      DateTime  @default(now())
+  deliveredAt    DateTime?
+  @@index([sourceId, deliveredAt, createdAt])
+  @@index([employerRef, period])
+}
