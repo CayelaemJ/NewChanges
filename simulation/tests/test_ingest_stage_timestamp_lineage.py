@@ -47,5 +47,30 @@ class TimestampLineageAuditContract(unittest.TestCase):
             self.assertNotIn(prohibited, self.source)
 
 
+    def test_safe_lineage_summary_queries_only_metadata_and_hides_sql_bodies(self):
+        path = ROOT / "ops" / "ingest_stage_lineage_summary_readonly.sql"
+        sql = path.read_text(encoding="utf-8")
+        cleaned = re.sub(r"(?m)^\\s*--[^\\n]*$", "", sql)
+        statements = [s.strip() for s in cleaned.split(";") if s.strip()]
+        self.assertEqual(len(statements), 4)
+        for statement in statements:
+            self.assertRegex(statement, r"(?is)^SELECT\\s")
+            self.assertIn("information_schema.", statement)
+            self.assertNotRegex(
+                statement,
+                r"(?i)\\b(?:INSERT|UPDATE|DELETE|ALTER|CREATE|DROP|TRUNCATE|GRANT|CALL|SET)\\s",
+            )
+            self.assertNotRegex(statement, r"(?i)\\bFROM\\s+ingest_stage\\.")
+            self.assertNotRegex(statement, r"(?i)\\bJOIN\\s+ingest_stage\\.")
+        for feed in FEEDS:
+            self.assertIn("'" + feed + "'", sql)
+        self.assertIn("VIEW_DEFINITION", sql)
+        self.assertNotRegex(sql, r"(?i)VIEW_DEFINITION\\s+AS\\s+")
+        self.assertNotIn("ACTION_STATEMENT", sql)
+        self.assertNotIn("GENERATION_EXPRESSION", sql)
+        self.assertNotIn("COLUMN_DEFAULT", sql)
+        self.assertNotIn("mysql.user", sql)
+
+
 if __name__ == "__main__":
     unittest.main()
