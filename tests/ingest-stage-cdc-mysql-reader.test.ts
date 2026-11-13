@@ -27,7 +27,8 @@ function mockMysql(feed: string, rows: Record<string, unknown>[]) {
   let ended = false;
   const names = getFormat(feed)!.fields.map(f => f.name);
   const db: CdcMysqlQueryConnection = {
-    async query(sql, params = []) {
+    async query(command, params = []) {
+      const sql = typeof command === "string" ? command : command.sql;
       calls.push({ sql, params });
       if (sql.includes("information_schema.COLUMNS"))
         return [names.map(COLUMN_NAME => ({ COLUMN_NAME })), []];
@@ -160,10 +161,21 @@ test("driver-side cross-employer rows fail closed even after SQL WHERE filter", 
   assert.equal(m.isEnded(), true);
 });
 
+test("connection failures are redacted before propagating to callers", async () => {
+  await assert.rejects(
+    readCdcMysqlView("employees", "VIG", scope, settings,
+      async () => { throw new Error("AWS_ENDPOINT_PRIVATE_SECRET"); }),
+    error => error instanceof Error &&
+      error.message === "CDC_MYSQL_VIEW_READ_FAILED" &&
+      !error.message.includes("AWS_ENDPOINT_PRIVATE_SECRET"),
+  );
+});
+
 test("query failures roll back and close without leaking sensitive driver messages", async () => {
   const calls: string[] = [];
   const db: CdcMysqlQueryConnection = {
-    async query(sql) {
+    async query(command) {
+      const sql = typeof command === "string" ? command : command.sql;
       calls.push(sql);
       if (sql.includes("information_schema.COLUMNS"))
         throw new Error("mysql credentials and raw rows NEVER_PRINT");
