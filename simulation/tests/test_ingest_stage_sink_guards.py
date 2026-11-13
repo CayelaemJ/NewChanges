@@ -99,7 +99,7 @@ class IngestSinkSafetyContracts(unittest.TestCase):
         ddl = (ROOT / "schema" / "004_ingest_stage_fixture.sql").read_text(
             encoding="utf-8"
         )
-        tables = re.findall(r"^CREATE TABLE ([a-z_]+) \\(", ddl, flags=re.MULTILINE)
+        tables = re.findall(r"^CREATE TABLE ([a-z_]+) \(", ddl, flags=re.MULTILINE)
         self.assertEqual(len(tables), 10)
         self.assertCountEqual(tables, FEED_TABLES)
         self.assertNotIn("INSERT INTO", ddl.upper())
