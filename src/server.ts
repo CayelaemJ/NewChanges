@@ -56,6 +56,7 @@ import { inspectMysqlReportingReadiness } from "./services/directMysqlReportingP
 import { compareHistoricalHeadcount } from "./services/directMysqlParity.js";
 import { discoverDirectMysqlEmployers } from "./services/directMysqlEmployers.js";
 import { createSourceInvalidationHub } from "./services/sourceInvalidationHub.js";
+import { inspectSourceCdcLineage } from "./services/sourceCdcLineagePreflight.js";
 import { readCdcEmployerVersion } from "./services/sourceCdcVersion.js";
 import { subscribeAdminEvents } from "./services/adminEventStream.js";
 import { ensureSectionDefaults, listSections, updateSection, grantUserSection, revokeUserSection, sectionsForUser } from "./services/sectionService.js";
@@ -2003,6 +2004,22 @@ app.get<{ Params: { employerId: string } }>(
     }
   },
 );
+
+// Admin-only metadata discovery: physical tables feeding ten canonical MySQL views.
+// This is NOT CDC approval or a binlog reader; no business rows are queried.
+app.get("/api/admin/integration/direct-reporting/cdc-lineage", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  if (!directReportingEnabled())
+    return reply.code(503).send({ error: "Direct MySQL reporting is not enabled" });
+  try {
+    const result = await inspectSourceCdcLineage(await getSyncConfig());
+    reply.header("Cache-Control", "no-store");
+    return result;
+  } catch (error: any) {
+    req.log.warn({ message: error?.message }, "CDC metadata lineage unavailable");
+    return reply.code(503).send({ error: "CDC lineage inspection unavailable" });
+  }
+});
 
 // ── Enterprise operations and analytics placement ──
 app.get("/api/admin/enterprise/overview", async (req, reply) => {
