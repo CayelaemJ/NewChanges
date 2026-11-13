@@ -128,6 +128,11 @@ async function setRefreshState(status: string, note: string, at = new Date(), su
 }
 
 async function runAuthoritativeFullRefresh(reason: "scheduled" | "manual" | "reset", onProgress?: (progress: SyncProgress) => void | Promise<void>) {
+  // Check before any lease, state transition, cursor clear, or data purge.
+  if (process.env.DIRECT_MYSQL_NO_REPLICATION === "true") {
+    return { ok: false, status: "DIRECT_REPORTING_ONLY",
+      error: "Full refresh and PostgreSQL source-row replication are disabled in direct MySQL reporting mode." };
+  }
   if (process.env.STANDBY_MODE === "true" && reason !== "reset") return { ok: false, status: "STANDBY", error: "Source reset is disabled on this standby." };
   if (activeFullRefresh) return activeFullRefresh;
 
