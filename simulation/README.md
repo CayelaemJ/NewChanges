@@ -256,16 +256,27 @@ The existing repository has `src/services/sourceAdapter.ts`, `syncService.ts`, `
 - The Cost Explorer query for 1–6 November showed no positive unblended service charges in the returned result. That is **not** evidence that the running RDS instance is free or will remain free; costs can lag or be covered by credits.
 - Do not deploy DMS, Kinesis, MSK, NAT gateways, VPC endpoints, CloudWatch alarms or new instances without an itemized cost and explicit approval. No paid resources were provisioned during development.
 
+The operator's latest complete WSL transcript from **13 November 2026**
+confirms **106/106 disposable MySQL 8.4 Docker tests passed, no skips,
+test container exit code 0**, at code commit `5f56f653`. The host
+phase passed 106 tests with 19 expected integration skips. This includes
+the explicit XID-based local `ingest_stage` CDC bridge, durable restart
+from the checkpoint, per-consumer notification and event isolation, source
+delete/tombstone handling, idempotency and rollback. The older 91-test
+record elsewhere in this document describes a historical milestone only.
+**This does not verify live RDS CDC, a source snapshot or production
+application integration.**
+
 ## Test and verification record
 
-| Gate | Latest status (12 November 2026) |
+| Gate | Latest status (13 November 2026) |
 |---|---|
 | AWS RDS metadata inspection | PASS, read-only |
 | SG not world-open on 3306 | PASS, one non-global IPv4 CIDR rule |
 | Existing repo source/sync inspection | PASS, read-only |
-| Python pure logic/guard tests | PASS, host phase 91 tests, 16 environment-dependent skips |
+| Python pure logic/guard tests | PASS, latest host phase 106 tests, 19 environment-dependent skips |
 | Python compile check | To be recorded after final packaging |
-| Disposable MySQL 8.4 integration tests | PASS, operator full Docker transcript, **91/91**, no skips, exit 0, commit `22d7fd29` |
+| Disposable MySQL 8.4 integration tests | **PASS, final operator Docker transcript, 106/106 tests, no skips, exit 0, code commit `5f56f653`** |
 | Binlog INSERT/UPDATE/DELETE on MySQL 8.4 | PASS in local disposable Docker MySQL, NOT on AWS RDS |
 | Live RDS table/schema inventory & PII classification | PARTIAL: operator verified 11 base tables + 10 views, 59 required feed columns; sensitive-row classification still outstanding |
 | Live RDS CDC parameter/retention inspection | PARTIAL: operator confirmed ROW/FULL binlog and NULL/unconfigured retention; no live CDC consumer |
