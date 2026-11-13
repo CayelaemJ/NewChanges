@@ -1,0 +1,28 @@
+# Direct AWS MySQL reporting — first implementation slice
+
+## Goal
+Keep AWS RDS MySQL as the authoritative reporting datastore. Railway PostgreSQL is for application-owned records (login, MFA, users, configuration, audit, jobs). Do **not** continuously copy employee, debt, policy, journey or other source rows into PostgreSQL simply to serve charts.
+
+## Implemented in this branch
+- `src/services/directMysqlReporting.ts`: explicit SQL/MySQL-only, allowlisted canonical reporting-view aggregate reader. Fixed parameterized count and source freshness per feed, optional employer filter. No import, cursor advancement, Prisma projection, or PostgreSQL business-row write.
+- `GET /api/admin/integration/direct-reporting/summary?reportKey=employees&employerRef=...`: MFA-protected admin-only endpoint. Server-side feature gate `DIRECT_MYSQL_REPORTING_ENABLED=true`; otherwise 503.
+- Strict TLS certificate verification, bounded query timeout, identifier validation, no arbitrary SQL, no multi-statements, read-only transaction.
+- Unit tests: `npx vitest run quality-tests/direct-mysql-reporting.test.ts`.
+
+## Configuration
+1. Create a MySQL user with **SELECT only** on specifically approved `v_<reportKey>` reporting views; no base-table access, DDL, DML, or privileged functions. Rely on MySQL GRANTs — SQL read-only transaction alone is not a permission boundary.
+2. Ensure AWS security group permits traffic from the Railway service only via an appropriate restricted network route, and RDS TLS CA validation succeeds. Do not publicly expose MySQL broadly.
+3. Configure source via existing Admin integration UI / secret vault, or `SOURCE_MODE=SQL`, `SOURCE_SQL_DIALECT=MYSQL`, `SOURCE_SQL_HOST`, `SOURCE_SQL_PORT`, `SOURCE_SQL_DATABASE`, `SOURCE_SQL_USERNAME`, `SOURCE_SQL_PASSWORD`, `SOURCE_SQL_SSL=true`. Do not commit credentials.
+4. After connectivity and privileges are verified, set `DIRECT_MYSQL_REPORTING_ENABLED=true` in Railway. This flag alone does **not** activate the customer-facing dashboard.
+5. Test the admin summary endpoint with valid authenticated MFA session; examine query load, return values, source timezones and freshness.
+
+## Important limitations and future tasks
+- **Not a full dashboard migration yet.** `snapshotBuilder.ts` currently reads PostgreSQL business projections, so switching `analyticsMode` alone does not route actual dashboards to MySQL.
+- Source views must include `employer_ref` and `source_updated_at` columns. A view without these fields fails closed.
+- This first endpoint is admin-only. Tenant-facing routes must resolve employer access server-side rather than trusting arbitrary client-supplied `employerRef`.
+- Next: implement MySQL-side curated KPI/period/cohort query contracts, validate agreement with existing financial/temporal logic, wire `getDashboardPayload` through an explicit per-feed read router, run parity tests, then disable source-to-PostgreSQL business-row synchronization in production.
+- Continue retaining PostgreSQL audit/security/configuration records and permitted small metadata. Don't delete existing models/migrations or turn on source-side automatic writes.
+- Set `STANDBY_MODE` appropriately only after confirming one writable primary and approved background workers. This branch does not change Railway variables or existing deployment.
+
+## Safety validation
+Confirm through SQL audit and tests that direct dashboard endpoints do **not** invoke `commitSyncRows`, `commitBatch`, source-history upserts, `snapshotEmployer` writes, or advances integration cursors. For full production migration, separately test all ten feeds, historical as-of behaviour, deleted records, tenant isolation, user roles, MFA, non-reporting workflows, and performance.
