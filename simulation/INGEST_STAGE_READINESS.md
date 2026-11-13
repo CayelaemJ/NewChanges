@@ -249,6 +249,63 @@ opaque event metadata, not business records or dashboard materializations.
 All new tables are in disposable Docker MySQL; no AWS DDL, data,
 permissions, cost settings or application integrations were changed.
 
+## Operator timestamp-lineage summary: all ten feeds (13 November 2026)
+
+The operator ran the **privacy-safe metadata summary** on the live
+RDS MySQL connection. The output, unlike the private full view/trigger
+definitions, was supplied and is now verified:
+
+- **10/10 canonical views PRESENT**; **10/10** reference the
+  `source_updated_at` token; **0/10** contain an *obvious*
+  `NOW()/CURRENT_TIMESTAMP/UTC_TIMESTAMP/SYSDATE` expression by
+  the summary's text heuristic. **Token presence and absence of these
+  expressions do not prove timestamp correctness.**
+- In all **10 base tables**, `source_updated_at` is nullable
+  `TEXT` with **no `ON UPDATE` attribute** in
+  `information_schema.COLUMNS`.
+- Every base table has a nullable `_source_updated_utc` **generated
+  DATETIME**; its generation does not independently advance the source
+  TEXT field when another column changes.
+- Each of the ten views exposes a nullable `DATETIME
+  source_updated_at` projection. The actual view expression still
+  needs semantic review; the full SQL definitions were not shared.
+- **No trigger rows were returned** in the audit's grouped
+  `information_schema.TRIGGERS` result. No visible trigger-backed
+  mutation timestamp maintenance can be assumed.
+- **10/10** base tables index `_ingest_id` and
+  `_source_updated_utc`. An index cannot make a missing or stale
+  watermark authoritative.
+
+**Engineering conclusion:** the existing MySQL data remains the
+reporting source. For the proposed live CDC pathway, detect changes by
+**committed ROW/FULL binlog transaction coordinates**, not a
+`source_updated_at > last_sync` watermark that may miss updated rows.
+The offline marker contract already flags stale or missing timestamps;
+a new pure regression test checks this for **all ten feeds**, including
+that opaque identity and events remain distinct and private. No
+production code path has been activated.
+
+**Direct reporting approach:** after separately approved retention,
+global replication privilege review, and verified nonempty initial
+snapshot, use per-feed CDC **notification generations** to invalidate
+cached reporting views and have The Fixer requery the authoritative
+MySQL views through its restricted TLS read-only SQL adapter.
+No bulk MySQL-to-Railway-PostgreSQL reporting-row replication.
+Before targeted per-row refresh, prove the mapping from a physical
+`_ingest_id` binlog source row to a canonical view natural key.
+The new `simulation/ops/ingest_stage_cdc_identity_readonly.sql`
+checks basic source/view identity-column exposure through metadata
+only, without querying source rows. It does **not** itself prove a
+safe or correct row mapping.
+
+**See** `simulation/INGEST_STAGE_CDC_FRESHNESS_DECISION.md` for
+the architecture decision and explicit activation gates.
+The `107/107` Docker PASS belongs to code commit `faac2fb4`.
+The two newly added offline tests (all-ten timestamp resilience and
+view-identity query safety) have not yet run in Docker. Together with
+the earlier pending summary-audit test, the next expected full suite
+is **110 tests**.
+
 ## Read-only source timestamp lineage execution (13 November 2026)
 
 The operator successfully ran
@@ -260,7 +317,8 @@ output was saved *only* on the operator's workstation at
 
 **Important:** successful command execution does **not** prove that
 `source_updated_at` is maintained on every underlying row mutation.
-The output itself has **not** been provided for inspection.
+The private *full-definition output* has not been provided; the
+separate privacy-safe summary has been reviewed and is documented above.
 The full file may include SQL view and trigger definitions with embedded
 constants; do not upload or paste it without reviewing those definitions.
 
@@ -273,9 +331,9 @@ watermark/identity index metadata. It suppresses complete view SQL,
 trigger bodies, column default expressions, generated expressions and
 source row values. A new host-safe static test guards this property.
 
-**Next gate:** operator reviews the summary (the warnings are heuristics,
-not a semantic proof), then a human checks source timestamp lineage
-in full if needed. Live CDC activation still remains blocked by
+**Next gate:** the operator's privacy-safe summary has now been reviewed.
+A human must still verify full source timestamp lineage where a mutation-time
+cursor is proposed; the summary's token checks are only heuristics. Live CDC activation still remains blocked by
 `binlog retention hours=NULL`, the initial source snapshot, global
 replication permissions, and The Fixer publication/refresh contract.
 At commit `faac2fb4`, **107/107 Docker tests PASS**. The extra
