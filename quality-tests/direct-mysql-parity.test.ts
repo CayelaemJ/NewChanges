@@ -48,6 +48,14 @@ describe("direct MySQL vs PostgreSQL historical headcount parity", () => {
       ...source, workforce: { ...source.workforce, eligibleCount: "9007199254740992" },
     }).status).toBe("NOT_COMPARABLE");
   });
+  it("accepts valid YYYY-MM periods and validates ISO as-of dates with numeric regexes", () => {
+    const code = readFileSync("src/server.ts", "utf8");
+    const start = code.indexOf('"/api/admin/integration/direct-reporting/parity/:employerId"');
+    const section = code.slice(start, start + 1300);
+    expect(section).toContain(String.raw`/^\d{4}-(0[1-9]|1[0-2])$/`);
+    expect(section).toContain(String.raw`/^\d{4}-\d{2}-\d{2}$/`);
+    expect(section).not.toContain(String.raw`/^\\d{4}`);
+  });
   it("protects the parity route with admin MFA and tenant authorization before source access", () => {
     const code = readFileSync("src/server.ts", "utf8");
     const at = code.indexOf('"/api/admin/integration/direct-reporting/parity/:employerId"');
