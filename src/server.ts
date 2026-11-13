@@ -53,6 +53,7 @@ import { readMysqlReportSummary, readMysqlJourneyKpis, readMysqlEventMetrics, di
 import { readDirectDashboardPreview } from "./services/directMysqlDashboardPreview.js";
 import { readDirectAsOfPreview } from "./services/directMysqlAsOfPreview.js";
 import { inspectMysqlReportingReadiness } from "./services/directMysqlReportingPreflight.js";
+import { compareHistoricalHeadcount } from "./services/directMysqlParity.js";
 import { subscribeAdminEvents } from "./services/adminEventStream.js";
 import { ensureSectionDefaults, listSections, updateSection, grantUserSection, revokeUserSection, sectionsForUser } from "./services/sectionService.js";
 import { publicEmailConfig, saveEmailConfig, testEmailConnection, createReportSchedule, listReportSchedules, updateReportSchedule, deleteReportSchedule, sendReportNow, recentReportDeliveries, runDueReports } from "./services/reportScheduler.js";
@@ -1855,6 +1856,42 @@ app.get("/api/admin/integration/direct-reporting/preflight", async (req, reply) 
     return reply.code(503).send({ error: "Reporting source preflight unavailable" });
   }
 });
+
+// Admin-only limited parity probe. Never writes or changes reporting mode.
+// Only snapshot-based unfiltered historical headcount can currently PASS.
+app.get<{ Params: { employerId: string }; Querystring: { period?: string } }>(
+  "/api/admin/integration/direct-reporting/parity/:employerId",
+  async (req, reply) => {
+    const admin = await requireAdmin(req, reply);
+    if (!admin) return;
+    if (!canViewEmployer(admin, req.params.employerId))
+      return reply.code(403).send({ error: "no access to this employer" });
+    if (!directReportingEnabled())
+      return reply.code(503).send({ error: "Direct MySQL reporting is not enabled" });
+    const period = String(req.query?.period ?? "");
+    if (!/^\\d{4}-(0[1-9]|1[0-2])$/.test(period))
+      return reply.code(400).send({ error: "Provide a valid YYYY-MM period" });
+    try {
+      const dashboard = await getDashboardPayload(req.params.employerId, { period });
+      const asOfDate = String(dashboard?.filterContext?.asAt ?? "").slice(0, 10);
+      if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(asOfDate))
+        return reply.code(503).send({ error: "Existing dashboard has no historical as-of date" });
+      const source = await readDirectAsOfPreview(await getSyncConfig(), {
+        employerRef: req.params.employerId, asOfDate,
+      });
+      reply.header("Cache-Control", "no-store");
+      return {
+        employerId: req.params.employerId, period, asOfDate,
+        comparison: compareHistoricalHeadcount(dashboard, source),
+        noReplication: true,
+        caveat: "All other KPIs require separate temporal and cohort parity validation",
+      };
+    } catch (error: any) {
+      req.log.warn({ message: error?.message }, "historical source parity probe failed");
+      return reply.code(503).send({ error: "Reporting parity probe unavailable" });
+    }
+  },
+);
 
 // ── Enterprise operations and analytics placement ──
 app.get("/api/admin/enterprise/overview", async (req, reply) => {
