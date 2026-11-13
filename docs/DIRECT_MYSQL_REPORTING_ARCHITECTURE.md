@@ -88,3 +88,9 @@ The new admin-only endpoint `GET /api/admin/integration/direct-reporting/employe
 After reviewing the source catalog, administrators must explicitly onboard **minimal identity anchors** (employer ID/name, authorized user links and tenant permissions) into PostgreSQL. Such small application-owned metadata is necessary for access control and is not equivalent to copying the reporting dataset. Do not auto-provision every employer or grant blanket access on a new environment.
 
 **Current limitation:** employer discovery is implemented, but tenant onboarding/provisioning and live source reachability have not been verified. Without those records, existing employer-scoped dashboard routes correctly deny access. Do not bypass `canViewEmployer` as a workaround.
+
+## Employer key semantics (verified in Prisma schema)
+
+`Employer.id` is already defined as the **external stable `employer_ref`**, not an internal UUID. The `UserEmployer.employerId` relationship therefore authorizes the same key that the MySQL reporting views filter by. Do not introduce a second mapping table unless the source contract changes.
+
+Both employer-scoped direct-preview routes now check an active `Employer` application record (`sourceDeletedAt: null`) after user/tenant authorization and before accessing MySQL source credentials. Superadmins cannot query an arbitrary undeclared employer reference via these preview routes. Only minimal control-plane employer anchors and user permissions are needed in Railway PostgreSQL, not copies of the underlying workforce or financial records.
