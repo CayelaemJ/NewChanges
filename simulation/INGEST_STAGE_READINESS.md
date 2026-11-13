@@ -194,12 +194,54 @@ It pulled code commit `5f56f653` and ran
 
 **Local Docker CDC integration gate: PASS at code commit `5f56f653`.**
 Later documentation-only commits do not modify the tested runtime.
-**Production AWS CDC gate: NOT PASSED.** The local fixtures model only
-two of the ten source feeds. The populated RDS source has not been
-connected to this worker, and RDS retention, privileges, timestamp lineage,
+**Production AWS CDC gate: NOT PASSED.** At the verified
+`5f56f653` revision, the local fixture modeled two of the ten source feeds.
+The fixture is extended in subsequent commits (not yet Docker-verified).
+The populated RDS source has not been connected to this worker, and
+RDS retention, privileges, timestamp lineage,
 verified initial snapshot, production sink and The Fixer dashboard
 publication remain pending. No AWS source mutation or deployment is
 authorized by a passing local test.
+
+## Ten-feed disposable CDC coverage (13 November 2026)
+
+The real RDS source remains **disconnected**. Building on the verified
+**106/106** local integration baseline at code commit `5f56f653`:
+
+- `simulation/schema/004_ingest_stage_fixture.sql` now creates all **ten**
+  allowlisted canonical source feed tables instead of the earlier two.
+  The eight additional minimal stand-ins use only an `_ingest_id` primary
+  key, test-only `fixture_state` field and nullable
+  `source_updated_at`. These do **not** replicate actual production
+  columns, joins, view definitions, timestamps or row content.
+- The XID-gated `simulation/runtime/ingest_stage_stream.py` reader derives
+  `only_tables` directly from `FEED_TABLES`, avoiding a second list
+  drifting out of sync with the canonical change-marker allowlist.
+- The real disposable MySQL integration test now performs **three source
+  transactions**: the prior employee insert/update/delete, restart with
+  a debt-account insert, then a **single third XID transaction covering
+  all ten feed tables**. It checks ten new source-event markers, a total
+  of 14 unique markers, per-feed generation counts and one new atomic
+  checkpoint. All local fixture INSERT SQL identifiers are fixed literal
+  allowlist entries; no external identifier interpolation occurs.
+- One new host-safe regression test confirms that the Docker fixture
+  contains the exact ten canonical table names, has no source data
+  inserts and includes `_ingest_id` and `source_updated_at` in each.
+  A test guard also checks the reader uses the exact canonical allowlist.
+
+**Verification:** Static code/SQL cross-file inspection passed. Because
+the earlier successful test ran only 106 cases, this change brings the
+next expected suite to **107 tests** (host: 19 expected Docker-dependent
+skips, Docker: no expected skips). **No 107-test Docker pass is claimed.**
+The next operator command is `bash simulation/ops/ci-docker.sh` in WSL,
+after pulling this branch.
+
+**Not proven:** full source-to-canonical-row projection, source view
+compatibility against populated AWS, production snapshot consistency,
+replication permissions and binlog retention. This pilot stores only
+opaque event metadata, not business records or dashboard materializations.
+All new tables are in disposable Docker MySQL; no AWS DDL, data,
+permissions, cost settings or application integrations were changed.
 
 ## What already exists
 
