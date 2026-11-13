@@ -411,7 +411,7 @@ try{
  await secondLogin.ctx.close();
  await O.page.reload({waitUntil:'domcontentloaded'});
  await O.page.waitForFunction(
-   ()=>document.querySelector('#mfa-approval-state')?.textContent?.includes('Setup approved'),
+   ()=>document.querySelector('#mfa-approval-state')?.textContent?.includes('Approval is ready'),
    null,{timeout:20000});
  await O.page.locator('#enroll').waitFor({state:'visible'});
  assert.equal(await O.page.locator('#enroll').isEnabled(),true,
