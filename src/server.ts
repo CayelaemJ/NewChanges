@@ -49,6 +49,7 @@ import { exportAuditLogCsv, exportSecurityAuditLogCsv, exportImportBatchCsv } fr
 import { listAnalyticsRoutes, saveAnalyticsRoute } from "./services/syncService.js";
 import { enterpriseOperationsOverview, dataQualityOverview } from "./services/enterpriseOperationsService.js";
 import { checkMysqlReadReplica } from "./services/sourceAdapter.js";
+import { readMysqlReportSummary, directReportingEnabled } from "./services/directMysqlReporting.js";
 import { subscribeAdminEvents } from "./services/adminEventStream.js";
 import { ensureSectionDefaults, listSections, updateSection, grantUserSection, revokeUserSection, sectionsForUser } from "./services/sectionService.js";
 import { publicEmailConfig, saveEmailConfig, testEmailConnection, createReportSchedule, listReportSchedules, updateReportSchedule, deleteReportSchedule, sendReportNow, recentReportDeliveries, runDueReports } from "./services/reportScheduler.js";
@@ -1719,6 +1720,23 @@ app.get("/api/admin/integration/replica-health", async (req, reply) => {
 app.get("/api/admin/integration/logs", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
   return recentSyncLogs(10);
+});
+
+// Opt-in direct-read preview. This endpoint never persists source business rows.
+// Admin + MFA access is required; no arbitrary SQL or view names are accepted.
+app.get<{ Querystring: { reportKey?: string; employerRef?: string } }>("/api/admin/integration/direct-reporting/summary", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  if (!directReportingEnabled()) return reply.code(503).send({ error: "Direct MySQL reporting is not enabled" });
+  try {
+    const config = await getSyncConfig();
+    return await readMysqlReportSummary(config, {
+      reportKey: String(req.query?.reportKey ?? ""),
+      employerRef: req.query?.employerRef,
+    });
+  } catch (error: any) {
+    req.log.warn({ error: error?.message }, "direct MySQL summary failed");
+    return reply.code(503).send({ error: "Direct reporting query unavailable" });
+  }
 });
 
 // ── Enterprise operations and analytics placement ──
