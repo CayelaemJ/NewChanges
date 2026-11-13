@@ -64,12 +64,13 @@ test('returning authenticator-only admin is never asked to re-enter a setup gran
   assert.equal(el('totp-verify-panel').hidden,false);
   assert.match(el('totp-state').textContent,/No setup key or QR scan/i);
 });
-test('first-time authenticator setup offers QR after secure server approval',async()=>{
+test('first-time administrator can start authenticator setup after password confirmation',async()=>{
   const el=await check({enrolled:false,verified:false,passkeyEnrolled:false,totpEnrolled:false,totpAvailable:true,canManageRecovery:false});
   assert.equal(el('totp-grant').hidden,true);
   assert.equal(el('totp-start').hidden,false);
-  assert.equal(el('totp-start').disabled,true);
+  assert.equal(el('totp-start').disabled,false);
   assert.equal(el('mfa-approval-panel').hidden,false);
+  assert.equal(el('mfa-self-enroll-form').hidden,false);
   assert.equal(el('totp-verify-panel').hidden,true);
   assert.match(el('totp-title').textContent,/QR code/i);
 });
@@ -118,14 +119,15 @@ test('method manager refuses to display new enrollment before MFA verification',
  assert.equal(el('totp-verify-panel').hidden,false);
 });
 
-test('first-time administrator uses server approval instead of entering a random key',async()=>{
+test('first-time administrator can self-enroll without a second administrator',async()=>{
  const el=await check({enrolled:false,verified:false,passkeyEnrolled:false,
   totpEnrolled:false,totpAvailable:true,canManageRecovery:false});
  assert.equal(el('mfa-approval-panel').hidden,false);
  assert.equal(el('grant').hidden,true);
  assert.equal(el('totp-grant').hidden,true);
- assert.equal(el('enroll').disabled,true);
- assert.equal(el('totp-start').disabled,true);
+ assert.equal(el('enroll').disabled,false);
+ assert.equal(el('totp-start').disabled,false);
+ assert.equal(el('mfa-self-enroll-form').hidden,false);
  assert.match(html,/id="mfa-approval-request"/);
  assert.match(script,/\/api\/auth\/mfa\/enrollment\/status/);
  assert.match(script,/enrollment\/request/);

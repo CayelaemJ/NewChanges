@@ -34,8 +34,9 @@ test('bootstrap emits distinct 256-bit one-time grants and persists only hashes 
  assert.match(script,/tx\.adminAuditLog\.create/);
  assert.doesNotMatch(script,/codeHash:values\[i\]/);
 });
-test('regular enrollment still consumes server approved grants and issues personal recovery key',()=>{
- assert.match(routes,/await consumeEnrollmentApproval\(tx,session,now,body\.grantCode\)/);
- assert.match(routes,/await consumeEnrollmentApproval\(tx,session,now,req\.body\?\.grantCode\)/);
+test('first-time account enrollment needs no second superadmin; approved recovery grants remain supported',()=>{
+ assert.match(routes,/await consumeEnrollmentApproval\(tx,session,now,body\.grantCode,/);
+ assert.match(routes,/await consumeEnrollmentApproval\(tx,session,now,req\.body\?\.grantCode,/);
+ assert.match(routes,/passkeyCount===0 && !totp\?\.enabledAt && passwordValid/);
  assert.match(routes,/const recoveryKey=await issueRecoveryKey\(tx,session\.userId\)/);
 });
