@@ -8,7 +8,7 @@
  * aborted sessions, stale leases, failed Postgres commits or source errors.
  */
 import {
-  acquireCdcLease, renewCdcLease, type CdcLease,
+  acquireCdcLease, renewCdcLease, releaseCdcLease, type CdcLease,
 } from "./sourceCdcCheckpoint.js";
 import {
   ingestCommittedSourceTransaction, type CommittedSourceTransaction,
@@ -102,7 +102,9 @@ export async function runCdcCaptureSession(
     clearInterval(heartbeat);
     input.signal?.removeEventListener("abort", abort);
     controller.abort();
-    // Lease expiration is the recovery fence; do not mutate another
-    // worker's lease here without a guarded generation comparison.
+    // A conditional release avoids holding a 30s lease on a clean end.
+    // It cannot release a newer generation owned by another worker.
+    try { await releaseCdcLease(lease); }
+    catch { /* Lease expiry remains the recovery fallback. */ }
   }
 }
