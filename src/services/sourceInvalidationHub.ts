@@ -87,10 +87,16 @@ export function createSourceInvalidationHub(debounceMs = 1200): SourceInvalidati
     validateHint(hint);
     if (!subscribers.has(hint.employerRef)) return true; // no browser listener
     const prefix = hint.employerRef + sep;
+    let supersededFeeds: Set<CanonicalFeed> | null = null;
     if (hint.period === null) {
-      // A tenant-wide invalidation supersedes all queued period entries.
-      for (const key of pending.keys()) {
-        if (key.startsWith(prefix)) pending.delete(key);
+      // A tenant-wide invalidation supersedes all queued period entries,
+      // retaining their feed hints for the browser's targeted fetch logic.
+      supersededFeeds = new Set<CanonicalFeed>();
+      for (const [key, feeds] of pending) {
+        if (key.startsWith(prefix)) {
+          feeds.forEach(feed => supersededFeeds!.add(feed));
+          pending.delete(key);
+        }
       }
     } else if (pending.has(prefix)) {
       // A previous broader change makes a narrower notification redundant.
@@ -118,6 +124,7 @@ export function createSourceInvalidationHub(debounceMs = 1200): SourceInvalidati
     } else {
       if (!pending.has(key)) pending.set(key, new Set());
       pending.get(key)!.add(hint.feed);
+      supersededFeeds?.forEach(feed => pending.get(key)!.add(feed));
     }
     if (!timer) {
       timer = setTimeout(flush, debounceMs);
