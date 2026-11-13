@@ -54,6 +54,7 @@ import { readDirectDashboardPreview } from "./services/directMysqlDashboardPrevi
 import { readDirectAsOfPreview } from "./services/directMysqlAsOfPreview.js";
 import { inspectMysqlReportingReadiness } from "./services/directMysqlReportingPreflight.js";
 import { compareHistoricalHeadcount } from "./services/directMysqlParity.js";
+import { discoverDirectMysqlEmployers } from "./services/directMysqlEmployers.js";
 import { subscribeAdminEvents } from "./services/adminEventStream.js";
 import { ensureSectionDefaults, listSections, updateSection, grantUserSection, revokeUserSection, sectionsForUser } from "./services/sectionService.js";
 import { publicEmailConfig, saveEmailConfig, testEmailConnection, createReportSchedule, listReportSchedules, updateReportSchedule, deleteReportSchedule, sendReportNow, recentReportDeliveries, runDueReports } from "./services/reportScheduler.js";
@@ -1892,6 +1893,24 @@ app.get<{ Params: { employerId: string }; Querystring: { period?: string } }>(
     }
   },
 );
+
+// Read-only employer identity discovery for an empty application control plane.
+// Never duplicates source business facts or provisions tenant permissions.
+app.get<{ Querystring: { after?: string } }>("/api/admin/integration/direct-reporting/employers", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  if (!directReportingEnabled())
+    return reply.code(503).send({ error: "Direct MySQL reporting is not enabled" });
+  try {
+    const data = await discoverDirectMysqlEmployers(
+      await getSyncConfig(), req.query?.after ?? null,
+    );
+    reply.header("Cache-Control", "no-store");
+    return data;
+  } catch (error: any) {
+    req.log.warn({ message: error?.message }, "direct MySQL employer discovery failed");
+    return reply.code(503).send({ error: "Employer discovery unavailable" });
+  }
+});
 
 // ── Enterprise operations and analytics placement ──
 app.get("/api/admin/enterprise/overview", async (req, reply) => {
