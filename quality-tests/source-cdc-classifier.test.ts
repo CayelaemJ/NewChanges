@@ -2,21 +2,18 @@ import { describe, expect, it } from "vitest";
 import { classifySourceRowChange } from "../src/services/sourceCdcClassifier.js";
 
 describe("canonical MySQL ROW-binlog change classification", () => {
-  it("targets the correct month for a new rating without copying PII", () => {
+  it("invalidates all employer periods after a rating that affects cumulative KPIs", () => {
     expect(classifySourceRowChange({
       feed: "ratings", operation: "INSERT",
       after: { employer_ref: "VIG", created_at: "2026-11-13" },
-    })).toEqual([{ feed: "ratings", employerRef: "VIG", period: "2026-11" }]);
+    })).toEqual([{ feed: "ratings", employerRef: "VIG", period: null }]);
   });
 
-  it("publishes both start and completion months for a new completed journey", () => {
+  it("invalidates later periods as well as the start and completion months", () => {
     expect(classifySourceRowChange({
       feed: "journeys", operation: "INSERT",
       after: { employer_ref: "VIG", started_at: "2026-09-22", completed_at: "2026-11-03" },
-    })).toEqual([
-      { feed: "journeys", employerRef: "VIG", period: "2026-09" },
-      { feed: "journeys", employerRef: "VIG", period: "2026-11" },
-    ]);
+    })).toEqual([{ feed: "journeys", employerRef: "VIG", period: null }]);
   });
 
   it("conservatively invalidates all employer periods after an historical correction", () => {
