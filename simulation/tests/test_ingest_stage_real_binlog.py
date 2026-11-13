@@ -9,7 +9,7 @@ import unittest
 from datetime import datetime, timezone
 
 from runtime.common import connect, connection_config
-from runtime.ingest_stage_contract import SnapshotHandoff
+from runtime.ingest_stage_contract import FEED_TABLES, SnapshotHandoff
 from runtime.ingest_stage_sink import bootstrap_local_sink
 from runtime.ingest_stage_stream import run_local_binlog
 
@@ -150,6 +150,66 @@ class LocalSourceXidIntegration(unittest.TestCase):
                     fixer_ingest_cdc.ingest_checkpoint WHERE consumer_name=%s""",
                     (CONSUMER,))
                 self.assertEqual(cur.fetchone(), resumed["last_checkpoint"])
+            sink.rollback()
+
+            # One THIRD local source transaction spans all ten canonical
+            # feed tables. A single XID must protect all ten opaque markers,
+            # even though two feeds already had prior committed events.
+            self.assertEqual(len(FEED_TABLES), 10)
+            with source.cursor() as cur:
+                cur.execute("""INSERT INTO employees
+                    (_ingest_id,employee_status,source_updated_at)
+                    VALUES(%s,%s,%s)""",
+                    (1777, "LOCAL_TEST_ONLY", "2025-01-01T10:00:00Z"))
+                cur.execute("""INSERT INTO debt_accounts
+                    (_ingest_id,debt_balance,source_updated_at)
+                    VALUES(%s,%s,%s)""",
+                    (1888, "15.50", "2025-01-01T10:00:00Z"))
+                other_feeds = sorted(FEED_TABLES - {"employees", "debt_accounts"})
+                for offset, feed in enumerate(other_feeds, start=1):
+                    # Only allowlisted, fixed source identifiers can reach
+                    # this test SQL. Fixture tables share these three columns;
+                    # their real RDS source columns are NOT modelled here.
+                    self.assertRegex(feed, r"^[a-z_]+$")
+                    cur.execute(
+                        f"INSERT INTO `{feed}` "
+                        "(_ingest_id,fixture_state,source_updated_at) "
+                        "VALUES(%s,%s,%s)",
+                        (2000 + offset, "LOCAL_TEST_ONLY", "2025-01-01T10:00:00Z"),
+                    )
+            source.commit()
+            complete = run_local_binlog(
+                sink_db=sink, handoff=handoff, hmac_secret=SECRET,
+                consumer_name=CONSUMER, max_commits=1,
+                max_packets=500, max_seconds=20,
+            )
+            self.assertEqual(complete["commits"], 1)
+            self.assertEqual(complete["markers"], 10)
+            self.assertNotEqual(complete["last_checkpoint"], resumed["last_checkpoint"])
+            with sink.cursor() as cur:
+                cur.execute("""SELECT feed,COUNT(*) FROM
+                    fixer_ingest_cdc.ingest_change_markers
+                    WHERE consumer_name=%s GROUP BY feed""", (CONSUMER,))
+                counts = dict(cur.fetchall())
+                self.assertEqual(set(counts), FEED_TABLES)
+                self.assertEqual(counts["employees"], 4)
+                self.assertEqual(counts["debt_accounts"], 2)
+                for feed in other_feeds:
+                    self.assertEqual(counts[feed], 1, feed)
+                self.assertEqual(sum(counts.values()), 14)
+                cur.execute("""SELECT feed,generation FROM
+                    fixer_ingest_cdc.ingest_feed_notifications
+                    WHERE consumer_name=%s""", (CONSUMER,))
+                generations = dict(cur.fetchall())
+                self.assertEqual(set(generations), FEED_TABLES)
+                self.assertEqual(generations["employees"], 2)
+                self.assertEqual(generations["debt_accounts"], 2)
+                for feed in other_feeds:
+                    self.assertEqual(generations[feed], 1, feed)
+                cur.execute("""SELECT log_file,log_pos FROM
+                    fixer_ingest_cdc.ingest_checkpoint
+                    WHERE consumer_name=%s""", (CONSUMER,))
+                self.assertEqual(cur.fetchone(), complete["last_checkpoint"])
         finally:
             source.rollback()
             sink.rollback()
