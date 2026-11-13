@@ -29,6 +29,59 @@ logging is `ON`, `ROW`, `FULL`. The operator's isolated local
 ten-feed binlog suite passed **107/107** at tested runtime commit
 `faac2fb4`; the live RDS CDC consumer has never been enabled.
 
+## Confirmed physical-to-reporting identity gap (operator read-only RDS audit)
+
+The operator ran `simulation/ops/ingest_stage_cdc_identity_readonly.sql`
+against the live AWS RDS database. For all ten feed names:
+
+| Check | Operator-verified outcome |
+|---|---|
+| Canonical `v_*` view | **10/10 PRESENT** |
+| Physical source table `_ingest_id` | **10/10 PRESENT** |
+| `_ingest_id` in canonical view output | **0/10 EXPOSED** |
+| View `source_updated_at` watermark column | **10/10 PRESENT** |
+
+**Decision: feed-level invalidation is the supported first version.**
+The physical binlog row's `_ingest_id` cannot be directly queried
+from the canonical reporting view because none exposes it.
+No source primary key may be inferred, reconstructed from HMAC,
+or appended to a canonical report view without an explicit schema,
+privacy and identity-contract review.
+
+This does **not** require a schema change. The durable CDC sink already
+tracks source table/consumer feed notification generations. An
+authorized dashboard component can use generation advances as a
+cache-invalidation signal, then query only the affected canonical
+MySQL view through a dedicated, approved **read-only** query path.
+Coalesce bursts and impose bounded concurrency, maximum query cost,
+timeouts, cache TTL and backpressure. Never requery all ten views
+automatically for every binlog row event; that would overload the RDS
+micro instance. Since physical deletes and updates are indicated by
+binlog events, do not infer freshness solely from nullable/stale
+`source_updated_at` values.
+
+**Critical application integration detail:** in the existing
+`src/services/sourceAdapter.ts`, `createSourceAdapter` exposes a
+SQL/MySQL report reader. However,
+`src/services/syncService.ts` calls that reader as part of a
+**PostgreSQL upsert/import workflow** (including
+`prisma.importBatch.create`, bulk natural-key merge and
+`prisma.integrationCursor`). The production dashboard invalidation
+path must **NOT call the sync service or its existing sync triggers**.
+Read-only source-query logic can be factored into an isolated
+server-side dashboard service with a dedicated least-privilege
+connection, without persisting raw MySQL reporting rows to Postgres.
+
+A small no-IO, offline-only pilot in
+`simulation/runtime/ingest_stage_feed_refresh.py` plans
+per-feed invalidation based on monotonically increasing generations
+and explicit source-read authorization/snapshot gates; it never
+queries or writes any database, never consumes raw IDs or source
+timestamps, coalesces repeated notifications via query spacing and
+refuses to acknowledge a new cache generation until the caller
+confirms a successful MySQL read/cache update. This is **not yet**
+wired into the application or deployed.
+
 ## Decision
 
 1. **MySQL remains authoritative for reporting data.** Never rewrite
@@ -52,13 +105,12 @@ ten-feed binlog suite passed **107/107** at tested runtime commit
    source adapter. The source adapter must not silently apply a
    timestamp-based `since` filter to a change-triggered refresh until
    reliable mutation-time semantics have been established.
-5. Before implementing per-row selective refresh, **prove the row
-   identity join** from the ten base tables' `_ingest_id` to the
-   canonical views' natural keys. The persisted HMAC marker cannot be
-   reversed into a source PK; do not make a targeted SQL query using a
-   token as if it were a raw ID. If mapping is not proven, use bounded
-   on-demand feed invalidation/requery only, with explicit cost/load
-   budgets, rather than a pretend row-level merge.
+5. **Use bounded feed-level invalidation first:** the operator's
+   live identity preflight proved `_ingest_id` is not exposed by
+   any of the ten canonical views. Do not attempt selective row-level
+   refresh from a physical binlog ID or reverse a persisted HMAC token.
+   Per-row selective refresh requires a separately approved and
+   verified natural-key mapping plus a privacy/security review.
 6. Hard DELETE must invalidate the relevant feed and retain a metadata
    tombstone. Preserve historic business event dates; do not set
    source timestamps to `NOW()` to make old records appear new.
