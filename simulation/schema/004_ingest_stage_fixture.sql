@@ -16,5 +16,61 @@ CREATE TABLE debt_accounts (
   debt_balance DECIMAL(12,2) NOT NULL,
   source_updated_at TEXT NULL
 ) ENGINE=InnoDB;
+-- Minimal synthetic stand-in; NOT the deployed source table contract.
+CREATE TABLE employers (
+  _ingest_id BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+  fixture_state VARCHAR(40) NOT NULL,
+  source_updated_at TEXT NULL
+) ENGINE=InnoDB;
+
+-- Minimal synthetic stand-in; NOT the deployed source table contract.
+CREATE TABLE workforce_snapshots (
+  _ingest_id BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+  fixture_state VARCHAR(40) NOT NULL,
+  source_updated_at TEXT NULL
+) ENGINE=InnoDB;
+
+-- Minimal synthetic stand-in; NOT the deployed source table contract.
+CREATE TABLE platform_users (
+  _ingest_id BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+  fixture_state VARCHAR(40) NOT NULL,
+  source_updated_at TEXT NULL
+) ENGINE=InnoDB;
+
+-- Minimal synthetic stand-in; NOT the deployed source table contract.
+CREATE TABLE journeys (
+  _ingest_id BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+  fixture_state VARCHAR(40) NOT NULL,
+  source_updated_at TEXT NULL
+) ENGINE=InnoDB;
+
+-- Minimal synthetic stand-in; NOT the deployed source table contract.
+CREATE TABLE policies (
+  _ingest_id BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+  fixture_state VARCHAR(40) NOT NULL,
+  source_updated_at TEXT NULL
+) ENGINE=InnoDB;
+
+-- Minimal synthetic stand-in; NOT the deployed source table contract.
+CREATE TABLE ratings (
+  _ingest_id BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+  fixture_state VARCHAR(40) NOT NULL,
+  source_updated_at TEXT NULL
+) ENGINE=InnoDB;
+
+-- Minimal synthetic stand-in; NOT the deployed source table contract.
+CREATE TABLE referrals (
+  _ingest_id BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+  fixture_state VARCHAR(40) NOT NULL,
+  source_updated_at TEXT NULL
+) ENGINE=InnoDB;
+
+-- Minimal synthetic stand-in; NOT the deployed source table contract.
+CREATE TABLE salary_advances (
+  _ingest_id BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+  fixture_state VARCHAR(40) NOT NULL,
+  source_updated_at TEXT NULL
+) ENGINE=InnoDB;
+
 -- Deliberately no ON UPDATE: synthetic events demonstrate the real risk
 -- of a source mutation that does not advance source_updated_at.
