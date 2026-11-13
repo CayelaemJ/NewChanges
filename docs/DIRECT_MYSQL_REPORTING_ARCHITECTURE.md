@@ -198,3 +198,18 @@ The current direct previews still establish a MySQL connection per request and h
 `src/services/sourceCdcClassifier.ts` maps the minimal BEFORE/AFTER metadata of canonical ROW-binlog events to `SourceChangeHint` entries. An `INSERT` to an event feed produces the known event month(s) when the reported timestamp is a valid calendar date; a journey may affect both start and completion months. Dimension/stock inserts, all updates/deletes, missing or ambiguous event dates, and cross-tenant row moves conservatively cause employer-wide invalidation. A tenant reassignment invalidates **both** original and new employer. UPDATE and DELETE require the BEFORE metadata: fail closed rather than lose old-employer invalidations.
 
 The classifier does not produce payroll identifiers, debt balances, employee fields or financial values in SSE hints. Unit tests cover old/new employer moves, date boundaries and historical corrections. **This classifier is not yet connected to MySQL binlogs**; a privileged, durable CDC reader must validate ROW event formats, construct the minimal metadata, and connect it to the in-memory transport only after safe offset/replay behavior is designed and tested. No newly committed code changes the source database.
+
+## CDC phase 2 — durable PostgreSQL checkpoint + outbox (implemented on draft PR)
+
+Added application-owned Prisma models `SourceCdcCheckpoint` and `SourceCdcOutbox` plus migration `20261113162000_source_cdc_outbox`. They store **only** one opaque source-position string per source, a fenced lease owner/generation/expiry, and small employer/feed/period invalidation hints. No employer payroll, debts, journeys, scores or other canonical business rows are copied into PostgreSQL.
+
+The `sourceCdcCheckpoint.ts` module provides:
+- `acquireCdcLease`: atomic create-if-absent and conditional ownership, increments generation to fence stale consumers.
+- `renewCdcLease`: renews only a currently held generation before its expiry.
+- `commitCdcBatch`: verifies expected source position and current lease, **conditionally updates the position and inserts deterministic deduplicated outbox hints inside the same PostgreSQL transaction**. An error rolls the entire transaction back; a failed CAS must not insert notification records.
+- `pendingCdcInvalidations`: bounded reads of unacknowledged hints, without source row data.
+- `acknowledgeDurableCdcInvalidations`: explicit acknowledgement API; **may only be called after a separate durable downstream invalidation/version has been recorded**. Successful delivery to a process-local SSE callback alone is **not** enough for safe acknowledgement because restart/disconnect loses those callbacks.
+
+A CDC reader still must provide a validated, sequential source cursor (MySQL GTID or binlog filename+position), a consistent transaction boundary, and the metadata from a full row-image BEFORE/AFTER event. Cursor ordering and retention-gap detection cannot be inferred from opaque cursor inequality; the reader must enforce correct source order and stop/reconcile on gaps. A real binlog reader and durable multi-replica browser version fan-out are **not included** in this commit. Therefore no production flags should be enabled and **no end-to-end CDC latency claim is yet valid**.
+
+The lease/outbox migration is only for the eventual application control plane; it has not been applied to production. CI has to validate Prisma generation, migration and tests before considering this phase complete.
