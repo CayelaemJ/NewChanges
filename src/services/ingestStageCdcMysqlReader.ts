@@ -111,8 +111,9 @@ async function connectReadOnly(settings: CdcMysqlReaderSettings): Promise<CdcMys
     ssl: {
       ca,
       rejectUnauthorized: true,
-      // Node validates the peer hostname; never use trustServerCertificate.
-      servername: settings.hostname,
+      // mysql2 disables hostname checks by default for compatibility:
+      // verifyIdentity must be explicitly true to validate the RDS hostname.
+      verifyIdentity: true,
     },
   });
   return connection as unknown as CdcMysqlQueryConnection;
