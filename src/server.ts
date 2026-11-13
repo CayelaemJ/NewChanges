@@ -1798,6 +1798,13 @@ app.get<{ Params: { employerId: string }; Querystring: { startDate?: string; end
       return reply.code(403).send({ error: "no access to this employer" });
     if (!directReportingEnabled())
       return reply.code(503).send({ error: "Direct MySQL reporting is not enabled" });
+    // Application employer IDs ARE canonical source employer_refs. Require an
+    // active control-plane anchor even for a superadmin before source access.
+    const employer = await prisma.employer.findFirst({
+      where: { id: req.params.employerId, sourceDeletedAt: null },
+      select: { id: true },
+    });
+    if (!employer) return reply.code(404).send({ error: "employer not found" });
     try {
       const config = await getSyncConfig();
       const data = await readDirectDashboardPreview(config, {
@@ -1827,6 +1834,13 @@ app.get<{ Params: { employerId: string }; Querystring: { asOfDate?: string } }>(
       return reply.code(403).send({ error: "no access to this employer" });
     if (!directReportingEnabled())
       return reply.code(503).send({ error: "Direct MySQL reporting is not enabled" });
+    // Application employer IDs ARE canonical source employer_refs. Require an
+    // active control-plane anchor even for a superadmin before source access.
+    const employer = await prisma.employer.findFirst({
+      where: { id: req.params.employerId, sourceDeletedAt: null },
+      select: { id: true },
+    });
+    if (!employer) return reply.code(404).send({ error: "employer not found" });
     try {
       const config = await getSyncConfig();
       const data = await readDirectAsOfPreview(config, {
