@@ -282,6 +282,23 @@ no failures or skips and test container exit code **0**; the host phase
 ran 107 tests with 19 expected environment skips. No RDS source read,
 live binlog reader activation or application-dashboard cutover is implied.
 
+### Operator-verified 118/118 Docker suite: PASS (13 November 2026)
+
+After merging the metadata-safe feed-invalidation planner and its eight
+host-safe tests into this branch, the operator ran the disposable
+MySQL 8.4 Docker test suite again. The supplied terminal output shows
+`Ran 118 tests in 0.930s`, `OK` and `test-1 exited with code 0`.
+**118/118 tests passed with zero failures and zero Docker skips**.
+The output excerpt covers the suite conclusion and local MySQL
+integration PASS. Compose's `Aborting on container exit` is expected
+cleanup after the test process exits with status 0.
+
+This validates the **local-only** simulation and pure feed-refresh
+planner; it is **not** evidence of a live RDS replication worker,
+an authorized initial snapshot, configured binlog retention or
+The Fixer's production dashboard requery wiring. Production
+activation remains BLOCKED.
+
 ### Canonical view identity audit: feed-level refresh required (13 November 2026)
 
 The operator ran `ops/ingest_stage_cdc_identity_readonly.sql`
@@ -308,9 +325,8 @@ and **eight new unit tests** encode generation monotonicity,
 stale/NULL timestamp independence, explicit source/snapshot
 approval, bounded requery timing and no acknowledgement on
 failed MySQL reads. They do not open database connections.
-The last verified disposable MySQL Docker baseline remains
-**110/110 PASS**; after these new cases, the **expected**
-suite is **118** pending the operator's next run.
+The last operator-verified disposable MySQL Docker baseline is now
+**118/118 PASS**, following the feed-invalidation planner tests.
 
 ### Docker 110/110 PASS after packaging fix (13 November 2026)
 
@@ -466,7 +482,7 @@ timestamp lineage and dashboard data contracts are addressed.
 | Existing repo source/sync inspection | PASS, read-only |
 | Python pure logic/guard tests | PASS, latest host phase 107 tests, 19 environment-dependent skips |
 | Python compile check | To be recorded after final packaging |
-| Disposable MySQL 8.4 integration tests | **PASS, latest operator Docker transcript, 110/110 tests, no skips, exit 0 (13 Nov 2026)**; previous baseline 107/107 at `faac2fb4` |
+| Disposable MySQL 8.4 integration tests | **PASS, latest operator Docker output, 118/118 tests, no skips, exit 0 (13 Nov 2026)**; feed-level planner now included |
 | Binlog INSERT/UPDATE/DELETE on MySQL 8.4 | PASS in local disposable Docker MySQL, NOT on AWS RDS |
 | Live RDS table/schema inventory & PII classification | PARTIAL: operator verified 11 base tables + 10 views, 59 required feed columns; sensitive-row classification still outstanding |
 | Live RDS view timestamp lineage | **SUMMARY REVIEWED / CURSOR NOT TRUSTWORTHY:** 10/10 views present; underlying 10/10 source TEXT fields nullable with no ON UPDATE; no visible trigger maintenance; full expression and write-path semantics not verified |
