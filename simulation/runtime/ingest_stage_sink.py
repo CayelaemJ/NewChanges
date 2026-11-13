@@ -158,10 +158,11 @@ def persist_local_plan(db, plan, *, consumer_name=CONSUMER):
         feed_notices = {}
         for change in plan.changes:
             _execute(db, """INSERT INTO fixer_ingest_cdc.ingest_change_markers
-                (event_key,feed,operation,opaque_row_key,source_timestamp_state,
-                 needs_tombstone,binlog_event_at_utc,captured_at_utc)
-                VALUES(%s,%s,%s,%s,%s,%s,%s,%s)""",
-                (change.event_key, change.feed, change.operation,
+                (consumer_name,event_key,feed,operation,opaque_row_key,
+                 source_timestamp_state,needs_tombstone,
+                 binlog_event_at_utc,captured_at_utc)
+                VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                (name, change.event_key, change.feed, change.operation,
                  change.opaque_row_key, change.source_timestamp_state,
                  int(change.needs_tombstone),
                  _datetime(change.binlog_event_at_utc),
@@ -171,12 +172,12 @@ def persist_local_plan(db, plan, *, consumer_name=CONSUMER):
                 feed_notices[change.feed] = change
         for feed, last in feed_notices.items():
             _execute(db, """INSERT INTO fixer_ingest_cdc.ingest_feed_notifications
-                (feed,generation,last_captured_at_utc,last_event_key)
-                VALUES(%s,1,%s,%s)
+                (consumer_name,feed,generation,last_captured_at_utc,last_event_key)
+                VALUES(%s,%s,1,%s,%s)
                 ON DUPLICATE KEY UPDATE generation=generation+1,
                 last_captured_at_utc=GREATEST(last_captured_at_utc,VALUES(last_captured_at_utc)),
                 last_event_key=VALUES(last_event_key)""",
-                (feed,_datetime(last.captured_at_utc),last.event_key))
+                (name,feed,_datetime(last.captured_at_utc),last.event_key))
 
         affected, _ = _execute(db, """UPDATE fixer_ingest_cdc.ingest_checkpoint
             SET log_file=%s,log_pos=%s,last_plan_digest=%s,updated_at=UTC_TIMESTAMP(6)
