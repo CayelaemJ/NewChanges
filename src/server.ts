@@ -49,7 +49,7 @@ import { exportAuditLogCsv, exportSecurityAuditLogCsv, exportImportBatchCsv } fr
 import { listAnalyticsRoutes, saveAnalyticsRoute } from "./services/syncService.js";
 import { enterpriseOperationsOverview, dataQualityOverview } from "./services/enterpriseOperationsService.js";
 import { checkMysqlReadReplica } from "./services/sourceAdapter.js";
-import { readMysqlReportSummary, readMysqlJourneyKpis, directReportingEnabled } from "./services/directMysqlReporting.js";
+import { readMysqlReportSummary, readMysqlJourneyKpis, readMysqlEventMetrics, directReportingEnabled } from "./services/directMysqlReporting.js";
 import { subscribeAdminEvents } from "./services/adminEventStream.js";
 import { ensureSectionDefaults, listSections, updateSection, grantUserSection, revokeUserSection, sectionsForUser } from "./services/sectionService.js";
 import { publicEmailConfig, saveEmailConfig, testEmailConnection, createReportSchedule, listReportSchedules, updateReportSchedule, deleteReportSchedule, sendReportNow, recentReportDeliveries, runDueReports } from "./services/reportScheduler.js";
@@ -1753,6 +1753,28 @@ app.get<{ Querystring: { employerRef?: string; startDate?: string; endDate?: str
     });
   } catch (error: any) {
     req.log.warn({ error: error?.message }, "direct MySQL journey KPI query failed");
+    return reply.code(503).send({ error: "Direct reporting query unavailable" });
+  }
+});
+
+// Admin-only opt-in MySQL event KPIs (no PostgreSQL source projection).
+app.get<{ Querystring: { feed?: string; employerRef?: string; startDate?: string; endDate?: string } }>("/api/admin/integration/direct-reporting/event-metrics", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  if (!directReportingEnabled()) return reply.code(503).send({ error: "Direct MySQL reporting is not enabled" });
+  const feed = String(req.query?.feed ?? "");
+  if (!["ratings", "referrals", "salary_advances"].includes(feed)) {
+    return reply.code(400).send({ error: "Unsupported reporting feed" });
+  }
+  try {
+    const config = await getSyncConfig();
+    return await readMysqlEventMetrics(config, {
+      feed: feed as "ratings" | "referrals" | "salary_advances",
+      employerRef: String(req.query?.employerRef ?? ""),
+      startDate: String(req.query?.startDate ?? ""),
+      endDate: String(req.query?.endDate ?? ""),
+    });
+  } catch (error: any) {
+    req.log.warn({ error: error?.message }, "direct MySQL event metrics query failed");
     return reply.code(503).send({ error: "Direct reporting query unavailable" });
   }
 });
