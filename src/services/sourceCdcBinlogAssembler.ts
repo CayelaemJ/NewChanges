@@ -34,7 +34,7 @@ export interface CdcPhysicalTableBinding {
 const IDENT = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const BINLOG = /^[A-Za-z0-9_.-]{1,128}$/;
 const MAX_ROWS = 256;
-const MAX_TABLES = 32;
+const MAX_TABLES = 128;
 
 function positionString(pos: Position): string {
   if (!BINLOG.test(pos.filename) ||
@@ -58,7 +58,7 @@ function mapKey(schema: string, table: string): string {
 
 /** Schema mappings must be independently reviewed against SHOW TABLES and binlog events. */
 export class CdcTransactionAssembler {
-  private readonly bindings = new Map<string, CanonicalFeed>();
+  private readonly bindings = new Map<string, Set<CanonicalFeed>>();
   private committedCursor: string;
   private lastSeen: Position;
   private inTransaction = false;
@@ -80,8 +80,10 @@ export class CdcTransactionAssembler {
     for (const binding of physicalTables) {
       if (!LOAD_ORDER.includes(binding.feed)) throw new Error("Unknown canonical feed mapping");
       const key = mapKey(binding.schema, binding.table);
-      if (this.bindings.has(key)) throw new Error("Duplicate physical source table mapping");
-      this.bindings.set(key, binding.feed);
+      if (!this.bindings.has(key)) this.bindings.set(key, new Set());
+      if (this.bindings.get(key)!.has(binding.feed))
+        throw new Error("Duplicate physical table/feed mapping");
+      this.bindings.get(key)!.add(binding.feed);
       covered.add(binding.feed);
     }
     if (covered.size !== LOAD_ORDER.length)
@@ -131,8 +133,8 @@ export class CdcTransactionAssembler {
       return rollbackMarker;
     }
     if (event.kind === "ROWS") {
-      const feed = this.bindings.get(mapKey(event.schema, event.table));
-      if (!feed) throw new Error("Unmapped source table changed; CDC coverage uncertain");
+      const feeds = this.bindings.get(mapKey(event.schema, event.table));
+      if (!feeds?.size) throw new Error("Unmapped source table changed; CDC coverage uncertain");
       if (!Array.isArray(event.rows) || event.rows.length === 0)
         throw new Error("Empty MySQL row event");
       this.changedRows += event.rows.length;
@@ -142,8 +144,10 @@ export class CdcTransactionAssembler {
             event.operation === "DELETE" && !row.before ||
             event.operation === "UPDATE" && (!row.before || !row.after))
           throw new Error("Missing full MySQL row before/after image");
-        this.changes.push({ feed, operation: event.operation,
-          before: row.before ?? null, after: row.after ?? null });
+        for (const feed of feeds) {
+          this.changes.push({ feed, operation: event.operation,
+            before: row.before ?? null, after: row.after ?? null });
+        }
       }
       return null;
     }
