@@ -176,3 +176,19 @@ For low-volume changes, the application should **not** re-read entire canonical 
 6. Only then consider enabling live read paths and disabling old PostgreSQL reporting sync; preserve a reversible switch while migrating.
 
 **Current status:** schema/preview/parity scaffolding exists; a true binlog CDC consumer, SSE invalidation wiring, broad metric parity, live Railway-to-RDS connectivity, and production cutover **do not yet exist**.
+
+## CDC phase 1 implemented — targeted notification transport only
+
+The branch now includes `src/services/sourceInvalidationHub.ts`, a bounded process-local notification hub. The hub accepts only canonical feed names, an explicit employer reference, and either a `YYYY-MM` partition or `null` for an employer-wide invalidation. It coalesces changes over a 1.2-second default debounce, caps pending keys at 1,024, and caps simultaneous listeners at 200. If its queue cannot accept a hint, `publish()` returns false; a future durable producer **must not advance its checkpoint while an unhandled invalidation is lost**. Emitted SSE notices contain feed keys, employer scope, partition and an opaque process-local version — never business-row fields. Disconnects remove subscriptions and pending tenant changes.
+
+The new route `GET /api/employers/:employerId/source-changes/events` requires authentication, MFA when enforced, existing tenant permission, an active application-owned employer record, `DIRECT_MYSQL_REPORTING_ENABLED=true`, and a **separate OFF-by-default** flag `DIRECT_MYSQL_CDC_SSE_ENABLED=true`. The route closes after 60 seconds to force permission revalidation and is not the older global publication endpoint.
+
+### Still unimplemented — do not claim working CDC
+
+There is **no live binlog producer** attached to the in-memory hub. Its process-local sequence is **not** a durable CDC offset. The current code does not connect to AWS MySQL, subscribe to ROW binlogs, persist GTID/file positions, reconcile lag, identify before/after tenant transitions, or propagate events across multiple Railway replicas. The new endpoint will produce heartbeats but no source-change notifications unless a future approved producer is wired in. No browser integration is claimed and the production flag must remain OFF.
+
+Before wiring a consumer, design a durable checkpoint/notification recovery handshake: commit a checkpoint only when replay or conservative invalidation is guaranteed on restart; on consumer startup, gap detection, backpressure, or replica reassignment, mark affected employer cache slices stale (or force a broad resync) before dashboard responses are considered fresh. Use source binlog retention and offset durability to prevent silent holes. In multi-instance service setups, use a single fenced consumer plus a fan-out mechanism or fail closed; the in-memory emitter is intentionally not distributed.
+
+### Cost warning
+
+The current direct previews still establish a MySQL connection per request and historical as-of queries use window functions over observation histories. These require query-plan benchmarking, carefully bounded caching and pooling before they can meet low-cost/live-refresh targets on `db.t4g.micro`. A notification transport does not solve these performance costs.
