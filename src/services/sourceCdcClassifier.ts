@@ -75,6 +75,10 @@ export function classifySourceRowChange(change: SourceRowChange): SourceChangeHi
   const hints: SourceChangeHint[] = [];
   for (const employerRef of employerRefs) {
     const periods = new Set<string | null>();
+    // Cumulative reporting (completed journeys, satisfaction, take-up,
+    // historical comparisons) means a new event can alter later periods too.
+    // Until downstream dependency-aware invalidation is proven, invalidate
+    // the employer's full date range even for an ordinary INSERT.
     if (change.operation !== "INSERT" || !(change.feed in EVENTS)) {
       periods.add(null);
     } else {
@@ -83,7 +87,11 @@ export function classifySourceRowChange(change: SourceRowChange): SourceChangeHi
         const period = monthOf(current?.[dateField as keyof SourceRowMetadata]);
         if (period) periods.add(period);
       }
-      if (!periods.size) periods.add(null);
+      // Event-month hints alone are not sufficient for cumulative metrics.
+      // One broad hint is cheap and safe; key-level version projection still
+      // updates only this employer, not other employers or business rows.
+      periods.clear();
+      periods.add(null);
     }
     for (const period of periods) hints.push({ feed: change.feed, employerRef, period });
   }
