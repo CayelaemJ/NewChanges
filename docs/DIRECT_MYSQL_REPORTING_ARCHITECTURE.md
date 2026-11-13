@@ -36,3 +36,19 @@ The read-only route `GET /api/employers/:employerId/direct-reporting-preview?sta
 - The new endpoint is **not** a replacement for `GET /api/employers/:employerId/dashboard`, `score-history`, monthly snapshot publication, or the current official optimising score.
 - Keep `DIRECT_MYSQL_REPORTING_ENABLED` and `DIRECT_MYSQL_NO_REPLICATION` disabled in Railway production until MySQL network reachability, tenant membership onboarding, contract validation, parity tests, and security review pass. `STANDBY_MODE` remains a separate operational control.
 - Follow-up dashboard migration must cover workforce as-at snapshots, debts, policies, historical joins, cohort filters, site/income dimensions, calculated scores, reporting schedules, and tenant-safe employer discovery from application metadata. Do not use the preview's event KPIs as a substitute for those calculations.
+
+## Historical as-of preview (phase 3)
+
+`GET /api/employers/:employerId/direct-reporting-asof-preview?asOfDate=2026-10-31` is an authenticated, tenant-authorized, MFA-gated preview. It reads three source-side historical aggregates under one consistent, read-only MySQL snapshot:
+
+- `v_workforce_snapshots`: latest employer `eligible_count` where `as_of_date <= :asOfDate`; returns null if no eligible historical denominator is available.
+- `v_debt_accounts`: latest observation per `account_ref` where `observed_at <= :asOfDate`, excludes tombstones and accounts closed on/before the as-of date, then counts accounts, arrears accounts and outstanding balances.
+- `v_policies`: latest observation per `policy_ref` where `observed_at <= :asOfDate`, excludes tombstones and policies outside `effective_from/effective_to`; computes active policy count, premiums and unresolved wasteful-policy count.
+
+**Critical preflight:** All views must expose full historical observation rows, **not** only current records. Verify `observed_at`, `source_updated_at`, `is_deleted`, `closed_at`, `effective_from`, `effective_to`, `is_wasteful`, `is_resolved`, `premium_rand`, `balance_rand`, and `in_arrears` as applicable. `is_deleted` is optional in the canonical ingestion contract; the view must expose it as a nullable false-default column for these historical queries or a reviewed view-specific query must be provided. These SQL assumptions have not yet been validated against live AWS RDS.
+
+Snapshot dates are inclusive, while event KPI ranges remain half-open. For historical policy resolution, time-dependent fields MUST represent the state as observed, not retroactively overwritten present-day flags. Any disagreement with current PostgreSQL dashboard score calculations is a release blocker. As-of previews do not claim full scoring, site/income cohort parity, cross-feed temporal joins or dashboard publication. No import pipeline, PostgreSQL snapshot materialization, or production flag is changed by this PR.
+
+### Performance and budget checks before rollout
+
+Windowed account/policy queries can be expensive without appropriately indexed source tables or pre-aggregated source-side history. Obtain `EXPLAIN ANALYZE` for approved views with representative employer/date ranges on a non-production replica or at a safe query budget; measure RDS CPU, reads, latency and network egress. Review index strategy on underlying source tables (e.g., tenant + natural key + observed timestamp) without applying unsolicited SQL changes.
