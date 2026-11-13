@@ -282,6 +282,40 @@ no failures or skips and test container exit code **0**; the host phase
 ran 107 tests with 19 expected environment skips. No RDS source read,
 live binlog reader activation or application-dashboard cutover is implied.
 
+### TypeScript read-only MySQL reporting reader: disabled pending approval (13 November 2026)
+
+`src/services/ingestStageCdcMysqlReader.ts` is a new
+**application-native, not-yet-wired** MySQL reporting view reader.
+It avoids `syncService.ts` and PostgreSQL reporting upserts,
+requires an explicit approved/snapshot-verified trusted caller,
+and denies the recovered RDS master account. No route calls this
+service; nothing reads live AWS RDS until a future reviewed rollout.
+
+The reader uses RDS TLS CA validation **plus
+`ssl.verifyIdentity: true`** (required for mysql2 hostname checks),
+selects only report-format declared fields from the ten allowlisted
+views, parameterizes a trusted tenant `employer_ref`, and runs
+bounded, timeout-controlled **read-only snapshot transactions**.
+It fails closed on missing required columns, employer scope mismatch,
+database errors, or source feeds exceeding the configured maximum,
+rather than publishing partial data.
+
+Initial implementation uses at most **2,000 source rows per
+feed/employer/read** and returns only in-memory records. This is
+a *safety limit*, not proof the existing larger RDS feeds will fit;
+scalable per-employer aggregation and cache publication need a
+separate reviewed implementation. No direct HTTP endpoint exists,
+so no raw workforce or financial records are exposed externally.
+
+`tests/ingest-stage-cdc-mysql-reader.test.ts` adds **10 mocked
+Node regression tests**, invoked by `npm run check:cdc-dashboard`.
+Use `npx tsc --noEmit` for TypeScript compilation as an independent
+check. **Both checks are pending the operator's WSL run.**
+The separately verified Python/disposable MySQL suite remains
+**118/118 PASS**; it is not increased by the new Node tests.
+No extra RDS service, DB privilege, connection, source query,
+application deploy or PostgreSQL data migration occurred.
+
 ### Operator-verified 118/118 Docker suite: PASS (13 November 2026)
 
 After merging the metadata-safe feed-invalidation planner and its eight
