@@ -50,6 +50,7 @@ import { listAnalyticsRoutes, saveAnalyticsRoute } from "./services/syncService.
 import { enterpriseOperationsOverview, dataQualityOverview } from "./services/enterpriseOperationsService.js";
 import { checkMysqlReadReplica } from "./services/sourceAdapter.js";
 import { readMysqlReportSummary, readMysqlJourneyKpis, readMysqlEventMetrics, directReportingEnabled } from "./services/directMysqlReporting.js";
+import { readDirectDashboardPreview } from "./services/directMysqlDashboardPreview.js";
 import { subscribeAdminEvents } from "./services/adminEventStream.js";
 import { ensureSectionDefaults, listSections, updateSection, grantUserSection, revokeUserSection, sectionsForUser } from "./services/sectionService.js";
 import { publicEmailConfig, saveEmailConfig, testEmailConnection, createReportSchedule, listReportSchedules, updateReportSchedule, deleteReportSchedule, sendReportNow, recentReportDeliveries, runDueReports } from "./services/reportScheduler.js";
@@ -1778,6 +1779,36 @@ app.get<{ Querystring: { feed?: string; employerRef?: string; startDate?: string
     return reply.code(503).send({ error: "Direct reporting query unavailable" });
   }
 });
+
+// Parallel, read-only preview of source-side dashboard KPIs.
+// Use the same employer authorization and MFA verification as existing dashboards.
+// Never expose arbitrary source SQL, arbitrary employer IDs or raw row samples.
+app.get<{ Params: { employerId: string }; Querystring: { startDate?: string; endDate?: string } }>(
+  "/api/employers/:employerId/direct-reporting-preview",
+  async (req, reply) => {
+    const user = await requireUser(req, reply);
+    if (!user) return;
+    if (MFA_ENFORCE && !await hasVerifiedMfaSession(req, user.id))
+      return reply.code(403).send({ error: "MFA verification required", code: "MFA_REQUIRED" });
+    if (!canViewEmployer(user, req.params.employerId))
+      return reply.code(403).send({ error: "no access to this employer" });
+    if (!directReportingEnabled())
+      return reply.code(503).send({ error: "Direct MySQL reporting is not enabled" });
+    try {
+      const config = await getSyncConfig();
+      const data = await readDirectDashboardPreview(config, {
+        employerRef: req.params.employerId,
+        startDate: String(req.query?.startDate ?? ""),
+        endDate: String(req.query?.endDate ?? ""),
+      });
+      reply.header("Cache-Control", "no-store");
+      return data;
+    } catch (error: any) {
+      req.log.warn({ message: error?.message }, "MySQL dashboard preview unavailable");
+      return reply.code(503).send({ error: "Direct MySQL dashboard preview unavailable" });
+    }
+  },
+);
 
 // ── Enterprise operations and analytics placement ──
 app.get("/api/admin/enterprise/overview", async (req, reply) => {
