@@ -6,7 +6,7 @@ otherwise writing its own sink would trigger an endless empty-XID loop.
 """
 import time
 
-from .ingest_stage_contract import validate_snapshot_handoff
+from .ingest_stage_contract import FEED_TABLES, validate_snapshot_handoff
 from .ingest_stage_row_adapter import stage_row_event
 from .ingest_stage_sink import _require_local, load_local_checkpoint, persist_local_plan
 from .ingest_stage_txn import LogCoordinate, TransactionPlanner
@@ -122,7 +122,7 @@ def run_local_binlog(*, sink_db, handoff, hmac_secret, consumer_name,
             connection_settings=config,
             server_id=24135,
             only_schemas=["ingest_stage"],
-            only_tables=["employees", "debt_accounts"],
+            only_tables=sorted(FEED_TABLES),
             only_events=[WriteRowsEvent, UpdateRowsEvent, DeleteRowsEvent, XidEvent],
             blocking=False, resume_stream=True,
             log_file=recovered.file, log_pos=recovered.position,
