@@ -282,6 +282,31 @@ no failures or skips and test container exit code **0**; the host phase
 ran 107 tests with 19 expected environment skips. No RDS source read,
 live binlog reader activation or application-dashboard cutover is implied.
 
+### Current live AWS read-only readiness inspection (13 November 2026)
+
+The connected AWS account confirmed the existing
+`fixer-synthetic-mysql` RDS MySQL 8.4.11 instance is **available**,
+`db.t4g.micro`, 20 GiB gp3 encrypted storage, **1-day automated
+backup retention**, three recent available automated snapshots,
+single-AZ, deletion-protected and publicly accessible. Security-group
+MySQL 3306 ingress is restricted to **41.160.169.207/32** (not global).
+The default MySQL parameter group reports
+`binlog_expire_logs_seconds=2592000`, but this **does not guarantee
+actual RDS external CDC binlog retention**. The effective
+`binlog retention hours` must be verified using
+`CALL mysql.rds_show_configuration`; on RDS MySQL, `NULL`
+means zero-hour retention. New dedicated read-only audit:
+`ops/ingest_stage_rds_retention_readonly.sql`.
+
+CloudWatch returned 37 hourly FreeStorageSpace samples from
+November 12–13 UTC with minimum 19,328,651,264 bytes; this is
+**not** a forecast of extra storage needed for retaining binlogs.
+The read-only metadata inspection did not alter or start any source
+database, MySQL privilege, security group, paid resource or application
+integration. Production CDC cannot be enabled until a verified
+snapshot, effective retention, least-privilege/security review,
+timestamp lineage and dashboard data contracts are addressed.
+
 ## Test and verification record
 
 | Gate | Latest status (13 November 2026) |
