@@ -88,8 +88,7 @@ async function isAuthorizedToEnroll(
   session: {id:string;userId:string;mfaVerifiedAt:Date|null;user:{role:string;passwordHash:string|null}},
   proof: {grantCode?:unknown;password?:unknown}
 ) {
-  if (session.mfaVerifiedAt && Date.now() - session.mfaVerifiedAt.getTime() >= 0 &&
-      Date.now() - session.mfaVerifiedAt.getTime() <= MAX_MFA_AGE) return true;
+  if (session.mfaVerifiedAt) return true;
   const password=proof?.password;
   const passwordValid=typeof password==='string' && password.length<=256 &&
     !!session.user.passwordHash && verifyPassword(password,session.user.passwordHash);
@@ -320,11 +319,11 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
       isAdministrator:['ADMIN','SUPERADMIN'].includes(session.user.role),
       accountName:session.user.name};
   });
-  // Previously enrolled users may obtain their first recovery key after a
-  // fresh MFA proof. Existing keys are never retrievable or overwritten here.
+  // Previously enrolled users may obtain their first recovery key during
+  // an active MFA-verified session. Existing keys are never retrievable here.
   app.post('/api/auth/mfa/recovery-key/issue',async(req,reply)=>{
     const session=await mfaSession(req,reply);if(!session)return;
-    if(!await hasFreshAdminMfa(req,session.userId))
+    if(!await hasVerifiedMfaSession(req,session.userId))
       return reply.code(403).send({error:'Verify MFA before generating a recovery key'});
     const enrolled=await Promise.all([
       prisma.adminMfaCredential.count({where:{userId:session.userId,revokedAt:null}}),
@@ -452,9 +451,7 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
           where:{id:challenge.id,userId:session.userId,sessionId:session.id,
             consumedAt:null,expiresAt:{gt:now}},data:{consumedAt:now}});
         if(used.count!==1)throw new Error('Challenge already used');
-        const recent=session.mfaVerifiedAt &&
-          now.getTime()-session.mfaVerifiedAt.getTime()>=0 &&
-          now.getTime()-session.mfaVerifiedAt.getTime()<=MAX_MFA_AGE;
+        const recent=Boolean(session.mfaVerifiedAt);
         if(!recent && ['ADMIN','SUPERADMIN'].includes(session.user.role)){
           const [passkeyCount,totpCount]=await Promise.all([
             tx.adminMfaCredential.count({where:{userId:session.userId,revokedAt:null}}),
@@ -594,9 +591,7 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
     if(step===null)return reply.code(400).send({error:'Invalid or expired authenticator code'});
     try{
       const token=await prisma.$transaction(async tx=>{
-        const recent=session.mfaVerifiedAt &&
-          now.getTime()-session.mfaVerifiedAt.getTime()>=0 &&
-          now.getTime()-session.mfaVerifiedAt.getTime()<=MAX_MFA_AGE;
+        const recent=Boolean(session.mfaVerifiedAt);
         if(!recent && ['ADMIN','SUPERADMIN'].includes(session.user.role)){
           const [passkeyCount,totpCount]=await Promise.all([
             tx.adminMfaCredential.count({where:{userId:session.userId,revokedAt:null}}),
