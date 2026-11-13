@@ -30,6 +30,8 @@ export interface DirectDashboardPreview {
   journeys: {
     started: string;
     completedOfStarted: string;
+    completedInPeriod: string;
+    completedInPeriodMonthlySavingsRand: string;
     completedStartedMonthlySavingsRand: string;
   };
   ratings: { submitted: string; fiveStar: string };
@@ -81,11 +83,15 @@ export async function readDirectDashboardPreview(
     identifier(source.sqlDatabase!) + "." + identifier((source.sqlViewPrefix ?? "v_") + key);
   // SQL fragments contain no user-controlled identifiers or expressions.
   const statements = {
-    journeys: `SELECT COUNT(*) AS total,
-      COALESCE(SUM(CASE WHEN status = 'COMPLETED' THEN 1 ELSE 0 END),0) AS secondary,
-      COALESCE(SUM(CASE WHEN status = 'COMPLETED' THEN monthly_saving_rand ELSE 0 END),0) AS amount
+    journeys: `SELECT
+      COALESCE(SUM(CASE WHEN started_at >= ? AND started_at < ? THEN 1 ELSE 0 END),0) AS total,
+      COALESCE(SUM(CASE WHEN status = 'COMPLETED' AND started_at >= ? AND started_at < ? THEN 1 ELSE 0 END),0) AS secondary,
+      COALESCE(SUM(CASE WHEN status = 'COMPLETED' AND started_at >= ? AND started_at < ? THEN monthly_saving_rand ELSE 0 END),0) AS amount,
+      COALESCE(SUM(CASE WHEN status = 'COMPLETED' AND completed_at >= ? AND completed_at < ? THEN 1 ELSE 0 END),0) AS completedInPeriod,
+      COALESCE(SUM(CASE WHEN status = 'COMPLETED' AND completed_at >= ? AND completed_at < ? THEN monthly_saving_rand ELSE 0 END),0) AS completedSavings
       FROM ${view("journeys")}
-      WHERE employer_ref = ? AND started_at >= ? AND started_at < ?`,
+      WHERE employer_ref = ? AND
+        ((started_at >= ? AND started_at < ?) OR (completed_at >= ? AND completed_at < ?))`,
     ratings: `SELECT COUNT(*) AS total,
       COALESCE(SUM(CASE WHEN stars = 5 THEN 1 ELSE 0 END),0) AS secondary, NULL AS amount
       FROM ${view("ratings")}
@@ -112,17 +118,24 @@ export async function readDirectDashboardPreview(
     await connection.query("SET TRANSACTION READ ONLY");
     await connection.query("START TRANSACTION WITH CONSISTENT SNAPSHOT");
     const params = [input.employerRef, input.startDate, input.endDate];
-    async function execute(sql: string) {
-      const [rows] = await connection.query({ sql, timeout: TIMEOUT_MS }, params);
+    async function execute(sql: string, argumentsForQuery = params) {
+      const [rows] = await connection.query({ sql, timeout: TIMEOUT_MS }, argumentsForQuery);
       const result = (rows as Record<string, unknown>[])[0];
       if (!result) throw new Error("A MySQL reporting view returned no aggregate");
       return {
         total: String(result.total ?? "0"),
         secondary: String(result.secondary ?? "0"),
         amount: String(result.amount ?? "0"),
+        completedInPeriod: String(result.completedInPeriod ?? "0"),
+        completedSavings: String(result.completedSavings ?? "0"),
       };
     }
-    const journeys = await execute(statements.journeys);
+    const journeys = await execute(statements.journeys, [
+      input.startDate, input.endDate, input.startDate, input.endDate,
+      input.startDate, input.endDate, input.startDate, input.endDate,
+      input.startDate, input.endDate, input.employerRef,
+      input.startDate, input.endDate, input.startDate, input.endDate,
+    ]);
     const ratings = await execute(statements.ratings);
     const referrals = await execute(statements.referrals);
     const advances = await execute(statements.salaryAdvances);
@@ -132,6 +145,8 @@ export async function readDirectDashboardPreview(
       journeys: {
         started: journeys.total,
         completedOfStarted: journeys.secondary,
+        completedInPeriod: journeys.completedInPeriod,
+        completedInPeriodMonthlySavingsRand: journeys.completedSavings,
         completedStartedMonthlySavingsRand: journeys.amount,
       },
       ratings: { submitted: ratings.total, fiveStar: ratings.secondary },
