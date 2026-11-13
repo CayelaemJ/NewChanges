@@ -282,6 +282,33 @@ no failures or skips and test container exit code **0**; the host phase
 ran 107 tests with 19 expected environment skips. No RDS source read,
 live binlog reader activation or application-dashboard cutover is implied.
 
+### Docker packaging regression: corrected, full rerun pending (13 November 2026)
+
+The operator pulled code commit `07553aec` and ran the complete
+`simulation/ops/ci-docker.sh` flow. The host phase completed
+**110 tests, OK (19 expected environment skips)**. The disposable
+MySQL 8.4 Docker phase completed **110 tests with 108 passes and
+2 errors, exit code 1**. All MySQL/binlog CDC integration tests
+passed. The **two errors were exclusively** `FileNotFoundError`
+for the two newly introduced read-only metadata SQL files:
+
+- `ops/ingest_stage_lineage_summary_readonly.sql`
+- `ops/ingest_stage_cdc_identity_readonly.sql`
+
+Root cause: `Dockerfile.test` used explicit `COPY` instructions
+but omitted these two new metadata audit files. Fixed by adding both
+`COPY` instructions and extending the existing packaging contract
+test to require **all five** metadata SQL files used by host/Docker
+tests. No runtime CDC logic or real AWS settings were changed.
+
+**Verification after fix:** cross-file/static checks **6/6 PASS**.
+**A clean 110/110 Docker rerun is still required**. The last verified
+zero-error Docker run remains **107/107** at earlier code commit
+`faac2fb4`. The operator's subsequent identity-audit output was
+not part of the submitted Docker log; its live RDS result remains
+unknown. The identity audit file itself is read-only and safe for
+a separate operator run.
+
 ### Ten-feed timestamp-lineage summary reviewed (13 November 2026)
 
 The operator ran `ops/ingest_stage_lineage_summary_readonly.sql`
