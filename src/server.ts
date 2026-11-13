@@ -49,6 +49,15 @@ import { exportAuditLogCsv, exportSecurityAuditLogCsv, exportImportBatchCsv } fr
 import { listAnalyticsRoutes, saveAnalyticsRoute } from "./services/syncService.js";
 import { enterpriseOperationsOverview, dataQualityOverview } from "./services/enterpriseOperationsService.js";
 import { checkMysqlReadReplica } from "./services/sourceAdapter.js";
+import { readMysqlReportSummary, readMysqlJourneyKpis, readMysqlEventMetrics, directReportingEnabled } from "./services/directMysqlReporting.js";
+import { readDirectDashboardPreview } from "./services/directMysqlDashboardPreview.js";
+import { readDirectAsOfPreview } from "./services/directMysqlAsOfPreview.js";
+import { inspectMysqlReportingReadiness } from "./services/directMysqlReportingPreflight.js";
+import { compareHistoricalHeadcount } from "./services/directMysqlParity.js";
+import { discoverDirectMysqlEmployers } from "./services/directMysqlEmployers.js";
+import { createSourceInvalidationHub } from "./services/sourceInvalidationHub.js";
+import { inspectSourceCdcLineage } from "./services/sourceCdcLineagePreflight.js";
+import { readCdcEmployerVersion } from "./services/sourceCdcVersion.js";
 import { subscribeAdminEvents } from "./services/adminEventStream.js";
 import { ensureSectionDefaults, listSections, updateSection, grantUserSection, revokeUserSection, sectionsForUser } from "./services/sectionService.js";
 import { publicEmailConfig, saveEmailConfig, testEmailConnection, createReportSchedule, listReportSchedules, updateReportSchedule, deleteReportSchedule, sendReportNow, recentReportDeliveries, runDueReports } from "./services/reportScheduler.js";
@@ -1719,6 +1728,297 @@ app.get("/api/admin/integration/replica-health", async (req, reply) => {
 app.get("/api/admin/integration/logs", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
   return recentSyncLogs(10);
+});
+
+// Opt-in direct-read preview. This endpoint never persists source business rows.
+// Admin + MFA access is required; no arbitrary SQL or view names are accepted.
+app.get<{ Querystring: { reportKey?: string; employerRef?: string } }>("/api/admin/integration/direct-reporting/summary", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  if (!directReportingEnabled()) return reply.code(503).send({ error: "Direct MySQL reporting is not enabled" });
+  try {
+    const config = await getSyncConfig();
+    return await readMysqlReportSummary(config, {
+      reportKey: String(req.query?.reportKey ?? ""),
+      employerRef: req.query?.employerRef,
+    });
+  } catch (error: any) {
+    req.log.warn({ error: error?.message }, "direct MySQL summary failed");
+    return reply.code(503).send({ error: "Direct reporting query unavailable" });
+  }
+});
+
+// Source-side journey KPI preview: admin-only until a parity-tested,
+// tenant-authorized direct dashboard route is available.
+app.get<{ Querystring: { employerRef?: string; startDate?: string; endDate?: string } }>("/api/admin/integration/direct-reporting/journey-kpis", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  if (!directReportingEnabled()) return reply.code(503).send({ error: "Direct MySQL reporting is not enabled" });
+  try {
+    const config = await getSyncConfig();
+    return await readMysqlJourneyKpis(config, {
+      employerRef: String(req.query?.employerRef ?? ""),
+      startDate: String(req.query?.startDate ?? ""),
+      endDate: String(req.query?.endDate ?? ""),
+    });
+  } catch (error: any) {
+    req.log.warn({ error: error?.message }, "direct MySQL journey KPI query failed");
+    return reply.code(503).send({ error: "Direct reporting query unavailable" });
+  }
+});
+
+// Admin-only opt-in MySQL event KPIs (no PostgreSQL source projection).
+app.get<{ Querystring: { feed?: string; employerRef?: string; startDate?: string; endDate?: string } }>("/api/admin/integration/direct-reporting/event-metrics", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  if (!directReportingEnabled()) return reply.code(503).send({ error: "Direct MySQL reporting is not enabled" });
+  const feed = String(req.query?.feed ?? "");
+  if (!["ratings", "referrals", "salary_advances"].includes(feed)) {
+    return reply.code(400).send({ error: "Unsupported reporting feed" });
+  }
+  try {
+    const config = await getSyncConfig();
+    return await readMysqlEventMetrics(config, {
+      feed: feed as "ratings" | "referrals" | "salary_advances",
+      employerRef: String(req.query?.employerRef ?? ""),
+      startDate: String(req.query?.startDate ?? ""),
+      endDate: String(req.query?.endDate ?? ""),
+    });
+  } catch (error: any) {
+    req.log.warn({ error: error?.message }, "direct MySQL event metrics query failed");
+    return reply.code(503).send({ error: "Direct reporting query unavailable" });
+  }
+});
+
+// Parallel, read-only preview of source-side dashboard KPIs.
+// Use the same employer authorization and MFA verification as existing dashboards.
+// Never expose arbitrary source SQL, arbitrary employer IDs or raw row samples.
+app.get<{ Params: { employerId: string }; Querystring: { startDate?: string; endDate?: string } }>(
+  "/api/employers/:employerId/direct-reporting-preview",
+  async (req, reply) => {
+    const user = await requireUser(req, reply);
+    if (!user) return;
+    if (MFA_ENFORCE && !await hasVerifiedMfaSession(req, user.id))
+      return reply.code(403).send({ error: "MFA verification required", code: "MFA_REQUIRED" });
+    if (!canViewEmployer(user, req.params.employerId))
+      return reply.code(403).send({ error: "no access to this employer" });
+    if (!directReportingEnabled())
+      return reply.code(503).send({ error: "Direct MySQL reporting is not enabled" });
+    // Application employer IDs ARE canonical source employer_refs. Require an
+    // active control-plane anchor even for a superadmin before source access.
+    const employer = await prisma.employer.findFirst({
+      where: { id: req.params.employerId, sourceDeletedAt: null },
+      select: { id: true },
+    });
+    if (!employer) return reply.code(404).send({ error: "employer not found" });
+    try {
+      const config = await getSyncConfig();
+      const data = await readDirectDashboardPreview(config, {
+        employerRef: req.params.employerId,
+        startDate: String(req.query?.startDate ?? ""),
+        endDate: String(req.query?.endDate ?? ""),
+      });
+      reply.header("Cache-Control", "no-store");
+      return data;
+    } catch (error: any) {
+      req.log.warn({ message: error?.message }, "MySQL dashboard preview unavailable");
+      return reply.code(503).send({ error: "Direct MySQL dashboard preview unavailable" });
+    }
+  },
+);
+
+// Historical MySQL preview. Employer access and MFA checked before source reads.
+// Does not replace the existing score, filters or published dashboard.
+app.get<{ Params: { employerId: string }; Querystring: { asOfDate?: string } }>(
+  "/api/employers/:employerId/direct-reporting-asof-preview",
+  async (req, reply) => {
+    const user = await requireUser(req, reply);
+    if (!user) return;
+    if (MFA_ENFORCE && !await hasVerifiedMfaSession(req, user.id))
+      return reply.code(403).send({ error: "MFA verification required", code: "MFA_REQUIRED" });
+    if (!canViewEmployer(user, req.params.employerId))
+      return reply.code(403).send({ error: "no access to this employer" });
+    if (!directReportingEnabled())
+      return reply.code(503).send({ error: "Direct MySQL reporting is not enabled" });
+    // Application employer IDs ARE canonical source employer_refs. Require an
+    // active control-plane anchor even for a superadmin before source access.
+    const employer = await prisma.employer.findFirst({
+      where: { id: req.params.employerId, sourceDeletedAt: null },
+      select: { id: true },
+    });
+    if (!employer) return reply.code(404).send({ error: "employer not found" });
+    try {
+      const config = await getSyncConfig();
+      const data = await readDirectAsOfPreview(config, {
+        employerRef: req.params.employerId,
+        asOfDate: String(req.query?.asOfDate ?? ""),
+      });
+      reply.header("Cache-Control", "no-store");
+      return data;
+    } catch (error: any) {
+      req.log.warn({ message: error?.message }, "MySQL as-of preview unavailable");
+      return reply.code(503).send({ error: "Direct MySQL historical preview unavailable" });
+    }
+  },
+);
+
+// Admin/MFA-only, schema-metadata preflight for canonical AWS reporting views.
+// This does not execute business-row scans or modify either database.
+app.get("/api/admin/integration/direct-reporting/preflight", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  if (!directReportingEnabled())
+    return reply.code(503).send({ error: "Direct MySQL reporting is not enabled" });
+  try {
+    const result = await inspectMysqlReportingReadiness(await getSyncConfig());
+    reply.header("Cache-Control", "no-store");
+    return result;
+  } catch (error: any) {
+    req.log.warn({ message: error?.message }, "direct MySQL preflight failed");
+    return reply.code(503).send({ error: "Reporting source preflight unavailable" });
+  }
+});
+
+// Admin-only limited parity probe. Never writes or changes reporting mode.
+// Only snapshot-based unfiltered historical headcount can currently PASS.
+app.get<{ Params: { employerId: string }; Querystring: { period?: string } }>(
+  "/api/admin/integration/direct-reporting/parity/:employerId",
+  async (req, reply) => {
+    const admin = await requireAdmin(req, reply);
+    if (!admin) return;
+    if (!canViewEmployer(admin, req.params.employerId))
+      return reply.code(403).send({ error: "no access to this employer" });
+    if (!directReportingEnabled())
+      return reply.code(503).send({ error: "Direct MySQL reporting is not enabled" });
+    const period = String(req.query?.period ?? "");
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(period))
+      return reply.code(400).send({ error: "Provide a valid YYYY-MM period" });
+    try {
+      const dashboard = await getDashboardPayload(req.params.employerId, { period });
+      const asOfDate = String(dashboard?.filterContext?.asAt ?? "").slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(asOfDate))
+        return reply.code(503).send({ error: "Existing dashboard has no historical as-of date" });
+      const source = await readDirectAsOfPreview(await getSyncConfig(), {
+        employerRef: req.params.employerId, asOfDate,
+      });
+      reply.header("Cache-Control", "no-store");
+      return {
+        employerId: req.params.employerId, period, asOfDate,
+        comparison: compareHistoricalHeadcount(dashboard, source),
+        noReplication: true,
+        caveat: "All other KPIs require separate temporal and cohort parity validation",
+      };
+    } catch (error: any) {
+      req.log.warn({ message: error?.message }, "historical source parity probe failed");
+      return reply.code(503).send({ error: "Reporting parity probe unavailable" });
+    }
+  },
+);
+
+// Read-only employer identity discovery for an empty application control plane.
+// Never duplicates source business facts or provisions tenant permissions.
+app.get<{ Querystring: { after?: string } }>("/api/admin/integration/direct-reporting/employers", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  if (!directReportingEnabled())
+    return reply.code(503).send({ error: "Direct MySQL reporting is not enabled" });
+  try {
+    const data = await discoverDirectMysqlEmployers(
+      await getSyncConfig(), req.query?.after ?? null,
+    );
+    reply.header("Cache-Control", "no-store");
+    return data;
+  } catch (error: any) {
+    req.log.warn({ message: error?.message }, "direct MySQL employer discovery failed");
+    return reply.code(503).send({ error: "Employer discovery unavailable" });
+  }
+});
+
+// Transport-only tenant SSE endpoint for future MySQL ROW-binlog invalidation.
+// No source producer is enabled by this route: CDC is NOT yet implemented.
+const directSourceNotifications = createSourceInvalidationHub();
+app.get<{ Params: { employerId: string } }>(
+  "/api/employers/:employerId/source-changes/events",
+  async (req, reply) => {
+    const user = await requireUser(req, reply);
+    if (!user) return;
+    if (MFA_ENFORCE && !await hasVerifiedMfaSession(req, user.id))
+      return reply.code(403).send({ error: "MFA verification required", code: "MFA_REQUIRED" });
+    if (!canViewEmployer(user, req.params.employerId))
+      return reply.code(403).send({ error: "no access to this employer" });
+    if (process.env.DIRECT_MYSQL_CDC_SSE_ENABLED !== "true" || !directReportingEnabled())
+      return reply.code(503).send({ error: "Source change notifications are disabled" });
+    const employer = await prisma.employer.findFirst({
+      where: { id: req.params.employerId, sourceDeletedAt: null },
+      select: { id: true },
+    });
+    if (!employer) return reply.code(404).send({ error: "employer not found" });
+    let ready = false;
+    const unsubscribe = directSourceNotifications.subscribe(req.params.employerId, notice => {
+      if (!ready || reply.raw.destroyed) return;
+      if (!reply.raw.write(`event: source-change\ndata: ${JSON.stringify(notice)}\n\n`)) reply.raw.end();
+    });
+    if (!unsubscribe) return reply.code(503).send({ error: "Change notification capacity exhausted" });
+    reply.hijack();
+    reply.raw.writeHead(200, {
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "private, no-store, no-transform",
+      "X-Accel-Buffering": "no",
+      "Connection": "keep-alive",
+    });
+    ready = true;
+    reply.raw.write("retry: 3000\n\n: connected\n\n");
+    const heartbeat = setInterval(() => {
+      if (!reply.raw.write(": heartbeat\n\n")) reply.raw.end();
+    }, 15_000);
+    // Force fresh user/tenant authorization on reconnection after 60 seconds.
+    const expiry = setTimeout(() => reply.raw.end(), 60_000);
+    const cleanup = () => { clearInterval(heartbeat); clearTimeout(expiry); unsubscribe(); };
+    reply.raw.once("close", cleanup);
+    req.raw.once("aborted", cleanup);
+  },
+);
+
+// Tenant-authorized durable version fallback for missed future CDC SSE events.
+// It never queries or duplicates MySQL business rows. OFF by default.
+app.get<{ Params: { employerId: string } }>(
+  "/api/employers/:employerId/source-changes/version",
+  async (req, reply) => {
+    const user = await requireUser(req, reply);
+    if (!user) return;
+    if (MFA_ENFORCE && !await hasVerifiedMfaSession(req, user.id))
+      return reply.code(403).send({ error: "MFA verification required", code: "MFA_REQUIRED" });
+    if (!canViewEmployer(user, req.params.employerId))
+      return reply.code(403).send({ error: "no access to this employer" });
+    if (process.env.DIRECT_MYSQL_CDC_SSE_ENABLED !== "true" || !directReportingEnabled())
+      return reply.code(503).send({ error: "Source change notifications are disabled" });
+    const sourceId = process.env.DIRECT_MYSQL_CDC_SOURCE_ID;
+    if (!sourceId) return reply.code(503).send({ error: "CDC source is not configured" });
+    const employer = await prisma.employer.findFirst({
+      where: { id: req.params.employerId, sourceDeletedAt: null },
+      select: { id: true },
+    });
+    if (!employer) return reply.code(404).send({ error: "employer not found" });
+    try {
+      const version = await readCdcEmployerVersion(sourceId, req.params.employerId);
+      reply.header("Cache-Control", "private, no-store");
+      return { employerId: req.params.employerId, version, source: "MYSQL_CDC_CONTROL_PLANE" };
+    } catch (error: any) {
+      req.log.warn({ message: error?.message }, "durable CDC version unavailable");
+      return reply.code(503).send({ error: "Source change version unavailable" });
+    }
+  },
+);
+
+// Admin-only metadata discovery: physical tables feeding ten canonical MySQL views.
+// This is NOT CDC approval or a binlog reader; no business rows are queried.
+app.get("/api/admin/integration/direct-reporting/cdc-lineage", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  if (!directReportingEnabled())
+    return reply.code(503).send({ error: "Direct MySQL reporting is not enabled" });
+  try {
+    const result = await inspectSourceCdcLineage(await getSyncConfig());
+    reply.header("Cache-Control", "no-store");
+    return result;
+  } catch (error: any) {
+    req.log.warn({ message: error?.message }, "CDC metadata lineage unavailable");
+    return reply.code(503).send({ error: "CDC lineage inspection unavailable" });
+  }
 });
 
 // ── Enterprise operations and analytics placement ──
