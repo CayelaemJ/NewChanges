@@ -63,6 +63,15 @@ export async function hasFreshAdminMfa(req: FastifyRequest, userId: string, meth
   const age = Date.now() - session.mfaVerifiedAt.getTime();
   return age >= 0 && age <= MAX_MFA_AGE;
 }
+// Normal signed-in access trusts the MFA proof for the life of its active
+// session. Sensitive admin operations still use hasFreshAdminMfa (10 minutes).
+export async function hasVerifiedMfaSession(req: FastifyRequest, userId: string) {
+  const token=req.cookies?.session;
+  if(typeof token!=='string')return false;
+  const session=await prisma.session.findUnique({where:{token:digest(token)}});
+  return Boolean(session && session.userId===userId && !session.endedAt &&
+    !session.revokedAt && session.expiresAt>new Date() && session.mfaVerifiedAt);
+}
 function grantHash(code: unknown) {
   return typeof code === 'string' && /^[A-Za-z0-9_-]{43}$/.test(code) ? digest(code) : null;
 }
@@ -297,7 +306,7 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
   app.get('/api/auth/mfa/status',async(req,reply)=>{
     const session=await mfaSession(req,reply);if(!session)return;
     const count=await prisma.adminMfaCredential.count({where:{userId:session.userId,revokedAt:null}});
-    const verified=await hasFreshAdminMfa(req,session.userId);
+    const verified=await hasVerifiedMfaSession(req,session.userId);
     const totp=totpIsEnabled() ? await prisma.adminMfaTotp.findUnique({
       where:{userId:session.userId},select:{enabledAt:true}
     }) : null;
