@@ -1664,3 +1664,15 @@ model SourceCdcOutbox {
   @@index([sourceId, deliveredAt, createdAt])
   @@index([employerRef, period])
 }
+
+
+/// Persisted per-employer invalidation generation, not a reporting snapshot.
+/// Browser can poll this tiny control-plane record after SSE reconnect.
+model SourceCdcVersion {
+  sourceId    String
+  employerRef String
+  version     BigInt   @default(0)
+  updatedAt   DateTime @updatedAt
+
+  @@id([sourceId, employerRef])
+}
