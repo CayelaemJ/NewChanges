@@ -18,7 +18,7 @@ vi.mock("../src/services/database.js", () => ({
 }));
 
 import {
-  acquireCdcLease, renewCdcLease, commitCdcBatch,
+  acquireCdcLease, renewCdcLease, releaseCdcLease, commitCdcBatch,
   pendingCdcInvalidations, acknowledgeDurableCdcInvalidations,
 } from "../src/services/sourceCdcCheckpoint.js";
 
@@ -98,6 +98,18 @@ describe("durable MySQL CDC cursor and small Postgres outbox", () => {
     expect(await renewCdcLease(lease!)).toBe(true);
     fake.checkpoint.updateMany.mockResolvedValueOnce({ count: 0 });
     expect(await renewCdcLease(lease!)).toBe(false);
+  });
+
+  it("conditionally releases only this fenced lease generation", async () => {
+    const released = await releaseCdcLease({
+      sourceId: "aws-fixer", owner: "consumer-A", generation: 4,
+      cursor: base.expectedCursor, expiresAt: new Date("2030-01-01"),
+    });
+    expect(released).toBe(true);
+    expect(fake.checkpoint.updateMany.mock.calls[0][0]).toMatchObject({
+      where: { id: "aws-fixer", leaseOwner: "consumer-A", leaseGeneration: 4 },
+      data: { leaseOwner: null, leaseExpiresAt: null },
+    });
   });
 
   it("does not claim ownership if another consumer holds the lease", async () => {
