@@ -25,13 +25,6 @@ export interface SourceRowChange {
   after?: SourceRowMetadata | null;
 }
 
-const EVENTS: Record<string, string[]> = {
-  journeys: ["started_at", "completed_at"],
-  ratings: ["created_at"],
-  referrals: ["shared_at"],
-  salary_advances: ["advanced_at"],
-};
-
 function validateTenant(record: SourceRowMetadata | null | undefined): string {
   const employerRef = record?.employer_ref;
   if (typeof employerRef !== "string" || !employerRef.trim() || employerRef.length > 128)
@@ -39,23 +32,11 @@ function validateTenant(record: SourceRowMetadata | null | undefined): string {
   return employerRef;
 }
 
-function monthOf(raw: string | null | undefined): string | null {
-  if (typeof raw !== "string") return null;
-  // MySQL reporting views use calendar dates. Explicitly reject ambiguous
-  // non-ISO input rather than assign the wrong month to a timestamp.
-  const match = /^(\d{4})-(0[1-9]|1[0-2])-(\d{2})(?:$|[T ])/.exec(raw);
-  if (!match) return null;
-  const date = new Date(match[0].slice(0, 10) + "T00:00:00.000Z");
-  return Number.isFinite(date.getTime()) &&
-    date.toISOString().slice(0, 10) === match[0].slice(0, 10)
-    ? raw.slice(0, 7) : null;
-}
-
 /**
  * Prefer correctness over false precision:
  * - UPDATE / DELETE: an arbitrary earlier snapshot or metric may change.
  * - dimension/stock INSERT: may affect historical cohorts and score weights.
- * - flow INSERT: use specific event month(s) when dates are reliable.
+ * - flow INSERT: conservatively invalidate all periods including later cumulative views.
  * - employer reassignment UPDATE: invalidate BOTH original and new tenant.
  */
 export function classifySourceRowChange(change: SourceRowChange): SourceChangeHint[] {
@@ -72,28 +53,10 @@ export function classifySourceRowChange(change: SourceRowChange): SourceChangeHi
   if (previous) employerRefs.add(validateTenant(previous));
   if (current) employerRefs.add(validateTenant(current));
 
-  const hints: SourceChangeHint[] = [];
-  for (const employerRef of employerRefs) {
-    const periods = new Set<string | null>();
-    // Cumulative reporting (completed journeys, satisfaction, take-up,
-    // historical comparisons) means a new event can alter later periods too.
-    // Until downstream dependency-aware invalidation is proven, invalidate
-    // the employer's full date range even for an ordinary INSERT.
-    if (change.operation !== "INSERT" || !(change.feed in EVENTS)) {
-      periods.add(null);
-    } else {
-      const dates = EVENTS[change.feed];
-      for (const dateField of dates) {
-        const period = monthOf(current?.[dateField as keyof SourceRowMetadata]);
-        if (period) periods.add(period);
-      }
-      // Event-month hints alone are not sufficient for cumulative metrics.
-      // One broad hint is cheap and safe; key-level version projection still
-      // updates only this employer, not other employers or business rows.
-      periods.clear();
-      periods.add(null);
-    }
-    for (const period of periods) hints.push({ feed: change.feed, employerRef, period });
-  }
-  return hints;
+  // All canonical feeds influence cumulative historical and current metrics.
+  // Until a dependency DAG proves period-limited updates are correct, a
+  // single employer-wide hint prevents later-month figures from going stale.
+  return [...employerRefs].map(employerRef => ({
+    feed: change.feed, employerRef, period: null,
+  }));
 }
