@@ -8,7 +8,7 @@ const connection = vi.hoisted(() => {
 });
 vi.mock("mysql2/promise", () => ({ createConnection: connection.createConnection }));
 
-import { readMysqlReportSummary } from "../src/services/directMysqlReporting.js";
+import { readMysqlReportSummary, readMysqlJourneyKpis } from "../src/services/directMysqlReporting.js";
 
 const config = {
   sourceMode: "SQL",
@@ -74,4 +74,37 @@ describe("direct MySQL reporting: no replication", () => {
       .rejects.toThrow(/Invalid database/);
     expect(connection.createConnection).not.toHaveBeenCalled();
   });
+  it("queries source-side journey activity without committing source rows", async () => {
+    connection.query.mockImplementation(async (arg: any) => {
+      if (typeof arg === "object" && arg.sql?.includes("startedJourneys")) {
+        return [[{ startedJourneys: "19", completedOfStartedJourneys: "6", savingsRand: "820.25" }], []];
+      }
+      return [[], []];
+    });
+    const result = await readMysqlJourneyKpis(config, {
+      employerRef: "EMP-123", startDate: "2026-01-01", endDate: "2026-02-01",
+    });
+    expect(result).toMatchObject({
+      source: "MYSQL", startedJourneys: "19",
+      completedOfStartedJourneys: "6",
+      monthlySavingsOfCompletedStartedJourneysRand: "820.25",
+      replicatedToPostgres: false,
+    });
+    const stmt = connection.query.mock.calls.find(([arg]: any[]) =>
+      typeof arg === "object" && arg.sql?.includes("startedJourneys"));
+    expect(stmt?.[0].sql).toContain("FROM `reporting`.`v_journeys`");
+    expect(stmt?.[1]).toEqual(["EMP-123", "2026-01-01", "2026-02-01"]);
+    expect(connection.query).toHaveBeenCalledWith("SET TRANSACTION READ ONLY");
+    expect(connection.end).toHaveBeenCalledOnce();
+  });
+  it("rejects invalid or oversized journey date windows before MySQL connection", async () => {
+    await expect(readMysqlJourneyKpis(config, {
+      employerRef: "EMP-123", startDate: "2026-02-30", endDate: "2026-03-01",
+    })).rejects.toThrow(/Invalid report date/);
+    await expect(readMysqlJourneyKpis(config, {
+      employerRef: "EMP-123", startDate: "2024-01-01", endDate: "2026-01-01",
+    })).rejects.toThrow(/exceeds one year/);
+    expect(connection.createConnection).not.toHaveBeenCalled();
+  });
+
 });
