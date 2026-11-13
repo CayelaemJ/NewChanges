@@ -35,6 +35,22 @@ describe("strict physical-table MySQL ROW binlog assembler", () => {
     parser.acknowledge(result!);
     expect(parser.accept({ kind: "BEGIN", at: at(190) })).toBeNull();
   });
+  it("fans out one physical-table change to every dependent feed", () => {
+    const shared = [
+      ...bindings,
+      { schema: "ingest_stage", table: "physical_journeys", feed: "ratings" as const },
+    ];
+    const parser = new CdcTransactionAssembler(
+      "aws-fixer", "mysql-bin.000010:100", shared,
+    );
+    parser.accept({ kind: "BEGIN", at: at(120) });
+    parser.accept(change);
+    const committed = parser.accept({ kind: "COMMIT", at: at(180) });
+    expect(committed?.changes).toEqual([
+      { feed: "journeys", operation: "INSERT", before: null, after: { employer_ref: "VIG" } },
+      { feed: "ratings", operation: "INSERT", before: null, after: { employer_ref: "VIG" } },
+    ]);
+  });
   it("refuses partial and unknown physical table mappings", () => {
     expect(() => new CdcTransactionAssembler(
       "aws-fixer", "mysql-bin.000010:100", bindings.slice(0, 9),
