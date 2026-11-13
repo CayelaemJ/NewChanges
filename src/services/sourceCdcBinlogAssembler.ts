@@ -64,6 +64,7 @@ export class CdcTransactionAssembler {
   private inTransaction = false;
   private changes: SourceRowChange[] = [];
   private changedRows = 0;
+  private awaitingDurability: CommittedSourceTransaction | null = null;
 
   constructor(
     private readonly sourceId: string,
@@ -88,6 +89,7 @@ export class CdcTransactionAssembler {
   }
 
   accept(event: CdcDecodedEvent): CommittedSourceTransaction | null {
+    if (this.awaitingDurability) throw new Error("Persist prior binlog commit before accepting next event");
     const cursor = positionString(event.at);
     if (event.kind === "UNSUPPORTED")
       throw new Error("Unsupported MySQL binlog event: " + event.reason.slice(0, 100));
@@ -121,8 +123,12 @@ export class CdcTransactionAssembler {
       // An explicit rollback also advances the source cursor, but a
       // consumer must durably checkpoint it through an empty committed
       // envelope rather than skip untracked transactions.
-      return { committed: true, sourceId: this.sourceId,
-        fromCursor: this.committedCursor, toCursor: cursor, changes: [] };
+      const rollbackMarker: CommittedSourceTransaction = {
+        committed: true, sourceId: this.sourceId,
+        fromCursor: this.committedCursor, toCursor: cursor, changes: [],
+      };
+      this.awaitingDurability = rollbackMarker;
+      return rollbackMarker;
     }
     if (event.kind === "ROWS") {
       const feed = this.bindings.get(mapKey(event.schema, event.table));
@@ -149,6 +155,7 @@ export class CdcTransactionAssembler {
     };
     this.changes = [];
     this.changedRows = 0;
+    this.awaitingDurability = transaction;
     // This parser remains a single-use source of candidate envelopes.
     // The caller must not hand it new events until commitCdcBatch has
     // succeeded. Its next cursor is updated only via acknowledge().
@@ -156,14 +163,17 @@ export class CdcTransactionAssembler {
   }
 
   acknowledge(transaction: CommittedSourceTransaction): void {
-    if (transaction.sourceId !== this.sourceId ||
+    if (this.awaitingDurability !== transaction ||
+        transaction.sourceId !== this.sourceId ||
         transaction.fromCursor !== this.committedCursor ||
         transaction.toCursor !== positionString(this.lastSeen))
       throw new Error("Refusing unsafe binlog acknowledgement");
     this.committedCursor = transaction.toCursor;
+    this.awaitingDurability = null;
   }
 
   assertComplete(): void {
-    if (this.inTransaction) throw new Error("MySQL stream ended mid-transaction");
+    if (this.inTransaction || this.awaitingDurability)
+      throw new Error("MySQL stream ended with unresolved transaction");
   }
 }
