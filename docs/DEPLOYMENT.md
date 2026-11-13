@@ -38,6 +38,14 @@ Additional production configuration includes the public base URL, contact/legal 
 
 See [.env.example](../.env.example) for the repository's configuration template.
 
+## Multi-factor authentication
+
+When `MFA_ENFORCE=true`, all account roles must complete MFA before using protected application pages or APIs. Configure the relying-party origin and TOTP encryption settings on the target hosting service before rollout. Keep the TOTP encryption key persistent across deploys and protect it as a secret.
+
+The account chooses a passkey or authenticator app at first enrollment. Once an active passkey exists, that account is passkey-only; TOTP setup and verification are rejected by the server. Remembered sessions last up to 30 days but expire after seven days idle. Superadmins must save the one-time recovery key before dashboard access.
+
+Follow the [MFA operations and support runbook](MFA_CUTOVER_KEY_AND_ORIGIN_RUNBOOK.md) for required variables, migrations, recovery, smoke checks and the boundary between Render standby and production.
+
 ## External SQL source
 
 The external source account must be read-only.
