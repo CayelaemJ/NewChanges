@@ -398,6 +398,7 @@ document.getElementById('mfa-backup-dismiss').addEventListener('click',async()=>
  document.getElementById('mfa-backup-key').hidden=true;
  await refresh();
  show('Recovery key hidden. The Fixer cannot display it again.');
+ if(!managingMethods)window.location.assign('/dashboard');
 });
 
 document.getElementById('mfa-existing-recovery-issue').addEventListener('click',async()=>{
