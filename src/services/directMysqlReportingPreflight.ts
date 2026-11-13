@@ -10,6 +10,8 @@ import { directReportingEnabled } from "./directMysqlReporting.js";
 
 const REQUIRED: Record<string, readonly string[]> = {
   v_employers: ["employer_ref", "name", "source_updated_at"],
+  v_employees: ["employer_ref", "payroll_ref", "observed_at", "eligible_from", "source_updated_at"],
+  v_platform_users: ["employer_ref", "payroll_ref", "enrolled_at", "source_updated_at"],
   v_journeys: ["employer_ref", "started_at", "status", "monthly_saving_rand", "source_updated_at"],
   v_ratings: ["employer_ref", "created_at", "stars", "source_updated_at"],
   v_referrals: ["employer_ref", "shared_at", "converted", "source_updated_at"],
