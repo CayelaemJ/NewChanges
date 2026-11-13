@@ -57,7 +57,7 @@ input:focus{border-color:#65349e}
 </style></head>
 <body><header><strong>THE FIXER · ACCOUNT SECURITY</strong><a href="/dashboard">Back to dashboard</a></header>
 <main><article><h1>Protect your account</h1>
-<p>Choose either a device passkey (Windows Hello, Face ID, Touch ID or security key) or a one-time authenticator QR setup. Once enrolled, future sign-ins use your saved passkey or a fresh six-digit authenticator code — not another setup grant.</p>
+<p id="mfa-method-policy">Choose a device passkey or an authenticator app. Once you enroll a passkey, sign-in uses that passkey only.</p>
 <div role="status" aria-live="polite" class="state" id="status">Checking your account security…</div>
 <div id="mfa-success" class="state" hidden>
  <strong id="mfa-success-title">Authenticator verified successfully.</strong>
@@ -79,7 +79,7 @@ input:focus{border-color:#65349e}
 <p>Your MFA method is already active, but you have not received a recovery key. Generate one now and save it in a trusted password manager or another secure place. It will be shown only once.</p>
 <button id="mfa-existing-recovery-issue" type="button">Generate my one-time recovery key</button>
 </section>
-<section id="mfa-manage-banner" class="panel" hidden><h2>Manage your authentication methods</h2><p>Your account session is verified. Add a device passkey or an authenticator app without repeating first-time enrollment. Existing methods cannot be silently replaced.</p></section>
+<section id="mfa-manage-banner" class="panel" hidden><h2>Manage your authentication methods</h2><p id="mfa-manage-note">Your session is verified.</p></section>
 <section id="mfa-approval-panel" class="panel" hidden style="margin:18px 0">
 <h2>Recovery or bootstrap grant</h2>
 <p>First-time MFA setup is available to every existing user after confirming their current password. No second administrator is needed. Use the optional grant field only if a security operator has issued you a one-time recovery or bootstrap grant.</p>

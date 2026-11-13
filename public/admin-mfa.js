@@ -82,6 +82,11 @@ async function refresh(){
   const res=await fetch('/api/auth/mfa/status',{credentials:'same-origin'});
   if(!res.ok)throw Error('Please sign in to continue');
   const state=await res.json();
+  const passkeyOnly=state.passkeyEnrolled===true;
+  const methodPolicy=document.getElementById('mfa-method-policy');
+  if(methodPolicy)methodPolicy.textContent=passkeyOnly
+    ? 'Your passkey is enrolled. Use that passkey at sign-in; authenticator QR setup is disabled for this account.'
+    : 'Choose a device passkey or an authenticator app. Once you enroll a passkey, sign-in uses that passkey only.';
   const firstTime=!state.enrolled&&!state.verified&&!managingMethods;
   accountIsAdministrator=state.isAdministrator===true;
   document.querySelector('header strong').textContent=accountIsAdministrator
@@ -116,7 +121,11 @@ async function refresh(){
   document.getElementById('recovery').hidden=!state.canManageRecovery;
   const manageBanner=document.getElementById('mfa-manage-banner');
   if(manageBanner)manageBanner.hidden=!(managingMethods && state.verified);
-  document.getElementById('totp-panel').hidden=!state.totpAvailable;
+  const manageCopy=document.getElementById('mfa-manage-note');
+  if(manageCopy)manageCopy.textContent=passkeyOnly
+    ? 'This account uses passkey-only MFA. Sign in with your enrolled passkey; authenticator QR setup is disabled.'
+    : 'Your session is verified. You may add a passkey. Once enrolled, that account will use passkey-only sign-in.';
+  document.getElementById('totp-panel').hidden=!state.totpAvailable || passkeyOnly;
   document.getElementById('totp-start').hidden=!!state.totpEnrolled;
   // Only show the next relevant action. The server remains authoritative.
   const passkeyVerify=document.getElementById('mfa-passkey-verify-panel');
@@ -139,7 +148,7 @@ async function refresh(){
   if(passkeyGrantLabel)passkeyGrantLabel.hidden=true;
   enrollBtn.disabled=false;
   document.getElementById('totp-grant').hidden=true;
-  document.getElementById('totp-start').hidden=!!state.totpEnrolled || (!!state.verified && !managingMethods);
+  document.getElementById('totp-start').hidden=passkeyOnly || !!state.totpEnrolled || (!!state.verified && !managingMethods);
   document.getElementById('totp-start').disabled=false;
   document.getElementById('totp-title').textContent=state.totpEnrolled
     ? 'Verify with your authenticator app'
@@ -152,7 +161,7 @@ async function refresh(){
       : 'First time only: confirm your current password, open any authenticator app that supports standard TOTP, add an account and scan your personal QR. Enter one code to activate it.';
   const totpGrantLabel=document.querySelector?.('label[for="totp-grant"]');
   if(totpGrantLabel)totpGrantLabel.hidden=true;
-  document.getElementById('totp-panel').hidden=!state.totpAvailable || (!!state.verified && (!managingMethods || !!state.totpEnrolled));
+  document.getElementById('totp-panel').hidden=!state.totpAvailable || passkeyOnly || (!!state.verified && (!managingMethods || !!state.totpEnrolled));
   document.getElementById('totp-state').textContent=state.totpEnrolled
     ? 'Already set up. Enter the current six-digit code from your app. No setup key or QR scan is needed again.'
     : state.verified && managingMethods
@@ -162,7 +171,7 @@ async function refresh(){
       : 'Confirm your current password, choose Generate QR code, and scan it with any authenticator app that supports standard TOTP. No second administrator is needed for first-time setup.';
   // The setup code was already consumed by confirmation. Never prompt the
   // user to verify it again on the same freshly elevated session.
-  document.getElementById('totp-verify-panel').hidden=!state.totpEnrolled || !!state.verified;
+  document.getElementById('totp-verify-panel').hidden=!state.totpEnrolled || !!state.verified || passkeyOnly;
   const success=document.getElementById('mfa-success');
   success.hidden=!state.verified;
   if(state.verified){
@@ -174,7 +183,9 @@ async function refresh(){
         ? 'Save and acknowledge the recovery key shown below before continuing. You cannot view it again.'
         : missingRecovery
           ? 'MFA is verified. Generate and securely save your one-time recovery key before opening the dashboard.'
-          : 'Your account MFA is active. On your next sign-in, use an enrolled passkey or a fresh authenticator code.';
+          : passkeyOnly
+            ? 'Your account MFA is active. Sign in with your enrolled passkey; authenticator QR setup is disabled.'
+            : 'Your account MFA is active. On your next sign-in, use an enrolled passkey or a fresh authenticator code.';
   }
   if(state.totpEnrolled){
     document.getElementById('totp-setup').hidden=true;
