@@ -1,4 +1,4 @@
-import { registerAdminMfaRoutes, hasFreshAdminMfa, hasIssuedAdminRecoveryKey } from "./services/adminMfaRoutes.js";
+import { registerAdminMfaRoutes, hasVerifiedMfaSession, hasIssuedAdminRecoveryKey } from "./services/adminMfaRoutes.js";
 import { requiresAdminMfaStepUp } from "./services/adminMfaRouteScope.js";
 import { createDashboardPublicationStream } from "./services/dashboardPublicationStream.js";
 import { inspectReplacementDependencies } from "./services/datasetReplacementDependencies.js";
@@ -380,7 +380,7 @@ async function requireAdmin(req: FastifyRequest, reply: FastifyReply): Promise<A
   const user = await requireUser(req, reply);
   if (!user) return null;
   if (user.role !== "ADMIN" && user.role !== "SUPERADMIN") { reply.code(403).send({ error: "admin only" }); return null; }
-  if (MFA_ENFORCE && !await hasFreshAdminMfa(req, user.id)) { reply.code(403).send({error:"Fresh MFA verification required",code:"MFA_REQUIRED"}); return null; }
+  if (MFA_ENFORCE && !await hasVerifiedMfaSession(req, user.id)) { reply.code(403).send({error:"MFA verification required",code:"MFA_REQUIRED"}); return null; }
   return user;
 }
 // Rollout switch is OFF by default. Set only after locked dependency, migration,
@@ -427,8 +427,8 @@ app.addHook("preHandler", async (req, reply) => {
   }
   if (scope.adminOnly && !isAdminRole(user))
     return reply.code(403).send({error:"Administrator session required"});
-  if (!await hasFreshAdminMfa(req, user.id))
-    return reply.code(403).send({error:"Fresh MFA verification required", code:"MFA_REQUIRED"});
+  if (!await hasVerifiedMfaSession(req, user.id))
+    return reply.code(403).send({error:"MFA verification required", code:"MFA_REQUIRED"});
   if (user.role === "SUPERADMIN" && !await hasIssuedAdminRecoveryKey(user.id))
     return reply.code(403).send({error:"Save your account recovery key before continuing",code:"RECOVERY_KEY_REQUIRED"});
 });
@@ -451,7 +451,7 @@ app.get("/react/", async (req, reply) => {
   const user = await currentUser(req);
   if (!user) return reply.redirect("/login");
   if (!canAccessModule(user, "dashboard")) return reply.code(403).send({ error: "no dashboard access" });
-  if (MFA_ENFORCE && !await hasFreshAdminMfa(req, user.id))
+  if (MFA_ENFORCE && !await hasVerifiedMfaSession(req, user.id))
     return reply.redirect("/mfa");
   if (MFA_ENFORCE && user.role === "SUPERADMIN" &&
       !await hasIssuedAdminRecoveryKey(user.id))
@@ -467,7 +467,7 @@ app.get("/react/admin", async (req, reply) => {
   const user = await currentUser(req);
   if (!user) return reply.redirect("/login");
   if (!canAccessModule(user, "admin")) return reply.code(403).send({ error: "admin only" });
-  if (MFA_ENFORCE && !await hasFreshAdminMfa(req, user.id)) return reply.redirect("/mfa");
+  if (MFA_ENFORCE && !await hasVerifiedMfaSession(req, user.id)) return reply.redirect("/mfa");
   if (MFA_ENFORCE && user.role === "SUPERADMIN" &&
       !await hasIssuedAdminRecoveryKey(user.id)) return reply.redirect("/mfa");
   try {
@@ -481,7 +481,7 @@ app.get("/react/dashboard", async (req, reply) => {
   const user = await currentUser(req);
   if (!user) return reply.redirect("/login");
   if (!canAccessModule(user, "dashboard")) return reply.code(403).send({ error: "no dashboard access" });
-  if (MFA_ENFORCE && !await hasFreshAdminMfa(req, user.id))
+  if (MFA_ENFORCE && !await hasVerifiedMfaSession(req, user.id))
     return reply.redirect("/mfa");
   if (MFA_ENFORCE && user.role === "SUPERADMIN" &&
       !await hasIssuedAdminRecoveryKey(user.id))
@@ -548,7 +548,7 @@ app.post<{ Body: { name?: unknown; email?: unknown; organisation?: unknown; mess
 app.get("/", async (req, reply) => {
   const user = await currentUser(req);
   if (user && canAccessModule(user, "dashboard")) {
-    if (MFA_ENFORCE && !await hasFreshAdminMfa(req, user.id))
+    if (MFA_ENFORCE && !await hasVerifiedMfaSession(req, user.id))
       return reply.redirect("/mfa");
     return reply.redirect("/dashboard");
   }
@@ -560,7 +560,7 @@ app.get("/mfa", async (req, reply) => {
   if (!user) return reply.redirect("/login");
   // This is a second-factor step, not a landing page. After successful
   // authentication there is no reason to present enrollment again.
-  if (MFA_ENFORCE && await hasFreshAdminMfa(req, user.id) &&
+  if (MFA_ENFORCE && await hasVerifiedMfaSession(req, user.id) &&
       (user.role !== "SUPERADMIN" || await hasIssuedAdminRecoveryKey(user.id)))
     return reply.redirect("/dashboard");
   return serveHtml(reply, "admin-mfa.html");
@@ -570,7 +570,7 @@ app.get("/mfa", async (req, reply) => {
 app.get("/mfa/manage", async (req, reply) => {
   const user = await currentUser(req);
   if (!user) return reply.redirect("/login");
-  if (!await hasFreshAdminMfa(req, user.id)) return reply.redirect("/mfa");
+  if (!await hasVerifiedMfaSession(req, user.id)) return reply.redirect("/mfa");
   return serveHtml(reply, "admin-mfa.html");
 });
 app.get("/set-password", async (_req, reply) => serveHtml(reply, "set-password.html"));
@@ -583,7 +583,7 @@ app.get("/dashboard", async (req, reply) => {
   const user = await currentUser(req);
   if (!user) return reply.redirect("/login");
   if (!canAccessModule(user, "dashboard")) return reply.redirect("/login");
-  if (MFA_ENFORCE && !await hasFreshAdminMfa(req, user.id))
+  if (MFA_ENFORCE && !await hasVerifiedMfaSession(req, user.id))
     return reply.redirect("/mfa");
   if (MFA_ENFORCE && user.role === "SUPERADMIN" &&
       !await hasIssuedAdminRecoveryKey(user.id))
@@ -597,7 +597,7 @@ app.get("/admin", async (req, reply) => {
   const user = await currentUser(req);
   if (!user) return reply.redirect("/login");
   if (!canAccessModule(user, "admin")) return reply.code(403).type("text/html").send("<h2 style='font-family:sans-serif;padding:40px'>Admins only. <a href='/dashboard'>Go to dashboard</a></h2>");
-  if (MFA_ENFORCE && !await hasFreshAdminMfa(req, user.id)) return reply.redirect("/mfa");
+  if (MFA_ENFORCE && !await hasVerifiedMfaSession(req, user.id)) return reply.redirect("/mfa");
   if (MFA_ENFORCE && user.role === "SUPERADMIN" &&
       !await hasIssuedAdminRecoveryKey(user.id)) return reply.redirect("/mfa");
   return serveHtml(reply, "admin.html");
@@ -605,7 +605,7 @@ app.get("/admin", async (req, reply) => {
 app.get("/users", async (req, reply) => {
   const user = await currentUser(req);
   if (!user || (user.role !== "ADMIN" && user.role !== "SUPERADMIN")) return reply.redirect("/login");
-  if (MFA_ENFORCE && !await hasFreshAdminMfa(req, user.id)) return reply.redirect("/mfa");
+  if (MFA_ENFORCE && !await hasVerifiedMfaSession(req, user.id)) return reply.redirect("/mfa");
   if (MFA_ENFORCE && user.role === "SUPERADMIN" &&
       !await hasIssuedAdminRecoveryKey(user.id)) return reply.redirect("/mfa");
   return serveHtml(reply, "users.html");
@@ -666,8 +666,8 @@ app.get("/api/auth/me", async (req, reply) => {
   const user = await currentUser(req);
   if (!user) return reply.code(401).send({ error: "not signed in" });
   if (MFA_ENFORCE) {
-    const verified=await hasFreshAdminMfa(req,user.id);
-    const recoveryKeyRequired=verified && user.role==="SUPERADMIN" &&
+    const verified=await hasVerifiedMfaSession(req,user.id);
+    const recoveryKeyRequired=verified &&
       !await hasIssuedAdminRecoveryKey(user.id);
     if (!verified || recoveryKeyRequired) {
       // Do not reveal employer records or module entitlements while the

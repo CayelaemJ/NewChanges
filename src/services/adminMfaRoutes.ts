@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { prisma } from './database.js';
 import {decodeTotpSecret,decryptTotpSecret,encryptTotpSecret,findTotpStep,generateTotpSecret,makeTotpQrSvgDataUri,makeTotpUri,requireTotpEncryptionKey,totpIsEnabled} from './adminTotp.js';
-import { verifyPassword } from './authService.js';
+import { SESSION_IDLE_TIMEOUT_MS, verifyPassword } from './authService.js';
 
 const MAX_MFA_AGE = 10 * 60 * 1000;
 const MAX_CHALLENGE_AGE = 5 * 60 * 1000;
@@ -32,9 +32,21 @@ async function mfaSession(req: FastifyRequest, reply: FastifyReply) {
     reply.code(401).send({error:'Signed-in account required'}); return null;
   }
   const session = await prisma.session.findUnique({where:{token:digest(token)},include:{user:true}});
-  if (!session || session.endedAt || session.revokedAt || session.expiresAt <= new Date() ||
+  const now=new Date();
+  if (!session || session.endedAt || session.revokedAt || session.expiresAt <= now ||
       !session.user.active) {
     reply.code(403).send({error:'Account session unavailable'}); return null;
+  }
+  if (now.getTime()-session.lastSeenAt.getTime()>SESSION_IDLE_TIMEOUT_MS) {
+    await prisma.session.updateMany({
+      where:{id:session.id,endedAt:null},data:{endedAt:now},
+    });
+    reply.code(401).send({error:'Session expired after inactivity; sign in again'}); return null;
+  }
+  if (now.getTime()-session.lastSeenAt.getTime()>60_000) {
+    await prisma.session.updateMany({
+      where:{id:session.id,endedAt:null,revokedAt:null},data:{lastSeenAt:now},
+    });
   }
   return session;
 }
@@ -63,6 +75,15 @@ export async function hasFreshAdminMfa(req: FastifyRequest, userId: string, meth
   const age = Date.now() - session.mfaVerifiedAt.getTime();
   return age >= 0 && age <= MAX_MFA_AGE;
 }
+// Normal signed-in access trusts the MFA proof for the life of its active
+// session. Sensitive admin operations still use hasFreshAdminMfa (10 minutes).
+export async function hasVerifiedMfaSession(req: FastifyRequest, userId: string) {
+  const token=req.cookies?.session;
+  if(typeof token!=='string')return false;
+  const session=await prisma.session.findUnique({where:{token:digest(token)}});
+  return Boolean(session && session.userId===userId && !session.endedAt &&
+    !session.revokedAt && session.expiresAt>new Date() && session.mfaVerifiedAt);
+}
 function grantHash(code: unknown) {
   return typeof code === 'string' && /^[A-Za-z0-9_-]{43}$/.test(code) ? digest(code) : null;
 }
@@ -79,8 +100,7 @@ async function isAuthorizedToEnroll(
   session: {id:string;userId:string;mfaVerifiedAt:Date|null;user:{role:string;passwordHash:string|null}},
   proof: {grantCode?:unknown;password?:unknown}
 ) {
-  if (session.mfaVerifiedAt && Date.now() - session.mfaVerifiedAt.getTime() >= 0 &&
-      Date.now() - session.mfaVerifiedAt.getTime() <= MAX_MFA_AGE) return true;
+  if (session.mfaVerifiedAt) return true;
   const password=proof?.password;
   const passwordValid=typeof password==='string' && password.length<=256 &&
     !!session.user.passwordHash && verifyPassword(password,session.user.passwordHash);
@@ -297,7 +317,7 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
   app.get('/api/auth/mfa/status',async(req,reply)=>{
     const session=await mfaSession(req,reply);if(!session)return;
     const count=await prisma.adminMfaCredential.count({where:{userId:session.userId,revokedAt:null}});
-    const verified=await hasFreshAdminMfa(req,session.userId);
+    const verified=await hasVerifiedMfaSession(req,session.userId);
     const totp=totpIsEnabled() ? await prisma.adminMfaTotp.findUnique({
       where:{userId:session.userId},select:{enabledAt:true}
     }) : null;
@@ -311,11 +331,11 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
       isAdministrator:['ADMIN','SUPERADMIN'].includes(session.user.role),
       accountName:session.user.name};
   });
-  // Previously enrolled users may obtain their first recovery key after a
-  // fresh MFA proof. Existing keys are never retrievable or overwritten here.
+  // Previously enrolled users may obtain their first recovery key during
+  // an active MFA-verified session. Existing keys are never retrievable here.
   app.post('/api/auth/mfa/recovery-key/issue',async(req,reply)=>{
     const session=await mfaSession(req,reply);if(!session)return;
-    if(!await hasFreshAdminMfa(req,session.userId))
+    if(!await hasVerifiedMfaSession(req,session.userId))
       return reply.code(403).send({error:'Verify MFA before generating a recovery key'});
     const enrolled=await Promise.all([
       prisma.adminMfaCredential.count({where:{userId:session.userId,revokedAt:null}}),
@@ -443,9 +463,7 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
           where:{id:challenge.id,userId:session.userId,sessionId:session.id,
             consumedAt:null,expiresAt:{gt:now}},data:{consumedAt:now}});
         if(used.count!==1)throw new Error('Challenge already used');
-        const recent=session.mfaVerifiedAt &&
-          now.getTime()-session.mfaVerifiedAt.getTime()>=0 &&
-          now.getTime()-session.mfaVerifiedAt.getTime()<=MAX_MFA_AGE;
+        const recent=Boolean(session.mfaVerifiedAt);
         if(!recent && ['ADMIN','SUPERADMIN'].includes(session.user.role)){
           const [passkeyCount,totpCount]=await Promise.all([
             tx.adminMfaCredential.count({where:{userId:session.userId,revokedAt:null}}),
@@ -585,9 +603,7 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
     if(step===null)return reply.code(400).send({error:'Invalid or expired authenticator code'});
     try{
       const token=await prisma.$transaction(async tx=>{
-        const recent=session.mfaVerifiedAt &&
-          now.getTime()-session.mfaVerifiedAt.getTime()>=0 &&
-          now.getTime()-session.mfaVerifiedAt.getTime()<=MAX_MFA_AGE;
+        const recent=Boolean(session.mfaVerifiedAt);
         if(!recent && ['ADMIN','SUPERADMIN'].includes(session.user.role)){
           const [passkeyCount,totpCount]=await Promise.all([
             tx.adminMfaCredential.count({where:{userId:session.userId,revokedAt:null}}),

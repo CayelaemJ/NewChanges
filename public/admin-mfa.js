@@ -146,10 +146,10 @@ async function refresh(){
     : 'Set up your authenticator app with a QR code';
   const instructions=document.getElementById('totp-instructions');
   if(instructions)instructions.textContent=state.totpEnrolled
-    ? 'Open the existing The Fixer entry in Google or Microsoft Authenticator and enter its current six-digit code. You only scan a QR during initial setup.'
+    ? 'Open the existing The Fixer entry in your authenticator app and enter its current six-digit code. Any app that supports standard TOTP works; you only scan a QR during initial setup.'
     : managingMethods && state.verified
       ? 'Add a second method: scan your one-time QR code and verify a six-digit code. Your verified session authorizes the change.'
-      : 'First time only: confirm your current password, open Google Authenticator or Microsoft Authenticator, tap Add account and scan your personal QR. Enter one code to activate the saved account.';
+      : 'First time only: confirm your current password, open any authenticator app that supports standard TOTP, add an account and scan your personal QR. Enter one code to activate it.';
   const totpGrantLabel=document.querySelector?.('label[for="totp-grant"]');
   if(totpGrantLabel)totpGrantLabel.hidden=true;
   document.getElementById('totp-panel').hidden=!state.totpAvailable || (!!state.verified && (!managingMethods || !!state.totpEnrolled));
@@ -159,7 +159,7 @@ async function refresh(){
       ? 'Your session is verified. Add an authenticator using a QR code without another enrollment grant.'
     : state.verified
       ? 'Your account is verified. No new setup is needed to continue.'
-      : 'Confirm your current password, choose Generate QR code, and scan it using Google or Microsoft Authenticator. No second administrator is needed for first-time setup.';
+      : 'Confirm your current password, choose Generate QR code, and scan it with any authenticator app that supports standard TOTP. No second administrator is needed for first-time setup.';
   // The setup code was already consumed by confirmation. Never prompt the
   // user to verify it again on the same freshly elevated session.
   document.getElementById('totp-verify-panel').hidden=!state.totpEnrolled || !!state.verified;
@@ -248,7 +248,7 @@ totpStart.addEventListener('click',()=>withTotpBusy(totpStart,async()=>{
  document.getElementById('totp-qr').src=data.qrDataUri;
  document.getElementById('totp-manual-key').textContent=data.manualKey||'';
  document.getElementById('totp-setup').hidden=false;
- show('Open Google or Microsoft Authenticator, add an account, scan this QR, and enter the six-digit code below.');
+ show('Open any authenticator app that supports standard TOTP, add an account, scan this QR, and enter the six-digit code below.');
 }));
 totpConfirm.addEventListener('click',()=>withTotpBusy(totpConfirm,async()=>{
  const code=document.getElementById('totp-confirm-code').value.trim();
@@ -273,7 +273,8 @@ totpVerify.addEventListener('click',()=>withTotpBusy(totpVerify,async()=>{
  if(!/^[0-9]{6}$/.test(code))throw Error('Enter the current six-digit authenticator code.');
  await api('totp/verify',{code});
  field.value='';
- show('Authenticator app verified. You can continue.');
+ show('Authenticator app verified. Opening your dashboard…');
+ if(!managingMethods){window.location.assign('/dashboard');return;}
  await refresh();
 }));
 
@@ -397,6 +398,7 @@ document.getElementById('mfa-backup-dismiss').addEventListener('click',async()=>
  document.getElementById('mfa-backup-key').hidden=true;
  await refresh();
  show('Recovery key hidden. The Fixer cannot display it again.');
+ if(!managingMethods)window.location.assign('/dashboard');
 });
 
 document.getElementById('mfa-existing-recovery-issue').addEventListener('click',async()=>{
