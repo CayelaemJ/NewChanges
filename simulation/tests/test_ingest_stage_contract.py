@@ -45,6 +45,36 @@ class IngestStageContractTests(unittest.TestCase):
         output = event("UPDATE", previous, changed)
         self.assertEqual(output.source_timestamp_state, "NOT_ADVANCED_ON_UPDATE")
 
+    def test_all_ten_feeds_mark_changes_despite_stale_or_null_source_timestamp(self):
+        # Live RDS information_schema audit: source_updated_at is nullable
+        # TEXT with no ON UPDATE rule across all ten tables. Binlog/XID, not
+        # source_updated_at, is the reliable change boundary for this pilot.
+        for idx, feed in enumerate(sorted(FEED_TABLES)):
+            with self.subTest(feed=feed):
+                older = {"_ingest_id": idx + 1, "source_updated_at": "2024-01-01",
+                         "fixture_state": "OLD_PRIVATE_VALUE"}
+                changed = older | {"fixture_state": "NEW_PRIVATE_VALUE"}
+                stale = event(
+                    "UPDATE", older, changed, table=feed,
+                    binlog_position=1000 + idx * 2,
+                )
+                self.assertEqual(stale.feed, feed)
+                self.assertEqual(stale.operation, "UPDATE")
+                self.assertEqual(stale.source_timestamp_state, "NOT_ADVANCED_ON_UPDATE")
+
+                older_missing = older | {"source_updated_at": None}
+                changed_missing = changed | {"source_updated_at": None}
+                missing = event(
+                    "UPDATE", older_missing, changed_missing, table=feed,
+                    binlog_position=1001 + idx * 2,
+                )
+                self.assertEqual(missing.source_timestamp_state, "MISSING_SOURCE_WATERMARK")
+                self.assertEqual(stale.opaque_row_key, missing.opaque_row_key)
+                self.assertNotEqual(stale.event_key, missing.event_key)
+                for secret in ("OLD_PRIVATE_VALUE", "NEW_PRIVATE_VALUE", "2024-01-01"):
+                    self.assertNotIn(secret, repr(stale))
+                    self.assertNotIn(secret, repr(missing))
+
     def test_two_updates_same_second_get_distinct_event_keys(self):
         old = {"_ingest_id": 3, "source_updated_at": "2024-01-01"}
         new = {"_ingest_id": 3, "source_updated_at": "2026-11-06"}
