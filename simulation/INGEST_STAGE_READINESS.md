@@ -69,10 +69,12 @@ XID commits for foreign tables / the sink itself are ignored when no
 allowed rows are buffered, preventing self-induced infinite event loops.
 Processing is bounded by packet, time and transaction limits.
 
-`simulation/schema/004_ingest_stage_fixture.sql` defines two **empty,
-synthetic** source tables `ingest_stage.employees` and
-`ingest_stage.debt_accounts` with the same `_ingest_id` primary-key and
-nullable TEXT `source_updated_at` shape as the operator-inspected RDS source.
+`simulation/schema/004_ingest_stage_fixture.sql` now defines all ten
+**empty synthetic** canonical-feed source tables; the first two are
+`ingest_stage.employees` and `ingest_stage.debt_accounts`. The additional
+eight use only `_ingest_id`, `fixture_state` and nullable TEXT
+`source_updated_at`. These minimal fixtures do not reproduce actual
+RDS table definitions, data or view behavior.
 This script is mounted only in the internal, ephemeral Docker MySQL service.
 The disposable `sim_writer` receives fixture-only DML, and `sim_repl`
 receives fixture SELECT for metadata; the local `sim_cdc` sink account is
@@ -203,6 +205,10 @@ verified initial snapshot, production sink and The Fixer dashboard
 publication remain pending. No AWS source mutation or deployment is
 authorized by a passing local test.
 
+The operator's **latest** successful local run at commit `faac2fb4`
+verified the ten-feed transaction; the earlier 106/106 result
+is a historical milestone, not the current test total.
+
 ## Ten-feed disposable CDC coverage (13 November 2026)
 
 The real RDS source remains **disconnected**. Building on the verified
@@ -229,12 +235,12 @@ The real RDS source remains **disconnected**. Building on the verified
   inserts and includes `_ingest_id` and `source_updated_at` in each.
   A test guard also checks the reader uses the exact canonical allowlist.
 
-**Verification:** Static code/SQL cross-file inspection passed. Because
-the earlier successful test ran only 106 cases, this change brings the
-next expected suite to **107 tests** (host: 19 expected Docker-dependent
-skips, Docker: no expected skips). **No 107-test Docker pass is claimed.**
-The next operator command is `bash simulation/ops/ci-docker.sh` in WSL,
-after pulling this branch.
+**Verification: PASS.** The operator's final WSL transcript after
+pulling code commit `faac2fb4` confirms **107 host tests, OK
+(19 expected environment skips)** and **107/107 disposable MySQL 8.4
+Docker tests, OK with zero skips, exit code 0**. The ten-feed XID
+integration and fixture/allowlist guard both passed. Subsequent
+changes to this document alone do not alter the tested runtime.
 
 **Not proven:** full source-to-canonical-row projection, source view
 compatibility against populated AWS, production snapshot consistency,
