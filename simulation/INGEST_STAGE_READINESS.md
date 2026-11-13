@@ -101,9 +101,42 @@ before claiming the new MySQL XID integration actually passes.
 **Still blocked for live AWS:** genuine consistent snapshot/import manifest,
 proven MySQL binlog retention, safe replication privileges on a
 mixed-schema instance, actual timestamp/view lineage, full ten-table
-live source consumer, restart-from-verified-checkpoint beyond bootstrap,
-and app analytics publication. This local pilot is NOT a deployable
+live source consumer, restart resilience with real binlog purge/rotation, and app
+analytics publication. This local pilot is NOT a deployable
 production worker and is deliberately unable to connect to RDS.
+
+## Durable local CDC restart recovery (13 November 2026)
+
+The prior XID-gated local bridge had a repeat-run bug: it required
+the durable source checkpoint to equal the **initial** snapshot position,
+so a second run after a successful commit could not start.
+
+The local pilot now preserves the original immutable `SnapshotHandoff`
+and introduces `load_local_checkpoint` in
+`simulation/runtime/ingest_stage_sink.py`. That function performs a fresh
+read from the **dedicated disposable sink**, checks the exact snapshot
+manifest digest, refuses a missing/malformed position, confirms the stored
+coordinate has not regressed or changed binlog lineage, and returns
+the saved checkpoint. The `TransactionPlanner` accepts a separate
+`resume_checkpoint` only when at or after its original snapshot anchor.
+The MySQL reader starts at that sink-verified checkpoint, never at
+`SHOW BINARY LOG STATUS` or a wall-clock-derived position.
+
+Tests added/extended:
+- Two new offline planner tests for successful resume and rejection of
+  backward or foreign-lineage positions.
+- One new real disposable-MySQL sink test for positive resume, missing
+  consumer, mismatched manifest and corrupted/backward checkpoint.
+- The original real XID binlog integration test now runs the reader **twice**
+  against two successive synthetic source commits using the same original
+  snapshot manifest, and checks that it persists four distinct markers
+  without duplicating the first three.
+
+**Verification:** Code and test declarations passed static cross-file checks.
+The prior **91/91 Docker result** precedes the XID pilot changes. The new
+restart changes bring the expected suite to **105 tests**, all of which
+still require WSL/Docker execution before this gate can be marked passed.
+There is no enabled background worker or live AWS CDC connection.
 
 ## What already exists
 
