@@ -90,10 +90,14 @@ describe("tenant-scoped direct MySQL dashboard preview", () => {
     const server = readFileSync("src/server.ts", "utf8");
     const start = server.indexOf('"/api/employers/:employerId/direct-reporting-preview"');
     expect(start).toBeGreaterThan(-1);
-    const section = server.slice(start, start + 1400);
+    const section = server.slice(start, start + 1950);
     expect(section.indexOf("requireUser(req, reply)")).toBeLessThan(section.indexOf("getSyncConfig()"));
     expect(section.indexOf("canViewEmployer(user, req.params.employerId)"))
       .toBeLessThan(section.indexOf("getSyncConfig()"));
+    const appIdentity = section.indexOf("prisma.employer.findFirst(");
+    expect(appIdentity).toBeGreaterThan(-1);
+    expect(appIdentity).toBeLessThan(section.indexOf("getSyncConfig()"));
+    expect(section).toContain("sourceDeletedAt: null");
     expect(section.indexOf("hasVerifiedMfaSession(req, user.id)"))
       .toBeLessThan(section.indexOf("getSyncConfig()"));
   });
