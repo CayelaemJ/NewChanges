@@ -35,7 +35,7 @@ describe("tenant-scoped direct MySQL dashboard preview", () => {
     ]) delete process.env[key];
     db.query.mockImplementation(async (arg: any) => {
       if (typeof arg === "object") {
-        return [[{ total: "14", secondary: "4", amount: "250.25" }], []];
+        return [[{ total: "14", secondary: "4", amount: "250.25", completedInPeriod: "9", completedSavings: "380.75" }], []];
       }
       return [[], []];
     });
@@ -45,7 +45,7 @@ describe("tenant-scoped direct MySQL dashboard preview", () => {
     const result = await readDirectDashboardPreview(source, input);
     expect(result).toMatchObject({
       source: "MYSQL", mode: "DIRECT_PREVIEW", replicatedToPostgres: false,
-      employerRef: input.employerRef, journeys: { started: "14", completedOfStarted: "4" },
+      employerRef: input.employerRef, journeys: { started: "14", completedOfStarted: "4", completedInPeriod: "9", completedInPeriodMonthlySavingsRand: "380.75" },
       ratings: { submitted: "14", fiveStar: "4" },
       referrals: { shared: "14", convertedAmongShared: "4" },
       salaryAdvances: { requested: "14", finalised: "4", finalisedAmountRand: "250.25" },
@@ -57,9 +57,18 @@ describe("tenant-scoped direct MySQL dashboard preview", () => {
     expect(db.end).toHaveBeenCalledOnce();
     const reads = db.query.mock.calls.filter(([sql]: any[]) => typeof sql === "object");
     expect(reads).toHaveLength(4);
-    for (const [statement, params] of reads) {
-      expect(statement.sql).toContain("WHERE employer_ref = ? AND");
-      expect(params).toEqual(["TENANT-ONE", "2026-10-01", "2026-11-01"]);
+    for (const [index, [statement, params]] of reads.entries()) {
+      expect(statement.sql).toContain("employer_ref = ?");
+      if (index === 0) {
+        expect(statement.sql).toContain("completed_at >= ?");
+        expect(statement.sql).toContain("completed_at < ?");
+        expect(params).toHaveLength(15);
+        expect(params[10]).toBe("TENANT-ONE");
+        expect(params[11]).toBe("2026-10-01");
+        expect(params[12]).toBe("2026-11-01");
+      } else {
+        expect(params).toEqual(["TENANT-ONE", "2026-10-01", "2026-11-01"]);
+      }
       expect(statement.timeout).toBe(10_000);
     }
   });
