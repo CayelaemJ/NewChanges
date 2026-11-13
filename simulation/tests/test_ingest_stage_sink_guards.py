@@ -1,5 +1,6 @@
 """Guardrails for metadata-only ingest CDC sink; safe on host without MySQL."""
 from dataclasses import replace
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -91,6 +92,31 @@ class IngestSinkSafetyContracts(unittest.TestCase):
         self.assertIn("COPY docker-compose.yml docker-compose.yml", dockerfile)
         self.assertIn("COPY schema/003_ingest_cdc.sql schema/003_ingest_cdc.sql",
                       dockerfile)
+
+
+    def test_fixture_covers_all_ten_canonical_feeds_without_data(self):
+        from runtime.ingest_stage_contract import FEED_TABLES
+        ddl = (ROOT / "schema" / "004_ingest_stage_fixture.sql").read_text(
+            encoding="utf-8"
+        )
+        tables = re.findall(r"^CREATE TABLE ([a-z_]+) \\(", ddl, flags=re.MULTILINE)
+        self.assertEqual(len(tables), 10)
+        self.assertCountEqual(tables, FEED_TABLES)
+        self.assertNotIn("INSERT INTO", ddl.upper())
+        self.assertNotIn("UPDATE ingest_stage", ddl)
+        self.assertNotIn("DROP DATABASE", ddl.upper())
+        for feed in FEED_TABLES:
+            section = ddl.split("CREATE TABLE " + feed + " (", 1)[1].split(
+                ") ENGINE=InnoDB;", 1
+            )[0]
+            self.assertIn("_ingest_id BIGINT UNSIGNED NOT NULL PRIMARY KEY", section)
+            self.assertIn("source_updated_at TEXT NULL", section)
+        stream = (ROOT / "runtime" / "ingest_stage_stream.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("only_tables=sorted(FEED_TABLES)", stream)
+        self.assertIn('only_schemas=["ingest_stage"]', stream)
+
 
 
 if __name__ == "__main__":
