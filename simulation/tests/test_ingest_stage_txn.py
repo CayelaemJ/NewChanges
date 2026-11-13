@@ -54,6 +54,38 @@ class OfflineTransactionPlannerTests(unittest.TestCase):
                 snapshot_import_verified=True, snapshot_manifest_sha256="a" * 64,
                 retention_hours=24))
 
+    def test_resume_from_verified_durable_checkpoint_advances_start(self):
+        initial = pos(500)
+        proof = SnapshotHandoff(
+            schema="ingest_stage", binlog_file=initial.file,
+            binlog_position=initial.position, snapshot_consistent=True,
+            snapshot_import_verified=True, snapshot_manifest_sha256="a" * 64,
+            retention_hours=24,
+        )
+        p = TransactionPlanner(initial, handoff=proof, resume_checkpoint=pos(600))
+        self.assertEqual(p.checkpoint, pos(600))
+        p.begin()
+        p.stage(marker("after-restart"), pos(650))
+        plan = p.prepare_commit(pos(700))
+        self.assertEqual(plan.previous, pos(600))
+        self.assertEqual(plan.next_checkpoint, pos(700))
+
+    def test_resume_refuses_older_or_foreign_lineage_coordinate(self):
+        initial = pos(500)
+        proof = SnapshotHandoff(
+            schema="ingest_stage", binlog_file=initial.file,
+            binlog_position=initial.position, snapshot_consistent=True,
+            snapshot_import_verified=True, snapshot_manifest_sha256="a" * 64,
+            retention_hours=24,
+        )
+        for recovered in (
+            pos(499), pos(900, "other-binlog.000001"),
+            pos(650, "mysql-bin-changelog.000054"),
+        ):
+            with self.subTest(recovered=recovered), self.assertRaises(ValueError):
+                TransactionPlanner(initial, handoff=proof,
+                                   resume_checkpoint=recovered)
+
     def test_checkpoint_never_moves_until_ack(self):
         p = planner(pos(500))
         p.begin()
