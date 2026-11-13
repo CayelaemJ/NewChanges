@@ -52,3 +52,14 @@ Snapshot dates are inclusive, while event KPI ranges remain half-open. For histo
 ### Performance and budget checks before rollout
 
 Windowed account/policy queries can be expensive without appropriately indexed source tables or pre-aggregated source-side history. Obtain `EXPLAIN ANALYZE` for approved views with representative employer/date ranges on a non-production replica or at a safe query budget; measure RDS CPU, reads, latency and network egress. Review index strategy on underlying source tables (e.g., tenant + natural key + observed timestamp) without applying unsolicited SQL changes.
+
+## Source readiness gate — database metadata only
+
+The administration endpoint `GET /api/admin/integration/direct-reporting/preflight` requires a valid admin session (and MFA when enforced) plus the direct-reporting feature flag. It uses parameterized `information_schema.TABLES` and `information_schema.COLUMNS` queries; it **never reads business rows**.
+
+It currently checks the seven views that power event and as-of previews:
+`v_journeys`, `v_ratings`, `v_referrals`, `v_salary_advances`, `v_workforce_snapshots`, `v_debt_accounts` and `v_policies`. A missing view, a base table substituted for an approved view, or a missing required column yields `ready: false` with specific deficiencies. The check does not expose passwords or connection URLs.
+
+A `ready: true` response is **necessary but insufficient** for rollout: it cannot verify that a view contains all historical observations, handles late-arriving corrections correctly, implements source tenant scoping, or matches published financial scores. For those guarantees, compare representative employer-period outputs with the current PostgreSQL reports under a controlled read-only experiment, and inspect RDS query plans and CPU usage.
+
+**Do not enable the no-replication cutover solely because metadata preflight passes.**
