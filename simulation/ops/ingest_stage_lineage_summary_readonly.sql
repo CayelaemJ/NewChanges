@@ -72,7 +72,7 @@ ORDER BY EVENT_OBJECT_TABLE, EVENT_MANIPULATION;
 SELECT TABLE_NAME AS source_table,
        COLUMN_NAME AS indexed_column,
        COUNT(DISTINCT INDEX_NAME) AS index_count,
-       MIN(NON_UNIQUE) AS has_unique_or_primary_index
+       MIN(NON_UNIQUE) AS min_non_unique_flag
 FROM information_schema.STATISTICS
 WHERE TABLE_SCHEMA = 'ingest_stage'
   AND COLUMN_NAME IN (
