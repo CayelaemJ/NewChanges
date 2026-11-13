@@ -12,6 +12,8 @@ COPY ops/setup_local.py ops/setup_local.py
 COPY ops/local_bootstrap_probe.py ops/local_bootstrap_probe.py
 COPY ops/ingest_stage_readonly_audit.sql ops/ingest_stage_readonly_audit.sql
 COPY ops/ingest_stage_timestamp_lineage.sql ops/ingest_stage_timestamp_lineage.sql
+COPY ops/ingest_stage_lineage_summary_readonly.sql ops/ingest_stage_lineage_summary_readonly.sql
+COPY ops/ingest_stage_cdc_identity_readonly.sql ops/ingest_stage_cdc_identity_readonly.sql
 COPY ops/preflight.sql ops/preflight.sql
 COPY tests/ tests/
 # Contract tests verify the same Dockerfile used for this image build.
