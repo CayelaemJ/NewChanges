@@ -49,7 +49,7 @@ import { exportAuditLogCsv, exportSecurityAuditLogCsv, exportImportBatchCsv } fr
 import { listAnalyticsRoutes, saveAnalyticsRoute } from "./services/syncService.js";
 import { enterpriseOperationsOverview, dataQualityOverview } from "./services/enterpriseOperationsService.js";
 import { checkMysqlReadReplica } from "./services/sourceAdapter.js";
-import { readMysqlReportSummary, directReportingEnabled } from "./services/directMysqlReporting.js";
+import { readMysqlReportSummary, readMysqlJourneyKpis, directReportingEnabled } from "./services/directMysqlReporting.js";
 import { subscribeAdminEvents } from "./services/adminEventStream.js";
 import { ensureSectionDefaults, listSections, updateSection, grantUserSection, revokeUserSection, sectionsForUser } from "./services/sectionService.js";
 import { publicEmailConfig, saveEmailConfig, testEmailConnection, createReportSchedule, listReportSchedules, updateReportSchedule, deleteReportSchedule, sendReportNow, recentReportDeliveries, runDueReports } from "./services/reportScheduler.js";
@@ -1735,6 +1735,24 @@ app.get<{ Querystring: { reportKey?: string; employerRef?: string } }>("/api/adm
     });
   } catch (error: any) {
     req.log.warn({ error: error?.message }, "direct MySQL summary failed");
+    return reply.code(503).send({ error: "Direct reporting query unavailable" });
+  }
+});
+
+// Source-side journey KPI preview: admin-only until a parity-tested,
+// tenant-authorized direct dashboard route is available.
+app.get<{ Querystring: { employerRef?: string; startDate?: string; endDate?: string } }>("/api/admin/integration/direct-reporting/journey-kpis", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  if (!directReportingEnabled()) return reply.code(503).send({ error: "Direct MySQL reporting is not enabled" });
+  try {
+    const config = await getSyncConfig();
+    return await readMysqlJourneyKpis(config, {
+      employerRef: String(req.query?.employerRef ?? ""),
+      startDate: String(req.query?.startDate ?? ""),
+      endDate: String(req.query?.endDate ?? ""),
+    });
+  } catch (error: any) {
+    req.log.warn({ error: error?.message }, "direct MySQL journey KPI query failed");
     return reply.code(503).send({ error: "Direct reporting query unavailable" });
   }
 });
