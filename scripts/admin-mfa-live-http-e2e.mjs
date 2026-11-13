@@ -415,7 +415,8 @@ try{
    null,{timeout:20000});
  await O.page.locator('#enroll').waitFor({state:'visible'});
  assert.equal(await O.page.locator('#enroll').isEnabled(),true,
-  'Approved first-time enrollment must enable passkey registration without a grant');
+  'Approved first-time enrollment must enable passkey registration');
+ await O.page.locator('#mfa-enrollment-password').fill(users[3].password);
  await O.page.locator('#enroll').click();
  await O.page.locator('#mfa-success').waitFor({state:'visible',timeout:20000});
  const persisted=await prisma.adminMfaEnrollmentRequest.findUnique({where:{id:enrollment.requestId}});
