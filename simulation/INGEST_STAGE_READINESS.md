@@ -249,6 +249,35 @@ opaque event metadata, not business records or dashboard materializations.
 All new tables are in disposable Docker MySQL; no AWS DDL, data,
 permissions, cost settings or application integrations were changed.
 
+## Latest operator Docker validation: 110 tests, packaging fix pending rerun
+
+On **13 November 2026**, the operator ran `simulation/ops/ci-docker.sh`
+after fast-forwarding to source commit `07553aec`.
+
+- **Host:** 110 tests, OK (19 expected Docker-only skips).
+- **Disposable MySQL 8.4 Docker:** 110 tests, 108 passed,
+  **2 errors**, test container **exit code 1**.
+- **All runtime CDC tests passed**, including real row-binlog XID
+  integration across ten feeds, stale/NULL timestamp markers,
+  notification isolation, atomic checkpoints and retry/replay.
+- Both errors were `FileNotFoundError` when two static metadata
+  tests attempted to read
+  `/app/ops/ingest_stage_lineage_summary_readonly.sql` and
+  `/app/ops/ingest_stage_cdc_identity_readonly.sql`.
+- Root cause: the files were committed but missing from explicit
+  `COPY` instructions in `simulation/Dockerfile.test`.
+  **Fixed in the branch** by adding both Dockerfile entries and
+  strengthening the existing packaging regression test to check
+  every one of the five metadata audit SQL files used by the test
+  suite.
+
+**The packaging fix has passed static checks only; a new 110-case
+Docker run is required before calling it 110/110 GREEN.**
+Last fully successful Docker run: **107/107**, source code commit
+`faac2fb4`. No AWS RDS data, settings, privileges or production
+application state were touched by this test fix. The live
+source-to-view identity SQL audit has not yet been supplied as output.
+
 ## Operator timestamp-lineage summary: all ten feeds (13 November 2026)
 
 The operator ran the **privacy-safe metadata summary** on the live
