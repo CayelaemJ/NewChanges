@@ -138,6 +138,39 @@ restart changes bring the expected suite to **105 tests**, all of which
 still require WSL/Docker execution before this gate can be marked passed.
 There is no enabled background worker or live AWS CDC connection.
 
+## Per-consumer CDC metadata isolation fix (13 November 2026)
+
+Operator WSL output for code commit `2338ad7c`: host phase ran
+**105 tests with 18 expected environment skips**; Docker MySQL 8.4
+completed **104/105**, with exactly one failed assertion in
+`test_atomic_checkpoint_marker_and_replay`. The two-pass XID source
+binlog integration test passed. The failing assertion read a shared
+`employees` notification and found a newer capture timestamp from
+the preceding real-binlog consumer (microseconds `580481`) instead
+of its own fixture's `345678`.
+
+**Root cause was real sink-state leakage**, not a timestamp precision
+failure: `ingest_feed_notifications` was keyed by `feed` alone.
+The `ingest_change_markers` unique identity also lacked a consumer
+scope, preventing independent consumers from saving the same source
+event. Both local-only tables now use composite primary keys:
+`(consumer_name,feed)` for notifications and
+`(consumer_name,event_key)` for opaque event markers. The local sink
+writer includes `consumer_name` in every insert; all relevant Docker
+assertions now filter by consumer. A new disposable-MySQL regression
+test saves the **same event key in two consumers** with different
+capture timestamps and verifies separate generations, microseconds
+and idempotent replay. The failed-transaction regression also asserts
+its feed generation stays unchanged after rollback.
+
+**Verification:** Changes were committed and are under static review;
+the prior **104/105 run predates this fix**. Expected revised suite:
+**106 tests** (host: 19 expected environment skips; Docker: all 106).
+The composite-key DDL is ONLY for the fresh tmpfs Docker schema.
+No production migration, source table, AWS data or RDS settings were
+modified. The test run still needs independent WSL/Docker verification
+before this gate can be closed.
+
 ## What already exists
 
 The database contains `ingest_stage` with 11 base tables and 10 views,
