@@ -249,6 +249,51 @@ opaque event metadata, not business records or dashboard materializations.
 All new tables are in disposable Docker MySQL; no AWS DDL, data,
 permissions, cost settings or application integrations were changed.
 
+## Operator-verified effective RDS binlog configuration (13 November 2026)
+
+**The previously unknown retention setting has now been verified from the
+live MySQL 8.4.11 connection** using the exact read-only script
+`simulation/ops/ingest_stage_rds_retention_readonly.sql` in WSL.
+The master-password reset succeeded first; the SQL audit then completed
+normally without a privilege error or source writes.
+
+| Live runtime property | Verified result |
+|---|---|
+| `mysql.rds_show_configuration` binlog retention hours | **NULL (RDS MySQL zero-hour guaranteed retention)** |
+| `@@GLOBAL.log_bin` | ON |
+| `@@GLOBAL.binlog_format` | ROW |
+| `@@GLOBAL.binlog_row_image` | FULL |
+| `@@GLOBAL.binlog_expire_logs_seconds` | 2592000 (engine value, not effective RDS external replication retention) |
+| `@@GLOBAL.gtid_mode` | OFF_PERMISSIVE |
+| `@@GLOBAL.server_id` | nonzero / present |
+| `SHOW BINARY LOGS` | 4 small files at time of check; **not** evidence of a protected replay horizon |
+
+**Result:** MySQL binlog generation and ROW/FULL image prerequisites pass.
+**Durable external CDC recovery remains BLOCKED** because RDS's
+effective retention is currently `NULL`. For **RDS for MySQL**, AWS
+states `NULL` means **0 hours**, despite a separate 30-day engine expiry
+parameter and despite some binary-log files currently being visible.
+Reference:
+https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/mysql-stored-proc-configuring.html
+
+**Proposed change, NOT executed:** evaluate a 24-hour bounded binlog
+retention window for short restart/outage recovery using the documented
+`mysql.rds_set_configuration` procedure **only after operator approval**,
+with CloudWatch free-storage monitoring, workload-aware binlog-volume
+estimates and a verified snapshot/consumer catch-up plan. The approved
+ceiling is a recovery requirement, **not** an unlimited storage budget.
+There is no new AWS service or instance in this proposal. No replication
+account, privileges, source data, RDS parameter groups or settings were
+changed during the audit.
+
+**Other production gates remain open:** actual timestamp lineage for
+all ten canonical views, initial snapshot consistency and import
+verification on the populated source, global-replication-privilege
+security review, valid restricted source adapter, and The Fixer's
+event-driven dashboard integration without copying source records to
+PostgreSQL. The 107/107 passing Docker suite is evidence about the
+disposable ten-feed fixture only.
+
 ## Live AWS RDS read-only configuration verification (13 November 2026)
 
 A read-only inspection of the **existing** RDS instance
@@ -276,9 +321,9 @@ AWS account. Verified AWS API responses:
 retention. AWS documents that the RDS-specific
 `mysql.rds_show_configuration` result for `binlog retention hours`
 governs retention, and that `NULL` means **zero-hour retention**
-for RDS MySQL. The currently effective value has **not** been retrieved
-from the MySQL session, so the recovery horizon remains **UNKNOWN and
-deployment-blocking**. The 1-day automated backup retention does not
+for RDS MySQL. The operator has now retrieved the effective value:
+**NULL**, so the durable CDC recovery horizon is **0 hours and
+production deployment remains blocked**. The 1-day automated backup retention does not
 establish an external CDC binlog-retention promise.
 
 To obtain actual evidence, run the new
@@ -578,7 +623,8 @@ production CDC service.
    No blanket binary-log replica account on this shared instance
    without classification/approval.
 5. Configure an agreed MySQL RDS binlog retention/recovery horizon and
-   monitor free storage. Operator reported the retention field blank/NULL.
+   monitor free storage. **Operator's 13 November read-only MySQL audit
+   confirmed retention=NULL (0 hours guaranteed), which blocks deployment.**
    AWS API read-only inspection found 20 GB allocated and about 17.96 GB
    minimum reported free storage in 6 sampled CloudWatch points over 24h
    on 2026-11-06. This **does not guarantee** a future retention budget.
