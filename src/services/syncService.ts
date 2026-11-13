@@ -368,6 +368,13 @@ export async function recoverSourceSyncState() {
 }
 
 export async function runSync(trigger: "manual" | "scheduled" | "full-refresh" = "manual", options: RunSyncOptions = {}) {
+  // Opt-in hard stop: direct-reporting deployments never materialize external
+  // business feeds in application PostgreSQL, regardless of trigger type.
+  if (process.env.DIRECT_MYSQL_NO_REPLICATION === "true") {
+    return { ok: false, status: "DIRECT_REPORTING_ONLY",
+      note: "Business-row replication is disabled for direct MySQL reporting.",
+      error: "Business-row replication is disabled for direct MySQL reporting." };
+  }
   if (process.env.STANDBY_MODE === "true" && !(trigger === "full-refresh" && options.standbyMaintenance === true)) return { ok: false, status: "STANDBY", note: "Source ingestion is disabled on this standby.", error: "Source ingestion is disabled on this standby." };
   // dailyRefresh.ts already owns the exclusive database lease while it calls
   // the full-refresh path. Every other sync takes a shared lease so an ordinary
