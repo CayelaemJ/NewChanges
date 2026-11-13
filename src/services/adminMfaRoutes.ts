@@ -566,6 +566,8 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
   // server-side; no code or secret is sent to an image service.
   app.post<{Body:{grantCode?:string;password?:string}}>('/api/auth/mfa/totp/setup',async(req,reply)=>{
     const session=await mfaSession(req,reply);if(!session)return;
+    const activePasskeys=await prisma.adminMfaCredential.count({where:{userId:session.userId,revokedAt:null}});
+    if(activePasskeys>0)return reply.code(409).send({error:'This account uses passkey-only MFA; authenticator setup and verification are disabled'});
     if(!totpIsEnabled())return reply.code(404).send({error:'Authenticator app setup is unavailable'});
     const key=requireTotpEncryptionKey();
     const existing=await prisma.adminMfaTotp.findUnique({where:{userId:session.userId}});
@@ -588,6 +590,8 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
   });
   app.post<{Body:{grantCode?:string;code?:string;password?:string}}>('/api/auth/mfa/totp/confirm',async(req,reply)=>{
     const session=await mfaSession(req,reply);if(!session)return;
+    const activePasskeys=await prisma.adminMfaCredential.count({where:{userId:session.userId,revokedAt:null}});
+    if(activePasskeys>0)return reply.code(409).send({error:'This account uses passkey-only MFA; authenticator setup and verification are disabled'});
     if(!totpIsEnabled())return reply.code(404).send({error:'Authenticator app setup is unavailable'});
     const row=await prisma.adminMfaTotp.findUnique({where:{userId:session.userId}});
     const now=new Date();
@@ -636,6 +640,8 @@ export function registerAdminMfaRoutes(app:FastifyInstance) {
   });
   app.post<{Body:{code?:string}}>('/api/auth/mfa/totp/verify',async(req,reply)=>{
     const session=await mfaSession(req,reply);if(!session)return;
+    const activePasskeys=await prisma.adminMfaCredential.count({where:{userId:session.userId,revokedAt:null}});
+    if(activePasskeys>0)return reply.code(409).send({error:'This account uses passkey-only MFA; authenticator setup and verification are disabled'});
     if(!totpIsEnabled())return reply.code(404).send({error:'Authenticator app verification unavailable'});
     const row=await prisma.adminMfaTotp.findUnique({where:{userId:session.userId}});
     const now=new Date();
