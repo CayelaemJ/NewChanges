@@ -16,7 +16,7 @@ import { prisma } from "./database.js";
 
 const SESSION_DAYS = 7;          // default session length
 const SESSION_DAYS_REMEMBER = 30; // "remember me" session length
-const SESSION_IDLE_DAYS = 7;       // inactivity expires even remembered sessions
+export const SESSION_IDLE_TIMEOUT_MS = 7 * 864e5; // inactivity expires even remembered sessions
 
 // ── password hashing (scrypt) ──
 const SCRYPT_N = 32768;
@@ -108,7 +108,7 @@ export async function resolveSession(token?: string) {
   if (!session) return null;
   const now = new Date();
   if (session.expiresAt < now ||
-      now.getTime() - session.lastSeenAt.getTime() > SESSION_IDLE_DAYS * 864e5 ||
+      now.getTime() - session.lastSeenAt.getTime() > SESSION_IDLE_TIMEOUT_MS ||
       session.endedAt || session.revokedAt) {
     if (!session.endedAt) await prisma.session.updateMany({ where: { id: session.id }, data: { endedAt: now } }).catch(() => {});
     return null;
