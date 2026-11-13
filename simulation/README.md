@@ -267,6 +267,19 @@ record elsewhere in this document describes a historical milestone only.
 **This does not verify live RDS CDC, a source snapshot or production
 application integration.**
 
+### Next local milestone: ten-feed XID coverage (pending rerun)
+
+The **106/106 Docker PASS at code commit `5f56f653`** below is the
+last operator-verified runtime baseline. Later commits expand the
+**disposable-only** `ingest_stage` fixture from two to all ten canonical
+feed names; the local reader derives the exact allowlist from
+`FEED_TABLES` and the three-transaction integration test now checks
+one multi-feed XID with ten markers and an atomic checkpoint.
+One new safety test asserts that the fixture and reader share the exact
+allowlist. The revised suite is **107 tests** and **has not yet been run
+in Docker**. No RDS source read, live binlog reader activation or
+application-dashboard cutover is implied.
+
 ## Test and verification record
 
 | Gate | Latest status (13 November 2026) |
