@@ -249,6 +249,45 @@ opaque event metadata, not business records or dashboard materializations.
 All new tables are in disposable Docker MySQL; no AWS DDL, data,
 permissions, cost settings or application integrations were changed.
 
+## Separate gated TypeScript MySQL view reader: prototype only
+
+Added `src/services/ingestStageCdcMysqlReader.ts` as a
+**default-disabled, not-yet-connected, application-native read
+service** for `ingest_stage.v_*` reporting views. It deliberately
+does **not** invoke `src/services/syncService.ts`, mutate source
+tables, bulk-copy reports into PostgreSQL or publish dashboard
+versions. It has no production API route and cannot authenticate
+end users on its own.
+
+Key guards: explicit feature/access/snapshot gates, separately
+server-authorized employer scopes, one of ten canonical feeds,
+parameterized `WHERE employer_ref = ?`, known report-format
+fields only, required-column metadata preflight, denied admin
+DB users (including `fixeradmin`), RDS hostname check, PEM TLS
+with `rejectUnauthorized: true` and `verifyIdentity: true`,
+read-only consistent MySQL snapshot transactions, per-query
+timeouts, 2,000-row maximum and fail-closed partial results,
+rollback and connection close. The allowed employer set MUST
+come from trusted session/tenant authorization. String flags
+alone are not evidence of a verified initial snapshot, safe
+replication privilege exposure or a correctly granted SQL account.
+
+Added `tests/ingest-stage-cdc-mysql-reader.test.ts` with ten
+mocked Node tests and `npm run check:cdc-dashboard`.
+**Node tests and `npx tsc --noEmit` have not yet been
+operator-executed.** This addition does not change the previously
+verified **118/118 disposable MySQL Docker PASS** total.
+
+**Before any live use:** independently verify credentials grant
+`SELECT` only on approved canonical views (and required metadata),
+validate the application's tenant-to-employer mapping, decide
+bounded per-employer *aggregated* dashboard contract for feeds
+larger than 2,000 rows, measure DB load, add authorized HTTP
+route and atomically publish a completed cache version before
+notifying SSE clients. Continue to treat `binlog retention
+hours=NULL`, global binlog credential exposure and snapshot
+handoff as production blockers.
+
 ## Operator Docker retest: 118/118 PASS (13 November 2026)
 
 The operator's follow-up disposable MySQL 8.4 Docker output,
