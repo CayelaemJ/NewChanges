@@ -282,7 +282,27 @@ no failures or skips and test container exit code **0**; the host phase
 ran 107 tests with 19 expected environment skips. No RDS source read,
 live binlog reader activation or application-dashboard cutover is implied.
 
-### Docker packaging regression: corrected, full rerun pending (13 November 2026)
+### Docker 110/110 PASS after packaging fix (13 November 2026)
+
+The operator supplied the follow-up Docker Compose test-container output
+after the missing-SQL-file COPY correction. **All 110/110 disposable
+MySQL 8.4 integration and safety tests passed**; the test report is
+`Ran 110 tests`, `OK`, and `test-1 exited with code 0`.
+The local MySQL container was healthy, local CDC preflight passed and
+the formerly failing metadata SQL summary/identity contract tests both
+passed. This confirms the earlier Docker `FileNotFoundError` packaging
+regression is resolved. The transcript begins with running containers;
+it does **not** separately show the exact Git checkout revision.
+No live RDS replication consumer, source migration, or AWS
+configuration change is implied.
+
+The **next live source-to-view identity audit remains pending**.
+Existing production blockers remain RDS `binlog retention hours=NULL`,
+restricted replication-security review, verified initial snapshot and
+dashboard freshness integration. **Do not merge or activate live CDC
+solely because local Docker passed.**
+
+### Historical Docker packaging failure (corrected 13 November 2026)
 
 The operator pulled code commit `07553aec` and ran the complete
 `simulation/ops/ci-docker.sh` flow. The host phase completed
@@ -301,10 +321,10 @@ but omitted these two new metadata audit files. Fixed by adding both
 test to require **all five** metadata SQL files used by host/Docker
 tests. No runtime CDC logic or real AWS settings were changed.
 
-**Verification after fix:** cross-file/static checks **6/6 PASS**.
-**A clean 110/110 Docker rerun is still required**. The last verified
-zero-error Docker run remains **107/107** at earlier code commit
-`faac2fb4`. The operator's subsequent identity-audit output was
+**Fix verification:** cross-file/static checks **6/6 PASS**.
+The initial 110-case run failed as described above; the subsequent
+operator-provided Docker run **passed all 110/110 tests with exit 0**.
+The earlier 107/107 result at `faac2fb4` remains a historical baseline. The operator's subsequent identity-audit output was
 not part of the submitted Docker log; its live RDS result remains
 unknown. The identity audit file itself is read-only and safe for
 a separate operator run.
@@ -417,7 +437,7 @@ timestamp lineage and dashboard data contracts are addressed.
 | Existing repo source/sync inspection | PASS, read-only |
 | Python pure logic/guard tests | PASS, latest host phase 107 tests, 19 environment-dependent skips |
 | Python compile check | To be recorded after final packaging |
-| Disposable MySQL 8.4 integration tests | **PASS, latest operator Docker transcript, 107/107 tests, no skips, exit 0, code commit `faac2fb4`** |
+| Disposable MySQL 8.4 integration tests | **PASS, latest operator Docker transcript, 110/110 tests, no skips, exit 0 (13 Nov 2026)**; previous baseline 107/107 at `faac2fb4` |
 | Binlog INSERT/UPDATE/DELETE on MySQL 8.4 | PASS in local disposable Docker MySQL, NOT on AWS RDS |
 | Live RDS table/schema inventory & PII classification | PARTIAL: operator verified 11 base tables + 10 views, 59 required feed columns; sensitive-row classification still outstanding |
 | Live RDS view timestamp lineage | **SUMMARY REVIEWED / CURSOR NOT TRUSTWORTHY:** 10/10 views present; underlying 10/10 source TEXT fields nullable with no ON UPDATE; no visible trigger maintenance; full expression and write-path semantics not verified |
