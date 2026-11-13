@@ -249,6 +249,39 @@ opaque event metadata, not business records or dashboard materializations.
 All new tables are in disposable Docker MySQL; no AWS DDL, data,
 permissions, cost settings or application integrations were changed.
 
+## Read-only source timestamp lineage execution (13 November 2026)
+
+The operator successfully ran
+`simulation/ops/ingest_stage_timestamp_lineage.sql` against the existing
+RDS MySQL connection using TLS identity verification in WSL. The terminal
+reported `Timestamp-lineage audit completed.` The full source metadata
+output was saved *only* on the operator's workstation at
+`~/.config/rds/ingest-stage-lineage-audit.txt`.
+
+**Important:** successful command execution does **not** prove that
+`source_updated_at` is maintained on every underlying row mutation.
+The output itself has **not** been provided for inspection.
+The full file may include SQL view and trigger definitions with embedded
+constants; do not upload or paste it without reviewing those definitions.
+
+To support a safe next review, an additional read-only MySQL query file
+`simulation/ops/ingest_stage_lineage_summary_readonly.sql` reports
+**only** the ten expected feed names, presence/absence of view
+timestamp tokens, heuristic query-time clock warnings, source timestamp
+column types and ON UPDATE/generation flags, trigger counts and
+watermark/identity index metadata. It suppresses complete view SQL,
+trigger bodies, column default expressions, generated expressions and
+source row values. A new host-safe static test guards this property.
+
+**Next gate:** operator reviews the summary (the warnings are heuristics,
+not a semantic proof), then a human checks source timestamp lineage
+in full if needed. Live CDC activation still remains blocked by
+`binlog retention hours=NULL`, the initial source snapshot, global
+replication permissions, and The Fixer publication/refresh contract.
+At commit `faac2fb4`, **107/107 Docker tests PASS**. The extra
+read-only metadata summary test has **not yet been operator-run**;
+the expected new test count is **108**.
+
 ## Operator-verified effective RDS binlog configuration (13 November 2026)
 
 **The previously unknown retention setting has now been verified from the
