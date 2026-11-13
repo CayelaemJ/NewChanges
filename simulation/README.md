@@ -282,6 +282,25 @@ no failures or skips and test container exit code **0**; the host phase
 ran 107 tests with 19 expected environment skips. No RDS source read,
 live binlog reader activation or application-dashboard cutover is implied.
 
+### Source timestamp lineage audit ran successfully (13 November 2026)
+
+The operator's WSL MySQL CLI reported a successful run of
+`ops/ingest_stage_timestamp_lineage.sql`. The full metadata output is
+stored privately in `~/.config/rds/ingest-stage-lineage-audit.txt`,
+including view/trigger definitions that should be inspected before
+sharing. **Source timestamp correctness is not yet verified** because
+the result data has not been reviewed.
+
+`ops/ingest_stage_lineage_summary_readonly.sql` is a new **read-only,
+privacy-safe summary** query returning only flags and counts for the
+ten canonical feed views, source timestamp columns, trigger-event
+counts and relevant indexes. It intentionally omits complete view
+definitions, trigger bodies, generated SQL, column defaults, raw rows
+and credentials. The token checks for `source_updated_at` and
+query-time clocks are *heuristics*, not proof of update semantics.
+One new host-safe regression test guards the query, so the expected
+suite grows from the verified **107/107** to **108** (not yet rerun).
+
 ### Live MySQL retention audit: NULL confirmed (13 November 2026)
 
 After authenticated CLI access and a successfully completed read-only SQL
@@ -343,6 +362,7 @@ timestamp lineage and dashboard data contracts are addressed.
 | Disposable MySQL 8.4 integration tests | **PASS, latest operator Docker transcript, 107/107 tests, no skips, exit 0, code commit `faac2fb4`** |
 | Binlog INSERT/UPDATE/DELETE on MySQL 8.4 | PASS in local disposable Docker MySQL, NOT on AWS RDS |
 | Live RDS table/schema inventory & PII classification | PARTIAL: operator verified 11 base tables + 10 views, 59 required feed columns; sensitive-row classification still outstanding |
+| Live RDS view timestamp lineage | **READ-ONLY AUDIT EXECUTED**, detailed output kept on operator WSL; correctness not yet established; safe summary pending review |
 | Live RDS CDC parameter/retention inspection | **PASS inspection / BLOCKED activation:** MySQL login succeeded; ROW/FULL active, effective RDS retention=NULL (0 guaranteed hours); no live CDC consumer |
 | AWS RDS source/sink schema deployment | NOT ATTEMPTED, requires approval |
 | Lambda connectivity and trigger test | NOT ATTEMPTED, requires approval |
