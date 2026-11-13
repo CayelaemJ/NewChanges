@@ -249,6 +249,27 @@ opaque event metadata, not business records or dashboard materializations.
 All new tables are in disposable Docker MySQL; no AWS DDL, data,
 permissions, cost settings or application integrations were changed.
 
+## Operator Docker retest: 118/118 PASS (13 November 2026)
+
+The operator's follow-up disposable MySQL 8.4 Docker output,
+including the additional eight feed-generation refresh tests,
+concludes `Ran 118 tests in 0.930s`, `OK`,
+`test-1 exited with code 0`. **118/118 PASS with no reported
+Docker skips/errors/failures.**
+
+The **offline** `ingest_stage_feed_refresh` planner's generation
+logic is now covered by this successful test run, along with the
+original local binlog/XID, replay, tombstone and metadata-only
+notification tests. The output portion supplied does not include
+the initial `git pull` or host-only test transcript, so no exact
+Git commit or separate host-run pass is inferred.
+
+**Production remains blocked** until RDS retention, restricted
+replication permissions, a consistent initial snapshot, a durable
+metadata-only sink and a separately authorized direct MySQL
+dashboard read path are verified. This test run did not
+modify live AWS RDS or production PostgreSQL.
+
 ## Live RDS identity preflight: 10/10 missing physical ID in reporting views
 
 The operator successfully executed
@@ -288,9 +309,8 @@ no-I/O planning/acknowledgement for per-feed notification
 generations, source/snapshot authorization gates, rate-limit
 deferral and anti-regression. Added eight Python unit tests in
 `simulation/tests/test_ingest_stage_feed_refresh.py`.
-The last **operator-verified** Docker run is **110/110 PASS**;
-this new code makes the **expected** test count **118**
-and is **NOT YET independently executed**. No live RDS data,
+The latest **operator-verified** Docker run is now
+**118/118 PASS**, including these eight new tests. No live RDS data,
 configuration, permissions, CDC worker, or production app changed.
 
 ## Verified disposable Docker 110/110 PASS (13 November 2026)
