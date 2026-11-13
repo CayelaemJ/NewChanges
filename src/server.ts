@@ -56,6 +56,7 @@ import { inspectMysqlReportingReadiness } from "./services/directMysqlReportingP
 import { compareHistoricalHeadcount } from "./services/directMysqlParity.js";
 import { discoverDirectMysqlEmployers } from "./services/directMysqlEmployers.js";
 import { createSourceInvalidationHub } from "./services/sourceInvalidationHub.js";
+import { readCdcEmployerVersion } from "./services/sourceCdcVersion.js";
 import { subscribeAdminEvents } from "./services/adminEventStream.js";
 import { ensureSectionDefaults, listSections, updateSection, grantUserSection, revokeUserSection, sectionsForUser } from "./services/sectionService.js";
 import { publicEmailConfig, saveEmailConfig, testEmailConnection, createReportSchedule, listReportSchedules, updateReportSchedule, deleteReportSchedule, sendReportNow, recentReportDeliveries, runDueReports } from "./services/reportScheduler.js";
@@ -1969,6 +1970,37 @@ app.get<{ Params: { employerId: string } }>(
     const cleanup = () => { clearInterval(heartbeat); clearTimeout(expiry); unsubscribe(); };
     reply.raw.once("close", cleanup);
     req.raw.once("aborted", cleanup);
+  },
+);
+
+// Tenant-authorized durable version fallback for missed future CDC SSE events.
+// It never queries or duplicates MySQL business rows. OFF by default.
+app.get<{ Params: { employerId: string } }>(
+  "/api/employers/:employerId/source-changes/version",
+  async (req, reply) => {
+    const user = await requireUser(req, reply);
+    if (!user) return;
+    if (MFA_ENFORCE && !await hasVerifiedMfaSession(req, user.id))
+      return reply.code(403).send({ error: "MFA verification required", code: "MFA_REQUIRED" });
+    if (!canViewEmployer(user, req.params.employerId))
+      return reply.code(403).send({ error: "no access to this employer" });
+    if (process.env.DIRECT_MYSQL_CDC_SSE_ENABLED !== "true" || !directReportingEnabled())
+      return reply.code(503).send({ error: "Source change notifications are disabled" });
+    const sourceId = process.env.DIRECT_MYSQL_CDC_SOURCE_ID;
+    if (!sourceId) return reply.code(503).send({ error: "CDC source is not configured" });
+    const employer = await prisma.employer.findFirst({
+      where: { id: req.params.employerId, sourceDeletedAt: null },
+      select: { id: true },
+    });
+    if (!employer) return reply.code(404).send({ error: "employer not found" });
+    try {
+      const version = await readCdcEmployerVersion(sourceId, req.params.employerId);
+      reply.header("Cache-Control", "private, no-store");
+      return { employerId: req.params.employerId, version, source: "MYSQL_CDC_CONTROL_PLANE" };
+    } catch (error: any) {
+      req.log.warn({ message: error?.message }, "durable CDC version unavailable");
+      return reply.code(503).send({ error: "Source change version unavailable" });
+    }
   },
 );
 
