@@ -110,6 +110,42 @@ class LocalSourceXidIntegration(unittest.TestCase):
                 cur.execute("""SELECT COUNT(*) FROM fixer_ingest_cdc.ingest_change_markers
                     WHERE feed='employees'""")
                 self.assertEqual(cur.fetchone()[0], 3)
+            sink.rollback()
+
+            # A NEW committed source transaction must be picked up on
+            # restart using the original snapshot handoff + the sink's
+            # committed checkpoint, not skipped or replayed twice.
+            with source.cursor() as cur:
+                cur.execute("""INSERT INTO debt_accounts
+                    (_ingest_id,debt_balance,source_updated_at)
+                    VALUES(%s,%s,%s)""",
+                    (888, "12.50", "2025-01-01T10:00:00Z"))
+            source.commit()
+            resumed = run_local_binlog(
+                sink_db=sink, handoff=handoff, hmac_secret=SECRET,
+                consumer_name=CONSUMER, max_commits=1,
+                max_packets=300, max_seconds=20,
+            )
+            self.assertEqual(resumed["commits"], 1)
+            self.assertEqual(resumed["markers"], 1)
+            self.assertNotEqual(
+                resumed["last_checkpoint"], result["last_checkpoint"]
+            )
+            with sink.cursor() as cur:
+                cur.execute("""SELECT feed,COUNT(*) FROM
+                    fixer_ingest_cdc.ingest_change_markers
+                    GROUP BY feed""")
+                self.assertCountEqual(
+                    cur.fetchall(), [("employees", 3), ("debt_accounts", 1)]
+                )
+                cur.execute("""SELECT generation FROM
+                    fixer_ingest_cdc.ingest_feed_notifications
+                    WHERE feed='debt_accounts'""")
+                self.assertEqual(cur.fetchone()[0], 1)
+                cur.execute("""SELECT log_file,log_pos FROM
+                    fixer_ingest_cdc.ingest_checkpoint WHERE consumer_name=%s""",
+                    (CONSUMER,))
+                self.assertEqual(cur.fetchone(), resumed["last_checkpoint"])
         finally:
             source.rollback()
             sink.rollback()
