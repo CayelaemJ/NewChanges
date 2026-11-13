@@ -86,8 +86,9 @@ class LocalSourceXidIntegration(unittest.TestCase):
             with sink.cursor() as cur:
                 cur.execute("""SELECT operation,source_timestamp_state,
                     needs_tombstone FROM fixer_ingest_cdc.ingest_change_markers
-                    WHERE feed='employees' ORDER BY binlog_event_at_utc,
-                    captured_at_utc, event_key""")
+                    WHERE consumer_name=%s AND feed=%s
+                    ORDER BY binlog_event_at_utc,
+                    captured_at_utc, event_key""", (CONSUMER,"employees"))
                 markers = cur.fetchall()
                 # Order within this one transaction is not inferred from
                 # timestamps: the event keys are opaque hashes.
@@ -105,10 +106,12 @@ class LocalSourceXidIntegration(unittest.TestCase):
                 self.assertEqual(cur.fetchone()[0], result["last_checkpoint"][1])
                 cur.execute("""SELECT generation FROM
                     fixer_ingest_cdc.ingest_feed_notifications
-                    WHERE feed='employees'""")
+                    WHERE consumer_name=%s AND feed=%s""",
+                    (CONSUMER,"employees"))
                 self.assertEqual(cur.fetchone()[0], 1)
                 cur.execute("""SELECT COUNT(*) FROM fixer_ingest_cdc.ingest_change_markers
-                    WHERE feed='employees'""")
+                    WHERE consumer_name=%s AND feed=%s""",
+                    (CONSUMER,"employees"))
                 self.assertEqual(cur.fetchone()[0], 3)
             sink.rollback()
 
@@ -134,13 +137,14 @@ class LocalSourceXidIntegration(unittest.TestCase):
             with sink.cursor() as cur:
                 cur.execute("""SELECT feed,COUNT(*) FROM
                     fixer_ingest_cdc.ingest_change_markers
-                    GROUP BY feed""")
+                    WHERE consumer_name=%s GROUP BY feed""", (CONSUMER,))
                 self.assertCountEqual(
                     cur.fetchall(), [("employees", 3), ("debt_accounts", 1)]
                 )
                 cur.execute("""SELECT generation FROM
                     fixer_ingest_cdc.ingest_feed_notifications
-                    WHERE feed='debt_accounts'""")
+                    WHERE consumer_name=%s AND feed=%s""",
+                    (CONSUMER,"debt_accounts"))
                 self.assertEqual(cur.fetchone()[0], 1)
                 cur.execute("""SELECT log_file,log_pos FROM
                     fixer_ingest_cdc.ingest_checkpoint WHERE consumer_name=%s""",
