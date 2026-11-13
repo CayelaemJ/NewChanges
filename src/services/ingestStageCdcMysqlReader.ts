@@ -11,8 +11,9 @@ import { LOAD_ORDER, getFormat } from "./reportFormats.js";
 
 type SourceRow = Record<string, unknown>;
 type MySqlRows = unknown;
+export interface CdcMysqlQueryOptions { sql: string; timeout: number }
 export interface CdcMysqlQueryConnection {
-  query(sql: string, params?: unknown[]): Promise<[MySqlRows, unknown]>;
+  query(sql: string | CdcMysqlQueryOptions, params?: unknown[]): Promise<[MySqlRows, unknown]>;
   end(): Promise<void>;
 }
 export interface CdcMysqlReaderSettings {
@@ -161,20 +162,23 @@ export async function readCdcMysqlView(
 ): Promise<CdcMysqlFeedRead> {
   validateSettings(settings);
   validateRequest(feed, employerRef, scope);
-  const db = await connect(settings);
+  let db: CdcMysqlQueryConnection | null = null;
   let inTransaction = false;
   try {
+    db = await connect(settings);
     await db.query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ");
     await db.query("START TRANSACTION WITH CONSISTENT SNAPSHOT, READ ONLY");
     inTransaction = true;
-    const [metadata] = await db.query(
-      "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?",
-      ["ingest_stage", "v_" + feed],
-    );
+    const [metadata] = await db.query({
+      sql: "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?",
+      timeout: settings.queryTimeoutMs,
+    }, ["ingest_stage", "v_" + feed]);
     const planned = buildCdcMysqlViewQuery(
       feed, employerRef, columnNames(metadata), settings.maxRows,
     );
-    const [results] = await db.query(planned.sql, planned.params);
+    const [results] = await db.query({
+      sql: planned.sql, timeout: settings.queryTimeoutMs,
+    }, planned.params);
     if (!Array.isArray(results) || results.length > settings.maxRows)
       throw new Error("CDC_MYSQL_REPORT_EXCEEDS_BUDGET");
     const records: SourceRow[] = results.map(row => {
@@ -192,9 +196,11 @@ export async function readCdcMysqlView(
     // Never leak DB connection strings, raw rows or SQL errors in responses.
     throw new Error("CDC_MYSQL_VIEW_READ_FAILED");
   } finally {
-    if (inTransaction) {
-      try { await db.query("ROLLBACK"); } catch { /* Connection will be closed. */ }
+    if (db) {
+      if (inTransaction) {
+        try { await db.query("ROLLBACK"); } catch { /* Connection will be closed. */ }
+      }
+      try { await db.end(); } catch { throw new Error("CDC_MYSQL_VIEW_READ_FAILED"); }
     }
-    await db.end();
   }
 }
