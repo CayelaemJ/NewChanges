@@ -171,6 +171,36 @@ No production migration, source table, AWS data or RDS settings were
 modified. The test run still needs independent WSL/Docker verification
 before this gate can be closed.
 
+## Final local integration verification: 106/106 (13 November 2026)
+
+The operator supplied the complete WSL output of three sequential Docker
+test attempts. **Only the final attempt is considered the latest outcome.**
+It pulled code commit `5f56f653` and ran
+`bash simulation/ops/ci-docker.sh`.
+
+- Host phase: **106 tests, OK (19 expected skips)** for cases requiring
+  the disposable MySQL environment or the installed binlog reader.
+- Docker: MySQL 8.4 image and fixture initialization completed, SHA-2
+  authentication and row-binlog preflight checks passed, then
+  **106 tests, OK, zero skips, test container exit code 0**.
+- Verified in the disposable source/sink: real row-binlog
+  INSERT/UPDATE/DELETE events, explicit XID boundaries, atomic marker
+  and checkpoint persistence, two-pass durable checkpoint restart,
+  hard-delete tombstones, same-source-event isolation between consumers,
+  microsecond capture-time fidelity, idempotent replay, rollback on conflict,
+  and rejection of bad snapshot/consumer contexts.
+- This confirms the prior missing `dataclasses.replace` import is
+  fixed and the cross-consumer feed notification isolation regression passes.
+
+**Local Docker CDC integration gate: PASS at code commit `5f56f653`.**
+Later documentation-only commits do not modify the tested runtime.
+**Production AWS CDC gate: NOT PASSED.** The local fixtures model only
+two of the ten source feeds. The populated RDS source has not been
+connected to this worker, and RDS retention, privileges, timestamp lineage,
+verified initial snapshot, production sink and The Fixer dashboard
+publication remain pending. No AWS source mutation or deployment is
+authorized by a passing local test.
+
 ## What already exists
 
 The database contains `ingest_stage` with 11 base tables and 10 views,
