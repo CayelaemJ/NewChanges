@@ -192,3 +192,9 @@ Before wiring a consumer, design a durable checkpoint/notification recovery hand
 ### Cost warning
 
 The current direct previews still establish a MySQL connection per request and historical as-of queries use window functions over observation histories. These require query-plan benchmarking, carefully bounded caching and pooling before they can meet low-cost/live-refresh targets on `db.t4g.micro`. A notification transport does not solve these performance costs.
+
+## CDC phase 1b — pure MySQL event classification (implemented)
+
+`src/services/sourceCdcClassifier.ts` maps the minimal BEFORE/AFTER metadata of canonical ROW-binlog events to `SourceChangeHint` entries. An `INSERT` to an event feed produces the known event month(s) when the reported timestamp is a valid calendar date; a journey may affect both start and completion months. Dimension/stock inserts, all updates/deletes, missing or ambiguous event dates, and cross-tenant row moves conservatively cause employer-wide invalidation. A tenant reassignment invalidates **both** original and new employer. UPDATE and DELETE require the BEFORE metadata: fail closed rather than lose old-employer invalidations.
+
+The classifier does not produce payroll identifiers, debt balances, employee fields or financial values in SSE hints. Unit tests cover old/new employer moves, date boundaries and historical corrections. **This classifier is not yet connected to MySQL binlogs**; a privileged, durable CDC reader must validate ROW event formats, construct the minimal metadata, and connect it to the in-memory transport only after safe offset/replay behavior is designed and tested. No newly committed code changes the source database.
