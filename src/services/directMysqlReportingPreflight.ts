@@ -23,6 +23,7 @@ const REQUIRED: Record<string, readonly string[]> = {
 
 export interface MySqlReportingPreflight {
   ready: boolean;
+  productionCutoverReady: false;
   checkedAt: string;
   database: string;
   checks: Array<{
@@ -92,6 +93,9 @@ export async function inspectMysqlReportingReadiness(
     });
     return {
       ready: checks.every(x => x.compatible),
+      // Schema presence is NOT equivalent to dashboard parity or safe cutover.
+      // A separate integration/cutover gate must be implemented and verified.
+      productionCutoverReady: false,
       checkedAt: new Date().toISOString(),
       database: source.sqlDatabase,
       checks,
