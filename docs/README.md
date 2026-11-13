@@ -12,6 +12,7 @@ The repository README is the short entry point. This directory contains the deep
 | [Architecture](ARCHITECTURE.md) | System boundaries, routes, services, data flow and current frontend model |
 | [Testing](TESTING.md) | Regression checks, CI gates and UI verification |
 | [Deployment](DEPLOYMENT.md) | Local, Railway and container deployment |
+| [MFA operations](MFA_CUTOVER_KEY_AND_ORIGIN_RUNBOOK.md) | All-account MFA behavior, configuration, sessions, recovery and support |
 | [Scheduled reports](SCHEDULED_REPORTS.md) | SMTP, report schedules, delivery and troubleshooting |
 
 ## Product and integration documents
