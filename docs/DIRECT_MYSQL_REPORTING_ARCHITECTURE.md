@@ -94,3 +94,11 @@ After reviewing the source catalog, administrators must explicitly onboard **min
 `Employer.id` is already defined as the **external stable `employer_ref`**, not an internal UUID. The `UserEmployer.employerId` relationship therefore authorizes the same key that the MySQL reporting views filter by. Do not introduce a second mapping table unless the source contract changes.
 
 Both employer-scoped direct-preview routes now check an active `Employer` application record (`sourceDeletedAt: null`) after user/tenant authorization and before accessing MySQL source credentials. Superadmins cannot query an arbitrary undeclared employer reference via these preview routes. Only minimal control-plane employer anchors and user permissions are needed in Railway PostgreSQL, not copies of the underlying workforce or financial records.
+
+## Railway configuration audit — 13 November 2026
+
+The Railway production `NewChanges` service was verified to deploy `CayelaemJ/NewChanges` from `main`. Service-defined variables were `NODE_ENV`, `COOKIE_SECURE`, `DATABASE_URL`, and `STANDBY_MODE`; source-related variables such as `SOURCE_MODE`, `SOURCE_SQL_DIALECT`, `SOURCE_SQL_HOST`, `SOURCE_SQL_DATABASE`, `SOURCE_SQL_USERNAME`, `SOURCE_SQL_PASSWORD`, `SOURCE_SQL_SSL`, and `DIRECT_MYSQL_REPORTING_ENABLED` were not present. Railway-owned variables were present separately. No variable values were read or recorded. Therefore, **live AWS MySQL connectivity from Railway has not been established**.
+
+The preflight reports `ready` for **view-schema compatibility only** and separately returns `productionCutoverReady: false`. Do not interpret a schema-ready response as authorization for `DIRECT_MYSQL_NO_REPLICATION=true`, source removal, or dashboard replacement. A cutover-ready result must require independently validated RDS network/TLS, least-privilege SELECT grants, historical completeness, employer isolation, dashboard metric parity, acceptable query plans, and a reversible operational rollout.
+
+Until those gates are satisfied, keep production on its current `main` deployment, leave the source no-replication flag disabled, and do not introduce MySQL secrets into GitHub or this document.
