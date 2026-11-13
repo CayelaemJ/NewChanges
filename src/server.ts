@@ -52,6 +52,7 @@ import { checkMysqlReadReplica } from "./services/sourceAdapter.js";
 import { readMysqlReportSummary, readMysqlJourneyKpis, readMysqlEventMetrics, directReportingEnabled } from "./services/directMysqlReporting.js";
 import { readDirectDashboardPreview } from "./services/directMysqlDashboardPreview.js";
 import { readDirectAsOfPreview } from "./services/directMysqlAsOfPreview.js";
+import { inspectMysqlReportingReadiness } from "./services/directMysqlReportingPreflight.js";
 import { subscribeAdminEvents } from "./services/adminEventStream.js";
 import { ensureSectionDefaults, listSections, updateSection, grantUserSection, revokeUserSection, sectionsForUser } from "./services/sectionService.js";
 import { publicEmailConfig, saveEmailConfig, testEmailConnection, createReportSchedule, listReportSchedules, updateReportSchedule, deleteReportSchedule, sendReportNow, recentReportDeliveries, runDueReports } from "./services/reportScheduler.js";
@@ -1838,6 +1839,22 @@ app.get<{ Params: { employerId: string }; Querystring: { asOfDate?: string } }>(
     }
   },
 );
+
+// Admin/MFA-only, schema-metadata preflight for canonical AWS reporting views.
+// This does not execute business-row scans or modify either database.
+app.get("/api/admin/integration/direct-reporting/preflight", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  if (!directReportingEnabled())
+    return reply.code(503).send({ error: "Direct MySQL reporting is not enabled" });
+  try {
+    const result = await inspectMysqlReportingReadiness(await getSyncConfig());
+    reply.header("Cache-Control", "no-store");
+    return result;
+  } catch (error: any) {
+    req.log.warn({ message: error?.message }, "direct MySQL preflight failed");
+    return reply.code(503).send({ error: "Reporting source preflight unavailable" });
+  }
+});
 
 // ── Enterprise operations and analytics placement ──
 app.get("/api/admin/enterprise/overview", async (req, reply) => {
