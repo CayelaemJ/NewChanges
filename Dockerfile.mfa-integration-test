@@ -13,6 +13,8 @@ COPY public ./public
 COPY tests ./tests
 COPY scripts ./scripts
 COPY tsconfig.json ./
+RUN test -s tests/security/admin-mfa-route-scope.test.ts \
+    && test -s tests/security/admin-totp.test.ts
 RUN npx prisma generate && npx tsc --noEmit
 USER node
 ENV CI=true
