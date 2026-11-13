@@ -249,6 +249,62 @@ opaque event metadata, not business records or dashboard materializations.
 All new tables are in disposable Docker MySQL; no AWS DDL, data,
 permissions, cost settings or application integrations were changed.
 
+## Live AWS RDS read-only configuration verification (13 November 2026)
+
+A read-only inspection of the **existing** RDS instance
+`fixer-synthetic-mysql` in `eu-north-1` completed through the connected
+AWS account. Verified AWS API responses:
+
+| AWS property | Observed value |
+|---|---|
+| Status / engine | available / MySQL 8.4.11 |
+| Instance class / volume | db.t4g.micro / 20 GiB gp3 |
+| Encryption | enabled |
+| Automated backup retention | 1 day |
+| Recent automated snapshots | available, November 11, 12 and 13 (UTC) |
+| Availability zones | single AZ, Multi-AZ disabled |
+| Deletion protection | enabled |
+| RDS network accessibility | publicly accessible |
+| Port 3306 inbound rule | exactly `41.160.169.207/32` in security group `sg-0c1fbf1d96ec8ac18` |
+| MySQL parameter group | `default.mysql8.4`, in-sync |
+| AWS binlog expiry *engine* parameter | `binlog_expire_logs_seconds=2592000` (30 days; engine-default, not proof of RDS effective retention) |
+| GTID mode parameter | `OFF_PERMISSIVE` (system) |
+| CloudWatch FreeStorageSpace | minimum 19,328,651,264 bytes across 37 hourly data points, November 12–13 UTC |
+
+**Critical distinction:** the engine parameter
+`binlog_expire_logs_seconds` does **NOT** prove RDS's effective CDC
+retention. AWS documents that the RDS-specific
+`mysql.rds_show_configuration` result for `binlog retention hours`
+governs retention, and that `NULL` means **zero-hour retention**
+for RDS MySQL. The currently effective value has **not** been retrieved
+from the MySQL session, so the recovery horizon remains **UNKNOWN and
+deployment-blocking**. The 1-day automated backup retention does not
+establish an external CDC binlog-retention promise.
+
+To obtain actual evidence, run the new
+`simulation/ops/ingest_stage_rds_retention_readonly.sql` **manually**
+on the existing DBeaver RDS connection. It invokes only
+`mysql.rds_show_configuration` (read-only), `SHOW GLOBAL VARIABLES`
+and `SHOW BINARY LOGS`; no source content or changes. Separately run
+`simulation/ops/ingest_stage_timestamp_lineage.sql` to confirm how the
+ten canonical view timestamps are computed. Do **NOT** run
+`mysql.rds_set_configuration`, grant replication privileges or
+activate a worker until security, retention and snapshot gates clear.
+
+The publicly accessible RDS endpoint does **not** have an open
+`0.0.0.0/0` ingress rule on 3306. Nevertheless, exposing a production
+database through a public endpoint with a single source IP allowlist
+requires its own network and account-access review; this does not prove
+that binlog replication will avoid unrelated sensitive schemas.
+
+**Audit scope and changes:** Three RDS read-only metadata APIs
+(DescribeDBInstances, DescribeDBSnapshots, DescribeDBParameters), one
+EC2 DescribeSecurityGroups and one CloudWatch GetMetricStatistics call
+completed successfully. No AWS instance settings, storage, backups,
+permissions, network rules or MySQL source records were altered. These
+findings supplement, but do not replace, the **107/107 local Docker
+integration PASS**.
+
 ## What already exists
 
 The database contains `ingest_stage` with 11 base tables and 10 views,
