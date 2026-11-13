@@ -11,7 +11,7 @@ from unittest.mock import patch
 from runtime.common import connect
 from runtime.ingest_stage_contract import SnapshotHandoff, make_change_marker
 from runtime.ingest_stage_txn import LogCoordinate, TransactionPlanner
-from runtime.ingest_stage_sink import bootstrap_local_sink, persist_local_plan
+from runtime.ingest_stage_sink import bootstrap_local_sink, load_local_checkpoint, persist_local_plan
 
 FILE = "mysql-bin-changelog.000055"
 SECRET = b"test-only-hmac-value-with-more-than-32-bytes"
@@ -68,6 +68,43 @@ class LocalIngestSink(unittest.TestCase):
     def tearDown(self):
         self.db.rollback()
         self.db.close()
+
+    def test_resume_checkpoint_requires_manifest_and_monotonicity(self):
+        consumer = "test-ingest-recovery"
+        original = proof()
+        self.assertEqual(
+            bootstrap_local_sink(self.db, original, consumer_name=consumer),
+            "BOOTSTRAPPED",
+        )
+        _, pending = plan(500, 600, marker_pos=561)
+        self.assertEqual(
+            persist_local_plan(self.db, pending, consumer_name=consumer),
+            "PERSISTED",
+        )
+        recovered = load_local_checkpoint(
+            self.db, original, consumer_name=consumer,
+        )
+        self.assertEqual(recovered, LogCoordinate(FILE, 600))
+        # An old snapshot digest is not interchangeable with a new source.
+        from dataclasses import replace
+        with self.assertRaises(ValueError):
+            load_local_checkpoint(
+                self.db,
+                replace(original, snapshot_manifest_sha256="b" * 64),
+                consumer_name=consumer,
+            )
+        with self.assertRaises(ValueError):
+            load_local_checkpoint(
+                self.db, original, consumer_name="test-ingest-missing-recovery"
+            )
+        # Corrupted/backward sink positions must fail instead of replaying
+        # from a pre-snapshot coordinate. This only mutates local test data.
+        with self.db.cursor() as cur:
+            cur.execute("""UPDATE fixer_ingest_cdc.ingest_checkpoint
+                SET log_pos=%s WHERE consumer_name=%s""", (400, consumer))
+        self.db.commit()
+        with self.assertRaises(ValueError):
+            load_local_checkpoint(self.db, original, consumer_name=consumer)
 
     def test_atomic_checkpoint_marker_and_replay(self):
         consumer = "test-ingest-atomic"
