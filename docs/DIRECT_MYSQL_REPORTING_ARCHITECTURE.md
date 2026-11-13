@@ -63,3 +63,7 @@ It currently checks the seven views that power event and as-of previews:
 A `ready: true` response is **necessary but insufficient** for rollout: it cannot verify that a view contains all historical observations, handles late-arriving corrections correctly, implements source tenant scoping, or matches published financial scores. For those guarantees, compare representative employer-period outputs with the current PostgreSQL reports under a controlled read-only experiment, and inspect RDS query plans and CPU usage.
 
 **Do not enable the no-replication cutover solely because metadata preflight passes.**
+
+## Dashboard parity correction — journey temporal semantics
+
+The existing dashboard uses `completed_at` for *completed-in-period* journey flows, but `started_at` for *started-in-period* activity. These cohorts are different: an October-started journey completed in November counts in October starts and November completions. The direct MySQL dashboard preview now returns both `completedOfStarted` (a start-cohort metric) and `completedInPeriod` (a completion-date flow metric), with corresponding monthly savings. Do not compare `completedOfStarted` to the existing completion-date KPI. This change only corrects the preview and does not claim full score parity, source tombstone handling, or accurate historical point-in-time status.
