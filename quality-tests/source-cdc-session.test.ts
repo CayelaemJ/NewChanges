@@ -1,9 +1,9 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 const fake = vi.hoisted(() => ({
-  lease: vi.fn(), renew: vi.fn(), ingest: vi.fn(),
+  lease: vi.fn(), renew: vi.fn(), release: vi.fn(), ingest: vi.fn(),
 }));
 vi.mock("../src/services/sourceCdcCheckpoint.js", () => ({
-  acquireCdcLease: fake.lease, renewCdcLease: fake.renew,
+  acquireCdcLease: fake.lease, renewCdcLease: fake.renew, releaseCdcLease: fake.release,
 }));
 vi.mock("../src/services/sourceCdcTransactionAdapter.js", () => ({
   ingestCommittedSourceTransaction: fake.ingest,
@@ -30,6 +30,7 @@ describe("sequential fenced MySQL CDC capture orchestration", () => {
     vi.stubEnv("DIRECT_MYSQL_REPORTING_ENABLED", "true");
     fake.lease.mockResolvedValue({ ...initial });
     fake.renew.mockResolvedValue(true);
+    fake.release.mockResolvedValue(true);
     fake.ingest.mockImplementation(async (_lease: any, tx: any) =>
       ({ nextCursor: tx.toCursor, invalidations: 1 }));
   });
@@ -47,6 +48,7 @@ describe("sequential fenced MySQL CDC capture orchestration", () => {
     expect(stream.open).toHaveBeenCalledWith("binlog.000002:200", expect.any(AbortSignal));
     expect(fake.ingest.mock.calls[0][0].cursor).toBe("binlog.000002:200");
     expect(fake.ingest.mock.calls[1][0].cursor).toBe("binlog.000002:250");
+    expect(fake.release).toHaveBeenCalledWith(expect.objectContaining({ generation: 3 }));
   });
   it("does not read the binlog if another owner has the active lease", async () => {
     fake.lease.mockResolvedValue(null);
