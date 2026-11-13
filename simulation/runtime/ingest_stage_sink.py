@@ -80,6 +80,40 @@ def bootstrap_local_sink(db, handoff, *, consumer_name=CONSUMER):
         raise
 
 
+
+def load_local_checkpoint(db, handoff, *, consumer_name=CONSUMER):
+    """Read the last atomically committed position without a new bootstrap.
+
+    The snapshot manifest must match the original immutable handoff. This is
+    a LOCAL PILOT proof only; the caller must independently establish real
+    snapshot consistency and binlog availability before any future cutover.
+    A fresh read transaction prevents a stale REPEATABLE READ cursor.
+    """
+    _require_local()
+    name = _consumer(consumer_name)
+    validate_snapshot_handoff(handoff)
+    db.rollback()
+    try:
+        _, rows = _execute(db, """SELECT log_file,log_pos,
+            snapshot_manifest_sha256,last_plan_digest
+            FROM fixer_ingest_cdc.ingest_checkpoint
+            WHERE consumer_name=%s""", (name,))
+    finally:
+        db.rollback()
+    if len(rows) != 1:
+        raise ValueError("Missing durable CDC checkpoint; snapshot bootstrap required")
+    file, position, manifest, digest = rows[0]
+    if manifest != handoff.snapshot_manifest_sha256:
+        raise ValueError("Stored checkpoint belongs to a different source snapshot")
+    if not isinstance(digest, str) or _DIGEST.fullmatch(digest) is None:
+        raise ValueError("Stored checkpoint digest is malformed")
+    recovered = LogCoordinate(file, position)
+    original = LogCoordinate(handoff.binlog_file, handoff.binlog_position)
+    if _cmp(recovered, original) < 0:
+        raise ValueError("Stored checkpoint predates verified source snapshot")
+    return recovered
+
+
 def persist_local_plan(db, plan, *, consumer_name=CONSUMER):
     """Atomically write all metadata markers and the checkpoint, or neither.
 
