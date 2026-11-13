@@ -106,3 +106,90 @@ export async function readMysqlReportSummary(
     try { await client.query("ROLLBACK"); } finally { await client.end(); }
   }
 }
+
+/**
+ * A source-side activity KPI: journeys started inside a half-open UTC date
+ * window. This intentionally does not claim to reproduce the full dashboard
+ * score, which needs a separate parity-tested historical model.
+ */
+export interface DirectJourneyKpiRequest {
+  employerRef: string;
+  startDate: string; // inclusive YYYY-MM-DD
+  endDate: string;   // exclusive YYYY-MM-DD
+}
+export interface DirectJourneyKpis {
+  source: "MYSQL";
+  employerRef: string;
+  startDate: string;
+  endDate: string;
+  startedJourneys: string;
+  completedOfStartedJourneys: string;
+  monthlySavingsOfCompletedStartedJourneysRand: string;
+  replicatedToPostgres: false;
+}
+function validDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(value + "T00:00:00.000Z");
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+export async function readMysqlJourneyKpis(
+  config: IntegrationSourceConfig,
+  request: DirectJourneyKpiRequest,
+): Promise<DirectJourneyKpis> {
+  if (!directReportingEnabled()) throw new Error("Direct MySQL reporting is disabled");
+  const employerRef = String(request.employerRef ?? "").trim();
+  if (!employerRef || employerRef.length > 128) throw new Error("Employer scope is required");
+  const { startDate, endDate } = request;
+  if (!validDate(startDate) || !validDate(endDate) || startDate >= endDate) {
+    throw new Error("Invalid report date interval");
+  }
+  // Hard maximum history window to bound load on the source database.
+  if ((Date.parse(endDate) - Date.parse(startDate)) > 366 * 86_400_000) {
+    throw new Error("Reporting interval exceeds one year");
+  }
+  const source = effectiveSourceConfig(config);
+  if (String(source.sourceMode ?? "").toUpperCase() !== "SQL" ||
+      String(source.sqlDialect ?? "").toUpperCase() !== "MYSQL" ||
+      source.sqlSsl !== true || source.sqlTrustServerCertificate === true) {
+    throw new Error("A verified-TLS MySQL source is required");
+  }
+  if (!source.sqlHost || !source.sqlDatabase || !source.sqlUsername || !source.sqlPassword ||
+      !/^[A-Za-z0-9.-]{1,253}$/.test(source.sqlHost)) {
+    throw new Error("Missing or invalid MySQL connection configuration");
+  }
+  const port = Number(source.sqlPort ?? 3306);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error("Invalid MySQL port");
+  const view = safeIdentifier(source.sqlDatabase, "database") + "." +
+    safeIdentifier((source.sqlViewPrefix ?? "v_") + "journeys", "reporting view");
+  const mysql = await import("mysql2/promise");
+  const client = await mysql.createConnection({
+    host: source.sqlHost, port, database: source.sqlDatabase,
+    user: source.sqlUsername, password: source.sqlPassword,
+    ssl: { rejectUnauthorized: true }, connectTimeout: MAX_QUERY_MS,
+    timezone: "Z", supportBigNumbers: true, bigNumberStrings: true,
+    multipleStatements: false,
+  });
+  try {
+    await client.query("SET TRANSACTION READ ONLY");
+    await client.query("START TRANSACTION");
+    const [rows] = await client.query({
+      sql: `SELECT COUNT(*) AS startedJourneys,
+        COALESCE(SUM(CASE WHEN status = 'COMPLETED' THEN 1 ELSE 0 END),0) AS completedOfStartedJourneys,
+        COALESCE(SUM(CASE WHEN status = 'COMPLETED' THEN monthly_saving_rand ELSE 0 END),0) AS savingsRand
+        FROM ${view}
+        WHERE employer_ref = ? AND started_at >= ? AND started_at < ?`,
+      timeout: MAX_QUERY_MS,
+    }, [employerRef, startDate, endDate]);
+    const item = (rows as Record<string, unknown>[])[0];
+    if (!item) throw new Error("Source returned no journey aggregate");
+    return {
+      source: "MYSQL", employerRef, startDate, endDate,
+      startedJourneys: String(item.startedJourneys ?? "0"),
+      completedOfStartedJourneys: String(item.completedOfStartedJourneys ?? "0"),
+      monthlySavingsOfCompletedStartedJourneysRand: String(item.savingsRand ?? "0"),
+      replicatedToPostgres: false,
+    };
+  } finally {
+    try { await client.query("ROLLBACK"); } finally { await client.end(); }
+  }
+}
