@@ -55,6 +55,7 @@ import { readDirectAsOfPreview } from "./services/directMysqlAsOfPreview.js";
 import { inspectMysqlReportingReadiness } from "./services/directMysqlReportingPreflight.js";
 import { compareHistoricalHeadcount } from "./services/directMysqlParity.js";
 import { discoverDirectMysqlEmployers } from "./services/directMysqlEmployers.js";
+import { createSourceInvalidationHub } from "./services/sourceInvalidationHub.js";
 import { subscribeAdminEvents } from "./services/adminEventStream.js";
 import { ensureSectionDefaults, listSections, updateSection, grantUserSection, revokeUserSection, sectionsForUser } from "./services/sectionService.js";
 import { publicEmailConfig, saveEmailConfig, testEmailConnection, createReportSchedule, listReportSchedules, updateReportSchedule, deleteReportSchedule, sendReportNow, recentReportDeliveries, runDueReports } from "./services/reportScheduler.js";
@@ -1925,6 +1926,51 @@ app.get<{ Querystring: { after?: string } }>("/api/admin/integration/direct-repo
     return reply.code(503).send({ error: "Employer discovery unavailable" });
   }
 });
+
+// Transport-only tenant SSE endpoint for future MySQL ROW-binlog invalidation.
+// No source producer is enabled by this route: CDC is NOT yet implemented.
+const directSourceNotifications = createSourceInvalidationHub();
+app.get<{ Params: { employerId: string } }>(
+  "/api/employers/:employerId/source-changes/events",
+  async (req, reply) => {
+    const user = await requireUser(req, reply);
+    if (!user) return;
+    if (MFA_ENFORCE && !await hasVerifiedMfaSession(req, user.id))
+      return reply.code(403).send({ error: "MFA verification required", code: "MFA_REQUIRED" });
+    if (!canViewEmployer(user, req.params.employerId))
+      return reply.code(403).send({ error: "no access to this employer" });
+    if (process.env.DIRECT_MYSQL_CDC_SSE_ENABLED !== "true" || !directReportingEnabled())
+      return reply.code(503).send({ error: "Source change notifications are disabled" });
+    const employer = await prisma.employer.findFirst({
+      where: { id: req.params.employerId, sourceDeletedAt: null },
+      select: { id: true },
+    });
+    if (!employer) return reply.code(404).send({ error: "employer not found" });
+    let ready = false;
+    const unsubscribe = directSourceNotifications.subscribe(req.params.employerId, notice => {
+      if (!ready || reply.raw.destroyed) return;
+      if (!reply.raw.write(`event: source-change\\ndata: ${JSON.stringify(notice)}\\n\\n`)) reply.raw.end();
+    });
+    if (!unsubscribe) return reply.code(503).send({ error: "Change notification capacity exhausted" });
+    reply.hijack();
+    reply.raw.writeHead(200, {
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "private, no-store, no-transform",
+      "X-Accel-Buffering": "no",
+      "Connection": "keep-alive",
+    });
+    ready = true;
+    reply.raw.write("retry: 3000\\n\\n: connected\\n\\n");
+    const heartbeat = setInterval(() => {
+      if (!reply.raw.write(": heartbeat\\n\\n")) reply.raw.end();
+    }, 15_000);
+    // Force fresh user/tenant authorization on reconnection after 60 seconds.
+    const expiry = setTimeout(() => reply.raw.end(), 60_000);
+    const cleanup = () => { clearInterval(heartbeat); clearTimeout(expiry); unsubscribe(); };
+    reply.raw.once("close", cleanup);
+    req.raw.once("aborted", cleanup);
+  },
+);
 
 // ── Enterprise operations and analytics placement ──
 app.get("/api/admin/enterprise/overview", async (req, reply) => {
