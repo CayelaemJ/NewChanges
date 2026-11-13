@@ -267,7 +267,7 @@ record elsewhere in this document describes a historical milestone only.
 **This does not verify live RDS CDC, a source snapshot or production
 application integration.**
 
-### Next local milestone: ten-feed XID coverage (pending rerun)
+### Latest verified local milestone: ten-feed XID coverage (107/107)
 
 The **106/106 Docker PASS at code commit `5f56f653`** below is the
 last operator-verified runtime baseline. Later commits expand the
@@ -276,9 +276,11 @@ feed names; the local reader derives the exact allowlist from
 `FEED_TABLES` and the three-transaction integration test now checks
 one multi-feed XID with ten markers and an atomic checkpoint.
 One new safety test asserts that the fixture and reader share the exact
-allowlist. The revised suite is **107 tests** and **has not yet been run
-in Docker**. No RDS source read, live binlog reader activation or
-application-dashboard cutover is implied.
+allowlist. The operator's **13 November 2026** WSL transcript, after pulling
+code commit `faac2fb4`, confirms **107/107 Docker tests passed**, with
+no failures or skips and test container exit code **0**; the host phase
+ran 107 tests with 19 expected environment skips. No RDS source read,
+live binlog reader activation or application-dashboard cutover is implied.
 
 ## Test and verification record
 
@@ -287,9 +289,9 @@ application-dashboard cutover is implied.
 | AWS RDS metadata inspection | PASS, read-only |
 | SG not world-open on 3306 | PASS, one non-global IPv4 CIDR rule |
 | Existing repo source/sync inspection | PASS, read-only |
-| Python pure logic/guard tests | PASS, latest host phase 106 tests, 19 environment-dependent skips |
+| Python pure logic/guard tests | PASS, latest host phase 107 tests, 19 environment-dependent skips |
 | Python compile check | To be recorded after final packaging |
-| Disposable MySQL 8.4 integration tests | **PASS, final operator Docker transcript, 106/106 tests, no skips, exit 0, code commit `5f56f653`** |
+| Disposable MySQL 8.4 integration tests | **PASS, latest operator Docker transcript, 107/107 tests, no skips, exit 0, code commit `faac2fb4`** |
 | Binlog INSERT/UPDATE/DELETE on MySQL 8.4 | PASS in local disposable Docker MySQL, NOT on AWS RDS |
 | Live RDS table/schema inventory & PII classification | PARTIAL: operator verified 11 base tables + 10 views, 59 required feed columns; sensitive-row classification still outstanding |
 | Live RDS CDC parameter/retention inspection | PARTIAL: operator confirmed ROW/FULL binlog and NULL/unconfigured retention; no live CDC consumer |
