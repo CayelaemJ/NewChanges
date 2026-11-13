@@ -57,7 +57,7 @@ Windowed account/policy queries can be expensive without appropriately indexed s
 
 The administration endpoint `GET /api/admin/integration/direct-reporting/preflight` requires a valid admin session (and MFA when enforced) plus the direct-reporting feature flag. It uses parameterized `information_schema.TABLES` and `information_schema.COLUMNS` queries; it **never reads business rows**.
 
-It currently checks the seven views that power event and as-of previews:
+It checks all ten canonical views; the seven event/as-of metric sources are:
 `v_journeys`, `v_ratings`, `v_referrals`, `v_salary_advances`, `v_workforce_snapshots`, `v_debt_accounts` and `v_policies`. A missing view, a base table substituted for an approved view, or a missing required column yields `ready: false` with specific deficiencies. The check does not expose passwords or connection URLs.
 
 A `ready: true` response is **necessary but insufficient** for rollout: it cannot verify that a view contains all historical observations, handles late-arriving corrections correctly, implements source tenant scoping, or matches published financial scores. For those guarantees, compare representative employer-period outputs with the current PostgreSQL reports under a controlled read-only experiment, and inspect RDS query plans and CPU usage.
@@ -83,7 +83,7 @@ The route requires an authenticated admin (including existing admin MFA checks),
 
 An **empty** Railway PostgreSQL does not automatically contain the `Employer`, `UserEmployer` or role/permission records used by the existing `canViewEmployer` authorization checks. MySQL direct reporting alone cannot solve that authentication gap.
 
-The new admin-only endpoint `GET /api/admin/integration/direct-reporting/employers?after=EMP-000` reads up to 100 records from the approved `v_employers` source view using a parameterized keyset cursor. It returns only `employerRef` and `name`, not employees, policies, debts or source credentials. The response is never persisted by this endpoint. The preflight now checks eight views, including `v_employers`.
+The new admin-only endpoint `GET /api/admin/integration/direct-reporting/employers?after=EMP-000` reads up to 100 records from the approved `v_employers` source view using a parameterized keyset cursor. It returns only `employerRef` and `name`, not employees, policies, debts or source credentials. The response is never persisted by this endpoint. The preflight now checks all ten canonical views, including `v_employers`, `v_employees`, and `v_platform_users`.
 
 After reviewing the source catalog, administrators must explicitly onboard **minimal identity anchors** (employer ID/name, authorized user links and tenant permissions) into PostgreSQL. Such small application-owned metadata is necessary for access control and is not equivalent to copying the reporting dataset. Do not auto-provision every employer or grant blanket access on a new environment.
 
@@ -122,3 +122,57 @@ Read-only AWS API checks of `fixer-synthetic-mysql` in `eu-north-1` confirmed:
 6. Keep the no-replication flag and full customer dashboard cutover OFF; do not merge this draft PR until all required acceptance checks pass. Consider whether 1-day RDS backup retention meets the agreed recovery-point objective before production approval.
 
 No AWS resources, security groups, Railway variables or live databases were modified by the AWS read-only inspection.
+
+## Non-negotiable product architecture — canonical MySQL + low-cost realtime CDC (2026-11-13)
+
+### Single source of reporting truth
+
+AWS RDS MySQL stores and serves **all ten canonical business feeds**:
+`employers`, `workforce_snapshots`, `employees`, `platform_users`, `journeys`, `debt_accounts`, `policies`, `ratings`, `referrals`, and `salary_advances`.
+The MySQL reporting views use the canonical `v_<feed>` naming convention. The schema-only readiness preflight covers **all ten** feeds; contract checks do not prove live completeness or correctness.
+
+PostgreSQL on Railway holds **only application-owned control-plane metadata** (accounts, sessions, roles, MFA, employer authorization links, configuration, audits, and optionally a tiny durable CDC checkpoint/notification lease). It is **not** a backup analytical fact warehouse, and no copied canonical source rows or refreshed report snapshots should be used for the final direct-reporting dashboard. Old PostgreSQL reporting routes remain only as a guarded migration fallback until parity approval.
+
+### Intended CDC path
+
+```text
+AWS RDS MySQL 8.4 canonical tables (source of truth)
+      ├─ keyed, bounded MySQL queries / optionally MySQL-local aggregate tables
+      └─ ROW binlog (CDC)
+             │  one narrowly privileged, checkpointed consumer
+             ▼
+      tenant/feed/key event classifier + dedup + short batching
+             │  affected employers / periods / metrics only
+             ▼
+      app in-memory TTL cache invalidation or targeted refresh
+             │
+             ▼
+      existing dashboard SSE publication/version notification
+             │
+             ▼
+      browser refetches only the affected employer/period data
+```
+
+**Do not interpret periodic `MAX(source_updated_at)` checks as true CDC**. Those are only a degraded/backup polling mechanism, and can miss deletes and corrections. True CDC consumes committed MySQL row-binlog events from a durable position (GTID or file/position) with reconnects, bounded retries, schema evolution handling, and lag reporting. AWS RDS MySQL requires verifying the binlog format, retention, permissions, and source networking; no connector is deployed yet. The dashboard must not present polling as real-time CDC.
+
+For low-volume changes, the application should **not** re-read entire canonical tables and must not recompute every employer or historical period after one row changes. Change events contain only enough identifying information to invalidate the affected metric slices; re-aggregate at query time using bounded, indexed employer/date predicates. Deduplicate bursts and coalesce by employer + feed + affected period. In a future high-volume stage, source-owned incremental aggregate tables within MySQL may be considered **only after** metric-parity and SQL-change review, not silently created now.
+
+### Cost and speed limits
+
+- Target **approximately 1–5 seconds** from a committed source change to a visible dashboard update under normal load, subject to measured RDS CPU/network latency. This is an engineering target, **not a current capability or guarantee**.
+- Target a small number of MySQL connections: one CDC consumer (with leader/lease fencing if multiple service replicas), a bounded application read pool, and reuse the existing SSE mechanism. Do not deploy a separate Kafka, Redis cluster, Debezium Connect cluster, or managed streaming service by default; reconsider only if volume demands it.
+- Prefer a sub-second in-memory invalidation path with a short (e.g. 1–5 second) debounce/coalescing window; enforce tenant isolation on every refetch. Do not transmit financial/employee row payloads through SSE; send opaque version/tenant-scope indicators only.
+- Keep dashboard queries indexed and bounded by employer and time. Avoid unbounded `COUNT(*)` or expensive historical `ROW_NUMBER()` scans on every browser refresh of the small RDS instance; profile and fix query plans **before** production. Existing preview queries still need this optimisation.
+- Store **only** a minimal CDC consumer offset/lease and health state in PostgreSQL if needed. Handle duplicate delivery and restart without silently skipping source changes. A durable offset alone does not replace binlog retention, reconciliation, or backup/restore testing.
+- Require explicit cost ceilings/alerts for RDS CPU and connections, egress, storage, and Railway worker usage. The implementation must measure changes-to-UI latency, consumer lag and missing-event reconciliation. Define a degraded mode that reports staleness rather than pretending updates are instantaneous.
+
+### Release acceptance: not yet implemented
+
+1. Confirm secure, least-privileged Railway-to-RDS route and verified TLS; inspect RDS binlog configuration, binlog retention, replication-reader privileges, and continuity after disconnect.
+2. Implement and test one durable consumer capable of processing **INSERT/UPDATE/DELETE**, handling schema changes and preserving tenant identity. No full MySQL-to-Postgres fact replication.
+3. Demonstrate targeted invalidation for all ten canonical feeds, including updates that affect more than one historical period and source tombstones, and test replays/idempotency.
+4. Verify that MySQL-only dashboard queries reproduce complete historical stock, flow, site/income cohort, and score calculations; compare at multiple dates and employers.
+5. Verify actual source-to-browser latency and stable RDS costs under representative changes/bursts. Define threshold-driven rollback and a staleness indicator.
+6. Only then consider enabling live read paths and disabling old PostgreSQL reporting sync; preserve a reversible switch while migrating.
+
+**Current status:** schema/preview/parity scaffolding exists; a true binlog CDC consumer, SSE invalidation wiring, broad metric parity, live Railway-to-RDS connectivity, and production cutover **do not yet exist**.
