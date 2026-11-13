@@ -89,6 +89,7 @@ describe("sequential fenced MySQL CDC capture orchestration", () => {
       sourceId:"rds-fixer",owner:"worker-a",reader:stream,maxTransactions:1,
     });
     expect(response.committedTransactions).toBe(1);
+    expect(response.status).toBe("STOPPED");
     expect(fake.ingest).toHaveBeenCalledTimes(1);
   });
 });
