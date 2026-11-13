@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { prisma } from './database.js';
 import {decodeTotpSecret,decryptTotpSecret,encryptTotpSecret,findTotpStep,generateTotpSecret,makeTotpQrSvgDataUri,makeTotpUri,requireTotpEncryptionKey,totpIsEnabled} from './adminTotp.js';
-import { verifyPassword } from './authService.js';
+import { SESSION_IDLE_TIMEOUT_MS, verifyPassword } from './authService.js';
 
 const MAX_MFA_AGE = 10 * 60 * 1000;
 const MAX_CHALLENGE_AGE = 5 * 60 * 1000;
@@ -32,9 +32,21 @@ async function mfaSession(req: FastifyRequest, reply: FastifyReply) {
     reply.code(401).send({error:'Signed-in account required'}); return null;
   }
   const session = await prisma.session.findUnique({where:{token:digest(token)},include:{user:true}});
-  if (!session || session.endedAt || session.revokedAt || session.expiresAt <= new Date() ||
+  const now=new Date();
+  if (!session || session.endedAt || session.revokedAt || session.expiresAt <= now ||
       !session.user.active) {
     reply.code(403).send({error:'Account session unavailable'}); return null;
+  }
+  if (now.getTime()-session.lastSeenAt.getTime()>SESSION_IDLE_TIMEOUT_MS) {
+    await prisma.session.updateMany({
+      where:{id:session.id,endedAt:null},data:{endedAt:now},
+    });
+    reply.code(401).send({error:'Session expired after inactivity; sign in again'}); return null;
+  }
+  if (now.getTime()-session.lastSeenAt.getTime()>60_000) {
+    await prisma.session.updateMany({
+      where:{id:session.id,endedAt:null,revokedAt:null},data:{lastSeenAt:now},
+    });
   }
   return session;
 }
