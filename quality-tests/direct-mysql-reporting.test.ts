@@ -8,7 +8,7 @@ const connection = vi.hoisted(() => {
 });
 vi.mock("mysql2/promise", () => ({ createConnection: connection.createConnection }));
 
-import { readMysqlReportSummary, readMysqlJourneyKpis } from "../src/services/directMysqlReporting.js";
+import { readMysqlReportSummary, readMysqlJourneyKpis, readMysqlEventMetrics } from "../src/services/directMysqlReporting.js";
 
 const config = {
   sourceMode: "SQL",
@@ -104,6 +104,39 @@ describe("direct MySQL reporting: no replication", () => {
     await expect(readMysqlJourneyKpis(config, {
       employerRef: "EMP-123", startDate: "2024-01-01", endDate: "2026-01-01",
     })).rejects.toThrow(/exceeds one year/);
+    expect(connection.createConnection).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["ratings", "v_ratings", "created_at", "rated_five_stars"],
+    ["referrals", "v_referrals", "shared_at", "converted_referrals"],
+    ["salary_advances", "v_salary_advances", "advanced_at", "finalised_advances"],
+  ] as const)("reads %s metrics directly from MySQL", async (feed, view, dateColumn, meaning) => {
+    connection.query.mockImplementation(async (arg: any) => {
+      if (typeof arg === "object" && arg.sql?.includes("eventCount"))
+        return [[{ eventCount: "12", secondaryCount: "7", amountRand: feed === "salary_advances" ? "3300.50" : null }], []];
+      return [[], []];
+    });
+    const result = await readMysqlEventMetrics(config, {
+      feed, employerRef: "EMP-123", startDate: "2026-10-01", endDate: "2026-11-01",
+    });
+    expect(result).toMatchObject({
+      source: "MYSQL", feed, eventCount: "12", secondaryCount: "7",
+      secondaryMeaning: meaning, replicatedToPostgres: false,
+    });
+    const queryCall = connection.query.mock.calls.find(([arg]: any[]) =>
+      typeof arg === "object" && arg.sql?.includes("eventCount"));
+    expect(queryCall?.[0].sql).toContain(view);
+    expect(queryCall?.[0].sql).toContain(dateColumn);
+    expect(queryCall?.[1]).toEqual(["EMP-123", "2026-10-01", "2026-11-01"]);
+    expect(connection.end).toHaveBeenCalledOnce();
+  });
+
+  it("refuses unapproved event feeds before connecting", async () => {
+    await expect(readMysqlEventMetrics(config, {
+      feed: "employees" as any, employerRef: "EMP-123",
+      startDate: "2026-10-01", endDate: "2026-11-01",
+    })).rejects.toThrow(/Unknown event feed/);
     expect(connection.createConnection).not.toHaveBeenCalled();
   });
 
