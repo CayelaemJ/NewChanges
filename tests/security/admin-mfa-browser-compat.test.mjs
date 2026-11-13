@@ -51,7 +51,7 @@ test('real enroll and verify button handlers use Safari-compatible options when 
    addEventListener(type,fn){handlers.set(id+':'+type,fn)}});
   return elements.get(id);
  };
- getElementById('grant').value='local-demo-grant';
+ getElementById('mfa-enrollment-password').value='fixture-password';
  const context=createContext({
   document:{getElementById},window:{isSecureContext:true},
   navigator:{credentials:{
@@ -61,7 +61,7 @@ test('real enroll and verify button handlers use Safari-compatible options when 
   PublicKeyCredential:function(){},Uint8Array,atob,btoa,Error,JSON,
   async fetch(url,options){
    calls.push(url);
-   const value=url.endsWith('/status')?{configured:true,enrolled:true,verified:false,isAdministrator:true,canManageRecovery:false}:
+   const value=url.endsWith('/status')?{configured:true,enrolled:false,verified:false,isAdministrator:true,canManageRecovery:false}:
     url.endsWith('/register/options')?{challenge:'AQID',user:{id:'BAUG',name:'Test',displayName:'Test'},excludeCredentials:[]}:
     url.endsWith('/authenticate/options')?{challenge:'BAUG',allowCredentials:[{id:'AQID',type:'public-key'}]}:
     {ok:true};
