@@ -96,16 +96,16 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@playwright/test": "^1.64.1",
+    "@playwright/test": "^1.65.0",
     "@types/luxon": "^3.7.6",
     "@types/mssql": "^12.3.0",
     "@types/pg": "^8.23.1",
-    "@typescript-eslint/parser": "^8.72.0",
-    "eslint": "^10.13.0",
-    "globals": "^17.13.0",
+    "@typescript-eslint/parser": "^8.72.2",
+    "eslint": "^10.14.0",
+    "globals": "^17.14.0",
     "tsx": "^4.23.15",
-    "typescript": "6.0",
-    "vitest": "^5.0.5"
+    "typescript": "7.0",
+    "vitest": "^5.1.0"
   },
   "overrides": {
     "@fastify/busboy": "3.2.3",
