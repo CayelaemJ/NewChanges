@@ -51,11 +51,22 @@ class IngestStageReadOnlyContract(unittest.TestCase):
                 self.assertIn("AS current_utc_datetime", sql)
 
     def test_preflight_sql_is_packaged_in_docker_image(self):
-        # Without this COPY the timestamp alias regression test passes on
-        # the host but crashes with FileNotFoundError inside Docker.
+        # Host-green metadata tests must not fail inside Docker with
+        # FileNotFoundError: Dockerfile.test uses explicit COPY instructions.
         dockerfile = (ROOT / "Dockerfile.test").read_text(encoding="utf-8")
-        self.assertIn("COPY ops/preflight.sql ops/preflight.sql", dockerfile)
-        self.assertTrue((ROOT / "ops" / "preflight.sql").is_file())
+        for filename in (
+            "preflight.sql",
+            "ingest_stage_readonly_audit.sql",
+            "ingest_stage_timestamp_lineage.sql",
+            "ingest_stage_lineage_summary_readonly.sql",
+            "ingest_stage_cdc_identity_readonly.sql",
+        ):
+            with self.subTest(filename=filename):
+                self.assertTrue((ROOT / "ops" / filename).is_file())
+                self.assertIn(
+                    f"COPY ops/{filename} ops/{filename}",
+                    dockerfile,
+                )
 
     def test_expected_canonical_views_match_ten_feed_names(self):
         raw, _ = query_statements()
