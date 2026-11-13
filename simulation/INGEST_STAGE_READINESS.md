@@ -249,6 +249,50 @@ opaque event metadata, not business records or dashboard materializations.
 All new tables are in disposable Docker MySQL; no AWS DDL, data,
 permissions, cost settings or application integrations were changed.
 
+## Live RDS identity preflight: 10/10 missing physical ID in reporting views
+
+The operator successfully executed
+`simulation/ops/ingest_stage_cdc_identity_readonly.sql` in WSL
+against existing RDS MySQL, after pulling previous docs at
+`daefc00f`. The complete supplied output shows **10/10**
+canonical views `PRESENT`, physical table `_ingest_id` **PRESENT**
+for **10/10** base tables, the same column **NOT_EXPOSED** in
+**10/10 canonical views**, and the view `source_updated_at`
+watermark **PRESENT** in **10/10**.
+
+**Implementation decision:** build **feed-level invalidation**,
+not per-row canonical view patching. The real binlog event identifies
+which of the ten physical tables changed, and the metadata-only
+sink's per-consumer feed notification generation can invalidate
+only that feed. A separate approved read-only dashboard query
+service must fetch affected canonical MySQL views on demand,
+without filtering by potentially stale `source_updated_at`.
+Rate-limit/coalesce invalidations to avoid scanning the same feed
+for every individual row event on the small RDS instance.
+Never guess that an HMAC token can recover the original source ID.
+
+**Application separation risk verified in repository:**
+`src/services/sourceAdapter.ts` is called by
+`src/services/syncService.ts`, whose normal sync pathway stages
+and executes natural-key merges/upserts into **PostgreSQL**.
+Do NOT reuse that synchronization workflow as the CDC-triggered
+dashboard refresh; it would reproduce unnecessary source-row
+duplication. The future dashboard read path needs independent
+server-side auth, least-privilege MySQL credentials, bounded queries,
+tenant isolation, cache invalidation and no raw reporting-data
+persistence in PostgreSQL.
+
+**Implemented (offline prototype only):**
+`simulation/runtime/ingest_stage_feed_refresh.py` has pure
+no-I/O planning/acknowledgement for per-feed notification
+generations, source/snapshot authorization gates, rate-limit
+deferral and anti-regression. Added eight Python unit tests in
+`simulation/tests/test_ingest_stage_feed_refresh.py`.
+The last **operator-verified** Docker run is **110/110 PASS**;
+this new code makes the **expected** test count **118**
+and is **NOT YET independently executed**. No live RDS data,
+configuration, permissions, CDC worker, or production app changed.
+
 ## Verified disposable Docker 110/110 PASS (13 November 2026)
 
 The operator supplied the follow-up **disposable MySQL 8.4 Docker**
