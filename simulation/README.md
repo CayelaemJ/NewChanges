@@ -282,6 +282,36 @@ no failures or skips and test container exit code **0**; the host phase
 ran 107 tests with 19 expected environment skips. No RDS source read,
 live binlog reader activation or application-dashboard cutover is implied.
 
+### Canonical view identity audit: feed-level refresh required (13 November 2026)
+
+The operator ran `ops/ingest_stage_cdc_identity_readonly.sql`
+successfully on live RDS. All **ten base tables** contain indexed
+`_ingest_id`, but **zero of ten canonical `v_*` views exposes that
+column**. All ten views exist and provide `source_updated_at`.
+This establishes that the initial CDC notification strategy must be
+**feed-level**, not selective update-by-`_ingest_id` or guessed
+natural-key reconstruction. No source data was read or modified by
+this metadata audit.
+
+The application `src/services/sourceAdapter.ts` already supports
+MySQL canonical SQL source views, **but its current use in
+`src/services/syncService.ts` results in staging and PostgreSQL
+natural-key upserts**. Do **not** route CDC notifications through
+that sync workflow. Production dashboard reads need a separate
+authenticated, bounded, least-privilege, TLS-validated MySQL
+read-only path; feed notification generations should invalidate
+the affected report cache only, with debouncing, query budgets
+and no reporting-row replication to PostgreSQL.
+
+An offline-only `runtime/ingest_stage_feed_refresh.py` planner
+and **eight new unit tests** encode generation monotonicity,
+stale/NULL timestamp independence, explicit source/snapshot
+approval, bounded requery timing and no acknowledgement on
+failed MySQL reads. They do not open database connections.
+The last verified disposable MySQL Docker baseline remains
+**110/110 PASS**; after these new cases, the **expected**
+suite is **118** pending the operator's next run.
+
 ### Docker 110/110 PASS after packaging fix (13 November 2026)
 
 The operator supplied the follow-up Docker Compose test-container output
@@ -324,10 +354,9 @@ tests. No runtime CDC logic or real AWS settings were changed.
 **Fix verification:** cross-file/static checks **6/6 PASS**.
 The initial 110-case run failed as described above; the subsequent
 operator-provided Docker run **passed all 110/110 tests with exit 0**.
-The earlier 107/107 result at `faac2fb4` remains a historical baseline. The operator's subsequent identity-audit output was
-not part of the submitted Docker log; its live RDS result remains
-unknown. The identity audit file itself is read-only and safe for
-a separate operator run.
+The earlier 107/107 result at `faac2fb4` remains a historical baseline. The identity audit was subsequently executed against live RDS;
+its finding is documented above (0 of 10 views exposing the physical
+source `_ingest_id` column).
 
 ### Ten-feed timestamp-lineage summary reviewed (13 November 2026)
 
@@ -441,6 +470,7 @@ timestamp lineage and dashboard data contracts are addressed.
 | Binlog INSERT/UPDATE/DELETE on MySQL 8.4 | PASS in local disposable Docker MySQL, NOT on AWS RDS |
 | Live RDS table/schema inventory & PII classification | PARTIAL: operator verified 11 base tables + 10 views, 59 required feed columns; sensitive-row classification still outstanding |
 | Live RDS view timestamp lineage | **SUMMARY REVIEWED / CURSOR NOT TRUSTWORTHY:** 10/10 views present; underlying 10/10 source TEXT fields nullable with no ON UPDATE; no visible trigger maintenance; full expression and write-path semantics not verified |
+| Live RDS source-to-view physical ID preflight | **PASS inspection / PER-ROW BLOCKED:** 10/10 base tables have `_ingest_id`; 0/10 canonical views exposes it; choose feed-level generation invalidation |
 | Live RDS CDC parameter/retention inspection | **PASS inspection / BLOCKED activation:** MySQL login succeeded; ROW/FULL active, effective RDS retention=NULL (0 guaranteed hours); no live CDC consumer |
 | AWS RDS source/sink schema deployment | NOT ATTEMPTED, requires approval |
 | Lambda connectivity and trigger test | NOT ATTEMPTED, requires approval |
