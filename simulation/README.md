@@ -282,14 +282,45 @@ no failures or skips and test container exit code **0**; the host phase
 ran 107 tests with 19 expected environment skips. No RDS source read,
 live binlog reader activation or application-dashboard cutover is implied.
 
+### Ten-feed timestamp-lineage summary reviewed (13 November 2026)
+
+The operator ran `ops/ingest_stage_lineage_summary_readonly.sql`
+successfully on the existing live RDS MySQL connection and shared
+only its safe metadata flags. **10/10 canonical views are present**,
+all reference `source_updated_at`, and the simple query-time-clock
+heuristic flagged **none**. All ten underlying source tables have
+nullable `TEXT source_updated_at` with **no ON UPDATE** column
+rule; the nullable generated `_source_updated_utc DATETIME`
+cannot auto-maintain the source TEXT value. No trigger rows were
+returned. All ten base tables index the source `_ingest_id` and
+generated UTC timestamp.
+
+**Decision:** do not depend on timestamp-based incremental pulls
+alone for detecting source mutations. Use binlog-XID/coordinate event
+markers to trigger per-feed invalidation, and fetch reporting data
+from authoritative MySQL views via an approved restricted source
+adapter (not bulk replication of reporting rows to Railway Postgres).
+Missing/stale source timestamps cannot suppress CDC notifications.
+This design is **not yet implemented in production**; existing app
+data and source SQL are unchanged.
+
+New `ops/ingest_stage_cdc_identity_readonly.sql` checks whether the
+canonical views expose `_ingest_id` as basic metadata-only evidence.
+It does not prove the relation from raw physical IDs to canonical
+natural keys. See `INGEST_STAGE_CDC_FRESHNESS_DECISION.md` for
+architecture details and remaining gates. New offline safety/contract
+tests bring the **expected** full suite to 110 tests; previous
+**107/107 Docker pass** remains the last operator-run baseline.
+
 ### Source timestamp lineage audit ran successfully (13 November 2026)
 
 The operator's WSL MySQL CLI reported a successful run of
 `ops/ingest_stage_timestamp_lineage.sql`. The full metadata output is
 stored privately in `~/.config/rds/ingest-stage-lineage-audit.txt`,
 including view/trigger definitions that should be inspected before
-sharing. **Source timestamp correctness is not yet verified** because
-the result data has not been reviewed.
+sharing. **Complete timestamp mutation semantics remain unverified**:
+the separate privacy-safe metadata summary has now been reviewed,
+but the full view expressions and actual source write paths have not.
 
 `ops/ingest_stage_lineage_summary_readonly.sql` is a new **read-only,
 privacy-safe summary** query returning only flags and counts for the
@@ -362,7 +393,7 @@ timestamp lineage and dashboard data contracts are addressed.
 | Disposable MySQL 8.4 integration tests | **PASS, latest operator Docker transcript, 107/107 tests, no skips, exit 0, code commit `faac2fb4`** |
 | Binlog INSERT/UPDATE/DELETE on MySQL 8.4 | PASS in local disposable Docker MySQL, NOT on AWS RDS |
 | Live RDS table/schema inventory & PII classification | PARTIAL: operator verified 11 base tables + 10 views, 59 required feed columns; sensitive-row classification still outstanding |
-| Live RDS view timestamp lineage | **READ-ONLY AUDIT EXECUTED**, detailed output kept on operator WSL; correctness not yet established; safe summary pending review |
+| Live RDS view timestamp lineage | **SUMMARY REVIEWED / CURSOR NOT TRUSTWORTHY:** 10/10 views present; underlying 10/10 source TEXT fields nullable with no ON UPDATE; no visible trigger maintenance; full expression and write-path semantics not verified |
 | Live RDS CDC parameter/retention inspection | **PASS inspection / BLOCKED activation:** MySQL login succeeded; ROW/FULL active, effective RDS retention=NULL (0 guaranteed hours); no live CDC consumer |
 | AWS RDS source/sink schema deployment | NOT ATTEMPTED, requires approval |
 | Lambda connectivity and trigger test | NOT ATTEMPTED, requires approval |
