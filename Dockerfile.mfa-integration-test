@@ -16,4 +16,4 @@ COPY tsconfig.json ./
 RUN npx prisma generate && npx tsc --noEmit
 USER node
 ENV CI=true
-CMD ["sh", "-ec", "node --test tests/security/admin-mfa-*.test.mjs && node --import tsx --test tests/security/admin-mfa-route-scope.test.ts tests/security/admin-totp.test.ts && node --test tests/security/mfa-login-navigation.test.mjs tests/mfa-writable-startup-contract.test.mjs && node scripts/production-auth-cutover-gate.mjs && node --test tests/verify-render-aiven-config.test.mjs"]
+CMD ["sh", "-ec", "node --test tests/security/admin-mfa-*.test.mjs && node --import tsx --test tests/security/admin-mfa-route-scope.test.ts && node --import tsx --test tests/security/admin-totp.test.ts && node --test tests/security/mfa-login-navigation.test.mjs && node --test tests/mfa-writable-startup-contract.test.mjs && node scripts/production-auth-cutover-gate.mjs && node --test tests/verify-render-aiven-config.test.mjs"]
