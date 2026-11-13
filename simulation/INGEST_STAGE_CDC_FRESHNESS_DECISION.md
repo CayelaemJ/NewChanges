@@ -161,6 +161,72 @@ successful cache publication. Existing production dashboard endpoints
 must remain unchanged until that independently tested path is ready.
 No new production endpoint, worker or database privilege is claimed.
 
+## Default-disabled server-side MySQL canonical view reader (13 November 2026)
+
+A new application-native TypeScript module
+`src/services/ingestStageCdcMysqlReader.ts` implements an **isolated,
+default-off MySQL-only view reader**, independent of the existing
+`syncService.ts` data-import path. It is **not imported by server
+routes, not activated and not deployed**. All callers must use
+server-validated tenant/employer authorizations and a separately
+approved, read-only MySQL credential; **the master `fixeradmin`
+account is explicitly denied**.
+
+Safety contract:
+
+- Explicit `featureEnabled`, `accessReviewed`, and
+  `snapshotVerified` gates; caller declarations alone do **not**
+  constitute approval or snapshot proof. Keep false until separately
+  verified by operators.
+- A matching AWS RDS hostname, non-admin reader username containing
+  `read`, server-held password, PEM CA certificate and TLS
+  `rejectUnauthorized: true`, **`verifyIdentity: true`**. For
+  mysql2, hostname verification is otherwise disabled by default.
+  Never use `sqlTrustServerCertificate`.
+- Only the ten `LOAD_ORDER` canonical view identifiers, quoted
+  from trusted report formats. SQL arguments use placeholders and
+  all reporting queries **require `employer_ref = ?`** selected
+  from a trusted authorized-employer scope.
+- No guessed physical `_ingest_id`, no timestamp-based incremental
+  `since` filters, no broad source schema access, no arbitrary view
+  overrides, no multiple SQL statements, and no direct Postgres
+  reporting-row writes.
+- View-column metadata is inspected first. Select only fields declared
+  in the corresponding canonical `reportFormats.ts` contract;
+  all required columns/natural keys must exist. Source data returned
+  for a *different* employer is rejected even if the DB predicate
+  apparently succeeded. Do not log queries, rows, SQL errors or secrets.
+- Each read runs a **read-only, consistent-snapshot MySQL transaction**.
+  Separate MySQL query timeouts and a strict maximum of **2,000 rows
+  per feed per employer** are enforced (initial default in calling
+  configuration may be lower). The query requests one extra row
+  and **rejects oversized feeds entirely**, rather than publishing
+  a misleading truncated report. Query budgeting is a **prototype**
+  safeguard, not a substitute for an approved scalable aggregation
+  plan: real feeds may exceed this bound.
+- Always attempt rollback and close. Database errors, connector
+  errors and tenant-scope mismatches do not expose raw record contents.
+
+New `tests/ingest-stage-cdc-mysql-reader.test.ts` contains **ten
+fully mocked Node/TypeScript tests** for the ten feeds, tenant
+scope rejection, gate enforcement, admin-account rejection, TLS
+identity check presence, output minimization, query limits,
+cross-tenant rows, rollback and sensitive error redaction.
+`npm run check:cdc-dashboard` invokes this independent test
+command. **Node tests and TypeScript compilation have not yet
+been operator-run**. The last verified disposable local MySQL
+CDC suite remains **118/118**; the Node tests are separate,
+not a claim of **128 Docker tests**.
+
+**Next integration gate:** identify the trusted session-to-employer
+mapping and build an explicitly authorized, bounded, **aggregation**
+endpoint/cache publication contract. Do **not** expose raw reporting
+records as an unreviewed HTTP endpoint, do **not** reuse existing
+PostgreSQL dashboard snapshots as if they were live MySQL data,
+and do **not** announce a new SSE version until approved report
+aggregations are complete. A per-feed generation is an
+invalidation signal only.
+
 ## Production activation gates (remain BLOCKED)
 
 - Confirm an acceptable RDS binlog-retention period, estimate binlog
