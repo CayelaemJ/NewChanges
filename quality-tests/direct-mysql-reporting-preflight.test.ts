@@ -23,6 +23,7 @@ const config = {
 };
 
 const schema: Record<string, string[]> = {
+  v_employers: ["employer_ref", "name", "source_updated_at"],
   v_journeys: ["employer_ref", "started_at", "status", "monthly_saving_rand", "source_updated_at"],
   v_ratings: ["employer_ref", "created_at", "stars", "source_updated_at"],
   v_referrals: ["employer_ref", "shared_at", "converted", "source_updated_at"],
@@ -56,7 +57,7 @@ describe("MySQL direct reporting preflight", () => {
   it("checks required reporting views and columns using only information_schema", async () => {
     const result = await inspectMysqlReportingReadiness(config);
     expect(result.ready).toBe(true);
-    expect(result.checks).toHaveLength(7);
+    expect(result.checks).toHaveLength(8);
     expect(result.checks.every(check => check.compatible)).toBe(true);
     expect(fake.query).toHaveBeenCalledTimes(2);
     for (const [command, params] of fake.query.mock.calls) {
