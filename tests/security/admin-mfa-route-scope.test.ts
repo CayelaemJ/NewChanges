@@ -38,3 +38,14 @@ test('server uses classification in preHandler and keeps rollout opt-in',()=>{
  assert.match(s,/scope\.adminOnly && !isAdminRole\(user\)/);
  assert.match(s,/hasFreshAdminMfa\(req, user\.id\)/);
 });
+
+test('passkey-enrolled accounts cannot set up or verify TOTP',()=>{
+ const source=readFileSync('src/services/adminMfaRoutes.ts','utf8');
+ for(const action of ['setup','confirm','verify']){
+  const marker="'/api/auth/mfa/totp/"+action+"'";
+  const start=source.indexOf(marker);
+  assert.notEqual(start,-1,'missing TOTP '+action+' route');
+  assert.match(source.slice(start,start+700),
+   /adminMfaCredential\.count\(\{where:\{userId:session\.userId,revokedAt:null\}\}\)[\s\S]{0,220}passkey-only MFA/);
+ }
+});
