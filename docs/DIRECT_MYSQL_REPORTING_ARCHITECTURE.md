@@ -26,3 +26,13 @@ Keep AWS RDS MySQL as the authoritative reporting datastore. Railway PostgreSQL 
 
 ## Safety validation
 Confirm through SQL audit and tests that direct dashboard endpoints do **not** invoke `commitSyncRows`, `commitBatch`, source-history upserts, `snapshotEmployer` writes, or advances integration cursors. For full production migration, separately test all ten feeds, historical as-of behaviour, deleted records, tenant isolation, user roles, MFA, non-reporting workflows, and performance.
+
+## Tenant-facing source KPI preview (PR #248)
+
+The read-only route `GET /api/employers/:employerId/direct-reporting-preview?startDate=2026-10-01&endDate=2026-11-01` validates the authenticated application session, the same employer-access predicate as the existing dashboard, and MFA when enabled **before** retrieving source credentials. It executes four aggregate statements in one read-only MySQL transaction and returns journey, rating, referral and salary-advance KPIs. A user cannot choose another employer outside their authorized associations.
+
+- The source views must be accessible with a least-privileged account granting `SELECT` and expose all canonical columns.
+- Dates are half-open `[startDate, endDate)`, maximum 366 days, and reflect **event cohorts**; not historical stock snapshots.
+- The new endpoint is **not** a replacement for `GET /api/employers/:employerId/dashboard`, `score-history`, monthly snapshot publication, or the current official optimising score.
+- Keep `DIRECT_MYSQL_REPORTING_ENABLED` and `DIRECT_MYSQL_NO_REPLICATION` disabled in Railway production until MySQL network reachability, tenant membership onboarding, contract validation, parity tests, and security review pass. `STANDBY_MODE` remains a separate operational control.
+- Follow-up dashboard migration must cover workforce as-at snapshots, debts, policies, historical joins, cohort filters, site/income dimensions, calculated scores, reporting schedules, and tenant-safe employer discovery from application metadata. Do not use the preview's event KPIs as a substitute for those calculations.
