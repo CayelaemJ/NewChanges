@@ -44,7 +44,7 @@ test('enrolled administrator sees verification, not another setup',async()=>{
   assert.equal(el('mfa-passkey-enroll-panel').hidden,true);
   assert.equal(el('mfa-passkey-verify-panel').hidden,false);
   assert.equal(el('totp-start').hidden,true);
-  assert.equal(el('totp-verify-panel').hidden,false);
+  assert.equal(el('totp-verify-panel').hidden,true);
 });
 test('verified administrator sees only completion state',async()=>{
   const el=await check({enrolled:true,verified:true,verificationMethod:'TOTP',passkeyEnrolled:true,totpEnrolled:true,totpAvailable:true,canManageRecovery:false});
@@ -102,14 +102,15 @@ test('verified authenticator user may add a Windows Hello passkey without a gran
  assert.equal(el('grant').hidden,true);
  assert.equal(el('totp-panel').hidden,true);
 });
-test('verified passkey user can add authenticator QR without a second grant',async()=>{
+test('verified passkey user sees passkey-only policy and no authenticator QR',async()=>{
  const el=await check({enrolled:true,verified:true,verificationMethod:'PASSKEY',
    passkeyEnrolled:true,totpEnrolled:false,totpAvailable:true,canManageRecovery:false},'/mfa/manage');
  assert.equal(el('mfa-manage-banner').hidden,false);
- assert.equal(el('totp-panel').hidden,false);
- assert.equal(el('totp-start').hidden,false);
+ assert.equal(el('totp-panel').hidden,true);
+ assert.equal(el('totp-start').hidden,true);
  assert.equal(el('totp-grant').hidden,true);
  assert.equal(el('totp-verify-panel').hidden,true);
+ assert.match(el('mfa-method-policy').textContent,/passkey is enrolled/i);
 });
 test('method manager refuses to display new enrollment before MFA verification',async()=>{
  const el=await check({enrolled:true,verified:false,passkeyEnrolled:false,
