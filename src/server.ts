@@ -666,8 +666,8 @@ app.get("/api/auth/me", async (req, reply) => {
   const user = await currentUser(req);
   if (!user) return reply.code(401).send({ error: "not signed in" });
   if (MFA_ENFORCE) {
-    const verified=await hasFreshAdminMfa(req,user.id);
-    const recoveryKeyRequired=verified && user.role==="SUPERADMIN" &&
+    const verified=await hasVerifiedMfaSession(req,user.id);
+    const recoveryKeyRequired=verified &&
       !await hasIssuedAdminRecoveryKey(user.id);
     if (!verified || recoveryKeyRequired) {
       // Do not reveal employer records or module entitlements while the
