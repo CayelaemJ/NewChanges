@@ -81,9 +81,13 @@ describe("as-of MySQL reporting without copying source data", () => {
     const server = readFileSync("src/server.ts", "utf8");
     const at = server.indexOf('"/api/employers/:employerId/direct-reporting-asof-preview"');
     expect(at).toBeGreaterThan(-1);
-    const route = server.slice(at, at + 1250);
+    const route = server.slice(at, at + 1850);
     expect(route.indexOf("canViewEmployer(user, req.params.employerId)"))
       .toBeLessThan(route.indexOf("getSyncConfig()"));
+    const appIdentity = route.indexOf("prisma.employer.findFirst(");
+    expect(appIdentity).toBeGreaterThan(-1);
+    expect(appIdentity).toBeLessThan(route.indexOf("getSyncConfig()"));
+    expect(route).toContain("sourceDeletedAt: null");
     expect(route.indexOf("hasVerifiedMfaSession(req, user.id)"))
       .toBeLessThan(route.indexOf("getSyncConfig()"));
   });
