@@ -15,7 +15,8 @@ CREATE TABLE ingest_checkpoint (
 ) ENGINE=InnoDB;
 
 CREATE TABLE ingest_change_markers (
-  event_key CHAR(64) NOT NULL PRIMARY KEY,
+  consumer_name VARCHAR(60) NOT NULL,
+  event_key CHAR(64) NOT NULL,
   feed VARCHAR(40) NOT NULL,
   operation ENUM('INSERT','UPDATE','DELETE') NOT NULL,
   opaque_row_key CHAR(64) NOT NULL,
@@ -23,16 +24,21 @@ CREATE TABLE ingest_change_markers (
   needs_tombstone BOOLEAN NOT NULL,
   binlog_event_at_utc DATETIME(6) NOT NULL,
   captured_at_utc DATETIME(6) NOT NULL,
-  INDEX idx_ingest_feed_capture(feed,captured_at_utc),
-  INDEX idx_ingest_row_identity(feed,opaque_row_key)
+  PRIMARY KEY (consumer_name,event_key),
+  INDEX idx_ingest_feed_capture(consumer_name,feed,captured_at_utc),
+  INDEX idx_ingest_row_identity(consumer_name,feed,opaque_row_key)
 ) ENGINE=InnoDB;
 
 CREATE TABLE ingest_feed_notifications (
-  feed VARCHAR(40) NOT NULL PRIMARY KEY,
+  consumer_name VARCHAR(60) NOT NULL,
+  feed VARCHAR(40) NOT NULL,
   generation BIGINT UNSIGNED NOT NULL DEFAULT 0,
   last_captured_at_utc DATETIME(6) NOT NULL,
-  last_event_key CHAR(64) NOT NULL
+  last_event_key CHAR(64) NOT NULL,
+  PRIMARY KEY (consumer_name,feed)
 ) ENGINE=InnoDB;
 
+-- Per-consumer keys prevent one CDC checkpoint/notification stream from
+-- overwriting another consumer's feed state in the disposable pilot.
 -- No raw row payload, employee name, account reference, salary, email,
 -- or banking details are persisted by this metadata-only prototype.
