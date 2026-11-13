@@ -72,8 +72,10 @@ export async function inspectMysqlReportingReadiness(
       sql: `SELECT TABLE_NAME, COLUMN_NAME FROM information_schema.COLUMNS
         WHERE TABLE_SCHEMA = ? AND TABLE_NAME IN (${placeholders})`, timeout: 10_000,
     }, [source.sqlDatabase, ...viewNames]);
-    const types = new Map((tableRows as Array<{ TABLE_NAME: string; TABLE_TYPE: string }>)
-      .map(row => [row.TABLE_NAME, row.TABLE_TYPE]));
+    const types = new Map<string, string>(
+      (tableRows as Array<{ TABLE_NAME: string; TABLE_TYPE: string }>)
+        .map(row => [row.TABLE_NAME, row.TABLE_TYPE] as const),
+    );
     const columns = new Map<string, Set<string>>();
     for (const row of columnRows as Array<{ TABLE_NAME: string; COLUMN_NAME: string }>) {
       if (!columns.has(row.TABLE_NAME)) columns.set(row.TABLE_NAME, new Set());
