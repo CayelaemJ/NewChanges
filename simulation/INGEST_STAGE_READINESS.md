@@ -249,7 +249,36 @@ opaque event metadata, not business records or dashboard materializations.
 All new tables are in disposable Docker MySQL; no AWS DDL, data,
 permissions, cost settings or application integrations were changed.
 
-## Latest operator Docker validation: 110 tests, packaging fix pending rerun
+## Verified disposable Docker 110/110 PASS (13 November 2026)
+
+The operator supplied the follow-up **disposable MySQL 8.4 Docker**
+test log after the packaging fix. The output confirms:
+
+- MySQL container healthy and **local CDC preflight PASS**.
+- Real row-binlog/XID integration, all ten stale/NULL source timestamp
+  marker tests, replay/atomic checkpoints, hard-delete tombstones,
+  two-consumer isolation and privacy/safety tests **PASS**.
+- Previously missing SQL summary and identity audit contract tests
+  both **PASS** inside the Docker image.
+- `Ran 110 tests in 0.978s`, `OK`, and
+  `test-1 exited with code 0` — **110/110 PASS, zero Docker skips**.
+- Compose message `Aborting on container exit` is expected after the
+  test container completed with **exit code 0**, not a test failure.
+
+The submitted transcript begins with running Docker containers, so it
+does not independently identify the exact Git checkout SHA. The
+earlier operator log records the host phase **110 tests OK
+(19 environment-dependent skips)**. These are locally tested
+synthetic/disposable fixtures, **not** evidence of production RDS CDC.
+
+**Remaining live-CDC gates:** effective RDS retention `NULL`
+(0 guaranteed hours), least-privilege/global-binlog exposure review,
+consistent initial snapshot/import proof, source-view identity
+mapping, and restricted read-only dashboard freshness wiring.
+The new metadata-only live identity SQL audit has not yet been
+executed by the operator. Production activation remains **BLOCKED**.
+
+## Historical first 110-test Docker failure (fixed, subsequent rerun PASS)
 
 On **13 November 2026**, the operator ran `simulation/ops/ci-docker.sh`
 after fast-forwarding to source commit `07553aec`.
@@ -271,9 +300,9 @@ after fast-forwarding to source commit `07553aec`.
   every one of the five metadata audit SQL files used by the test
   suite.
 
-**The packaging fix has passed static checks only; a new 110-case
-Docker run is required before calling it 110/110 GREEN.**
-Last fully successful Docker run: **107/107**, source code commit
+**This first 110-case Docker failure is now historical.** The
+follow-up Docker run passed **110/110** with exit code 0 as documented
+above. Earlier verified 107/107 was at source code commit
 `faac2fb4`. No AWS RDS data, settings, privileges or production
 application state were touched by this test fix. The live
 source-to-view identity SQL audit has not yet been supplied as output.
