@@ -8,7 +8,7 @@ import time
 
 from .ingest_stage_contract import validate_snapshot_handoff
 from .ingest_stage_row_adapter import stage_row_event
-from .ingest_stage_sink import _require_local, persist_local_plan
+from .ingest_stage_sink import _require_local, load_local_checkpoint, persist_local_plan
 from .ingest_stage_txn import LogCoordinate, TransactionPlanner
 
 _ROWS = frozenset({"WRITE_ROWS", "UPDATE_ROWS", "DELETE_ROWS"})
@@ -98,23 +98,16 @@ def run_local_binlog(*, sink_db, handoff, hmac_secret, consumer_name,
     from pymysqlreplication.row_event import WriteRowsEvent, UpdateRowsEvent, DeleteRowsEvent
     from .common import connection_config
 
-    # Do not silently skip data by using today's coordinates. The supplied
-    # approved LOCAL empty-source snapshot must match an existing sink record.
-    with sink_db.cursor() as cur:
-        cur.execute("""SELECT log_file,log_pos,snapshot_manifest_sha256
-            FROM fixer_ingest_cdc.ingest_checkpoint
-            WHERE consumer_name=%s""", (consumer_name,))
-        row = cur.fetchone()
-    sink_db.rollback()
-    if tuple(row or ()) != (
-        handoff.binlog_file, handoff.binlog_position,
-        handoff.snapshot_manifest_sha256,
-    ):
-        raise RuntimeError("Local snapshot and durable checkpoint do not match")
-
+    # Recover from the sink's committed position, not the original snapshot
+    # position after the first successful run. load_local_checkpoint verifies
+    # the original manifest and denies missing/backward/foreign-lineage cursors.
+    # This MUST be the same sink transaction that stored the change markers.
+    recovered = load_local_checkpoint(
+        sink_db, handoff, consumer_name=consumer_name
+    )
     planner = TransactionPlanner(
         LogCoordinate(handoff.binlog_file, handoff.binlog_position),
-        handoff=handoff,
+        handoff=handoff, resume_checkpoint=recovered,
     )
     bridge = LocalIngestBridge(
         planner, hmac_secret=hmac_secret,
@@ -132,7 +125,7 @@ def run_local_binlog(*, sink_db, handoff, hmac_secret, consumer_name,
             only_tables=["employees", "debt_accounts"],
             only_events=[WriteRowsEvent, UpdateRowsEvent, DeleteRowsEvent, XidEvent],
             blocking=False, resume_stream=True,
-            log_file=handoff.binlog_file, log_pos=handoff.binlog_position,
+            log_file=recovered.file, log_pos=recovered.position,
             freeze_schema=True,
         )
         for event in stream:
