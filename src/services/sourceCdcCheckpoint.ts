@@ -125,6 +125,23 @@ export async function renewCdcLease(lease: CdcLease, leaseMs = 15_000): Promise<
   return updated.count === 1;
 }
 
+/** Release only this exact fenced generation, never another owner's lease. */
+export async function releaseCdcLease(lease: CdcLease): Promise<boolean> {
+  bounded(lease.sourceId, "source ID", MAX_SOURCE);
+  bounded(lease.owner, "lease owner", MAX_OWNER);
+  if (!Number.isInteger(lease.generation) || lease.generation < 1)
+    throw new Error("Invalid CDC lease generation");
+  const released = await prisma.sourceCdcCheckpoint.updateMany({
+    where: {
+      id: lease.sourceId,
+      leaseOwner: lease.owner,
+      leaseGeneration: lease.generation,
+    },
+    data: { leaseOwner: null, leaseExpiresAt: null },
+  });
+  return released.count === 1;
+}
+
 export async function commitCdcBatch(input: CdcCommitInput): Promise<number> {
   const sourceId = bounded(input.lease.sourceId, "source ID", MAX_SOURCE);
   const owner = bounded(input.lease.owner, "lease owner", MAX_OWNER);
