@@ -78,3 +78,13 @@ The existing dashboard uses `completed_at` for *completed-in-period* journey flo
 The route requires an authenticated admin (including existing admin MFA checks), confirms employer authorization, and returns only an aggregate comparison. It writes no source business data into PostgreSQL.
 
 **IMPORTANT:** A headcount `PASS` does **not** authorize switching the whole dashboard to MySQL. Completed journeys, policies, account risk, score weightings, site/income cohorts, historical corrections and publication semantics still require separate parity criteria and approved production tests. The endpoint calls the existing dashboard renderer for a single requested month and can incur PostgreSQL work; keep it admin-only and avoid bulk probing until load limits have been tested.
+
+## Employer identity bootstrap without business-data duplication
+
+An **empty** Railway PostgreSQL does not automatically contain the `Employer`, `UserEmployer` or role/permission records used by the existing `canViewEmployer` authorization checks. MySQL direct reporting alone cannot solve that authentication gap.
+
+The new admin-only endpoint `GET /api/admin/integration/direct-reporting/employers?after=EMP-000` reads up to 100 records from the approved `v_employers` source view using a parameterized keyset cursor. It returns only `employerRef` and `name`, not employees, policies, debts or source credentials. The response is never persisted by this endpoint. The preflight now checks eight views, including `v_employers`.
+
+After reviewing the source catalog, administrators must explicitly onboard **minimal identity anchors** (employer ID/name, authorized user links and tenant permissions) into PostgreSQL. Such small application-owned metadata is necessary for access control and is not equivalent to copying the reporting dataset. Do not auto-provision every employer or grant blanket access on a new environment.
+
+**Current limitation:** employer discovery is implemented, but tenant onboarding/provisioning and live source reachability have not been verified. Without those records, existing employer-scoped dashboard routes correctly deny access. Do not bypass `canViewEmployer` as a workaround.
