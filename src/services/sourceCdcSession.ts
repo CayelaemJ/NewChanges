@@ -75,7 +75,7 @@ export async function runCdcCaptureSession(
   heartbeat.unref?.();
   let committedTransactions = 0;
   let invalidationHints = 0;
-  let endOfStream = false;
+  let stoppedByLimit = false;
   try {
     const stream = input.reader.open(acquired.cursor, controller.signal);
     // The reader must honor abort and close network sockets. This session
@@ -89,12 +89,14 @@ export async function runCdcCaptureSession(
       lease = { ...lease, cursor: accepted.nextCursor };
       committedTransactions++;
       invalidationHints += accepted.invalidations;
-      if (committedTransactions >= (input.maxTransactions ?? 128)) break;
+      if (committedTransactions >= (input.maxTransactions ?? 128)) {
+        stoppedByLimit = true;
+        break;
+      }
     }
-    endOfStream = !controller.signal.aborted;
     if (lostLease) throw new Error("CDC source lease lost");
     return {
-      status: endOfStream ? "END_OF_STREAM" : "STOPPED",
+      status: !stoppedByLimit && !controller.signal.aborted ? "END_OF_STREAM" : "STOPPED",
       sourceId: input.sourceId, lastCursor: lease.cursor,
       committedTransactions, invalidationHints,
     };
