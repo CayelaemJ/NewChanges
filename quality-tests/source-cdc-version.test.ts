@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
 
 const db = vi.hoisted(() => {
   const outbox = { findMany: vi.fn(), updateMany: vi.fn() };
@@ -65,6 +66,23 @@ describe("CDC durable employer version dispatch", () => {
     expect(await readCdcEmployerVersion("aws-fixer", "TENANT-A")).toBe("4");
     db.versions.findUnique.mockResolvedValue(null);
     expect(await readCdcEmployerVersion("aws-fixer", "TENANT-A")).toBe("0");
+  });
+
+  it("requires identity, MFA and employer authorization before durable-version access", () => {
+    const code = readFileSync("src/server.ts", "utf8") as string;
+    const at = code.indexOf('"/api/employers/:employerId/source-changes/version"');
+    expect(at).toBeGreaterThan(-1);
+    const route = code.slice(at, at + 1900);
+    expect(route.indexOf("requireUser(req, reply)")).toBeLessThan(route.indexOf("readCdcEmployerVersion("));
+    expect(route.indexOf("canViewEmployer(user, req.params.employerId)"))
+      .toBeLessThan(route.indexOf("readCdcEmployerVersion("));
+    expect(route.indexOf("hasVerifiedMfaSession(req, user.id)"))
+      .toBeLessThan(route.indexOf("readCdcEmployerVersion("));
+    expect(route.indexOf("sourceDeletedAt: null"))
+      .toBeLessThan(route.indexOf("readCdcEmployerVersion("));
+    expect(route).toContain('DIRECT_MYSQL_CDC_SSE_ENABLED !== "true"');
+    expect(route).toContain("DIRECT_MYSQL_CDC_SOURCE_ID");
+    expect(route).toContain('Cache-Control", "private, no-store"');
   });
 
   it("refuses malformed source ids and oversized dispatch requests", async () => {
