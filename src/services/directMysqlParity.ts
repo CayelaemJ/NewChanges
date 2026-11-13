@@ -40,8 +40,9 @@ export function compareHistoricalHeadcount(
     difference: null as number | null,
     otherMetrics: "NOT_ASSESSED" as const,
   };
-  const no = (reason: string): ParityResult =>
-    { ...base, status: "NOT_COMPARABLE", reason };
+  const no = (reason: string): ParityResult => ({
+    ...base, status: "NOT_COMPARABLE", reason,
+  });
   const ctx = pg.filterContext;
   if (!ctx?.asAt || !/^\d{4}-\d{2}-\d{2}T/.test(ctx.asAt))
     return no("PostgreSQL dashboard has no valid as-of timestamp");
