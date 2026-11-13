@@ -57,6 +57,7 @@ describe("MySQL direct reporting preflight", () => {
   it("checks required reporting views and columns using only information_schema", async () => {
     const result = await inspectMysqlReportingReadiness(config);
     expect(result.ready).toBe(true);
+    expect(result.productionCutoverReady).toBe(false);
     expect(result.checks).toHaveLength(8);
     expect(result.checks.every(check => check.compatible)).toBe(true);
     expect(fake.query).toHaveBeenCalledTimes(2);
@@ -79,6 +80,7 @@ describe("MySQL direct reporting preflight", () => {
     });
     const result = await inspectMysqlReportingReadiness(config);
     expect(result.ready).toBe(false);
+    expect(result.productionCutoverReady).toBe(false);
     expect(result.checks.find(c => c.view === "v_workforce_snapshots")?.present).toBe(false);
     expect(result.checks.find(c => c.view === "v_debt_accounts")?.missingColumns).toContain("is_deleted");
   });
