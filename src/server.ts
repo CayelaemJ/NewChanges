@@ -1949,7 +1949,7 @@ app.get<{ Params: { employerId: string } }>(
     let ready = false;
     const unsubscribe = directSourceNotifications.subscribe(req.params.employerId, notice => {
       if (!ready || reply.raw.destroyed) return;
-      if (!reply.raw.write(`event: source-change\\ndata: ${JSON.stringify(notice)}\\n\\n`)) reply.raw.end();
+      if (!reply.raw.write(`event: source-change\ndata: ${JSON.stringify(notice)}\n\n`)) reply.raw.end();
     });
     if (!unsubscribe) return reply.code(503).send({ error: "Change notification capacity exhausted" });
     reply.hijack();
@@ -1960,9 +1960,9 @@ app.get<{ Params: { employerId: string } }>(
       "Connection": "keep-alive",
     });
     ready = true;
-    reply.raw.write("retry: 3000\\n\\n: connected\\n\\n");
+    reply.raw.write("retry: 3000\n\n: connected\n\n");
     const heartbeat = setInterval(() => {
-      if (!reply.raw.write(": heartbeat\\n\\n")) reply.raw.end();
+      if (!reply.raw.write(": heartbeat\n\n")) reply.raw.end();
     }, 15_000);
     // Force fresh user/tenant authorization on reconnection after 60 seconds.
     const expiry = setTimeout(() => reply.raw.end(), 60_000);
