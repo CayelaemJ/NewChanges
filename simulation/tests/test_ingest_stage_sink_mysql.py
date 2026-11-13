@@ -5,6 +5,7 @@ Does not read or alter ingest_stage or send any credentials to a real RDS.
 """
 import os
 import unittest
+from dataclasses import replace
 from datetime import datetime, timezone
 from unittest.mock import patch
 
