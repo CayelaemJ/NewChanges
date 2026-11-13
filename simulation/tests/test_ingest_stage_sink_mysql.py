@@ -25,7 +25,7 @@ def proof(position=500):
     )
 
 
-def plan(start=500, end=600, operation="UPDATE", marker_pos=545):
+def plan(start=500, end=600, operation="UPDATE", marker_pos=545, captured_at=None):
     cp = LogCoordinate(FILE, start)
     instance = TransactionPlanner(cp, handoff=proof(start))
     instance.begin()
@@ -42,8 +42,8 @@ def plan(start=500, end=600, operation="UPDATE", marker_pos=545):
             binlog_file=FILE, binlog_position=marker_pos, row_index=0,
             binlog_timestamp=1794391200,
             hmac_secret=SECRET,
-            captured_at_utc=datetime(2026, 11, 11, 12, 0, 0, 345678,
-                                     tzinfo=timezone.utc),
+            captured_at_utc=captured_at or datetime(2026, 11, 11, 12, 0, 0, 345678,
+                                                  tzinfo=timezone.utc),
         )
         instance.stage(marker, LogCoordinate(FILE, marker_pos))
     return instance, instance.prepare_commit(LogCoordinate(FILE, end))
@@ -86,7 +86,6 @@ class LocalIngestSink(unittest.TestCase):
         )
         self.assertEqual(recovered, LogCoordinate(FILE, 600))
         # An old snapshot digest is not interchangeable with a new source.
-        from dataclasses import replace
         with self.assertRaises(ValueError):
             load_local_checkpoint(
                 self.db,
@@ -123,21 +122,66 @@ class LocalIngestSink(unittest.TestCase):
         self.assertEqual(checkpoint, (600, pending.digest))
         self.assertEqual(
             query(self.db, "SELECT COUNT(*) FROM fixer_ingest_cdc.ingest_change_markers "
-                 "WHERE event_key=%s", (pending.changes[0].event_key,))[0][0], 1
+                 "WHERE consumer_name=%s AND event_key=%s",
+                 (consumer,pending.changes[0].event_key))[0][0], 1
         )
         notice = query(self.db, "SELECT generation,last_captured_at_utc "
-                       "FROM fixer_ingest_cdc.ingest_feed_notifications WHERE feed='employees'")[0]
-        self.assertGreaterEqual(notice[0], 1)
+                       "FROM fixer_ingest_cdc.ingest_feed_notifications "
+                       "WHERE consumer_name=%s AND feed=%s",
+                       (consumer,"employees"))[0]
+        self.assertEqual(notice[0], 1)
         self.assertEqual(notice[1].microsecond, 345678)
         self.assertEqual(
             persist_local_plan(self.db, pending, consumer_name=consumer), "REPLAYED"
         )
         self.assertEqual(
             query(self.db, "SELECT COUNT(*) FROM fixer_ingest_cdc.ingest_change_markers "
-                 "WHERE event_key=%s", (pending.changes[0].event_key,))[0][0], 1
+                 "WHERE consumer_name=%s AND event_key=%s",
+                 (consumer,pending.changes[0].event_key))[0][0], 1
         )
+        self.assertEqual(query(self.db, "SELECT generation FROM "
+                               "fixer_ingest_cdc.ingest_feed_notifications "
+                               "WHERE consumer_name=%s AND feed=%s",
+                               (consumer,"employees"))[0][0], 1)
         planner.confirm_durable_commit(pending)
         self.assertEqual(planner.checkpoint.position, 600)
+
+    def test_two_consumers_keep_identical_source_events_and_notifications_isolated(self):
+        """Both consumers may persist the same source event without timestamp bleed."""
+        first = "test-ingest-scope-a"
+        second = "test-ingest-scope-b"
+        self.assertEqual(bootstrap_local_sink(self.db, proof(), consumer_name=first),
+                         "BOOTSTRAPPED")
+        self.assertEqual(bootstrap_local_sink(self.db, proof(), consumer_name=second),
+                         "BOOTSTRAPPED")
+        later = datetime(2026, 11, 13, 9, 30, 0, 580481, tzinfo=timezone.utc)
+        _, first_plan = plan(marker_pos=575)
+        _, second_plan = plan(marker_pos=575, captured_at=later)
+        self.assertEqual(first_plan.changes[0].event_key,
+                         second_plan.changes[0].event_key)
+        self.assertEqual(persist_local_plan(self.db, second_plan, consumer_name=second),
+                         "PERSISTED")
+        self.assertEqual(persist_local_plan(self.db, first_plan, consumer_name=first),
+                         "PERSISTED")
+        rows = query(self.db, """SELECT consumer_name,generation,last_captured_at_utc
+            FROM fixer_ingest_cdc.ingest_feed_notifications
+            WHERE consumer_name IN (%s,%s) AND feed=%s
+            ORDER BY consumer_name""", (first,second,"employees"))
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0][0:2], (first,1))
+        self.assertEqual(rows[0][2].microsecond, 345678)
+        self.assertEqual(rows[1][0:2], (second,1))
+        self.assertEqual(rows[1][2].microsecond, 580481)
+        self.assertEqual(query(self.db, """SELECT COUNT(*)
+            FROM fixer_ingest_cdc.ingest_change_markers
+            WHERE event_key=%s AND consumer_name IN (%s,%s)""",
+            (first_plan.changes[0].event_key,first,second))[0][0], 2)
+        self.assertEqual(persist_local_plan(self.db, first_plan, consumer_name=first),
+                         "REPLAYED")
+        self.assertEqual(query(self.db, """SELECT generation
+            FROM fixer_ingest_cdc.ingest_feed_notifications
+            WHERE consumer_name=%s AND feed=%s""",
+            (first,"employees"))[0][0], 1)
 
     def test_duplicate_source_event_rolls_back_checkpoint(self):
         consumer = "test-ingest-duplicate"
@@ -153,10 +197,11 @@ class LocalIngestSink(unittest.TestCase):
         # Inserting the collision BEFORE persist tests all-or-nothing rollback.
         with self.db.cursor() as cursor:
             cursor.execute("""INSERT INTO fixer_ingest_cdc.ingest_change_markers
-                (event_key,feed,operation,opaque_row_key,source_timestamp_state,
-                 needs_tombstone,binlog_event_at_utc,captured_at_utc)
-                VALUES(%s,%s,%s,%s,%s,%s,%s,%s)""",
-                (change.event_key,change.feed,change.operation,
+                (consumer_name,event_key,feed,operation,opaque_row_key,
+                 source_timestamp_state,needs_tombstone,
+                 binlog_event_at_utc,captured_at_utc)
+                VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                (consumer,change.event_key,change.feed,change.operation,
                  change.opaque_row_key,change.source_timestamp_state,
                  int(change.needs_tombstone),
                  change.binlog_event_at_utc.replace(tzinfo=None),
@@ -171,7 +216,8 @@ class LocalIngestSink(unittest.TestCase):
         )
         self.assertEqual(
             query(self.db, "SELECT COUNT(*) FROM fixer_ingest_cdc.ingest_change_markers "
-                 "WHERE event_key=%s", (change.event_key,))[0][0], 1
+                 "WHERE consumer_name=%s AND event_key=%s",
+                 (consumer,change.event_key))[0][0], 1
         )
 
     def test_stale_checkpoint_refuses_plan_without_marker_write(self):
@@ -190,7 +236,8 @@ class LocalIngestSink(unittest.TestCase):
         )[0][0], 600)
         self.assertEqual(query(
             self.db, "SELECT COUNT(*) FROM fixer_ingest_cdc.ingest_change_markers "
-                     "WHERE event_key=%s", (stale.changes[0].event_key,)
+                     "WHERE consumer_name=%s AND event_key=%s",
+                     (consumer,stale.changes[0].event_key)
         )[0][0], 0)
 
     def test_unbootstrapped_consumer_fails_without_source_write(self):
@@ -199,7 +246,8 @@ class LocalIngestSink(unittest.TestCase):
             persist_local_plan(self.db, p, consumer_name="test-ingest-unbootstrapped")
         self.assertEqual(query(
             self.db, "SELECT COUNT(*) FROM fixer_ingest_cdc.ingest_change_markers "
-                     "WHERE event_key=%s", (p.changes[0].event_key,)
+                     "WHERE consumer_name=%s AND event_key=%s",
+                     ("test-ingest-unbootstrapped",p.changes[0].event_key)
         )[0][0], 0)
 
     def test_empty_committed_source_transaction_advances_checkpoint(self):
