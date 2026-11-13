@@ -72,6 +72,9 @@ class IngestSinkSafetyContracts(unittest.TestCase):
         self.assertIn("CREATE TABLE ingest_checkpoint",ddl)
         self.assertIn("CREATE TABLE ingest_change_markers",ddl)
         self.assertIn("CREATE TABLE ingest_feed_notifications",ddl)
+        # Cross-consumer notifications and change identities must be isolated.
+        self.assertIn("PRIMARY KEY (consumer_name,event_key)", ddl)
+        self.assertIn("PRIMARY KEY (consumer_name,feed)", ddl)
         self.assertNotIn("USE ingest_stage",ddl)
         self.assertNotIn("ALTER TABLE ingest_stage",ddl)
         self.assertIn("03-ingest-cdc.sql:ro",compose)
