@@ -67,3 +67,14 @@ A `ready: true` response is **necessary but insufficient** for rollout: it canno
 ## Dashboard parity correction — journey temporal semantics
 
 The existing dashboard uses `completed_at` for *completed-in-period* journey flows, but `started_at` for *started-in-period* activity. These cohorts are different: an October-started journey completed in November counts in October starts and November completions. The direct MySQL dashboard preview now returns both `completedOfStarted` (a start-cohort metric) and `completedInPeriod` (a completion-date flow metric), with corresponding monthly savings. Do not compare `completedOfStarted` to the existing completion-date KPI. This change only corrects the preview and does not claim full score parity, source tombstone handling, or accurate historical point-in-time status.
+
+## Read-only parity probe — historical headcount only
+
+`GET /api/admin/integration/direct-reporting/parity/:employerId?period=2026-10` compares a PostgreSQL dashboard's existing unfiltered, snapshot-backed historical headcount to the matching source MySQL workforce headcount. It returns:
+- `PASS` only when the reporting as-of date, source observation date and eligible headcount all agree.
+- `FAIL` when counts differ after the dates/source definitions agree.
+- `NOT_COMPARABLE` for site/income cohort restrictions, fallback-derived headcounts, missing values, mismatched observation dates or unsafe numeric values.
+
+The route requires an authenticated admin (including existing admin MFA checks), confirms employer authorization, and returns only an aggregate comparison. It writes no source business data into PostgreSQL.
+
+**IMPORTANT:** A headcount `PASS` does **not** authorize switching the whole dashboard to MySQL. Completed journeys, policies, account risk, score weightings, site/income cohorts, historical corrections and publication semantics still require separate parity criteria and approved production tests. The endpoint calls the existing dashboard renderer for a single requested month and can incur PostgreSQL work; keep it admin-only and avoid bulk probing until load limits have been tested.
