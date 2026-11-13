@@ -51,6 +51,7 @@ import { enterpriseOperationsOverview, dataQualityOverview } from "./services/en
 import { checkMysqlReadReplica } from "./services/sourceAdapter.js";
 import { readMysqlReportSummary, readMysqlJourneyKpis, readMysqlEventMetrics, directReportingEnabled } from "./services/directMysqlReporting.js";
 import { readDirectDashboardPreview } from "./services/directMysqlDashboardPreview.js";
+import { readDirectAsOfPreview } from "./services/directMysqlAsOfPreview.js";
 import { subscribeAdminEvents } from "./services/adminEventStream.js";
 import { ensureSectionDefaults, listSections, updateSection, grantUserSection, revokeUserSection, sectionsForUser } from "./services/sectionService.js";
 import { publicEmailConfig, saveEmailConfig, testEmailConnection, createReportSchedule, listReportSchedules, updateReportSchedule, deleteReportSchedule, sendReportNow, recentReportDeliveries, runDueReports } from "./services/reportScheduler.js";
@@ -1806,6 +1807,34 @@ app.get<{ Params: { employerId: string }; Querystring: { startDate?: string; end
     } catch (error: any) {
       req.log.warn({ message: error?.message }, "MySQL dashboard preview unavailable");
       return reply.code(503).send({ error: "Direct MySQL dashboard preview unavailable" });
+    }
+  },
+);
+
+// Historical MySQL preview. Employer access and MFA checked before source reads.
+// Does not replace the existing score, filters or published dashboard.
+app.get<{ Params: { employerId: string }; Querystring: { asOfDate?: string } }>(
+  "/api/employers/:employerId/direct-reporting-asof-preview",
+  async (req, reply) => {
+    const user = await requireUser(req, reply);
+    if (!user) return;
+    if (MFA_ENFORCE && !await hasVerifiedMfaSession(req, user.id))
+      return reply.code(403).send({ error: "MFA verification required", code: "MFA_REQUIRED" });
+    if (!canViewEmployer(user, req.params.employerId))
+      return reply.code(403).send({ error: "no access to this employer" });
+    if (!directReportingEnabled())
+      return reply.code(503).send({ error: "Direct MySQL reporting is not enabled" });
+    try {
+      const config = await getSyncConfig();
+      const data = await readDirectAsOfPreview(config, {
+        employerRef: req.params.employerId,
+        asOfDate: String(req.query?.asOfDate ?? ""),
+      });
+      reply.header("Cache-Control", "no-store");
+      return data;
+    } catch (error: any) {
+      req.log.warn({ message: error?.message }, "MySQL as-of preview unavailable");
+      return reply.code(503).send({ error: "Direct MySQL historical preview unavailable" });
     }
   },
 );
