@@ -124,6 +124,43 @@ wired into the application or deployed.
    privilege are reviewed. Application-side table filters do not
    restrict what the upstream replication account can receive.
 
+## Existing application dashboard route check (13 November 2026)
+
+A read-only repository inspection confirms the current dashboard API
+is still **backed by the app's PostgreSQL-derived snapshot pipeline**,
+not by live canonical MySQL queries:
+
+- `src/server.ts` loads `getDashboardPayload` and
+  `getPublishedDashboardPayload` from
+  `src/services/snapshotBuilder.ts` for dashboard payload endpoints,
+  including `/api/dashboard/first`.
+- `/api/dashboard/events` streams a publication version based on the
+  app's `IntegrationConfig.lastSuccessfulSyncAt`, and
+  `/api/dashboard/version` reports that sync publication timestamp.
+  **A CDC marker must not impersonate a completed dashboard
+  publication**: the UI should only announce a new data version after
+  the approved MySQL view read and cache replacement succeed.
+- The current `src/services/sourceAdapter.ts` MySQL query executor
+  supports `source_updated_at > ?` incremental filters. For an
+  event-triggered report refresh, **do not pass the prior timestamp
+  watermark as `since`**, because live RDS source columns may be
+  stale or NULL. Continue to respect existing canonical report
+  contract and view authorization.
+- `src/services/syncService.ts` owns the existing PostgreSQL
+  import/upsert path; **do not invoke its sync triggers** on CDC
+  notifications. Otherwise a new binlog consumer would still copy
+  reporting data into PostgreSQL.
+
+**Follow-on engineering scope (not yet implemented):** create an
+independent, server-side, tenant-authorized and report-allowlisted
+**read-only MySQL dashboard adapter** with reviewed query limits and
+deduplicated per-feed notification generations. Cache results only
+where authorized and within a bounded size/TTL. Integrate with the
+existing dashboard version/SSE mechanism *only after* an atomic
+successful cache publication. Existing production dashboard endpoints
+must remain unchanged until that independently tested path is ready.
+No new production endpoint, worker or database privilege is claimed.
+
 ## Production activation gates (remain BLOCKED)
 
 - Confirm an acceptable RDS binlog-retention period, estimate binlog
