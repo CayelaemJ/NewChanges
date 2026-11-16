@@ -93,7 +93,7 @@ test("supported connectors do not promise generic mapping or active multi-source
   assert.deepEqual(o.availableConnectors.map(c => c.driver), [
     "MYSQL","POSTGRESQL","MSSQL","API",
   ]);
-  assert.equal(o.onboarding.schemaMappingCapability, "PLANNED_NOT_IMPLEMENTED");
+  assert.equal(o.onboarding.schemaMappingCapability, "OFFLINE_TEN_FEED_PLANNER_AVAILABLE_NOT_ACTIVATED");
   assert.equal(o.onboarding.currentCapability,
     "TEST_AND_STAGE_ONE_CANDIDATE_WITHOUT_SWITCHING_ACTIVE_SOURCE");
   assert.equal(o.onboarding.link, "/admin#live-integration");
@@ -120,7 +120,7 @@ test("React admin has a distinct data-sources tab without changing dashboard end
   assert(app.includes('tab==="sources"&&<DataSourcesControlCenter'));
   assert(panel.includes("/api/admin/data-sources/overview"));
   assert(panel.includes("Stage a database"));
-  assert(panel.includes("simultaneously active sources"));
+  assert(panel.includes("simultaneous active sources"));
   assert(!panel.includes("/api/admin/integration/sync-now"));
   assert(!panel.includes("method: \"POST\""));
 });
