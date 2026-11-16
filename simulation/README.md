@@ -382,7 +382,7 @@ scalable per-employer aggregation and cache publication need a
 separate reviewed implementation. No direct HTTP endpoint exists,
 so no raw workforce or financial records are exposed externally.
 
-`tests/ingest-stage-cdc-mysql-reader.test.ts` adds **10 mocked
+`tests/ingest-stage-cdc-mysql-reader.test.ts` adds **11 mocked
 Node regression tests**, invoked by `npm run check:cdc-dashboard`.
 Use `npx tsc --noEmit` for TypeScript compilation as an independent
 check. **Both checks are pending the operator's WSL run.**
