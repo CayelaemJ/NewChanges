@@ -44,7 +44,10 @@ records, and projects them through the pure
 The returned JSON deliberately **does not include** SQL hosts,
 credentials, connection strings, vault references, raw source rows,
 source view definitions, external endpoint labels, failure text or
-unreviewed source metadata. A candidate's opaque safe ID and
+unreviewed source metadata. The new **Existing source watcher activity**
+section displays only actual sanitized process-local timestamps,
+last outcome, poll duration, poll count and changed-feed count. It
+must never be labelled a real-time binlog CDC feed. A candidate's opaque safe ID and
 status are allowed for administrative display. The existing source
 watcher's status is labelled **this-process / legacy source watcher**,
 not AWS binlog-CDC lag or cross-worker health.
@@ -184,9 +187,11 @@ ROW/FULL binlog configuration; source-to-view physical identity
 gap (0/10 exposed).
 
 **New PR checks, run before sign-off:** `npm run check:cdc-dashboard`
-(reader/publisher/control-centre Node tests), `npx tsc --noEmit`,
-`npm run check:frontend:typecheck`, existing frontend build
-and CircleCI verify/security checks.
+(37 Node tests: 10 reader + 17 publisher + 10 admin control centre),
+`npx tsc --noEmit`, `npm run check:frontend:typecheck`,
+existing frontend build and CircleCI verify/security checks.
+The Node tests and new frontend are not yet verified in a completed
+runtime build in this conversation.
 
 **Hard live CDC blockers:** RDS
 `mysql.rds_show_configuration` reported
