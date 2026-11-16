@@ -110,6 +110,9 @@ export function createCdcFeedSummaryPublisher(options: CdcFeedSummaryPublisherOp
         settings.accessReviewed !== true ||
         settings.snapshotVerified !== true)
       throw new Error("CDC_PUBLICATION_SOURCE_NOT_APPROVED");
+    if (!Number.isSafeInteger(settings.maxRows) ||
+        settings.maxRows < 1 || settings.maxRows > 2000)
+      throw new Error("CDC_PUBLICATION_SOURCE_BUDGET_INVALID");
 
     // One in-flight query per feed and employer. A newer notification arriving
     // during that read is retried after the older publication finishes.
@@ -124,11 +127,20 @@ export function createCdcFeedSummaryPublisher(options: CdcFeedSummaryPublisherOp
       await running;
     }
 
-    if (!cache.has(key) && cache.size >= maxCacheEntries)
+    // Pending keys reserve capacity, preventing concurrent first publications
+    // from exceeding the bound before either response has been committed.
+    const pendingNewKeys = [...pending.keys()].filter(k => !cache.has(k)).length;
+    if (!cache.has(key) && cache.size + pendingNewKeys >= maxCacheEntries)
       throw new Error("CDC_PUBLICATION_CAPACITY_EXCEEDED");
 
     const operation = (async (): Promise<CdcFeedSummary> => {
-      const completed = await options.read(feed, employerRef, scope, settings);
+      let completed: CdcMysqlFeedRead;
+      try {
+        completed = await options.read(feed, employerRef, scope, settings);
+      } catch {
+        // Driver exceptions can contain a hostname, a query or a value.
+        throw new Error("CDC_PUBLICATION_SOURCE_READ_FAILED");
+      }
       if (completed.complete !== true ||
           completed.source !== "MYSQL_READ_ONLY" ||
           completed.feed !== feed ||
