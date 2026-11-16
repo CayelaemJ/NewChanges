@@ -249,6 +249,52 @@ opaque event metadata, not business records or dashboard materializations.
 All new tables are in disposable Docker MySQL; no AWS DDL, data,
 permissions, cost settings or application integrations were changed.
 
+## Employer-isolated metadata publication coordinator (16 November 2026)
+
+A default-disabled, **process-local-only** TypeScript coordinator
+`src/services/ingestStageCdcFeedPublication.ts` now defines
+metadata-only publication for each authorized `(feed,
+employerRef)` pair. It does **not** constitute a production CDC
+reader, a durable checkpoint or an actual dashboard/SSE
+publication. The caller must provide a trusted employer
+authorization scope and evidence-backed `featureEnabled`,
+`accessReviewed` and `snapshotVerified` gates.
+
+The coordinator:
+- reads reporting rows only via an injected/approved MySQL
+  source-reader contract; caches only generation, feed, employer,
+  row count and success timestamp, **never raw reporting values**;
+- coalesces duplicate in-flight reads, handles newer generations
+  arriving during older reads and prevents stale generation replay;
+- enforces TTL, per-process bounded metadata-cache capacity,
+  concurrent new-key reservations and source row budgets;
+- never acknowledges a failed, partial, oversized or cross-employer
+  read, never publishes a dashboard/SSE version and preserves the
+  prior metadata on any source failure; connection failures are
+  reported with safe codes rather than raw driver messages.
+
+`tests/ingest-stage-cdc-feed-publication.test.ts` now has
+**17 fully mocked tests**, one of which composes the actual
+TypeScript MySQL reader with a fake DB response. Together
+with the reader's ten mocked tests, the independent Node
+`npm run check:cdc-dashboard` suite contains **27 cases**.
+It is included in `check:all` and in the CircleCI **verify**
+job. These new tests and `npx tsc --noEmit` have **not yet
+been independently executed**; last confirmed disposable
+MySQL/Python Docker baseline remains **118/118 PASS**.
+
+**Open safety and scale gates:** real RDS `binlog retention
+hours=NULL`, replication-account data exposure review, real
+initial snapshot, durable cross-instance generation publication,
+server-side tenant/employer mapping, an approved least-privilege
+MySQL view reader, and scalable validated **aggregate** metrics
+for large feeds. The reader's current 2,000-row cap will fail
+closed on larger sources instead of silently presenting
+incomplete dashboards. Do not wire the existing
+`syncService.ts` Postgres import path into CDC.
+
+See `INGEST_STAGE_DASHBOARD_PUBLICATION_CONTRACT.md`.
+
 ## Separate gated TypeScript MySQL view reader: prototype only
 
 Added `src/services/ingestStageCdcMysqlReader.ts` as a
