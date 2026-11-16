@@ -113,7 +113,10 @@ test("a failed source read must retain the last successfully published generatio
   const pub = createCdcFeedSummaryPublisher({ read, now: () => 10000 });
   await pub.publish(input());
   shouldFail = true;
-  await assert.rejects(pub.publish(input({ generation: 2 })));
+  await assert.rejects(pub.publish(input({ generation: 2 })),
+    error => error instanceof Error &&
+      error.message === "CDC_PUBLICATION_SOURCE_READ_FAILED" &&
+      !error.message.includes("SECRET MYSQL FAILURE"));
   assert.equal(pub.get("employees", "VIG", employerScope)?.generation, 1);
 });
 
@@ -216,6 +219,38 @@ test("bounded metadata cache refuses silent eviction and cross-employer mixing",
   })), /CDC_PUBLICATION_CAPACITY_EXCEEDED/);
   assert.equal(pub.get("ratings", "VIG", employerScope), null);
   assert.equal(pub.get("employees", "VIG", employerScope)?.rowCount, 1);
+});
+
+test("concurrent distinct cache misses reserve slots before either completes", async () => {
+  let settle!: () => void;
+  let started = 0;
+  const gate = new Promise<void>(resolve => { settle = resolve; });
+  const read: CdcFeedReader = async (feed, employerRef) => {
+    started++;
+    await gate;
+    return { feed, employerRef, source: "MYSQL_READ_ONLY", complete: true, records: [] };
+  };
+  const pub = createCdcFeedSummaryPublisher({ read, maxCacheEntries: 1 });
+  const first = pub.publish(input());
+  await assert.rejects(pub.publish(input({ feed: "ratings" })),
+    /CDC_PUBLICATION_CAPACITY_EXCEEDED/);
+  settle();
+  await first;
+  assert.equal(started, 1);
+  assert.equal(pub.get("employees", "VIG", employerScope)?.generation, 1);
+  assert.equal(pub.get("ratings", "VIG", employerScope), null);
+});
+
+test("invalid source budget is refused before the mocked reader is called", async () => {
+  const r = reading();
+  const pub = createCdcFeedSummaryPublisher({ read: r.read });
+  await assert.rejects(pub.publish(input({
+    settings: { ...settings, maxRows: Number.NaN },
+  })), /CDC_PUBLICATION_SOURCE_BUDGET_INVALID/);
+  await assert.rejects(pub.publish(input({
+    settings: { ...settings, maxRows: 2001 },
+  })), /CDC_PUBLICATION_SOURCE_BUDGET_INVALID/);
+  assert.equal(r.calls(), 0);
 });
 
 test("metadata cache never exposes another employer just because a feed matches", async () => {
