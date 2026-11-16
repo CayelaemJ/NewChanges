@@ -249,6 +249,54 @@ opaque event metadata, not business records or dashboard materializations.
 All new tables are in disposable Docker MySQL; no AWS DDL, data,
 permissions, cost settings or application integrations were changed.
 
+## Multi-source admin control centre: read-only React UI + API (16 November 2026)
+
+A user-visible, **admin-only** connection inventory is now
+implemented in the application code (NOT YET DEPLOYED):
+
+- `src/services/dataSourceControlCenter.ts` safely projects the
+  singleton active IntegrationConfig and staged SourceGeneration
+  records into an explicit multi-source *inventory* response.
+  It excludes SQL hosts, credentials, API tokens, source/vault
+  labels, database rows, free-form errors and unmapped metadata.
+- `GET /api/admin/data-sources/overview` in `src/server.ts`
+  requires `requireAdmin` before any data reads. It does not
+  create/test a source connection, change the source, enable CDC,
+  or initiate any PostgreSQL import.
+- `frontend/src/components/DataSourcesControlCenter.tsx`
+  is rendered under `/react/admin` → **Data sources & CDC**,
+  refreshed at most once every 60 seconds while mounted.
+  It displays configured source mode, staged candidates,
+  the CDC pilot's BLOCKED status, safe launch gates and a link
+  to the existing candidate test/stage form at
+  `/admin#live-integration`.
+- Legacy source watcher activity is labelled
+  **THIS_PROCESS_LEGACY_SOURCE_WATCHER** and displays only
+  actual observed last check, last change, last success,
+  last failure, last outcome, count, duration and polls.
+  It is **not** labeled binlog CDC throughput, replication
+  lag, retention or cross-instance health.
+- The app already includes standalone, tested **offline**
+  ten-feed schema discovery/mapping modules for MySQL,
+  PostgreSQL and SQL Server. A second database can presently
+  be tested/staged as a *candidate*, but not activated
+  alongside the existing singleton active connection.
+  Full multi-active-source registration is explicitly
+  **NOT implemented** and requires future reviewed schema
+  and connector lifecycle changes.
+
+Added **10 Node tests** to
+`tests/data-source-control-center.test.ts`, bringing
+`npm run check:cdc-dashboard` to **37 tests** (10 MySQL
+reader, 17 metadata publication, 10 control centre).
+These are *not* part of the last 118/118 disposable
+Python/MySQL Docker run. **New Node tests and frontend
+typecheck/build still require verification.**
+
+See `MULTI_SOURCE_CONTROL_CENTER.md` for the screens,
+data-source onboarding lifecycle, metric/cost telemetry
+and remaining production-readiness conditions.
+
 ## Employer-isolated metadata publication coordinator (16 November 2026)
 
 A default-disabled, **process-local-only** TypeScript coordinator
