@@ -13,6 +13,7 @@ import {
 import { getFormat } from "../src/services/reportFormats.js";
 
 const settings: CdcMysqlReaderSettings = {
+  sourceId: "ingest_stage_rds",
   featureEnabled: true,
   accessReviewed: true,
   snapshotVerified: true,
@@ -24,14 +25,14 @@ const settings: CdcMysqlReaderSettings = {
   queryTimeoutMs: 10000,
   maxRows: 10,
 };
-const employerScope: VerifiedEmployerScope = { authorizedEmployerRefs: ["VIG"] };
+const employerScope: VerifiedEmployerScope = { sourceId: "ingest_stage_rds", tenantId: "tenant_a", authorizedEmployerRefs: ["VIG"] };
 
 function reading(rows = [{ employer_ref: "VIG", payroll_ref: "MUST_NOT_CACHE" }]) {
   let calls = 0;
   const read: CdcFeedReader = async (feed, employerRef) => {
     calls++;
     return {
-      feed, employerRef, source: "MYSQL_READ_ONLY", complete: true,
+      sourceId: "ingest_stage_rds", tenantId: "tenant_a", feed, employerRef, source: "MYSQL_READ_ONLY", complete: true,
       records: rows,
     };
   };
@@ -93,6 +94,7 @@ test("one authorized read publishes only count and monotonic generation", async 
   const pub = createCdcFeedSummaryPublisher({ read: r.read, now: () => 12000 });
   const summary = await pub.publish(input());
   assert.deepEqual(summary, {
+    sourceId: "ingest_stage_rds", tenantId: "tenant_a",
     feed: "employees", employerRef: "VIG",
     generation: 1, rowCount: 1, publishedAtMs: 12000,
   });
@@ -130,7 +132,7 @@ test("scope and feature gates run before a database read or cached response", as
   const r = reading();
   const pub = createCdcFeedSummaryPublisher({ read: r.read });
   await assert.rejects(pub.publish(input({
-    scope: { authorizedEmployerRefs: ["OTHER"] },
+    scope: { ...employerScope, authorizedEmployerRefs: ["OTHER"] },
   })), /CDC_PUBLICATION_SCOPE_DENIED/);
   await assert.rejects(pub.publish(input({
     settings: { ...settings, featureEnabled: false },
@@ -141,7 +143,7 @@ test("scope and feature gates run before a database read or cached response", as
   await assert.rejects(pub.publish(input({
     settings: { ...settings, accessReviewed: false },
   })), /CDC_PUBLICATION_SOURCE_NOT_APPROVED/);
-  assert.throws(() => pub.get("employees", "VIG", { authorizedEmployerRefs: ["OTHER"] }),
+  assert.throws(() => pub.get("employees", "VIG", { ...employerScope, authorizedEmployerRefs: ["OTHER"] }),
     /CDC_PUBLICATION_SCOPE_DENIED/);
   assert.equal(r.calls(), 0);
 });
@@ -150,7 +152,7 @@ test("a failed source read must retain the last successfully published generatio
   let shouldFail = false;
   const read: CdcFeedReader = async (feed, employerRef) => {
     if (shouldFail) throw new Error("SECRET MYSQL FAILURE MUST_NOT_RETURN");
-    return { feed, employerRef, source: "MYSQL_READ_ONLY", complete: true, records: [] };
+    return { sourceId: "ingest_stage_rds", tenantId: "tenant_a", feed, employerRef, source: "MYSQL_READ_ONLY", complete: true, records: [] };
   };
   const pub = createCdcFeedSummaryPublisher({ read, now: () => 10000 });
   await pub.publish(input());
@@ -166,10 +168,10 @@ test("incomplete or cross-employer source response never overwrites a valid gene
   let malformed = false;
   const read: CdcFeedReader = async (feed, employerRef) => {
     if (malformed) return {
-      feed, employerRef, source: "MYSQL_READ_ONLY", complete: true,
+      sourceId: "ingest_stage_rds", tenantId: "tenant_a", feed, employerRef, source: "MYSQL_READ_ONLY", complete: true,
       records: [{ employer_ref: "OTHER" }],
     };
-    return { feed, employerRef, source: "MYSQL_READ_ONLY", complete: true, records: [] };
+    return { sourceId: "ingest_stage_rds", tenantId: "tenant_a", feed, employerRef, source: "MYSQL_READ_ONLY", complete: true, records: [] };
   };
   const pub = createCdcFeedSummaryPublisher({ read, now: () => 10000 });
   await pub.publish(input());
@@ -193,7 +195,7 @@ test("concurrent same employer/feed generation coalesces to one source query", a
   const read: CdcFeedReader = async (feed, employerRef) => {
     starts++;
     await gate;
-    return { feed, employerRef, source: "MYSQL_READ_ONLY", complete: true, records: [] };
+    return { sourceId: "ingest_stage_rds", tenantId: "tenant_a", feed, employerRef, source: "MYSQL_READ_ONLY", complete: true, records: [] };
   };
   const pub = createCdcFeedSummaryPublisher({ read });
   const first = pub.publish(input());
@@ -211,7 +213,7 @@ test("a newer generation during an in-flight read gets an additional read", asyn
   const read: CdcFeedReader = async (feed, employerRef) => {
     starts++;
     if (starts === 1) await gate;
-    return { feed, employerRef, source: "MYSQL_READ_ONLY", complete: true, records: [] };
+    return { sourceId: "ingest_stage_rds", tenantId: "tenant_a", feed, employerRef, source: "MYSQL_READ_ONLY", complete: true, records: [] };
   };
   const pub = createCdcFeedSummaryPublisher({ read });
   const older = pub.publish(input({ generation: 1 }));
@@ -251,7 +253,7 @@ test("time-to-live expiry forces a fresh read without falsely incrementing gener
 
 test("bounded metadata cache refuses silent eviction and cross-employer mixing", async () => {
   const read: CdcFeedReader = async (feed, employerRef) => ({
-    feed, employerRef, source: "MYSQL_READ_ONLY", complete: true,
+    sourceId: "ingest_stage_rds", tenantId: "tenant_a", feed, employerRef, source: "MYSQL_READ_ONLY", complete: true,
     records: [{ employer_ref: employerRef }],
   });
   const pub = createCdcFeedSummaryPublisher({ read, maxCacheEntries: 1 });
@@ -270,7 +272,7 @@ test("concurrent distinct cache misses reserve slots before either completes", a
   const read: CdcFeedReader = async (feed, employerRef) => {
     started++;
     await gate;
-    return { feed, employerRef, source: "MYSQL_READ_ONLY", complete: true, records: [] };
+    return { sourceId: "ingest_stage_rds", tenantId: "tenant_a", feed, employerRef, source: "MYSQL_READ_ONLY", complete: true, records: [] };
   };
   const pub = createCdcFeedSummaryPublisher({ read, maxCacheEntries: 1 });
   const first = pub.publish(input());
@@ -297,12 +299,12 @@ test("invalid source budget is refused before the mocked reader is called", asyn
 
 test("metadata cache never exposes another employer just because a feed matches", async () => {
   const read: CdcFeedReader = async (feed, employerRef) => ({
-    feed, employerRef, source: "MYSQL_READ_ONLY", complete: true,
+    sourceId: "ingest_stage_rds", tenantId: "tenant_a", feed, employerRef, source: "MYSQL_READ_ONLY", complete: true,
     records: [{ employer_ref: employerRef }],
   });
   const pub = createCdcFeedSummaryPublisher({ read });
   await pub.publish(input());
-  const scopeB = { authorizedEmployerRefs: ["B"] };
+  const scopeB = { ...employerScope, authorizedEmployerRefs: ["B"] };
   assert.equal(pub.get("employees", "B", scopeB), null);
   const b = await pub.publish(input({ employerRef: "B", scope: scopeB }));
   assert.equal(b.employerRef, "B");
