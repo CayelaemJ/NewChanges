@@ -10,6 +10,7 @@ import {
 } from "../src/services/ingestStageCdcMysqlReader.js";
 
 const settings: CdcMysqlReaderSettings = {
+  sourceId: "ingest_stage_rds",
   featureEnabled: true,
   accessReviewed: true,
   snapshotVerified: true,
@@ -21,7 +22,7 @@ const settings: CdcMysqlReaderSettings = {
   queryTimeoutMs: 10000,
   maxRows: 2,
 };
-const scope = { authorizedEmployerRefs: ["VIG"] } as const;
+const scope = { sourceId: "ingest_stage_rds", tenantId: "tenant_a", authorizedEmployerRefs: ["VIG"] } as const;
 
 function mockMysql(feed: string, rows: Record<string, unknown>[]) {
   const calls: { sql: string; params: unknown[] }[] = [];
@@ -52,6 +53,8 @@ test("all ten canonical feeds allow only scoped read-only MySQL SELECT and no Po
       feed, "VIG", scope, settings, async () => m.db,
     );
     assert.equal(result.complete, true);
+    assert.equal(result.sourceId, "ingest_stage_rds");
+    assert.equal(result.tenantId, "tenant_a");
     assert.equal(result.source, "MYSQL_READ_ONLY");
     assert.equal(result.feed, feed);
     assert.equal(result.records.length, 1);
@@ -98,10 +101,32 @@ test("server-issued tenant scope enforced before any connection", async () => {
     ["employees", "VIG", ["VIG", " "]],
   ] as const) {
     await assert.rejects(
-      readCdcMysqlView(feed, employer, { authorizedEmployerRefs: [...tenants] }, settings,
+      readCdcMysqlView(feed, employer, { ...scope, authorizedEmployerRefs: [...tenants] }, settings,
         async () => { connects++; throw Error("SHOULD_NOT_OPEN"); }),
     );
   }
+  assert.equal(connects, 0);
+});
+
+test("reject mismatched tenant/source scope before opening a DB connection", async () => {
+  let connects = 0;
+  for (const changed of [
+    { sourceId: "another_database" },
+    { tenantId: " " },
+    { tenantId: "" },
+  ]) {
+    await assert.rejects(
+      readCdcMysqlView("employees", "VIG", { ...scope, ...changed }, settings,
+        async () => { connects++; throw Error("SHOULD_NOT_OPEN"); }),
+      /CDC_MYSQL_EMPLOYER_SCOPE_DENIED/,
+    );
+  }
+  await assert.rejects(
+    readCdcMysqlView("employees", "VIG", scope,
+      { ...settings, sourceId: "other_source" },
+      async () => { connects++; throw Error("SHOULD_NOT_OPEN"); }),
+    /CDC_MYSQL_EMPLOYER_SCOPE_DENIED/,
+  );
   assert.equal(connects, 0);
 });
 
