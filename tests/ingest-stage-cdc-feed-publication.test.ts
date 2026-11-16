@@ -311,6 +311,47 @@ test("metadata cache never exposes another employer just because a feed matches"
   assert.equal(pub.get("employees", "VIG", employerScope)?.employerRef, "VIG");
 });
 
+test("two tenants with identical employer references never share cached results", async () => {
+  let count = 0;
+  const read: CdcFeedReader = async (feed, employerRef, scope) => {
+    count++;
+    return {
+      sourceId: scope.sourceId, tenantId: scope.tenantId, feed, employerRef,
+      source: "MYSQL_READ_ONLY", complete: true,
+      records: [{ employer_ref: employerRef }],
+    };
+  };
+  const pub = createCdcFeedSummaryPublisher({ read });
+  const a = await pub.publish(input());
+  const tenantB = { ...employerScope, tenantId: "tenant_b" };
+  assert.equal(pub.get("employees", "VIG", tenantB), null);
+  const b = await pub.publish(input({ scope: tenantB }));
+  assert.equal(a.tenantId, "tenant_a");
+  assert.equal(b.tenantId, "tenant_b");
+  assert.equal(count, 2);
+  assert.notDeepEqual(a, b);
+  assert.equal(pub.get("employees", "VIG", employerScope)?.tenantId, "tenant_a");
+});
+
+test("cross-source authorizations and reader-response identity mismatches fail closed", async () => {
+  let count = 0;
+  const read: CdcFeedReader = async (feed, employerRef) => {
+    count++;
+    return {
+      sourceId: "foreign_source", tenantId: "tenant_a", feed, employerRef,
+      source: "MYSQL_READ_ONLY", complete: true, records: [],
+    };
+  };
+  const pub = createCdcFeedSummaryPublisher({ read });
+  await assert.rejects(pub.publish(input({
+    scope: { ...employerScope, sourceId: "foreign_source" },
+  })), /CDC_PUBLICATION_SOURCE_SCOPE_MISMATCH/);
+  assert.equal(count, 0);
+  await assert.rejects(pub.publish(input()), /CDC_PUBLICATION_INCOMPLETE_MYSQL_READ/);
+  assert.equal(count, 1);
+  assert.equal(pub.get("employees", "VIG", employerScope), null);
+});
+
 test("invalid publisher limits fail closed at construction", () => {
   const read = reading().read;
   for (const opts of [{ ttlMs: 0 }, { ttlMs: -1 }, { maxCacheEntries: 0 },
