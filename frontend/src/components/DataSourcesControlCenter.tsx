@@ -190,7 +190,7 @@ export function DataSourcesControlCenter() {
       <section className="border border-slate-200 bg-white p-5">
         <h3 className="text-base font-semibold text-slate-900">Plug-and-play connector pathway</h3>
         <p className="mt-1 text-sm text-slate-600">
-          Supported today: test and stage one candidate. Multiple simultaneously active sources and automatic schema mapping require another implementation phase.
+          Supported today: test and stage one candidate. Offline ten-feed schema discovery and mapping tools already exist, but automated mapping approval, simultaneous active sources and dashboard wiring are not enabled yet.
         </p>
         <div className="mt-4 grid gap-3 md:grid-cols-4">
           {data.availableConnectors.map(connector => <div key={connector.driver} className="border border-slate-200 p-3">
@@ -200,11 +200,11 @@ export function DataSourcesControlCenter() {
           </div>)}
         </div>
         <ol className="mt-4 grid gap-2 text-xs text-slate-700 sm:grid-cols-2 xl:grid-cols-5">
-          {["Choose connector", "Test and preview", "Map schema (planned)", "Approve change mode", "Activate deliberately"].map((step, i) =>
+          {["Choose connector", "Test and preview", "Review 10-feed mapping", "Approve change mode", "Activate deliberately"].map((step, i) =>
             <li key={step} className="border-t-2 border-slate-200 pt-2"><span className="mr-2 text-slate-400">{i + 1}.</span>{step}</li>)}
         </ol>
         <p className="mt-4 text-xs text-slate-500">
-          Source discovery, transformation rules and multi-source runtime registration are not yet automated. The control centre will show them as pending rather than guessing.
+          The existing mapping planner can inspect metadata for ten canonical feeds, but it is not an active self-service wizard. New database schemas still need reviewed mappings, privileges and an approved activation path.
         </p>
       </section>
       <p className="text-right text-[11px] text-slate-400">Inventory checked {formattedDate(data.observedAt)} · Admin-only</p>
