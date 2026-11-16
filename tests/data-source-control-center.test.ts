@@ -18,6 +18,8 @@ const generations = [
   { id: "c789", state: "ACTIVE", sourceMode: "SQL" },
 ];
 const watcher = { status: "STALE", lastCheckedAt: "2026-11-15T12:05:00Z",
+  lastChangeDetectedAt: "2026-11-15T11:55:00Z", lastSuccessfulSyncAt: "2026-11-15T12:02:00Z",
+  lastOutcome: "CHANGED", pollCount: 12, lastDurationMs: 110,
   lastChangedFeeds: 2, lastErrorClass: "SENSITIVE_DB_ERROR" };
 
 test("show current SQL importer without claiming a live CDC pipeline", () => {
@@ -54,6 +56,20 @@ test("metadata response never serializes source hosts, credentials, errors or va
     "MYSQL_SECRET","PRIVATE_RDS_HOST","API_BEARER_SECRET","REPLICA_SECRET",
     "SECRET_MYSQL_ENDPOINT","SECRET_REFERENCE","RAW_SECRET","SENSITIVE_DB_ERROR",
   ]) assert(!json.includes(forbidden), forbidden);
+});
+
+test("admin overview shows observed watcher activity without claiming CDC throughput", () => {
+  const o = buildDataSourceControlOverview(active, generations, watcher);
+  assert.equal(o.polling.status, "STALE");
+  assert.equal(o.polling.scope, "THIS_PROCESS_LEGACY_SOURCE_WATCHER");
+  assert.equal(o.polling.lastOutcome, "CHANGED");
+  assert.equal(o.polling.lastDurationMs, 110);
+  assert.equal(o.polling.pollCount, 12);
+  assert.equal(o.polling.changedFeedsLastPoll, 2);
+  assert.equal(o.polling.lastChangeDetectedAt, "2026-11-15T11:55:00.000Z");
+  assert.equal(o.polling.lastSuccessfulSyncAt, "2026-11-15T12:02:00.000Z");
+  assert.equal(o.cdcPilot.state, "BLOCKED_NOT_DEPLOYED");
+  assert(!JSON.stringify(o).includes("SENSITIVE_DB_ERROR"));
 });
 
 test("a configured but disabled source is paused, not reported as connected", () => {
@@ -120,6 +136,7 @@ test("React admin has a distinct data-sources tab without changing dashboard end
   assert(app.includes('tab==="sources"&&<DataSourcesControlCenter'));
   assert(panel.includes("/api/admin/data-sources/overview"));
   assert(panel.includes("Stage a database"));
+  assert(panel.includes("Existing source watcher activity"));
   assert(panel.includes("simultaneous active sources"));
   assert(!panel.includes("/api/admin/integration/sync-now"));
   assert(!panel.includes("method: \"POST\""));
