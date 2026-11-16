@@ -17,6 +17,7 @@ import {
 import { LOAD_ORDER } from "./reportFormats.js";
 
 const ALLOWED = new Set(LOAD_ORDER);
+const NAMESPACE = /^[A-Za-z0-9_-]{1,128}$/;
 
 export type CdcFeedReader = (
   feed: string,
@@ -26,6 +27,8 @@ export type CdcFeedReader = (
 ) => Promise<CdcMysqlFeedRead>;
 
 export interface CdcFeedSummary {
+  readonly sourceId: string;
+  readonly tenantId: string;
   readonly feed: string;
   readonly employerRef: string;
   readonly generation: number;
@@ -57,6 +60,8 @@ export function createCdcFeedSummaryPublisher(options: CdcFeedSummaryPublisherOp
 
   function scopeKey(feed: string, employerRef: string, scope: VerifiedEmployerScope): string {
     if (!ALLOWED.has(feed) ||
+        !NAMESPACE.test(scope?.sourceId ?? "") ||
+        !NAMESPACE.test(scope?.tenantId ?? "") ||
         typeof employerRef !== "string" || !employerRef ||
         employerRef.length > 200 || employerRef.trim() !== employerRef ||
         !Array.isArray(scope?.authorizedEmployerRefs) ||
@@ -66,7 +71,7 @@ export function createCdcFeedSummaryPublisher(options: CdcFeedSummaryPublisherOp
           typeof value === "string" && value.length > 0 &&
           value.length <= 200 && value.trim() === value))
       throw new Error("CDC_PUBLICATION_SCOPE_DENIED");
-    return JSON.stringify([feed, employerRef]);
+    return JSON.stringify([scope.sourceId, scope.tenantId, feed, employerRef]);
   }
 
   function clock(): number {
@@ -106,6 +111,9 @@ export function createCdcFeedSummaryPublisher(options: CdcFeedSummaryPublisherOp
     const requested = generation(input.generation);
     // A cached summary is not authorization to query MySQL or advance CDC.
     // These declarations must reflect independent verification by the caller.
+    if (!NAMESPACE.test(settings.sourceId ?? "") ||
+        settings.sourceId !== scope.sourceId)
+      throw new Error("CDC_PUBLICATION_SOURCE_SCOPE_MISMATCH");
     if (settings.featureEnabled !== true ||
         settings.accessReviewed !== true ||
         settings.snapshotVerified !== true)
@@ -142,6 +150,8 @@ export function createCdcFeedSummaryPublisher(options: CdcFeedSummaryPublisherOp
         throw new Error("CDC_PUBLICATION_SOURCE_READ_FAILED");
       }
       if (completed.complete !== true ||
+          completed.sourceId !== scope.sourceId ||
+          completed.tenantId !== scope.tenantId ||
           completed.source !== "MYSQL_READ_ONLY" ||
           completed.feed !== feed ||
           completed.employerRef !== employerRef ||
@@ -155,6 +165,7 @@ export function createCdcFeedSummaryPublisher(options: CdcFeedSummaryPublisherOp
       // The only data retained is a count and a generation. Source rows are
       // never stored in this cache, in PostgreSQL or in an SSE message.
       const summary: CdcFeedSummary = Object.freeze({
+        sourceId: scope.sourceId, tenantId: scope.tenantId,
         feed, employerRef, generation: requested,
         rowCount: completed.records.length,
         publishedAtMs: clock(),
