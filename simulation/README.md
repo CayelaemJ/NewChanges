@@ -333,7 +333,7 @@ Driver errors are redacted; failed or cross-employer reads retain
 the last successful metadata version.
 
 The coordinator stores ONLY
-`{feed, employerRef, generation, rowCount, publishedAtMs}`.
+`{sourceId, tenantId, feed, employerRef, generation, rowCount, publishedAtMs}`.
 No raw payroll, debt or identity fields are cached or copied into
 PostgreSQL. It does not itself compute the full dashboard metrics,
 create HTTP routes, publish SSE versions, or change any production
@@ -611,3 +611,18 @@ timestamp lineage and dashboard data contracts are addressed.
 - [Python MySQL binlog replication library](https://pypi.org/project/mysql-replication/)
 
 No production access credentials, personal data, RDS connection URL or hardcoded real password is stored in this package.
+
+## Tenant/source namespace isolation (16 November 2026)
+
+The default-disabled MySQL reader now requires a **trusted stable
+sourceId and tenantId** in its server-constructed authorization scope.
+The sourceId must match the approved MySQL reader configuration
+before any connection is opened. The metadata-only publication
+coordinator keys its cache by **(sourceId, tenantId, feed, employerRef)**
+and verifies both IDs on the reader response. Identical employer codes
+in different tenants or future databases cannot share cached counts.
+Reader and publisher negative tests cover mismatches; the independent
+Node suite has **40 cases** (11 reader, 19 publisher, 10 admin).
+Those tests remain **pending execution**, separate from the operator's
+118/118 successful disposable MySQL/Python CDC baseline.
+
