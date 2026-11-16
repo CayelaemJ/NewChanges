@@ -7,8 +7,8 @@
  * It is not yet a multi-active-source runtime or proof of CDC readiness.
  */
 export type SourceControlState =
-  "ACTIVE_LEGACY_SYNC" | "PAUSED" | "NOT_CONFIGURED" |
-  "STAGED" | "VALIDATED" | "RETIRED" | "UNKNOWN";
+  "ENABLED_LEGACY_IMPORT" | "PAUSED" | "NOT_CONFIGURED" |
+  "STAGED" | "VALIDATED" | "ACTIVE_GENERATION" | "RETIRED" | "UNKNOWN";
 
 export interface SourceControlConfig {
   enabled?: boolean | null;
@@ -58,7 +58,8 @@ function safeDriver(value: string | null | undefined): string {
 }
 function safeState(value: string | null | undefined): SourceControlState {
   const normalized = String(value ?? "").toUpperCase();
-  if (normalized === "VALIDATED" || normalized === "ACTIVE") return "VALIDATED";
+  if (normalized === "VALIDATED") return "VALIDATED";
+  if (normalized === "ACTIVE") return "ACTIVE_GENERATION";
   if (normalized === "CANDIDATE") return "STAGED";
   if (normalized === "RETIRED") return "RETIRED";
   return "UNKNOWN";
@@ -73,7 +74,7 @@ export function buildDataSourceControlOverview(
   const configured = current.configured === true;
   const active = configured && current.enabled === true;
   const activeState: SourceControlState = !configured
-    ? "NOT_CONFIGURED" : active ? "ACTIVE_LEGACY_SYNC" : "PAUSED";
+    ? "NOT_CONFIGURED" : active ? "ENABLED_LEGACY_IMPORT" : "PAUSED";
   const candidates = staged
     .filter(g => g && typeof g.id === "string" &&
       /^[a-zA-Z0-9_-]{1,100}$/.test(g.id) && typeof g.state === "string")
@@ -113,9 +114,9 @@ export function buildDataSourceControlOverview(
     candidates,
     availableConnectors: supported,
     summary: {
-      active: active ? 1 : 0,
+      enabledIntegrations: active ? 1 : 0,
       staged: candidates.filter(g => g.status === "STAGED" || g.status === "VALIDATED").length,
-      registered: (configured ? 1 : 0) + candidates.length,
+      trackedEntries: (configured ? 1 : 0) + candidates.length,
       cdcProductionReady: false,
     },
     polling: {
