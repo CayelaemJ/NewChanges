@@ -149,7 +149,7 @@ export function buildDataSourceControlOverview(
       connectedPlatforms: ["MYSQL", "POSTGRESQL", "MSSQL", "API"],
       currentCapability: "TEST_AND_STAGE_ONE_CANDIDATE_WITHOUT_SWITCHING_ACTIVE_SOURCE",
       simultaneousActiveSources: false,
-      schemaMappingCapability: "PLANNED_NOT_IMPLEMENTED",
+      schemaMappingCapability: "OFFLINE_TEN_FEED_PLANNER_AVAILABLE_NOT_ACTIVATED",
       link: "/admin#live-integration",
     },
   };
