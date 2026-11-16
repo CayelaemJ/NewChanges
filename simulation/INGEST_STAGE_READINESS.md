@@ -287,8 +287,8 @@ implemented in the application code (NOT YET DEPLOYED):
 
 Added **10 Node tests** to
 `tests/data-source-control-center.test.ts`, bringing
-`npm run check:cdc-dashboard` to **37 tests** (10 MySQL
-reader, 17 metadata publication, 10 control centre).
+`npm run check:cdc-dashboard` to **40 tests** (10 MySQL
+reader, 19 metadata publication, 10 control centre).
 These are *not* part of the last 118/118 disposable
 Python/MySQL Docker run. **New Node tests and frontend
 typecheck/build still require verification.**
@@ -325,7 +325,7 @@ The coordinator:
 **17 fully mocked tests**, one of which composes the actual
 TypeScript MySQL reader with a fake DB response. Together
 with the reader's ten mocked tests, the independent Node
-`npm run check:cdc-dashboard` suite contains **27 cases**.
+`npm run check:cdc-dashboard` suite contains **30 cases**.
 It is included in `check:all` and in the CircleCI **verify**
 job. These new tests and `npx tsc --noEmit` have **not yet
 been independently executed**; last confirmed disposable
