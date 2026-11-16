@@ -104,16 +104,23 @@ CDC notifications: it stages and merges canonical rows into PostgreSQL.
 - `tests/ingest-stage-cdc-mysql-reader.test.ts`: 10 mocked checks
   for tenant isolation, RDS/TLS limits, read-only SQL, rollback,
   cross-tenant leakage and incomplete-result handling.
-- `tests/ingest-stage-cdc-feed-publication.test.ts`: 16 mocked checks
+- `tests/ingest-stage-cdc-feed-publication.test.ts`: 17 mocked checks
   for all ten feeds, version monotonicity, concurrent notifications,
   capacity reservation, refresh errors, expiry, and metadata-only
   publication.
 
-The new Node suite is **26 tests, added but not yet executed by
+The new Node suite is **27 tests, added but not yet executed by
 the operator**; `npx tsc --noEmit` is likewise pending.
 The earlier **118/118 Docker PASS** is a separate Python/MySQL
 test suite and cannot be counted as a Node regression pass.
 The new command is included in `package.json`'s `check:all`.
+It is also invoked directly by the `.circleci/config.yml` **verify**
+job, following existing `check:source-sync-safety` tests. The latest
+additional test composes the actual TypeScript MySQL view reader (with a
+mocked DB connection) and the metadata coordinator, verifying source
+ROW field minimization, read-only snapshot SQL, no write statements,
+and that raw payroll references are not retained in the publication.
+**No CI result is claimed yet for these new tests.**
 
 ## Production launch gates (open)
 
