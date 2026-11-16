@@ -146,7 +146,7 @@ The independent Node command now includes a third test file,
 `tests/data-source-control-center.test.ts` (**10 more tests**)
 for secret redaction, admin authorization, source-stage states,
 legacy watcher semantics and React admin route wiring.
-**Total pending Node regression cases: 37**; separate verified
+**Total pending Node regression cases: 40**; separate verified
 Docker/Python baseline remains **118/118**. Do not claim
 these new Node tests passed without execution evidence.
 
