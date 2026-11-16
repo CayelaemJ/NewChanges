@@ -282,6 +282,43 @@ no failures or skips and test container exit code **0**; the host phase
 ran 107 tests with 19 expected environment skips. No RDS source read,
 live binlog reader activation or application-dashboard cutover is implied.
 
+### New Data Sources & CDC admin control centre (16 November 2026)
+
+`/react/admin` now includes the **Data sources & CDC** tab, backed
+by admin-only `GET /api/admin/data-sources/overview`. The endpoint
+reads the existing `IntegrationConfig` and staged
+`SourceGeneration` metadata and the process-local legacy
+`sourceWatchHealth`; it does **not connect to any source database**.
+`src/services/dataSourceControlCenter.ts` projects only
+sanitized status, connector driver type, candidate lifecycle,
+approved operator-provided local CDC test baseline, and
+the existing watcher's last checked/change/success/failure times,
+outcome, changed feed count and probe duration. No SQL credentials,
+hosts, connection strings, external endpoint labels, vault IDs,
+row data or source errors are returned.
+
+The React page shows connection inventory, candidate staging,
+existing watcher activity, **production CDC not enabled**, launch
+blockers and a fixed link to the legacy
+`/admin#live-integration` form for testing/staging another
+candidate. It does not promise that staging changes the current
+database or that multiple sources can be active simultaneously.
+Existing `canonicalSchemaDiscovery.ts` and
+`canonicalSchemaMapping.ts` already support **offline read-only
+schema discovery and ten-feed mapping previews** for MySQL,
+PostgreSQL and SQL Server; self-service mapping approval and
+multi-active source registration remain separate work.
+
+Added **10 mocked Node tests** in
+`tests/data-source-control-center.test.ts`, bringing the
+independent `npm run check:cdc-dashboard` command to **37 tests**
+(10 reader + 17 publisher + 10 control centre). The command runs
+under CircleCI verify and `check:all`. **37/37 has not yet
+been executed or confirmed**; the earlier disposable Docker
+MySQL/Python suite remains **118/118 PASS**.
+See `MULTI_SOURCE_CONTROL_CENTER.md` for visual layout, connector
+lifecycle, safety, future database support and rollout gaps.
+
 ### Default-disabled employer-scoped CDC publication coordinator (16 November 2026)
 
 Added `src/services/ingestStageCdcFeedPublication.ts`, an
