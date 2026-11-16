@@ -187,7 +187,7 @@ ROW/FULL binlog configuration; source-to-view physical identity
 gap (0/10 exposed).
 
 **New PR checks, run before sign-off:** `npm run check:cdc-dashboard`
-(37 Node tests: 10 reader + 17 publisher + 10 admin control centre),
+(40 Node tests: 11 reader + 19 publisher + 10 admin control centre),
 `npx tsc --noEmit`, `npm run check:frontend:typecheck`,
 existing frontend build and CircleCI verify/security checks.
 The Node tests and new frontend are not yet verified in a completed
