@@ -24,8 +24,11 @@ type DataSourcesOverview = {
   candidates: TrackedSource[];
   summary: { enabledIntegrations: number; staged: number; trackedEntries: number; cdcProductionReady: false };
   polling: {
-    status: string; scope: string; lastCheckedAt: string | null;
-    lastFailureAt: string | null; changedFeedsLastPoll: number | null;
+    status: string; scope: string;
+    lastCheckedAt: string | null; lastChangeDetectedAt: string | null;
+    lastSuccessfulSyncAt: string | null; lastFailureAt: string | null;
+    lastOutcome: string | null; lastDurationMs: number | null;
+    pollCount: number | null; changedFeedsLastPoll: number | null;
   };
   cdcPilot: {
     label: string; mode: string; state: string; localDockerBaseline: string;
@@ -186,6 +189,34 @@ export function DataSourcesControlCenter() {
           </p>
         </div>
       </div>
+
+      <section className="border border-slate-200 bg-white p-5" aria-label="Existing source watcher activity">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="text-base font-semibold text-slate-900">Existing source watcher activity</h3>
+            <p className="mt-1 text-xs text-slate-600">The current application process only. This is NOT the binlog CDC event stream.</p>
+          </div>
+          <State value={data.polling.status} />
+        </div>
+        <div className="mt-4 grid gap-3 text-xs sm:grid-cols-2 xl:grid-cols-4">
+          {[
+            ["Last source check", formattedDate(data.polling.lastCheckedAt)],
+            ["Last detected change", formattedDate(data.polling.lastChangeDetectedAt)],
+            ["Last successful sync", formattedDate(data.polling.lastSuccessfulSyncAt)],
+            ["Last error", formattedDate(data.polling.lastFailureAt)],
+            ["Last outcome", data.polling.lastOutcome || "Unknown"],
+            ["Changed feeds, last poll", data.polling.changedFeedsLastPoll == null ? "Not observed" : String(data.polling.changedFeedsLastPoll)],
+            ["Last check duration", data.polling.lastDurationMs == null ? "Not observed" : data.polling.lastDurationMs + " ms"],
+            ["Checks by this process", data.polling.pollCount == null ? "Not observed" : String(data.polling.pollCount)],
+          ].map(([label, value]) => <div key={label} className="border-t border-slate-100 pt-3">
+            <span className="block text-slate-500">{label}</span>
+            <strong className="mt-1 block break-words text-sm font-semibold text-slate-800">{value}</strong>
+          </div>)}
+        </div>
+        <p className="mt-4 text-xs text-slate-500">
+          Once live CDC is authorized, this screen can add verified event throughput, consumer lag, replay horizon and checkpoint health without confusing them with source polling.
+        </p>
+      </section>
 
       <section className="border border-slate-200 bg-white p-5">
         <h3 className="text-base font-semibold text-slate-900">Plug-and-play connector pathway</h3>
