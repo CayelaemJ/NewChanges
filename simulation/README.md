@@ -282,6 +282,44 @@ no failures or skips and test container exit code **0**; the host phase
 ran 107 tests with 19 expected environment skips. No RDS source read,
 live binlog reader activation or application-dashboard cutover is implied.
 
+### Default-disabled employer-scoped CDC publication coordinator (16 November 2026)
+
+Added `src/services/ingestStageCdcFeedPublication.ts`, an
+**internal-only, process-local metadata publication prototype**.
+It combines verified ten-feed MySQL source reads with explicit
+notification generations, a server-issued authorized employer scope,
+bounded cache capacity, in-flight request coalescing and short TTL.
+Simultaneous first-publish requests reserve capacity; a newer
+generation arriving during an older read is retrieved subsequently.
+Only successful complete source reads advance the cached generation.
+Driver errors are redacted; failed or cross-employer reads retain
+the last successful metadata version.
+
+The coordinator stores ONLY
+`{feed, employerRef, generation, rowCount, publishedAtMs}`.
+No raw payroll, debt or identity fields are cached or copied into
+PostgreSQL. It does not itself compute the full dashboard metrics,
+create HTTP routes, publish SSE versions, or change any production
+MySQL/RDS settings. Caution: **row-count metadata may still be
+sensitive** and must not be exposed to unapproved users. The
+2,000-row bound of the source reader still blocks large complete
+feeds; validated, tenant-scoped SQL aggregations are a required
+next step before any dashboard rollout.
+
+Added `tests/ingest-stage-cdc-feed-publication.test.ts` with
+**17 mocked unit/integration checks**, including one end-to-end
+reader-to-publication test. Combined with the existing ten
+`ingest-stage-cdc-mysql-reader.test.ts` checks, the **new
+Node suite is 27 tests**. Both files run via
+`npm run check:cdc-dashboard`, now included in
+`package.json` `check:all` and the CircleCI **verify** job.
+**Execution and `npx tsc --noEmit` remain pending**.
+The independently operator-verified Python/isolated MySQL Docker
+suite remains **118/118 PASS**, not 145 Docker tests.
+
+See `INGEST_STAGE_DASHBOARD_PUBLICATION_CONTRACT.md` for data flow,
+failure handling and live activation gates.
+
 ### TypeScript read-only MySQL reporting reader: disabled pending approval (13 November 2026)
 
 `src/services/ingestStageCdcMysqlReader.ts` is a new
