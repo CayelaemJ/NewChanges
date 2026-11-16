@@ -1,0 +1,18 @@
+# Full NewChanges product: original Fastify API, Prisma and compiled React/static UI.
+# Does not seed or migrate live databases during image build or start.
+FROM node:24-bookworm-slim AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --no-audit --no-fund
+COPY frontend/package*.json ./frontend/
+RUN npm ci --prefix frontend --no-audit --no-fund
+COPY . .
+RUN npm run build
+RUN npm prune --omit=dev
+FROM node:24-bookworm-slim
+ENV NODE_ENV=production PORT=8080
+WORKDIR /app
+COPY --from=builder --chown=node:node /app ./
+USER node
+EXPOSE 8080
+CMD ["sh","-c","node scripts/cloudflare/verify-full-app-neon.mjs && exec node dist/server.js"]
