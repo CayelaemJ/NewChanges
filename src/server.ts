@@ -34,6 +34,7 @@ import { activateEquivalentSource, bootstrapExistingSource } from "./services/so
 import { startDailyRefresh } from "./services/dailyRefresh.js";
 import { getConfig as getSyncConfig, saveConfig as saveSyncConfig, publicConfig as publicSyncConfig, testConnection as testSyncConnection, runSync, recoverSourceSyncState, recentSyncLogs, detectSourceChanges, pendingDashboardRetryDue, previewSourceSwitch, SOURCE_CHANGE_POLL_SECONDS } from "./services/syncService.js";
 import { recordSourceWatch, sourceWatchPublicStatus } from "./services/sourceWatchHealth.js";
+import { buildDataSourceControlOverview } from "./services/dataSourceControlCenter.js";
 import {reportOperationalFailure} from "./services/operationalFailureService.js";
 import { listPartners, createPartner, updatePartner, deletePartner, assignUserToPartner, assignEmployerToPartner, themeForUser, themeForEmployer, themeForSlug } from "./services/partnerService.js";
 import { login, resolveSession, destroySession, destroySessionById, destroyAllSessionsForUser, canViewEmployer, canAccessModule, allowedEmployerIds, AuthUser, isAdminRole } from "./services/authService.js";
@@ -1223,6 +1224,21 @@ app.get("/api/admin/database-status", async (req, reply) => {
     return { status: "red", provider, database: "Unverified", latencyMs: Date.now() - started,
       checkedAt: new Date().toISOString(), message: "Database query failed" };
   }
+});
+
+// Administrative connector/CDC inventory. Read-only: no source database
+// connection, no credential, no cutover, and no production CDC worker.
+app.get("/api/admin/data-sources/overview", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  const [config, generations] = await Promise.all([
+    getSyncConfig(), listSourceGenerations(),
+  ]);
+  const safe = publicSyncConfig(config);
+  const watcher = sourceWatchPublicStatus(
+    Boolean(safe.changeDetectionEnabled && safe.sourceChangeSchedulerEnabled),
+    SOURCE_CHANGE_POLL_SECONDS,
+  );
+  return buildDataSourceControlOverview(safe, generations, watcher);
 });
 
 // ── External integration (API or direct SQL pull & sync) — admin only ──
