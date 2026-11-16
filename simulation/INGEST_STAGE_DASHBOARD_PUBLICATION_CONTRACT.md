@@ -122,6 +122,37 @@ ROW field minimization, read-only snapshot SQL, no write statements,
 and that raw payroll references are not retained in the publication.
 **No CI result is claimed yet for these new tests.**
 
+## Admin source inventory and future multi-database use
+
+New `GET /api/admin/data-sources/overview` is protected by
+`requireAdmin` and returns only a sanitized connector inventory
+and the **existing** process-local source watcher state.
+`/react/admin` → **Data sources & CDC** displays configured
+source details, staged candidates, selected connector types,
+CDC launch gates and real, explicitly legacy polling activity.
+It uses a **fixed** link to `/admin#live-integration` to
+preview/stage an additional source without replacing the
+currently configured one.
+
+This is not yet simultaneous live database federation. Existing
+`SourceGeneration` and `canonicalSchemaDiscovery.ts` /
+`canonicalSchemaMapping.ts` modules provide bounded stage
+metadata and **offline ten-feed schema mapping previews**.
+A future independent source registry, identity/metric mapping,
+CDC connectors, authorized source-side aggregates and durable
+cross-worker version publication are required for true plug-and-play.
+
+The independent Node command now includes a third test file,
+`tests/data-source-control-center.test.ts` (**10 more tests**)
+for secret redaction, admin authorization, source-stage states,
+legacy watcher semantics and React admin route wiring.
+**Total pending Node regression cases: 37**; separate verified
+Docker/Python baseline remains **118/118**. Do not claim
+these new Node tests passed without execution evidence.
+
+See `MULTI_SOURCE_CONTROL_CENTER.md` for the next database's
+onboarding lifecycle, UX and cost/latency monitoring plan.
+
 ## Production launch gates (open)
 
 1. Review MySQL RDS external replication's broad binlog visibility
