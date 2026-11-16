@@ -70,7 +70,7 @@ function validateSettings(settings: CdcMysqlReaderSettings): void {
       settings.accessReviewed !== true ||
       settings.snapshotVerified !== true)
     throw new Error("CDC_MYSQL_READ_GATE_CLOSED");
-  if (!SOURCE_NAMESPACE.test(settings.sourceId))
+  if (!SOURCE_NAMESPACE.test(settings.sourceId ?? ""))
     throw new Error("CDC_MYSQL_SOURCE_ID_INVALID");
   if (!RDS_HOST.test(settings.hostname) ||
       !Number.isInteger(settings.port) ||
