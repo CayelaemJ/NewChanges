@@ -61,7 +61,10 @@ test("all ten canonical feeds allow only scoped read-only MySQL SELECT and no Po
     assert.equal(result.records[0].employer_ref, "VIG");
     assert.equal(result.records[0].source_updated_at, null);
     assert.equal(Object.hasOwn(result.records[0], "unexpected_sensitive_internal_value"), false);
-    const sqlCall = m.calls.find(call => call.sql.startsWith("SELECT ") && call.sql.includes(" FROM "));
+    const sqlCall = m.calls.find(call =>
+      call.sql.startsWith("SELECT ") &&
+      call.sql.includes(" FROM `ingest_stage`.`v_" + feed + "`")
+    );
     assert(sqlCall, feed);
     assert(sqlCall.sql.includes(" FROM " + String.fromCharCode(96) + "ingest_stage"));
     assert(sqlCall.sql.includes(" WHERE " + String.fromCharCode(96) + "employer_ref" + String.fromCharCode(96) + " = ?"));
