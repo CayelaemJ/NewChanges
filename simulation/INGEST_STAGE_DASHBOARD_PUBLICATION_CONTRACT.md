@@ -101,15 +101,15 @@ CDC notifications: it stages and merges canonical rows into PostgreSQL.
 
 `npm run check:cdc-dashboard` runs:
 
-- `tests/ingest-stage-cdc-mysql-reader.test.ts`: 10 mocked checks
+- `tests/ingest-stage-cdc-mysql-reader.test.ts`: 11 mocked checks
   for tenant isolation, RDS/TLS limits, read-only SQL, rollback,
   cross-tenant leakage and incomplete-result handling.
-- `tests/ingest-stage-cdc-feed-publication.test.ts`: 17 mocked checks
+- `tests/ingest-stage-cdc-feed-publication.test.ts`: 19 mocked checks
   for all ten feeds, version monotonicity, concurrent notifications,
   capacity reservation, refresh errors, expiry, and metadata-only
   publication.
 
-The new Node suite is **27 tests, added but not yet executed by
+The new Node suite is **30 tests, added but not yet executed by
 the operator**; `npx tsc --noEmit` is likewise pending.
 The earlier **118/118 Docker PASS** is a separate Python/MySQL
 test suite and cannot be counted as a Node regression pass.
