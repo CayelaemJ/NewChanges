@@ -8,6 +8,10 @@ updates:
       cronjob: "0 0 * * *"
       timezone: "Africa/Johannesburg"
     open-pull-requests-limit: 10
+    # Node 24 runtime remains pinned; accept patch/minor type fixes, not Node 25/26 APIs.
+    ignore:
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     versioning-strategy: "increase"
     labels:
       - "dependencies"
