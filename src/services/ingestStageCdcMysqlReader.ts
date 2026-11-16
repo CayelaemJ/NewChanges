@@ -17,6 +17,8 @@ export interface CdcMysqlQueryConnection {
   end(): Promise<void>;
 }
 export interface CdcMysqlReaderSettings {
+  // Approved stable source identity, not an arbitrary browser value.
+  sourceId: string;
   featureEnabled: boolean;
   accessReviewed: boolean;
   snapshotVerified: boolean;
@@ -31,9 +33,13 @@ export interface CdcMysqlReaderSettings {
 export interface VerifiedEmployerScope {
   // Must be built from server-side authentication/tenant authorization,
   // never directly from request query parameters or browser-provided claims.
+  sourceId: string;
+  tenantId: string;
   authorizedEmployerRefs: readonly string[];
 }
 export interface CdcMysqlFeedRead {
+  sourceId: string;
+  tenantId: string;
   feed: string;
   employerRef: string;
   records: SourceRow[];
@@ -45,6 +51,7 @@ export type CdcMysqlConnector =
 
 const ALLOWED = new Set<string>(LOAD_ORDER);
 const IDENTIFIER = /^[a-z][a-z0-9_]{0,63}$/;
+const SOURCE_NAMESPACE = /^[A-Za-z0-9_-]{1,128}$/;
 const RDS_HOST = /^[a-z0-9-]+(?:\.[a-z0-9-]+)+\.rds\.amazonaws\.com$/;
 const QUOTE = String.fromCharCode(96);
 
@@ -63,6 +70,8 @@ function validateSettings(settings: CdcMysqlReaderSettings): void {
       settings.accessReviewed !== true ||
       settings.snapshotVerified !== true)
     throw new Error("CDC_MYSQL_READ_GATE_CLOSED");
+  if (!SOURCE_NAMESPACE.test(settings.sourceId))
+    throw new Error("CDC_MYSQL_SOURCE_ID_INVALID");
   if (!RDS_HOST.test(settings.hostname) ||
       !Number.isInteger(settings.port) ||
       settings.port < 1 || settings.port > 65535)
@@ -82,10 +91,14 @@ function validateSettings(settings: CdcMysqlReaderSettings): void {
     throw new Error("CDC_MYSQL_REPORT_BUDGET_INVALID");
 }
 
-function validateRequest(feed: string, employerRef: string, scope: VerifiedEmployerScope): void {
+function validateRequest(feed: string, employerRef: string, scope: VerifiedEmployerScope,
+                         settings: CdcMysqlReaderSettings): void {
   if (!ALLOWED.has(feed) || !getFormat(feed))
     throw new Error("CDC_MYSQL_FEED_NOT_ALLOWLISTED");
   if (!safeEmployerRef(employerRef) ||
+      !SOURCE_NAMESPACE.test(scope?.sourceId ?? "") ||
+      !SOURCE_NAMESPACE.test(scope?.tenantId ?? "") ||
+      scope.sourceId !== settings.sourceId ||
       !Array.isArray(scope?.authorizedEmployerRefs) ||
       scope.authorizedEmployerRefs.length === 0 ||
       scope.authorizedEmployerRefs.length > 128 ||
@@ -162,7 +175,7 @@ export async function readCdcMysqlView(
   settings: CdcMysqlReaderSettings, connect: CdcMysqlConnector = connectReadOnly,
 ): Promise<CdcMysqlFeedRead> {
   validateSettings(settings);
-  validateRequest(feed, employerRef, scope);
+  validateRequest(feed, employerRef, scope, settings);
   let db: CdcMysqlQueryConnection | null = null;
   let inTransaction = false;
   try {
@@ -192,7 +205,8 @@ export async function readCdcMysqlView(
     // Do not claim a complete feed until every result passed the budget/scope checks.
     await db.query("ROLLBACK");
     inTransaction = false;
-    return { feed, employerRef, records, complete: true, source: "MYSQL_READ_ONLY" };
+    return { sourceId: scope.sourceId, tenantId: scope.tenantId,
+      feed, employerRef, records, complete: true, source: "MYSQL_READ_ONLY" };
   } catch {
     // Never leak DB connection strings, raw rows or SQL errors in responses.
     throw new Error("CDC_MYSQL_VIEW_READ_FAILED");
