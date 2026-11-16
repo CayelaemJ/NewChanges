@@ -20,7 +20,7 @@ if [[ ! -x node_modules/.bin/tsx ]] || [[ ! -x node_modules/.bin/tsc ]]; then
   npm ci --no-audit --no-fund
 fi
 
-echo "[PR237] Testing reader, publication and source control centre (37 Node tests)..."
+echo "[PR237] Testing reader, publication and source control centre (40 Node tests)..."
 npm run check:cdc-dashboard
 
 echo "[PR237] Type-checking backend..."
