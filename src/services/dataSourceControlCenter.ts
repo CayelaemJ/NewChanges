@@ -31,7 +31,11 @@ export interface SourceWatchPreview {
   status?: string | null;
   observerScope?: string | null;
   lastCheckedAt?: string | null;
+  lastChangeDetectedAt?: string | null;
+  lastSuccessfulSyncAt?: string | null;
   lastFailureAt?: string | null;
+  lastOutcome?: string | null;
+  lastDurationMs?: number | null;
   pollCount?: number | null;
   lastChangedFeeds?: number | null;
 }
@@ -123,7 +127,16 @@ export function buildDataSourceControlOverview(
       status: observationStatus,
       scope: "THIS_PROCESS_LEGACY_SOURCE_WATCHER",
       lastCheckedAt: iso(watcher.lastCheckedAt),
+      lastChangeDetectedAt: iso(watcher.lastChangeDetectedAt),
+      lastSuccessfulSyncAt: iso(watcher.lastSuccessfulSyncAt),
       lastFailureAt: iso(watcher.lastFailureAt),
+      lastOutcome: ["UNCHANGED","CHANGED","SYNC_OK","SYNC_FAILED","FALLBACK","DISABLED","ERROR","UNSUPPORTED"]
+        .includes(String(watcher.lastOutcome ?? ""))
+        ? watcher.lastOutcome : "UNKNOWN",
+      lastDurationMs: Number.isSafeInteger(watcher.lastDurationMs) &&
+        (watcher.lastDurationMs ?? -1) >= 0 ? watcher.lastDurationMs : null,
+      pollCount: Number.isSafeInteger(watcher.pollCount) &&
+        (watcher.pollCount ?? -1) >= 0 ? watcher.pollCount : null,
       // This is not a cross-worker health metric or RDS binlog lag.
       changedFeedsLastPoll: Number.isSafeInteger(watcher.lastChangedFeeds) &&
         (watcher.lastChangedFeeds ?? -1) >= 0 ? watcher.lastChangedFeeds : null,
