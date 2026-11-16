@@ -164,7 +164,7 @@ export function DataSourcesControlCenter() {
           </div>
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 p-5">
             <div><b className="text-sm text-slate-800">Another database coming?</b>
-              <p className="mt-1 text-xs text-slate-600">Use the existing preview and staging workflow; it does not automatically replace the current source.</p></div>
+              <p className="mt-1 text-xs text-slate-600">The current staging flow expects ten canonical reporting views. Different schemas need a reviewed field mapping; staging never automatically replaces the active source.</p></div>
             <a href="/admin#live-integration" className="rounded-md bg-[var(--brand-ink-strong)] px-4 py-2 text-sm font-semibold text-white hover:opacity-90">
               Stage a database
             </a>
