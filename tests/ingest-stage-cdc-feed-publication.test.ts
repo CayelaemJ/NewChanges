@@ -5,9 +5,12 @@ import {
   type CdcFeedReader,
 } from "../src/services/ingestStageCdcFeedPublication.js";
 import {
+  readCdcMysqlView,
+  type CdcMysqlQueryConnection,
   type CdcMysqlReaderSettings,
   type VerifiedEmployerScope,
 } from "../src/services/ingestStageCdcMysqlReader.js";
+import { getFormat } from "../src/services/reportFormats.js";
 
 const settings: CdcMysqlReaderSettings = {
   featureEnabled: true,
@@ -45,6 +48,45 @@ function input(overrides: Record<string, unknown> = {}) {
     ...overrides,
   };
 }
+
+test("reader-to-publication integration returns only scoped metadata after read-only SQL", async () => {
+  const statements: string[] = [];
+  let closed = false;
+  const connection: CdcMysqlQueryConnection = {
+    async query(command) {
+      const sql = typeof command === "string" ? command : command.sql;
+      statements.push(sql);
+      if (sql.includes("information_schema.COLUMNS")) {
+        return [getFormat("employees")!.fields.map(field => ({
+          COLUMN_NAME: field.name,
+        })), []];
+      }
+      if (sql.startsWith("SELECT ") && sql.includes(" FROM ")) {
+        return [[{
+          employer_ref: "VIG", payroll_ref: "PRIVATE_EMPLOYEE_REF",
+          source_updated_at: null,
+        }], []];
+      }
+      return [[], []];
+    },
+    async end() { closed = true; },
+  };
+  const read: CdcFeedReader = (feed, employerRef, scope, cfg) =>
+    readCdcMysqlView(feed, employerRef, scope, cfg, async () => connection);
+  const pub = createCdcFeedSummaryPublisher({ read });
+  const published = await pub.publish(input());
+  assert.deepEqual({
+    feed: published.feed, employerRef: published.employerRef,
+    generation: published.generation, rowCount: published.rowCount,
+  }, {
+    feed: "employees", employerRef: "VIG", generation: 1, rowCount: 1,
+  });
+  assert(!JSON.stringify(published).includes("PRIVATE_EMPLOYEE_REF"));
+  assert(statements.includes("START TRANSACTION WITH CONSISTENT SNAPSHOT, READ ONLY"));
+  assert(statements.includes("ROLLBACK"));
+  assert(!statements.some(sql => /\b(?:INSERT|UPDATE|DELETE|REPLACE|ALTER|DROP|GRANT)\s/i.test(sql)));
+  assert(closed);
+});
 
 test("one authorized read publishes only count and monotonic generation", async () => {
   const r = reading();
