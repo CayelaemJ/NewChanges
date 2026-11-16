@@ -311,9 +311,9 @@ multi-active source registration remain separate work.
 
 Added **10 mocked Node tests** in
 `tests/data-source-control-center.test.ts`, bringing the
-independent `npm run check:cdc-dashboard` command to **37 tests**
-(10 reader + 17 publisher + 10 control centre). The command runs
-under CircleCI verify and `check:all`. **37/37 has not yet
+independent `npm run check:cdc-dashboard` command to **40 tests**
+(11 reader + 19 publisher + 10 control centre). The command runs
+under CircleCI verify and `check:all`. **40/40 has not yet
 been executed or confirmed**; the earlier disposable Docker
 MySQL/Python suite remains **118/118 PASS**.
 See `MULTI_SOURCE_CONTROL_CENTER.md` for visual layout, connector
@@ -344,10 +344,10 @@ feeds; validated, tenant-scoped SQL aggregations are a required
 next step before any dashboard rollout.
 
 Added `tests/ingest-stage-cdc-feed-publication.test.ts` with
-**17 mocked unit/integration checks**, including one end-to-end
+**19 mocked unit/integration checks**, including one end-to-end
 reader-to-publication test. Combined with the existing ten
 `ingest-stage-cdc-mysql-reader.test.ts` checks, the **new
-Node suite is 27 tests**. Both files run via
+Node suite is 30 tests**. Both files run via
 `npm run check:cdc-dashboard`, now included in
 `package.json` `check:all` and the CircleCI **verify** job.
 **Execution and `npx tsc --noEmit` remain pending**.
