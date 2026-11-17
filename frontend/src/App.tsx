@@ -1,6 +1,7 @@
 import { Component, type CSSProperties, type PropsWithChildren, useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "./components/ui/badge";
 import { DataSourcesControlCenter } from "./components/DataSourcesControlCenter";
+import { MysqlChartPreview } from "./components/MysqlChartPreview";
 import { Button } from "./components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./components/ui/card";
 import { Progress } from "./components/ui/progress";
@@ -318,6 +319,7 @@ function DashboardView({me}:{me:Me}) {
           </div>
         </div>
       </div>
+      <MysqlChartPreview key={employer.id} employerId={employer.id} />
       <div className="exec-band reveal">
         <div className="exec-head">
           <div className="exec-pulse"></div>
