@@ -13,6 +13,7 @@ COPY ops/local_bootstrap_probe.py ops/local_bootstrap_probe.py
 COPY ops/business_activity_demo.py ops/business_activity_demo.py
 COPY ops/ten_feed_cdc_demo.py ops/ten_feed_cdc_demo.py
 COPY ops/aws_test_readiness.py ops/aws_test_readiness.py
+COPY ops/aws_source_contract.py ops/aws_source_contract.py
 COPY ops/ingest_stage_readonly_audit.sql ops/ingest_stage_readonly_audit.sql
 COPY ops/ingest_stage_timestamp_lineage.sql ops/ingest_stage_timestamp_lineage.sql
 COPY ops/ingest_stage_lineage_summary_readonly.sql ops/ingest_stage_lineage_summary_readonly.sql
