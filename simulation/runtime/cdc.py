@@ -259,6 +259,12 @@ def apply_change(db, table, op, old, new, key, file, position, row_idx, event_at
     return True
 
 
+def enforce_event_capacity(event_size, max_events):
+    """A single oversized row event can never make checkpoint progress."""
+    if event_size > max_events:
+        raise RuntimeError("CDC_ROW_EVENT_EXCEEDS_LIMIT")
+
+
 def run(max_events=None, max_seconds=None):
     if os.environ.get("SIM_CDC_ENABLED") != "true":
         raise RuntimeError("CDC consumption is disabled")
@@ -299,10 +305,8 @@ def run(max_events=None, max_seconds=None):
             next_pos = int(evt.packet.log_pos)
             event_at = datetime.fromtimestamp(evt.timestamp, tz=timezone.utc).replace(tzinfo=None)
             # Consume the entire row event as one transaction or do not advance its checkpoint.
-            if len(evt.rows) > max_events:
-                # This event cannot fit even in a fresh run. Fail the worker
-                # rather than repeatedly reporting SUCCEEDED at one checkpoint.
-                raise RuntimeError("CDC_ROW_EVENT_EXCEEDS_LIMIT")
+            # Refuse events that cannot fit even in an otherwise empty run.
+            enforce_event_capacity(len(evt.rows), max_events)
             if row_count+len(evt.rows)>max_events:break
             try:
                 for row_idx,row in enumerate(evt.rows):
