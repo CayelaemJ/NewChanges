@@ -85,6 +85,34 @@ def inspect(connection):
     }
 
 
+
+SAFE_CONFIGURATION_CODES = frozenset({
+    "AWS_TEST_READONLY_APPROVAL_REQUIRED", "AWS_TEST_RDS_ENDPOINT_INVALID",
+    "AWS_TEST_RDS_PORT_INVALID", "AWS_TEST_READER_USER_INVALID",
+    "AWS_TEST_READER_PASSWORD_MISSING", "AWS_TEST_TLS_CA_MISSING",
+})
+
+
+def safe_failure_code(exc):
+    """Classify failures without printing driver strings or server details."""
+    if type(exc) is RuntimeError and str(exc) in SAFE_CONFIGURATION_CODES:
+        return str(exc)
+    if isinstance(exc, (ModuleNotFoundError, ImportError)):
+        return "PYMYSQL_NOT_INSTALLED_IN_ACTIVE_PYTHON"
+    # MySQL numeric protocol codes; no arbitrary exception text in output.
+    code = getattr(exc, "args", (None,))[0] if getattr(exc, "args", ()) else None
+    if type(code) is int:
+        if code in (1044, 1045, 1698):
+            return "RDS_AUTHENTICATION_OR_DATABASE_ACCESS_DENIED"
+        if code in (2003, 2005, 2006, 2013):
+            return "RDS_NETWORK_DNS_OR_CONNECTION_FAILED"
+        if code in (2026,):
+            return "RDS_TLS_CERTIFICATE_OR_HANDSHAKE_FAILED"
+        if code in (1142, 1227):
+            return "RDS_METADATA_QUERY_PRIVILEGE_DENIED"
+    return "RDS_READONLY_PROBE_FAILED_UNCLASSIFIED"
+
+
 def main():
     try:
         config = validate_environment()
@@ -102,10 +130,10 @@ def main():
             connection.rollback()
             connection.close()
         print(json.dumps(result, sort_keys=True))
-    except Exception:
-        # Never leak driver errors (may contain SQL, hostnames or credentials).
+    except Exception as exc:
+        # Never leak driver errors (may contain SQL, hosts or credentials).
         print(json.dumps({"mode": "READ_ONLY_METADATA_NO_CDC",
-                          "status": "FAILED_REVIEW_LOCAL_CONFIG_OR_PERMISSIONS"}))
+                          "status": "FAILED", "reason_code": safe_failure_code(exc)}))
         return 1
     return 0
 
