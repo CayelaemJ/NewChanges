@@ -2253,6 +2253,28 @@ app.post<{ Params: { employerId: string }; Body: { period: string } }>(
 // ── first-run: create an admin from env vars if no users exist ──
 async function bootstrapAdmin() {
   try {
+    // One-time staging-only credential recovery. Never runs on other Railway
+    // projects, environments, or without all three explicit operator gates.
+    const recoveryRequested =
+      process.env.STAGING_SUPERADMIN_REPAIR === "YES_RECOVER_STAGING_ADMIN" &&
+      process.env.RAILWAY_PROJECT_ID === "f2f1bc4f-5de8-436e-9414-5dc125650e96" &&
+      process.env.RAILWAY_ENVIRONMENT_ID === "9ff830b6-24c3-4319-bee1-82b6a74db270";
+    if (recoveryRequested) {
+      const recoveryEmail=process.env.ADMIN_EMAIL?.toLowerCase().trim();
+      const recoveryPassword=process.env.ADMIN_PASSWORD;
+      if (!recoveryEmail || !recoveryPassword || recoveryPassword.length<12 ||
+          !/[A-Z]/.test(recoveryPassword) || !/[a-z]/.test(recoveryPassword) ||
+          !/[0-9]/.test(recoveryPassword))
+        throw new Error("STAGING_ADMIN_RECOVERY_CONFIG_INVALID");
+      const user=await prisma.user.findUnique({where:{email:recoveryEmail}});
+      if (!user) throw new Error("STAGING_ADMIN_RECOVERY_TARGET_MISSING");
+      if (user.role!=="ADMIN" && user.role!=="SUPERADMIN")
+        throw new Error("STAGING_ADMIN_RECOVERY_ROLE_INVALID");
+      await resetPassword(user.id,recoveryPassword);
+      await prisma.user.update({where:{id:user.id},data:{role:"SUPERADMIN",active:true}});
+      app.log.info("Isolated staging administrator credentials repaired; disable repair variables.");
+      return;
+    }
     const count = await prisma.user.count();
     if (count > 0) return;
     const email = process.env.ADMIN_EMAIL, password = process.env.ADMIN_PASSWORD;
