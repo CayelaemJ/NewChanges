@@ -1598,6 +1598,18 @@ app.get("/api/admin/integration/logs", async (req, reply) => {
   return recentSyncLogs(10);
 });
 
+// Low-cost, authenticated browser feature discovery. Never returns RDS details
+// and does not claim a binlog consumer is publishing chart invalidations.
+app.get("/api/reporting/mysql/capabilities", async (req, reply) => {
+  const user=await requireUser(req,reply);
+  if(!user)return;
+  if(!canAccessModule(user,"dashboard"))
+    return reply.code(403).send({error:"dashboard access required"});
+  reply.header("Cache-Control","private, no-store");
+  return {chartPreviewEnabled:mysqlChartPreviewEnabled(),
+    cdcAutoRefreshConnected:false};
+});
+
 // Independent MySQL reporting pilot: default-off, no PostgreSQL report writes.
 // The application DB is used only by the existing session/employer authorization.
 app.get<{Params:{employerId:string};Querystring:{feed?:string;dimension?:string}}>(
