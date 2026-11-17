@@ -28,7 +28,9 @@ def explain_failure_code(exc):
     """Report only a numeric MySQL error and safe broad class, never messages."""
     args = getattr(exc, "args", ())
     errno = args[0] if args and type(args[0]) is int else None
-    if errno in {1044, 1045, 1142, 1227, 1370}:
+    if errno == 1345:
+        category = "MYSQL_VIEW_EXPLAIN_PRIVILEGE_RESTRICTION"
+    elif errno in {1044, 1045, 1142, 1227, 1370}:
         category = "MYSQL_PERMISSION_DENIED"
     elif errno in {1356, 1449}:
         category = "MYSQL_VIEW_DEFINER_OR_REFERENCE"
