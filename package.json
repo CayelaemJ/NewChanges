@@ -72,7 +72,8 @@
     "quality:types": "tsc --noEmit && npm run check:frontend:typecheck",
     "quality:unit": "vitest run",
     "quality:e2e": "playwright test",
-    "security:tenant-audit": "node scripts/security/tenant-isolation-audit.mjs"
+    "security:tenant-audit": "node scripts/security/tenant-isolation-audit.mjs",
+    "check:cdc-mysql-disposable": "bash scripts/run-cdc-disposable-mysql-integration.sh"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.3",
