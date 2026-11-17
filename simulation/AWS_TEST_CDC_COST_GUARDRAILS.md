@@ -33,3 +33,23 @@
 - No simulated, real or sensitive row payloads written to the CDC metadata sink.
 - The AWS application-specific demo additionally must prove a successful read-only aggregation and dashboard publication, not just detection. Until then UI status must say **not connected**.
 - No new billable cloud resources and no unreviewed RDS setting changes.
+
+
+## New: safe AWS test metadata probe (no source writes)
+
+For a manual inspection of the REAL RDS test instance's ten view contracts, use:
+
+```bash
+cd ~/NewChanges/simulation
+python3 -m pip install --user 'PyMySQL[rsa]'
+export FIXER_AWS_TEST_READONLY_APPROVED=YES_METADATA_ONLY
+export FIXER_RDS_TEST_HOST='<approved RDS endpoint from AWS>'
+export FIXER_RDS_TEST_USER='<dedicated metadata-only account>'
+export FIXER_RDS_TEST_CA='<path to official RDS CA bundle>'
+export FIXER_RDS_TEST_PASSWORD='<obtain securely from your environment/secret store>'
+python3 -m ops.aws_test_readiness
+```
+
+**Do not paste credentials into ChatGPT, GitHub or terminal logs.** Prefer a local secret manager, environment injection or a hidden prompt. The code requires a TLS CA and host ending `.rds.amazonaws.com`, rejects administrator usernames, and does not connect without explicit read-only approval. It queries only `information_schema.TABLES`, `information_schema.COLUMNS` and MySQL global variables; it makes **zero** data-row queries or mutations. Its output intentionally never prints hosts, usernames, credentials or SQL definitions.
+
+The probe cannot independently verify binlog retention, broad replication privilege scope, snapshot handoff or dashboard parity. Those remain separate approval gates; this tool never enables a consumer. Use the returned missing-view / missing-key flags to prioritize source-to-view mapping work. No new AWS resources are created.
