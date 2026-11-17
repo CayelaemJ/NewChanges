@@ -233,3 +233,23 @@ test("query failures roll back and close without leaking sensitive driver messag
   assert(calls.includes("ROLLBACK"));
   assert.equal(calls.at(-1), "END");
 });
+
+test("a failed connection close cannot publish a successful read", async () => {
+  const m = mockMysql("employers", [{ employer_ref: "VIG" }]);
+  let closeAttempts = 0;
+  const db: CdcMysqlQueryConnection = {
+    query: (command, params) => m.db.query(command, params),
+    async end() {
+      closeAttempts++;
+      throw new Error("PRIVATE_CONNECTION_CLOSE_DETAIL");
+    },
+  };
+  await assert.rejects(
+    readCdcMysqlView("employers", "VIG", scope, settings, async () => db),
+    error => error instanceof Error &&
+      error.message === "CDC_MYSQL_VIEW_READ_FAILED" &&
+      !error.message.includes("PRIVATE_CONNECTION_CLOSE_DETAIL"),
+  );
+  assert.equal(closeAttempts, 2);
+  assert.equal(m.calls.at(-1)?.sql, "ROLLBACK");
+});
