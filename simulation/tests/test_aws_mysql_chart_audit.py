@@ -2,7 +2,7 @@
 import unittest
 from unittest.mock import MagicMock
 
-from ops.aws_mysql_chart_audit import DIMENSIONS, inspect
+from ops.aws_mysql_chart_audit import DIMENSIONS, inspect, explain_failure_code
 from runtime.ingest_stage_contract import FEED_TABLES
 
 
@@ -76,6 +76,24 @@ class NativeChartAuditTests(unittest.TestCase):
             output["feeds"]["employees"]["base_table_employer_ref_leading_index"]
         )
 
+
+    def test_explain_failure_redacts_sensitive_driver_messages(self):
+        for errno, expected in [
+            (1142, "MYSQL_PERMISSION_DENIED"),
+            (1356, "MYSQL_VIEW_DEFINER_OR_REFERENCE"),
+            (1064, "MYSQL_QUERY_CONTRACT"),
+            (2013, "MYSQL_CONNECTION_OR_TIMEOUT"),
+            (9999, "MYSQL_SERVER_ERROR"),
+        ]:
+            report = explain_failure_code(RuntimeError(
+                errno, "sensitive SQL source credentials never log"
+            ))
+            self.assertEqual(report["mysql_errno"], errno)
+            self.assertEqual(report["category"], expected)
+            self.assertNotIn("sensitive", str(report))
+        unknown = explain_failure_code(ValueError("secret query"))
+        self.assertEqual(unknown["category"], "CLIENT_OR_RESULT_PARSING_ERROR")
+        self.assertIsNone(unknown["mysql_errno"])
 
 if __name__ == "__main__":
     unittest.main()
