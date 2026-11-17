@@ -46,7 +46,7 @@ def probe_stream(config, server_id, *, reader_factory=None, clock=time.monotonic
 
     settings = {
         "host": config["host"], "port": config["port"], "user": config["user"],
-        "passwd": config["password"], "ssl_ca": config["ca"],
+        "password": config["password"], "ssl_ca": config["ca"],
         "ssl_verify_cert": True, "ssl_verify_identity": True,
         "connect_timeout": 5, "read_timeout": 4, "write_timeout": 4,
     }
