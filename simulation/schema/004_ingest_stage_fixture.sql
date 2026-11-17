@@ -74,3 +74,47 @@ CREATE TABLE salary_advances (
 
 -- Deliberately no ON UPDATE: synthetic events demonstrate the real risk
 -- of a source mutation that does not advance source_updated_at.
+
+-- TEST-ONLY reporting stand-ins: these are NOT the real RDS view definitions.
+-- They expose coarse synthetic metrics for visual comparison after each CDC cycle.
+-- No sensitive row identity and no PostgreSQL row replication.
+CREATE VIEW v_employers AS
+ SELECT 'SYN-DEMO' AS employer_ref, fixture_state AS fixture_status,
+ CAST(NULL AS DECIMAL(12,2)) AS fixture_amount, source_updated_at
+ FROM employers;
+CREATE VIEW v_workforce_snapshots AS
+ SELECT 'SYN-DEMO' AS employer_ref, fixture_state AS fixture_status,
+ CAST(NULL AS DECIMAL(12,2)) AS fixture_amount, source_updated_at
+ FROM workforce_snapshots;
+CREATE VIEW v_employees AS
+ SELECT 'SYN-DEMO' AS employer_ref, employee_status AS fixture_status,
+ CAST(NULL AS DECIMAL(12,2)) AS fixture_amount, source_updated_at
+ FROM employees;
+CREATE VIEW v_platform_users AS
+ SELECT 'SYN-DEMO' AS employer_ref, fixture_state AS fixture_status,
+ CAST(NULL AS DECIMAL(12,2)) AS fixture_amount, source_updated_at
+ FROM platform_users;
+CREATE VIEW v_journeys AS
+ SELECT 'SYN-DEMO' AS employer_ref, fixture_state AS fixture_status,
+ CAST(NULL AS DECIMAL(12,2)) AS fixture_amount, source_updated_at
+ FROM journeys;
+CREATE VIEW v_debt_accounts AS
+ SELECT 'SYN-DEMO' AS employer_ref, CAST(debt_balance AS CHAR) AS fixture_status,
+ debt_balance AS fixture_amount, source_updated_at
+ FROM debt_accounts;
+CREATE VIEW v_policies AS
+ SELECT 'SYN-DEMO' AS employer_ref, fixture_state AS fixture_status,
+ CAST(NULL AS DECIMAL(12,2)) AS fixture_amount, source_updated_at
+ FROM policies;
+CREATE VIEW v_ratings AS
+ SELECT 'SYN-DEMO' AS employer_ref, fixture_state AS fixture_status,
+ CAST(NULL AS DECIMAL(12,2)) AS fixture_amount, source_updated_at
+ FROM ratings;
+CREATE VIEW v_referrals AS
+ SELECT 'SYN-DEMO' AS employer_ref, fixture_state AS fixture_status,
+ CAST(NULL AS DECIMAL(12,2)) AS fixture_amount, source_updated_at
+ FROM referrals;
+CREATE VIEW v_salary_advances AS
+ SELECT 'SYN-DEMO' AS employer_ref, fixture_state AS fixture_status,
+ CAST(NULL AS DECIMAL(12,2)) AS fixture_amount, source_updated_at
+ FROM salary_advances;
