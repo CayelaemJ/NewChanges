@@ -299,6 +299,10 @@ def run(max_events=None, max_seconds=None):
             next_pos = int(evt.packet.log_pos)
             event_at = datetime.fromtimestamp(evt.timestamp, tz=timezone.utc).replace(tzinfo=None)
             # Consume the entire row event as one transaction or do not advance its checkpoint.
+            if len(evt.rows) > max_events:
+                # This event cannot fit even in a fresh run. Fail the worker
+                # rather than repeatedly reporting SUCCEEDED at one checkpoint.
+                raise RuntimeError("CDC_ROW_EVENT_EXCEEDS_LIMIT")
             if row_count+len(evt.rows)>max_events:break
             try:
                 for row_idx,row in enumerate(evt.rows):
