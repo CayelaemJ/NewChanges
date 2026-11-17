@@ -20,6 +20,7 @@ COPY ops/aws_replication_capture_probe.py ops/aws_replication_capture_probe.py
 COPY ops/aws_binlog_inventory.py ops/aws_binlog_inventory.py
 COPY ops/aws_fixture_schema_review.py ops/aws_fixture_schema_review.py
 COPY ops/aws_mysql_chart_audit.py ops/aws_mysql_chart_audit.py
+COPY ops/aws_mysql_chart_runtime_probe.py ops/aws_mysql_chart_runtime_probe.py
 COPY ops/ingest_stage_readonly_audit.sql ops/ingest_stage_readonly_audit.sql
 COPY ops/ingest_stage_timestamp_lineage.sql ops/ingest_stage_timestamp_lineage.sql
 COPY ops/ingest_stage_lineage_summary_readonly.sql ops/ingest_stage_lineage_summary_readonly.sql
