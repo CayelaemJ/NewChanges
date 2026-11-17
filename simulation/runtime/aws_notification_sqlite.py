@@ -5,6 +5,7 @@ Uses a single SQLite transaction for feed generations and committed position.
 Never saves MySQL row images, primary keys or other PII.
 """
 import json
+from contextlib import contextmanager
 import sqlite3
 from pathlib import Path
 
@@ -58,13 +59,23 @@ class SqliteNotificationStore:
             raise ValueError("Persistent SQLite file path required")
         self.path = str(path)
 
+    @contextmanager
     def _connect(self):
+        """Close each connection after use, including failed transactions.
+
+        sqlite3.Connection.__exit__ handles transaction state but does NOT
+        close its file descriptor. This wrapper prevents SQLite connections
+        leaking across the full host/Docker unittest suite.
+        """
         conn = sqlite3.connect(self.path, timeout=10, isolation_level=None)
-        conn.execute("PRAGMA foreign_keys=ON")
-        conn.execute("PRAGMA busy_timeout=10000")
-        conn.execute("PRAGMA synchronous=FULL")
-        conn.executescript(_SCHEMA)
-        return conn
+        try:
+            conn.execute("PRAGMA foreign_keys=ON")
+            conn.execute("PRAGMA busy_timeout=10000")
+            conn.execute("PRAGMA synchronous=FULL")
+            conn.executescript(_SCHEMA)
+            yield conn
+        finally:
+            conn.close()
 
     def bootstrap(self, baseline):
         if not isinstance(baseline, NotificationBaseline):
