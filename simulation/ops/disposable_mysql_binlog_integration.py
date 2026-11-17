@@ -8,6 +8,9 @@ the separate TypeScript shared MySQL writer or a browser SSE connection.
 import os
 import re
 import tempfile
+import json
+import hashlib
+import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -141,6 +144,8 @@ def main():
                 baseline=baseline, store=store, max_rows=16,
             )
             observed = []
+            xid_handoffs = []
+            pending_operation = None
             scanned = 0
             for event in stream:
                 scanned += 1
@@ -156,10 +161,30 @@ def main():
                     )
                     if committed == "PERSISTED":
                         observed.append("COMMITTED")
+                        if pending_operation is None:
+                            raise ValueError("CDC_BINLOG_MISSING_OPERATION")
+                        xid_pos = event.packet.log_pos
+                        payload = (
+                            f"{filename}:{xid_pos}:journeys:"
+                            f"{pending_operation}"
+                        ).encode("ascii")
+                        xid_handoffs.append({
+                            "file": filename, "position": xid_pos,
+                            "feed": "journeys", "operation": pending_operation,
+                            "digest": hashlib.sha256(payload).hexdigest(),
+                        })
+                        pending_operation = None
                 elif name in ("WriteRowsEvent", "UpdateRowsEvent", "DeleteRowsEvent"):
                     if event.schema != "ingest_stage" or event.table != "journeys":
                         raise ValueError("CDC_BINLOG_UNEXPECTED_SOURCE")
                     accept_parsed_event(bridge, event, binlog_file=filename)
+                    if pending_operation is not None:
+                        raise ValueError("CDC_BINLOG_MULTIPLE_ROW_PACKETS_UNSUPPORTED")
+                    pending_operation = {
+                        "WriteRowsEvent": "WRITE_ROWS",
+                        "UpdateRowsEvent": "UPDATE_ROWS",
+                        "DeleteRowsEvent": "DELETE_ROWS",
+                    }[name]
                     observed.append(name)
                 else:
                     raise ValueError("CDC_BINLOG_UNEXPECTED_EVENT")
@@ -179,9 +204,33 @@ def main():
                 count == 0 for feed, count in generations.items()
                 if feed != "journeys"
             )
+            if os.environ.get("FIXER_CDC_BINLOG_HANDOFF_MODE") == "shared":
+                handoff = {
+                    "sourceId": baseline.source_id,
+                    "file": filename,
+                    "position": position,
+                    "observed": xid_handoffs,
+                }
+                # Strictly metadata-only stdin handoff to the disposable
+                # local MySQL TypeScript transaction writer/reader.
+                proc = subprocess.run(
+                    ["node", "--import", "tsx",
+                     "scripts/cdc-disposable-binlog-shared-handoff.ts"],
+                    input=json.dumps(handoff, separators=(",", ":")),
+                    text=True, capture_output=True, check=False,
+                    timeout=45,
+                )
+                if proc.returncode != 0:
+                    raise RuntimeError("CDC_SHARED_HANDOFF_INTEGRATION_FAILED")
+                if "PASS: real parsed MySQL XIDs" not in proc.stdout:
+                    raise RuntimeError("CDC_SHARED_HANDOFF_ASSERTION_MISSING")
+                print(proc.stdout.strip())
             print("PASS: actual local MySQL 8.4 ROW/FULL INSERT, UPDATE, DELETE and XID boundaries captured.")
             print("PASS: ROLLBACK omitted; checkpoint and journeys generations persisted for three commits.")
-            print("NOT TESTED: AWS replication, shared MySQL metadata writer, leader election or browser refresh.")
+            if os.environ.get("FIXER_CDC_BINLOG_HANDOFF_MODE") != "shared":
+                print("NOT TESTED: AWS replication, shared MySQL metadata writer, leader election or browser refresh.")
+            else:
+                print("NOT TESTED: AWS replication, production leader election, cross-instance SSE or browser refresh.")
         finally:
             if stream is not None:
                 stream.close()
