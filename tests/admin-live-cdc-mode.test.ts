@@ -36,6 +36,15 @@ test("CDC source preflight only accepts operator-approved stage and exact host",
   assert.throws(()=>validateStagingCdcConnection(input,{...environment,RAILWAY_PROJECT_ID:"production"}),/STAGING_DISABLED/);
   assert.throws(()=>validateStagingCdcConnection({...input,password:""},environment),/NOT_APPROVED/);
 });
+test("disabled or unapproved preflight returns a safe result without contacting MySQL",async()=>{
+  let calls=0;
+  const neverConnect=(async()=>{calls++;throw Error("should not connect");}) as any;
+  assert.deepEqual(await testStagingCdcConnection(input,{},neverConnect),
+    {ok:false,code:"CDC_PREFLIGHT_STAGING_DISABLED",cdcActive:false});
+  assert.deepEqual(await testStagingCdcConnection({...input,host:"other.example"},environment,neverConnect),
+    {ok:false,code:"CDC_PREFLIGHT_CANDIDATE_INVALID_OR_HOST_NOT_APPROVED",cdcActive:false});
+  assert.equal(calls,0);
+});
 test("staging preflight uses only fixed read-only MySQL statement, no PostgreSQL writes",()=>{
   const route=server.slice(server.indexOf('"/api/admin/cdc/connection/test"'),
     server.indexOf('app.post<{ Body: Record<string, unknown> }>("/api/admin/integration/test"'));
