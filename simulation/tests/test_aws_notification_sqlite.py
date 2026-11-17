@@ -2,6 +2,8 @@
 from datetime import datetime, timezone
 from hashlib import sha256
 import tempfile
+import sqlite3
+from unittest.mock import patch
 from pathlib import Path
 import unittest
 
@@ -98,6 +100,45 @@ class SqliteNotificationStoreTests(unittest.TestCase):
         opened = SqliteNotificationStore(self.store.path)
         self.assertEqual(opened.checkpoint(self.b.source_id).position,600)
         self.assertEqual(opened.generations(self.b.source_id)["debt_accounts"],1)
+
+    def test_sqlite_connections_closed_after_reads_and_writes(self):
+        original_connect = sqlite3.connect
+        opened = []
+
+        def recording_connect(*args, **kwargs):
+            conn = original_connect(*args, **kwargs)
+            opened.append(conn)
+            return conn
+
+        with patch("runtime.aws_notification_sqlite.sqlite3.connect",
+                   side_effect=recording_connect):
+            self.store.generations(self.b.source_id)
+            self.store.checkpoint(self.b.source_id)
+            prev = self.store.checkpoint(self.b.source_id)
+            self.store.commit(self.b, prev, LogCoordinate(FILE, 600),
+                              ["employees"], digest("close-test"))
+        self.assertGreaterEqual(len(opened), 4)
+        for conn in opened:
+            with self.assertRaises(sqlite3.ProgrammingError):
+                conn.execute("SELECT 1")
+
+    def test_sqlite_connection_closed_on_rejected_transaction(self):
+        original_connect = sqlite3.connect
+        opened = []
+
+        def recording_connect(*args, **kwargs):
+            conn = original_connect(*args, **kwargs)
+            opened.append(conn)
+            return conn
+
+        with patch("runtime.aws_notification_sqlite.sqlite3.connect",
+                   side_effect=recording_connect):
+            with self.assertRaisesRegex(ValueError, "mismatch"):
+                self.store.bootstrap(baseline(binlog_position=600))
+        self.assertGreaterEqual(len(opened), 1)
+        for conn in opened:
+            with self.assertRaises(sqlite3.ProgrammingError):
+                conn.execute("SELECT 1")
 
 
 if __name__ == "__main__":
