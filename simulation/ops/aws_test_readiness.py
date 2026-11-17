@@ -133,7 +133,7 @@ def main():
         connection = pymysql.connect(
             host=config["host"], port=config["port"], user=config["user"],
             password=config["password"], database="information_schema",
-            ssl={"ca": config["ca"]}, ssl_verify_cert=True,
+            ssl_ca=config["ca"], ssl_verify_cert=True,
             ssl_verify_identity=True, connect_timeout=5, read_timeout=8,
             write_timeout=5, autocommit=False,
         )
