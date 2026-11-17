@@ -36,6 +36,8 @@ import { getConfig as getSyncConfig, saveConfig as saveSyncConfig, publicConfig 
 import { recordSourceWatch, sourceWatchPublicStatus } from "./services/sourceWatchHealth.js";
 import { buildDataSourceControlOverview } from "./services/dataSourceControlCenter.js";
 import {reportOperationalFailure} from "./services/operationalFailureService.js";
+import { readMysqlChart } from "./services/ingestStageMysqlChartQuery.js";
+import { mysqlChartPreviewEnabled, mysqlChartPreviewSettings } from "./services/mysqlChartPreviewSettings.js";
 import { listPartners, createPartner, updatePartner, deletePartner, assignUserToPartner, assignEmployerToPartner, themeForUser, themeForEmployer, themeForSlug } from "./services/partnerService.js";
 import { login, resolveSession, destroySession, destroySessionById, destroyAllSessionsForUser, canViewEmployer, canAccessModule, allowedEmployerIds, AuthUser, isAdminRole } from "./services/authService.js";
 import { createUser, listUsers, updateUser, resetPassword, completeSetup, deactivateSelf, listRevokedUsers, deleteUserPermanently, requestPasswordReset } from "./services/userService.js";
@@ -1593,6 +1595,38 @@ app.get("/api/admin/integration/logs", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
   return recentSyncLogs(10);
 });
+
+// Independent MySQL reporting pilot: default-off, no PostgreSQL report writes.
+// The application DB is used only by the existing session/employer authorization.
+app.get<{Params:{employerId:string};Querystring:{feed?:string;dimension?:string}}>(
+  "/api/reporting/mysql/charts/:employerId", async (req, reply) => {
+    const user = await requireUser(req, reply);
+    if (!user) return;
+    if (!canAccessModule(user, "dashboard") ||
+        !canViewEmployer(user, req.params.employerId))
+      return reply.code(403).send({error:"no access to this employer"});
+    // Must not open a MySQL connection when rollout gates are off.
+    if (!mysqlChartPreviewEnabled())
+      return reply.code(503).send({error:"MySQL reporting preview is not enabled"});
+    const feed = req.query?.feed;
+    const dimension = req.query?.dimension;
+    if (typeof feed !== "string" || typeof dimension !== "string" ||
+        feed.length > 64 || dimension.length > 64 ||
+        typeof req.params.employerId !== "string" || req.params.employerId.length > 200)
+      return reply.code(400).send({error:"invalid reporting chart request"});
+    try {
+      const settings = mysqlChartPreviewSettings();
+      return await readMysqlChart(feed, dimension, req.params.employerId, {
+        sourceId:settings.sourceId,
+        tenantId:"portal",
+        authorizedEmployerRefs:[req.params.employerId],
+      },settings);
+    } catch {
+      // No raw SQL, RDS details or source row values in browser errors.
+      return reply.code(503).send({error:"MySQL reporting query unavailable"});
+    }
+  },
+);
 
 // ── Enterprise operations and analytics placement ──
 app.get("/api/admin/enterprise/overview", async (req, reply) => {
