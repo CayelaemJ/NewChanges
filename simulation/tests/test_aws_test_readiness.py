@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from unittest.mock import MagicMock, patch
 
-from ops.aws_test_readiness import FEED_TABLES, inspect, validate_environment, safe_failure_code
+from ops.aws_test_readiness import FEED_TABLES, inspect, validate_environment, safe_failure_code, main
 
 
 class AwsReadinessTests(unittest.TestCase):
@@ -63,6 +63,25 @@ class AwsReadinessTests(unittest.TestCase):
         self.assertTrue(all(not any(token in sql for token in
                             ("INSERT INTO", "UPDATE ", "DELETE FROM", "DROP ", "CREATE ", "CALL "))
                             for sql in statements))
+
+    def test_connection_keeps_ca_with_verify_flags(self):
+        config = {
+            "host": "testing.abc.eu-north-1.rds.amazonaws.com",
+            "port": 3306,
+            "user": "cdc_metadata_reader",
+            "password": "placeholder-test-only",
+            "ca": "/tmp/test-only-ca.pem",
+        }
+        with patch("ops.aws_test_readiness.validate_environment", return_value=config):
+            with patch("pymysql.connect") as connect:
+                with patch("ops.aws_test_readiness.inspect", return_value={}):
+                    with patch("builtins.print"):
+                        self.assertEqual(main(), 0)
+        kwargs = connect.call_args.kwargs
+        self.assertEqual(kwargs["ssl_ca"], config["ca"])
+        self.assertTrue(kwargs["ssl_verify_cert"])
+        self.assertTrue(kwargs["ssl_verify_identity"])
+        self.assertNotIn("ssl", kwargs)
 
     def test_safe_diagnostic_codes_never_echo_server_exception_text(self):
         self.assertEqual(
