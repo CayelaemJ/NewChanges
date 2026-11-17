@@ -134,3 +134,36 @@ source-to-chart latency. These remain explicit release blockers.
 This command is deliberately absent from `check:cdc-dashboard` and the default
 CI/test pipeline because it requires local Docker and creates temporary DB
 objects. It should never be run with production credentials.
+
+## Real ROW/FULL binlog capture — disposable Docker exercise
+
+An additional opt-in exercise now parses **real** local MySQL row-binlog
+transactions using `mysql-replication` and the existing metadata-only Python
+XID adapter. It does not connect to RDS or activate production CDC.
+
+```bash
+# One-time Python dependencies in your virtualenv (if not already installed)
+python -m pip install -r simulation/requirements.txt
+
+# Starts a fresh local MySQL 8.4 container with ROW/FULL, then destroys it
+FIXER_CDC_RUN_DISPOSABLE_MYSQL=yes npm run check:cdc-binlog-disposable
+```
+
+The test creates `ingest_stage.journeys` **only inside the disposable
+container** and snapshots a local binlog origin before three committed changes:
+INSERT, UPDATE, DELETE. A fourth, rolled-back UPDATE must produce no committed
+invalidation. The stream filters to the local `journeys` feed, accepts only
+write/update/delete row events and the observed XID boundary, then checks
+the SQLite development store records exactly three committed generations.
+Source row images, employer identifiers and credentials are never printed.
+
+**This is distinct from the shared-MySQL writer integration:** the binlog
+exercise uses the existing Python SQLite development store. The previous
+Docker test exercises the TypeScript MySQL metadata writer and relay using
+synthetic XID proof. The two still need to be combined behind verified
+leadership, durable shared metadata storage and a real authenticated browser
+before any live CDC or no-manual-refresh claims.
+
+The binlog exercise is NOT included in normal CI: it requires the explicit
+opt-in environment variable, Docker and the Python `simulation/requirements.txt`
+dependencies. Do not reuse customer credentials or external database hosts.
