@@ -1,0 +1,13 @@
+# Dedicated disposable MySQL demo override. The base network remains internal;
+# no database ports are published, and all credentials are ephemeral.
+services:
+  test:
+    command:
+      - sh
+      - -c
+      - >-
+        python ops/setup_local.py &&
+        python -m ops.local_bootstrap_probe &&
+        python -m runtime.cdc bootstrap &&
+        python -m ops.business_activity_demo
+        --cycles 3 --interval-seconds 2 --orders-per-cycle 6 --demo-id liveproof
