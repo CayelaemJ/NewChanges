@@ -6,6 +6,7 @@ This does NOT initialize or activate CDC. Run manually, never scheduled.
 import json
 import os
 import re
+import ssl
 import sys
 
 from runtime.ingest_stage_contract import FEED_TABLES
@@ -99,6 +100,18 @@ def safe_failure_code(exc):
         return str(exc)
     if isinstance(exc, (ModuleNotFoundError, ImportError)):
         return "PYMYSQL_NOT_INSTALLED_IN_ACTIVE_PYTHON"
+    # PyMySQL commonly wraps SSLCertVerificationError inside OperationalError
+    # code 2003. Check exception types before interpreting protocol codes.
+    # Never emit certificate hostname, server text, or exception arguments.
+    visited = set()
+    current = exc
+    while current is not None and id(current) not in visited:
+        visited.add(id(current))
+        if isinstance(current, ssl.SSLCertVerificationError):
+            return "RDS_TLS_CERTIFICATE_VERIFICATION_FAILED"
+        if isinstance(current, ssl.SSLError):
+            return "RDS_TLS_CERTIFICATE_OR_HANDSHAKE_FAILED"
+        current = current.__cause__ or current.__context__
     # MySQL numeric protocol codes; no arbitrary exception text in output.
     code = getattr(exc, "args", (None,))[0] if getattr(exc, "args", ()) else None
     if type(code) is int:
