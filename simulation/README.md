@@ -626,3 +626,37 @@ Node suite has **40 cases** (11 reader, 19 publisher, 10 admin).
 Those tests remain **pending execution**, separate from the operator's
 118/118 successful disposable MySQL/Python CDC baseline.
 
+
+## Business activity demonstration (isolated MySQL, not production)
+
+The test-only `ops/demo-local.sh` command starts a fresh tmpfs MySQL 8.4
+instance on Docker's internal network, initializes local least-privilege
+accounts, bootstraps its EMPTY CDC source, then executes three synthetic
+business cycles with a two-second pause:
+
+```bash
+cd simulation
+bash ops/demo-local.sh
+```
+
+Each cycle reuses `runtime.simulator.run` to generate business-consistent
+customers, orders, order items, payments, financial transactions, status
+changes, financial corrections, a physical child-row delete, a failed
+transaction and a rollback. Each cycle then invokes the real `fixer_sim`
+row-binlog consumer and prints safe source counts, CDC change counts, Gold
+order counts, gross sales and net payments. Outputs contain **no raw rows**
+and make clear that the values come from *local MySQL Gold views*, not
+The Fixer's deployed customer dashboard. Identical `demo_id` and cycle
+keys are idempotent inside one database. The harness uses a fresh disposable
+database each run and tears it down with volumes after exit.
+
+**Never point the script at RDS.** Python enforces exact local-only hosts,
+schema names and explicit approval flags before opening a connection.
+The base Compose file exposes no database port. The generator's emergency
+stop defaults to OFF and is restored to OFF on successful or failed runs.
+
+This demonstrates genuine MySQL mutations -> binlog -> CDC -> local
+Gold reaggregation. To claim an actual *The Fixer* dashboard refresh,
+production/staging must first implement approved RDS snapshot/replication
+privileges, durable per-tenant generations and source-side reporting
+aggregation parity per `LIVE_RDS_CDC_ACCEPTANCE.md`.
