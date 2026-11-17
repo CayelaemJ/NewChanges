@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import patch, Mock
-from runtime.cdc import apply_change, bootstrap_empty_source, CdcReadinessError, CdcBootstrapStageError, preflight
+from runtime.cdc import apply_change, bootstrap_empty_source, CdcReadinessError, CdcBootstrapStageError, preflight, enforce_event_capacity
 
 class CdcGuard(unittest.TestCase):
     def test_requires_bootstrap_approval(self):
@@ -73,3 +73,13 @@ class CdcBootstrapStageTests(unittest.TestCase):
         self.assertEqual(raised.exception.stage, "SINK_CONNECT")
         self.assertNotIn("do_not_log_host", str(raised.exception))
         src.close.assert_called_once()
+
+
+class CdcEventCapacityTests(unittest.TestCase):
+    def test_oversized_event_fails_instead_of_silent_checkpoint_starvation(self):
+        with self.assertRaisesRegex(RuntimeError, "CDC_ROW_EVENT_EXCEEDS_LIMIT"):
+            enforce_event_capacity(201, 200)
+
+    def test_event_fitting_bound_is_allowed(self):
+        enforce_event_capacity(200, 200)
+        enforce_event_capacity(1, 200)
