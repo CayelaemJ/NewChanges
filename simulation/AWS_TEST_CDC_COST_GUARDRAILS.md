@@ -41,17 +41,40 @@ For a manual inspection of the REAL RDS test instance's ten view contracts, use:
 
 ```bash
 cd ~/NewChanges/simulation
-python3 -m pip install --user 'PyMySQL[rsa]'
+# Ubuntu PEP 668: install dependencies in a project-local environment.
+# If venv is unavailable: sudo apt install python3-venv
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install 'PyMySQL[rsa]'
 export FIXER_AWS_TEST_READONLY_APPROVED=YES_METADATA_ONLY
 export FIXER_RDS_TEST_HOST='<approved RDS endpoint from AWS>'
 export FIXER_RDS_TEST_USER='<dedicated metadata-only account>'
 export FIXER_RDS_TEST_CA='<path to official RDS CA bundle>'
 read -rsp 'Read-only RDS password: ' FIXER_RDS_TEST_PASSWORD; echo
 export FIXER_RDS_TEST_PASSWORD
-python3 -m ops.aws_test_readiness
+python -m ops.aws_test_readiness
 unset FIXER_RDS_TEST_PASSWORD
 ```
 
 **Do not paste credentials into ChatGPT, GitHub or terminal logs.** Prefer a local secret manager, environment injection or a hidden prompt. The code requires a TLS CA and host ending `.rds.amazonaws.com`, rejects administrator usernames, and does not connect without explicit read-only approval. It queries only `information_schema.TABLES`, `information_schema.COLUMNS` and MySQL global variables; it makes **zero** data-row queries or mutations. Its output intentionally never prints hosts, usernames, credentials or SQL definitions.
 
 The probe cannot independently verify binlog retention, broad replication privilege scope, snapshot handoff or dashboard parity. Those remain separate approval gates; this tool never enables a consumer. Use the returned missing-view / missing-key flags to prioritize source-to-view mapping work. No new AWS resources are created.
+
+
+### PEP 668 / diagnostic troubleshooting
+
+If Ubuntu says `externally-managed-environment` (PEP 668), do not use
+`--break-system-packages`. Run this manual probe in a project-local
+`.venv`, as shown above; `python -m pip --version` must point into
+that environment. A missing `python3-venv` package can be installed
+through Ubuntu's package manager.
+
+The probe reports bounded `reason_code` values, for example
+`PYMYSQL_NOT_INSTALLED_IN_ACTIVE_PYTHON`,
+`AWS_TEST_RDS_ENDPOINT_INVALID`,
+`AWS_TEST_TLS_CA_MISSING`,
+`RDS_AUTHENTICATION_OR_DATABASE_ACCESS_DENIED`, or
+`RDS_NETWORK_DNS_OR_CONNECTION_FAILED`. Codes deliberately omit actual
+endpoints, passwords and driver messages. Never paste real secrets into
+GitHub or chat. If `python -m ops.aws_test_readiness` fails, share only
+the returned nonsecret JSON reason code.
