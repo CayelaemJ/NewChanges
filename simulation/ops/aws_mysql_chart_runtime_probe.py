@@ -1,7 +1,7 @@
 """Explicitly approved, one-query, read-only RDS reporting smoke test.
 
-Measures an actual parameterized GROUP BY on v_journeys, with a real,
-authorized employer_ref. Outputs only timing and group count, never values.
+Measures one parameterized GROUP BY on v_journeys. On synthetic RDS only,
+can discover one employer internally; never logs the ref or chart values.
 No PostgreSQL, no CDC state writes, and no source DML/DDL.
 """
 import json
@@ -12,7 +12,11 @@ import time
 from ops.aws_test_readiness import safe_failure_code, validate_environment
 
 APPROVAL = "YES_READONLY_CHART_PROBE"
-MAX_GROUPS = 20\nDISCOVER_SQL = (\n    "SELECT /*+ MAX_EXECUTION_TIME(3000) */ `employer_ref` "\n    "FROM `ingest_stage`.`v_journeys` WHERE `employer_ref` IS NOT NULL LIMIT 1"\n)
+MAX_GROUPS = 20
+DISCOVER_SQL = (
+    "SELECT /*+ MAX_EXECUTION_TIME(3000) */ `employer_ref` "
+    "FROM `ingest_stage`.`v_journeys` WHERE `employer_ref` IS NOT NULL LIMIT 1"
+)
 SQL = (
     "SELECT /*+ MAX_EXECUTION_TIME(5000) */ `status` AS bucket, COUNT(*) AS value "
     "FROM `ingest_stage`.`v_journeys` WHERE `employer_ref`=%s "
@@ -29,7 +33,8 @@ def probe(conn, employer_ref=None):
         or len(employer_ref) > 200 or employer_ref != employer_ref.strip()
     ):
         raise ValueError("AUTHORIZED_EMPLOYER_REF_REQUIRED")
-    auto_mode = employer_ref is None\n    started = time.perf_counter()
+    auto_mode = employer_ref is None
+    started = time.perf_counter()
     with conn.cursor() as cur:
         cur.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ")
         cur.execute("START TRANSACTION WITH CONSISTENT SNAPSHOT, READ ONLY")
@@ -76,3 +81,52 @@ def probe(conn, employer_ref=None):
         "within_target": elapsed_ms <= 5000,
         "latency_includes_session_setup": True,
     }
+
+
+def main():
+    conn = None
+    try:
+        if os.getenv("FIXER_CDC_CHART_RUNTIME_APPROVED") != APPROVAL:
+            raise ValueError("CHART_RUNTIME_APPROVAL_REQUIRED")
+        if os.getenv("FIXER_RDS_TEST_USER") != "fixer_cdc_reader":
+            raise ValueError("DEDICATED_READONLY_ACCOUNT_REQUIRED")
+        employer_ref = os.getenv("FIXER_CDC_CHART_EMPLOYER_REF")
+        if employer_ref is None and os.getenv("FIXER_CDC_CHART_AUTO_SAMPLE") != "YES_SYNTHETIC_FIXTURE":
+            raise ValueError("AUTHORIZED_EMPLOYER_REF_REQUIRED")
+        if employer_ref is None and os.getenv("FIXER_RDS_TEST_HOST", "").split(".")[0] != "fixer-synthetic-mysql":
+            raise ValueError("AUTO_SAMPLE_SYNTHETIC_RDS_ONLY")
+        env = dict(os.environ)
+        env["FIXER_AWS_TEST_READONLY_APPROVED"] = "YES_METADATA_ONLY"
+        config = validate_environment(env)
+        import pymysql
+        conn = pymysql.connect(
+            host=config["host"], port=config["port"], user=config["user"],
+            password=config["password"], database="ingest_stage",
+            ssl_ca=config["ca"], ssl_verify_cert=True, ssl_verify_identity=True,
+            connect_timeout=5, read_timeout=8, write_timeout=5, autocommit=False,
+        )
+        output = probe(conn, employer_ref)
+        print(json.dumps(output, sort_keys=True))
+        return 0 if output["status"] == "PASS" else 2
+    except Exception as exc:
+        allowed = {
+            "CHART_RUNTIME_APPROVAL_REQUIRED", "DEDICATED_READONLY_ACCOUNT_REQUIRED",
+            "AUTHORIZED_EMPLOYER_REF_REQUIRED", "CHART_GROUP_LIMIT_EXCEEDED",
+            "CHART_RESULT_INVALID", "CHART_DISCOVERY_RESULT_INVALID",
+            "AUTO_SAMPLE_SYNTHETIC_RDS_ONLY",
+        }
+        code = str(exc) if type(exc) is ValueError and str(exc) in allowed else safe_failure_code(exc)
+        print(json.dumps({"status": "FAILED", "reason_code": code,
+                          "query": "JOURNEYS_STATUS_AGGREGATION",
+                          "source_rows_exported": False, "read_only": True}, sort_keys=True))
+        return 1
+    finally:
+        if conn is not None:
+            try:
+                conn.rollback()
+            finally:
+                conn.close()
+
+
+if __name__ == "__main__":
+    sys.exit(main())
