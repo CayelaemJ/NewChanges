@@ -21,8 +21,11 @@ export function MysqlChartPreview({employerId}:{employerId:string}){
   const [busy,setBusy]=useState(false);
   const generation=useRef(0);
   const pending=useRef(false);
+  const queued=useRef(false);
+  const refreshRef=useRef<((signal?:AbortSignal)=>Promise<void>)|null>(null);
   const refresh=useCallback(async(signal?:AbortSignal)=>{
-    if(pending.current||!employerId)return;
+    if(!employerId)return;
+    if(pending.current){queued.current=true;return;}
     pending.current=true;
     setBusy(true);
     try{
@@ -45,6 +48,8 @@ export function MysqlChartPreview({employerId}:{employerId:string}){
       if(!signal?.aborted)setBusy(false);
     }
   },[employerId]);
+
+  refreshRef.current=refresh;
 
   useEffect(()=>{
     let cancelled=false;
