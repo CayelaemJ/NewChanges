@@ -167,3 +167,33 @@ before any live CDC or no-manual-refresh claims.
 The binlog exercise is NOT included in normal CI: it requires the explicit
 opt-in environment variable, Docker and the Python `simulation/requirements.txt`
 dependencies. Do not reuse customer credentials or external database hosts.
+
+## Combined true-binlog → durable shared-MySQL handoff (local Docker)
+
+After both isolated integration tests pass, this **third opt-in mode** bridges
+three real parsed local MySQL row changes and observed XIDs to the actual
+TypeScript `commitCdcMetadata` implementation and then reads the shared
+InnoDB checkpoint/generation metadata. It also exercises the local
+`createCommittedFeedSnapshotRelay` and authorized-subscription fanout.
+
+```bash
+FIXER_CDC_RUN_DISPOSABLE_MYSQL=yes npm run check:cdc-binlog-shared-disposable
+```
+
+The Python reader passes a strictly bounded JSON envelope over stdin containing
+only the source ID, binlog coordinates, feed name, operation kind and SHA-256
+digest. The Node integration process creates the metadata tables inside the
+**same disposable MySQL container**, uses the real writer/reader, verifies
+generation 1→2→3 and duplicate-replay suppression, then confirms only
+authorized local subscribers receive three feed notifications.
+
+This is a controlled **local integration proof**, NOT a production
+authentication/attestation channel; `xidVerified:true` is valid here only
+because the Python fixture observed each XID in its own disposable stream.
+The production worker will still require authenticated source identity, TLS,
+verified binlog lineage/rotation, a DB-enforced elected leader, crash
+reconciliation and approved source-to-metadata credentials.
+
+This exercise does not test cross-process SSE transport, browser sessions,
+multi-host notification delivery, or actual AWS replication. Do not enable
+`cdcAutoRefreshConnected` merely because it passes.
