@@ -12,8 +12,12 @@ const handoff=read("scripts/cdc-disposable-binlog-shared-handoff.ts");
 test("real XID to shared MySQL handoff is disabled by default",()=>{
   assert.equal(packageJson.scripts["check:cdc-binlog-shared-disposable"],
     "FIXER_CDC_TEST_MODE=binlog-shared bash scripts/run-cdc-disposable-mysql-integration.sh");
-  assert(!packageJson.scripts["check:cdc-dashboard"].includes("binlog-shared"));
-  assert(!packageJson.scripts["check:all"].includes("binlog-shared"));
+  // The offline contract test filename contains "binlog-shared", but neither
+  // default suite executes the disposable Docker integration command.
+  const forbiddenCommand="check:cdc-binlog-shared-disposable";
+  assert(!packageJson.scripts["check:cdc-dashboard"].includes(forbiddenCommand));
+  assert(!packageJson.scripts["check:all"].includes(forbiddenCommand));
+  assert(!packageJson.scripts["check:cdc-dashboard"].includes("FIXER_CDC_TEST_MODE=binlog-shared"));
   assert(runner.includes('FIXER_CDC_RUN_DISPOSABLE_MYSQL:-'));
   assert(runner.includes('--publish 127.0.0.1::3306'));
   assert(runner.includes('trap cleanup EXIT'));
