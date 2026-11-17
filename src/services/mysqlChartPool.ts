@@ -101,8 +101,7 @@ export function createMysqlChartPoolConnector(
           const result=await conn.query(command,params);
           // The read service issues ROLLBACK before publishing success.
           // Any failure or unexpected checkout leaves the lease unusable.
-          if (sql==="ROLLBACK") safeToRelease=true;
-          else if (sql.startsWith("START TRANSACTION")) safeToRelease=false;
+          safeToRelease=sql==="ROLLBACK";
           return result;
         } catch {
           safeToRelease=false;
@@ -121,16 +120,6 @@ export function createMysqlChartPoolConnector(
     };
   };
 }
-
-export const connectPooledMysqlChart: CdcMysqlConnector = createMysqlChartPoolConnector(
-  (options)=>{
-    // Lazy loading: importing server.ts never creates a MySQL connection.
-    // mysql2 is loaded once when the first authorized chart request arrives.
-    // The pool factory itself stays synchronous, after this module is loaded.
-    if (!mysqlPoolFactory) throw new Error("CDC_MYSQL_POOL_DRIVER_NOT_INITIALIZED");
-    return mysqlPoolFactory(options);
-  },
-);
 
 // Lazily imported in a wrapper to avoid loading the driver for disabled routes.
 let mysqlPoolFactory: ChartPoolFactory | null = null;
