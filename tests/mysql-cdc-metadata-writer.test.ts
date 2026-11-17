@@ -41,7 +41,7 @@ test("valid committed XID plan is canonical and has bounded feeds",()=>{
   assert(Object.isFrozen(p.affectedFeeds));
 });
 
-test("reject unverified XID, source, digest, stale counters and duplicate feeds before connecting",()=>{
+test("reject unverified XID, source, digest, stale counters and duplicate feeds before connecting",async()=>{
   let connected=0;
   const connector=async()=>{connected++;return fake().conn;};
   const base={sourceId:"source_rds",binlogFile:"mysql-bin.000055",
