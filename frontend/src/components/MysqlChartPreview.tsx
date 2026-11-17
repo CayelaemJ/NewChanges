@@ -72,7 +72,7 @@ export function MysqlChartPreview({employerId}:{employerId:string}){
   },[employerId,refresh]);
 
   useEffect(()=>{
-    if(!capabilities?.chartPreviewEnabled||!employerId)return;
+    if(!capabilities?.chartPreviewEnabled||!capabilities.cdcAutoRefreshConnected||!employerId)return;
     const controller=new AbortController();
     const source=new EventSource(
       "/api/reporting/mysql/events/"+encodeURIComponent(employerId),
@@ -105,7 +105,7 @@ export function MysqlChartPreview({employerId}:{employerId:string}){
       source.removeEventListener("chart-invalidated",onInvalidation);
       source.close();
     };
-  },[capabilities?.chartPreviewEnabled,employerId,refresh]);
+  },[capabilities?.chartPreviewEnabled,capabilities?.cdcAutoRefreshConnected,employerId,refresh]);
 
   if(!capabilities?.chartPreviewEnabled)return null;
   const max=Math.max(1,...(chart?.buckets??[]).map(row=>row.value));
