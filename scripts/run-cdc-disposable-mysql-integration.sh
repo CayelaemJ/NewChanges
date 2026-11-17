@@ -14,7 +14,7 @@ password="local-only-$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n')"
 cleanup(){ docker rm -f "$name" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
 mode="${FIXER_CDC_TEST_MODE:-metadata}"
-if [[ "$mode" != "metadata" && "$mode" != "binlog" ]]; then
+if [[ "$mode" != "metadata" && "$mode" != "binlog" && "$mode" != "binlog-shared" ]]; then
   echo "Invalid disposable test mode" >&2
   exit 2
 fi
@@ -35,11 +35,12 @@ if [[ -z "$port" ]] || ! docker exec "$name" mysqladmin ping -h 127.0.0.1 -uroot
   echo "Disposable MySQL failed to become healthy" >&2
   exit 1
 fi
-if [[ "$mode" == "binlog" ]]; then
+if [[ "$mode" == "binlog" || "$mode" == "binlog-shared" ]]; then
   if ! python -c 'import pymysql,pymysqlreplication' >/dev/null 2>&1; then
     echo "Install simulation/requirements.txt into your active Python virtualenv." >&2
     exit 2
   fi
+  FIXER_CDC_BINLOG_HANDOFF_MODE="$([[ "$mode" == "binlog-shared" ]] && echo shared || echo sqlite)" \
   FIXER_CDC_DISPOSABLE_MYSQL_TEST=I_ACCEPT_LOCAL_CONTAINER_ONLY \
   FIXER_CDC_TEST_CONTAINER="$name" \
   FIXER_CDC_TEST_HOST=127.0.0.1 \
