@@ -79,7 +79,8 @@ export function MysqlChartPreview({employerId}:{employerId:string}){
       {withCredentials:true},
     );
     let timer:ReturnType<typeof setTimeout>|undefined;
-    const onInvalidation=(event:MessageEvent)=>{
+    const onInvalidation=(event:Event)=>{
+      if(!(event instanceof MessageEvent))return;
       try {
         const message=JSON.parse(event.data) as Invalidation;
         if(message.type!=="MYSQL_CHART_INVALIDATION" ||
