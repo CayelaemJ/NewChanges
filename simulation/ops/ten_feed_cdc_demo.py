@@ -166,6 +166,27 @@ def read_counts(sink):
     return markers, generations
 
 
+def verify_timestamp_and_delete_semantics(sink, phase):
+    if phase == "insert":
+        return
+    condition = ("source_timestamp_state='NOT_ADVANCED_ON_UPDATE'"
+                 if phase == "update" else
+                 "source_timestamp_state='DELETED_NO_LIVE_WATERMARK' AND needs_tombstone=1")
+    # Fixed code-owned SQL fragments only; no identifiers or user values.
+    sql = ("""SELECT feed,COUNT(*) FROM fixer_ingest_cdc.ingest_change_markers
+              WHERE consumer_name=%s AND operation=%s AND """ +
+           condition + " GROUP BY feed")
+    sink.rollback()
+    try:
+        with sink.cursor() as cursor:
+            cursor.execute(sql, (CONSUMER, phase.upper()))
+            totals = dict(cursor.fetchall())
+        if set(totals) != set(FEEDS) or any(total != 1 for total in totals.values()):
+            raise RuntimeError("TEN_FEED_WATERMARK_OR_TOMBSTONE_PARITY_FAILED")
+    finally:
+        sink.rollback()
+
+
 def verify_cycle(sink, phase, ordinal, before, after, generations):
     operation = phase.upper()
     expected = {
@@ -251,6 +272,7 @@ def drive(delay_seconds=2):
                 raise RuntimeError("TEN_FEED_CDC_COMMIT_PARITY_FAILED")
             current, generations = read_counts(sink)
             summary = verify_cycle(sink, phase, ordinal, previous, current, generations)
+            verify_timestamp_and_delete_semantics(sink, phase)
             summary.update(kind="ten_feed_cycle",
                            source="DISPOSABLE_MYSQL_FIXTURE_NOT_LIVE_RDS",
                            reporting_views=views,
