@@ -2266,13 +2266,26 @@ async function bootstrapAdmin() {
           !/[A-Z]/.test(recoveryPassword) || !/[a-z]/.test(recoveryPassword) ||
           !/[0-9]/.test(recoveryPassword))
         throw new Error("STAGING_ADMIN_RECOVERY_CONFIG_INVALID");
-      const user=await prisma.user.findUnique({where:{email:recoveryEmail}});
+      // Optional one-time email correction: identify the exact existing
+      // staging admin, never create a second account or elevate a third party.
+      const previousEmail=process.env.STAGING_ADMIN_PREVIOUS_EMAIL?.toLowerCase().trim();
+      if (previousEmail && previousEmail!=="cabosolutionsza@gmail.com")
+        throw new Error("STAGING_ADMIN_PREVIOUS_IDENTITY_INVALID");
+      const user=await prisma.user.findUnique({
+        where:{email:previousEmail || recoveryEmail},
+      });
       if (!user) throw new Error("STAGING_ADMIN_RECOVERY_TARGET_MISSING");
       if (user.role!=="ADMIN" && user.role!=="SUPERADMIN")
         throw new Error("STAGING_ADMIN_RECOVERY_ROLE_INVALID");
+      if (previousEmail && recoveryEmail!==previousEmail) {
+        const existingTarget=await prisma.user.findUnique({where:{email:recoveryEmail}});
+        if (existingTarget) throw new Error("STAGING_ADMIN_RECOVERY_EMAIL_CONFLICT");
+      }
       await resetPassword(user.id,recoveryPassword);
-      await prisma.user.update({where:{id:user.id},data:{role:"SUPERADMIN",active:true}});
-      app.log.info("Isolated staging administrator credentials repaired; disable repair variables.");
+      await prisma.user.update({where:{id:user.id},data:{
+        email:recoveryEmail,role:"SUPERADMIN",active:true,
+      }});
+      app.log.info("Isolated staging administrator credentials and identity repaired; disable repair variables.");
       return;
     }
     const count = await prisma.user.count();
