@@ -11,6 +11,7 @@ COPY runtime/ runtime/
 COPY ops/setup_local.py ops/setup_local.py
 COPY ops/local_bootstrap_probe.py ops/local_bootstrap_probe.py
 COPY ops/business_activity_demo.py ops/business_activity_demo.py
+COPY ops/ten_feed_cdc_demo.py ops/ten_feed_cdc_demo.py
 COPY ops/ingest_stage_readonly_audit.sql ops/ingest_stage_readonly_audit.sql
 COPY ops/ingest_stage_timestamp_lineage.sql ops/ingest_stage_timestamp_lineage.sql
 COPY ops/ingest_stage_lineage_summary_readonly.sql ops/ingest_stage_lineage_summary_readonly.sql
