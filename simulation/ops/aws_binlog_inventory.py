@@ -8,8 +8,7 @@ import json
 import os
 import sys
 
-from ops.aws_replication_stream_probe import probe_config
-from ops.aws_test_readiness import safe_failure_code
+from ops.aws_test_readiness import safe_failure_code, validate_environment
 
 
 def inspect_binlog_inventory(connection):
@@ -53,7 +52,12 @@ def main():
     try:
         if os.environ.get("FIXER_CDC_BINLOG_INVENTORY_APPROVED") != "YES_METADATA_ONLY":
             raise ValueError("BINLOG_INVENTORY_APPROVAL_REQUIRED")
-        config, _ = probe_config()
+        env = dict(os.environ)
+        if env.get("FIXER_RDS_TEST_USER") != "fixer_cdc_stream":
+            raise ValueError("DEDICATED_CDC_ACCOUNT_REQUIRED")
+        env["FIXER_AWS_TEST_READONLY_APPROVED"] = "YES_METADATA_ONLY"
+        env["FIXER_RDS_TEST_PASSWORD"] = env.get("FIXER_CDC_PASSWORD", "")
+        config = validate_environment(env)
         import pymysql
         connection = pymysql.connect(
             host=config["host"], port=config["port"], user=config["user"],
@@ -69,7 +73,7 @@ def main():
         return 0
     except Exception as exc:
         reason = str(exc) if type(exc) is ValueError and str(exc) in {
-            "BINLOG_INVENTORY_APPROVAL_REQUIRED", "TLS_NOT_NEGOTIATED",
+            "BINLOG_INVENTORY_APPROVAL_REQUIRED", "DEDICATED_CDC_ACCOUNT_REQUIRED", "TLS_NOT_NEGOTIATED",
             "BINLOG_INVENTORY_UNAVAILABLE", "INVALID_CURRENT_BINLOG",
             "CURRENT_BINLOG_NOT_RETAINED", "INVALID_BINLOG_METADATA",
         } else safe_failure_code(exc)
