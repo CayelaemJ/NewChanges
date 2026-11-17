@@ -72,6 +72,19 @@ STATIC_SQL = {
     },
 }
 EVENTS = ("insert", "update", "delete")
+BUSINESS_STATES = {
+    "employers": ("ACTIVE", "SUSPENDED"),
+    "workforce_snapshots": ("ELIGIBLE", "INELIGIBLE"),
+    "employees": ("ACTIVE", "INACTIVE"),
+    "platform_users": ("ACTIVE", "DISABLED"),
+    "journeys": ("OPEN", "COMPLETED"),
+    "policies": ("ACTIVE", "CANCELLED"),
+    "ratings": ("PENDING", "APPROVED"),
+    "referrals": ("PENDING", "CONVERTED"),
+    "salary_advances": ("REQUESTED", "PAID"),
+}
+
+
 
 VIEW_QUERIES = {
     "employers": "SELECT COUNT(*),COALESCE(SUM(fixture_amount),0),MAX(fixture_status) FROM v_employers WHERE employer_ref='SYN-DEMO'",
@@ -99,7 +112,15 @@ def verify_views(source, phase):
                 expected = Decimal("1000.00") if phase == "insert" else Decimal("750.00")
                 if Decimal(str(amount)) != expected:
                     raise RuntimeError("TEN_FEED_VIEW_AMOUNT_PARITY_FAILED")
+            if feed != "debt_accounts" and phase != "delete":
+                expected_status = BUSINESS_STATES[feed][0 if phase == "insert" else 1]
+                if status != expected_status:
+                    raise RuntimeError("TEN_FEED_VIEW_STATUS_PARITY_FAILED")
             snapshot[feed] = {"rows": int(count)}
+            if phase != "delete":
+                snapshot[feed]["synthetic_state"] = (
+                    str(amount) if feed == "debt_accounts" else str(status)
+                )
     return snapshot
 
 
@@ -204,10 +225,10 @@ def drive(delay_seconds=2):
                         row_id = 91001 + offset
                         sql = STATIC_SQL[feed][phase]
                         if phase == "insert":
-                            value = Decimal("1000.00") if feed == "debt_accounts" else "ACTIVE"
+                            value = Decimal("1000.00") if feed == "debt_accounts" else BUSINESS_STATES[feed][0]
                             args = (row_id, value, "2025-01-01T00:00:00Z")
                         elif phase == "update":
-                            value = Decimal("750.00") if feed == "debt_accounts" else "UPDATED"
+                            value = Decimal("750.00") if feed == "debt_accounts" else BUSINESS_STATES[feed][1]
                             args = (value, row_id)
                         else:
                             args = (row_id,)
