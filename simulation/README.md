@@ -660,3 +660,42 @@ Gold reaggregation. To claim an actual *The Fixer* dashboard refresh,
 production/staging must first implement approved RDS snapshot/replication
 privileges, durable per-tenant generations and source-side reporting
 aggregation parity per `LIVE_RDS_CDC_ACCEPTANCE.md`.
+
+## All ten canonical reporting feeds — local Python CDC scenario
+
+Run this against **only the disposable internal Docker MySQL**:
+
+```bash
+cd ~/NewChanges
+bash simulation/ops/demo-ten-feeds-local.sh
+```
+
+The override initializes a fresh empty `ingest_stage` test fixture,
+takes a local empty-source binlog handoff and performs exactly three
+committed transactions in sequence, each touching **all ten** feeds:
+
+1. INSERT: employers, workforce_snapshots, employees, platform_users,
+   journeys, debt_accounts, policies, ratings, referrals and salary_advances.
+2. UPDATE: status fields in nine fixture tables and a synthetic debt
+   balance change from 1000.00 to 750.00. The deliberately stale
+   `source_updated_at` values do **not** advance.
+3. DELETE: delete all ten fixture rows; the CDC metadata sink must
+   retain opaque delete markers without storing raw row payloads.
+
+The source schema includes **ten test-only** `v_*` view stand-ins
+(`v_employers` through `v_salary_advances`) with minimal synthetic
+`fixture_status` and `fixture_amount` projections. These are
+**not** definitions of the real AWS RDS reporting views and cannot
+establish parity with The Fixer's actual dashboard calculations.
+
+After EACH transaction, the Python driver checks that all ten local
+views show the expected state, MySQL binlog CDC captured exactly ten
+new markers, every feed received one additional generation, and a
+durable consumer checkpoint advanced. Expected after the three cycles:
+30 row-change markers and generation 3 for every feed. It fails closed
+if even one feed is missed. Every Docker run generates ephemeral
+credentials, uses no published port, and destroys its test volumes.
+
+This proves local source changes -> row binlog -> ten feed notifications,
+not a production AWS CDC connection, ten fully modelled business
+domains, or an actual The Fixer frontend dashboard update.
