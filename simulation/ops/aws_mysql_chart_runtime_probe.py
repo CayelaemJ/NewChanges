@@ -24,10 +24,15 @@ SQL = (
 )
 
 
-def probe(conn, employer_ref=None):
-    # Explicit, locally provided employer ref remains supported. In auto mode
-    # discover a fixture ID only after the caller approved this AWS read-only
-    # probe. Never print, persist, or return the discovered identifier.
+def probe(conn, employer_ref=None, *, repeats=1):
+    """Measure server round trips independently on one read-only connection.
+
+    repeats=1 preserves existing offline probe contract; the CLI uses three
+    bounded aggregations with a single discovery. No source values leave this
+    function, even if returned data changes between samples.
+    """
+    if not isinstance(repeats, int) or isinstance(repeats, bool) or not 1 <= repeats <= 3:
+        raise ValueError("CHART_REPETITION_BUDGET_INVALID")
     if employer_ref is not None and (
         not isinstance(employer_ref, str) or not employer_ref.strip()
         or len(employer_ref) > 200 or employer_ref != employer_ref.strip()
@@ -38,9 +43,13 @@ def probe(conn, employer_ref=None):
     with conn.cursor() as cur:
         cur.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ")
         cur.execute("START TRANSACTION WITH CONSISTENT SNAPSHOT, READ ONLY")
+        transaction_ms = round((time.perf_counter() - started) * 1000, 2)
+        discovery_ms = None
         if employer_ref is None:
+            discovery_started = time.perf_counter()
             cur.execute(DISCOVER_SQL)
             candidates = cur.fetchall()
+            discovery_ms = round((time.perf_counter() - discovery_started) * 1000, 2)
             if not candidates:
                 return {
                     "status": "NO_JOURNEY_EMPLOYER_INCONCLUSIVE",
@@ -50,6 +59,9 @@ def probe(conn, employer_ref=None):
                     "employer_selection": "AUTO_SYNTHETIC_FIXTURE",
                     "groups": 0,
                     "elapsed_ms": round((time.perf_counter() - started) * 1000, 2),
+                    "transaction_setup_ms": transaction_ms,
+                    "discovery_ms": discovery_ms,
+                    "aggregation_samples_ms": [],
                 }
             if len(candidates) != 1 or not isinstance(candidates[0], tuple) or len(candidates[0]) != 1:
                 raise ValueError("CHART_DISCOVERY_RESULT_INVALID")
@@ -58,30 +70,47 @@ def probe(conn, employer_ref=None):
                 len(employer_ref) > 200 or employer_ref != employer_ref.strip()
             ):
                 raise ValueError("CHART_DISCOVERY_RESULT_INVALID")
-        cur.execute(SQL, (employer_ref,))
-        rows = cur.fetchall()
+        samples = []
+        group_counts = []
+        fingerprints = []
+        for _ in range(repeats):
+            aggregation_started = time.perf_counter()
+            cur.execute(SQL, (employer_ref,))
+            rows = cur.fetchall()
+            samples.append(round((time.perf_counter() - aggregation_started) * 1000, 2))
+            if len(rows) > MAX_GROUPS:
+                raise ValueError("CHART_GROUP_LIMIT_EXCEEDED")
+            for row in rows:
+                if not isinstance(row, tuple) or len(row) != 2:
+                    raise ValueError("CHART_RESULT_INVALID")
+                count = row[1]
+                if isinstance(count, bool) or not isinstance(count, int) or count < 0:
+                    raise ValueError("CHART_RESULT_INVALID")
+            group_counts.append(len(rows))
+            # Compare within this snapshot only. No buckets or counts emitted.
+            fingerprints.append(tuple(rows))
     elapsed_ms = round((time.perf_counter() - started) * 1000, 2)
-    if len(rows) > MAX_GROUPS:
-        raise ValueError("CHART_GROUP_LIMIT_EXCEEDED")
-    for row in rows:
-        if not isinstance(row, tuple) or len(row) != 2:
-            raise ValueError("CHART_RESULT_INVALID")
-        count = row[1]
-        if isinstance(count, bool) or not isinstance(count, int) or count < 0:
-            raise ValueError("CHART_RESULT_INVALID")
+    if len(set(group_counts)) != 1 or any(fp != fingerprints[0] for fp in fingerprints):
+        raise ValueError("CHART_REPEAT_RESULT_CHANGED")
     return {
-        "status": "PASS" if rows else "EMPTY_SCOPE_INCONCLUSIVE",
+        "status": "PASS" if group_counts[0] else "EMPTY_SCOPE_INCONCLUSIVE",
         "query": "JOURNEYS_STATUS_AGGREGATION",
         "read_only": True,
         "source_rows_exported": False,
         "employer_selection": "AUTO_SYNTHETIC_FIXTURE" if auto_mode else "SUPPLIED",
-        "groups": len(rows),
+        "groups": group_counts[0],
         "elapsed_ms": elapsed_ms,
+        "transaction_setup_ms": transaction_ms,
+        "discovery_ms": discovery_ms,
+        "aggregation_samples_ms": samples,
+        "aggregation_min_ms": min(samples),
+        "aggregation_max_ms": max(samples),
+        "aggregation_mean_ms": round(sum(samples) / len(samples), 2),
         "target_query_ms": 5000,
-        "within_target": elapsed_ms <= 5000,
+        "within_target": all(value <= 5000 for value in samples),
         "latency_includes_session_setup": True,
+        "connection_setup_measured_separately": True,
     }
-
 
 def main():
     conn = None
@@ -99,13 +128,17 @@ def main():
         env["FIXER_AWS_TEST_READONLY_APPROVED"] = "YES_METADATA_ONLY"
         config = validate_environment(env)
         import pymysql
+        connection_started = time.perf_counter()
         conn = pymysql.connect(
             host=config["host"], port=config["port"], user=config["user"],
             password=config["password"], database="ingest_stage",
             ssl_ca=config["ca"], ssl_verify_cert=True, ssl_verify_identity=True,
             connect_timeout=5, read_timeout=8, write_timeout=5, autocommit=False,
         )
-        output = probe(conn, employer_ref)
+        connection_ms = round((time.perf_counter() - connection_started) * 1000, 2)
+        output = probe(conn, employer_ref, repeats=3)
+        output["connection_ms"] = connection_ms
+        output["overall_ms_including_connection"] = round(connection_ms + output["elapsed_ms"], 2)
         print(json.dumps(output, sort_keys=True))
         return 0 if output["status"] == "PASS" else 2
     except Exception as exc:
@@ -114,6 +147,7 @@ def main():
             "AUTHORIZED_EMPLOYER_REF_REQUIRED", "CHART_GROUP_LIMIT_EXCEEDED",
             "CHART_RESULT_INVALID", "CHART_DISCOVERY_RESULT_INVALID",
             "AUTO_SAMPLE_SYNTHETIC_RDS_ONLY",
+            "CHART_REPETITION_BUDGET_INVALID", "CHART_REPEAT_RESULT_CHANGED",
         }
         code = str(exc) if type(exc) is ValueError and str(exc) in allowed else safe_failure_code(exc)
         print(json.dumps({"status": "FAILED", "reason_code": code,
