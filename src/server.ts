@@ -39,6 +39,7 @@ import {reportOperationalFailure} from "./services/operationalFailureService.js"
 import { readMysqlChart } from "./services/ingestStageMysqlChartQuery.js";
 import { mysqlChartPreviewEnabled, mysqlChartPreviewSettings } from "./services/mysqlChartPreviewSettings.js";
 import { acquirePooledMysqlChart } from "./services/mysqlChartPool.js";
+import { createChartInvalidationHub } from "./services/mysqlChartInvalidationHub.js";
 import { listPartners, createPartner, updatePartner, deletePartner, assignUserToPartner, assignEmployerToPartner, themeForUser, themeForEmployer, themeForSlug } from "./services/partnerService.js";
 import { login, resolveSession, destroySession, destroySessionById, destroyAllSessionsForUser, canViewEmployer, canAccessModule, allowedEmployerIds, AuthUser, isAdminRole } from "./services/authService.js";
 import { createUser, listUsers, updateUser, resetPassword, completeSetup, deactivateSelf, listRevokedUsers, deleteUserPermanently, requestPasswordReset } from "./services/userService.js";
@@ -1626,6 +1627,67 @@ app.get<{Params:{employerId:string};Querystring:{feed?:string;dimension?:string}
       // No raw SQL, RDS details or source row values in browser errors.
       return reply.code(503).send({error:"MySQL reporting query unavailable"});
     }
+  },
+);
+
+// Process-local chart notifications. No CDC worker publishes into this hub
+// yet: do not advertise this SSE stream as a live AWS binlog connection.
+const mysqlChartInvalidations = createChartInvalidationHub();
+app.get<{Params:{employerId:string}}>(
+  "/api/reporting/mysql/events/:employerId", async (req, reply) => {
+    const user = await requireUser(req, reply);
+    if (!user) return;
+    if (!canAccessModule(user,"dashboard") ||
+        !canViewEmployer(user,req.params.employerId))
+      return reply.code(403).send({error:"no access to this employer"});
+    if (!mysqlChartPreviewEnabled())
+      return reply.code(503).send({error:"MySQL reporting preview is not enabled"});
+    if (typeof req.params.employerId !== "string" ||
+        req.params.employerId.length === 0 ||
+        req.params.employerId.length > 200)
+      return reply.code(400).send({error:"invalid employer reference"});
+    let sourceId: string;
+    try {sourceId=mysqlChartPreviewSettings().sourceId;}
+    catch {return reply.code(503).send({error:"MySQL reporting preview unavailable"});}
+    let ready=false;
+    let unsubscribe: (()=>void)|null;
+    try {
+      unsubscribe=mysqlChartInvalidations.subscribe({
+        sourceId, tenantId:"portal",employerRef:req.params.employerId,
+        authorizedEmployerRefs:[req.params.employerId],
+      },event=>{
+        if (!ready || reply.raw.destroyed) return;
+        if (!reply.raw.write(`event: chart-invalidated\\ndata: ${JSON.stringify(event)}\\n\\n`))
+          reply.raw.end();
+      });
+    } catch {
+      return reply.code(400).send({error:"invalid chart subscription"});
+    }
+    if (!unsubscribe)
+      return reply.code(503).send({error:"Chart stream capacity reached; retry with polling"});
+    reply.hijack();
+    reply.raw.writeHead(200,{
+      "Content-Type":"text/event-stream; charset=utf-8",
+      "Cache-Control":"private, no-store, no-transform",
+      "X-Accel-Buffering":"no",
+      "Connection":"keep-alive",
+    });
+    ready=true;
+    reply.raw.write("retry: 3000\\n\\n: connected\\n\\n");
+    const heartbeat=setInterval(()=>{
+      if (!reply.raw.write(": heartbeat\\n\\n")) reply.raw.end();
+    },15_000);
+    // Reauthorization on reconnect; live streams cannot outlive their session.
+    const expiry=setTimeout(()=>reply.raw.end(),60_000);
+    let cleaned=false;
+    const cleanup=()=>{
+      if (cleaned) return;
+      cleaned=true;
+      clearInterval(heartbeat);clearTimeout(expiry);
+      unsubscribe?.();
+    };
+    reply.raw.once("close",cleanup);
+    req.raw.once("aborted",cleanup);
   },
 );
 
