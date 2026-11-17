@@ -24,6 +24,26 @@ DIMENSIONS = {
     "referrals": ("channel", "converted"),
     "salary_advances": ("salary_advance_status", "bank_account_verification_status"),
 }
+def explain_failure_code(exc):
+    """Report only a numeric MySQL error and safe broad class, never messages."""
+    args = getattr(exc, "args", ())
+    errno = args[0] if args and type(args[0]) is int else None
+    if errno in {1044, 1045, 1142, 1227, 1370}:
+        category = "MYSQL_PERMISSION_DENIED"
+    elif errno in {1356, 1449}:
+        category = "MYSQL_VIEW_DEFINER_OR_REFERENCE"
+    elif errno in {1054, 1064, 1109}:
+        category = "MYSQL_QUERY_CONTRACT"
+    elif errno in {1205, 1317, 2003, 2006, 2013}:
+        category = "MYSQL_CONNECTION_OR_TIMEOUT"
+    elif errno is not None:
+        category = "MYSQL_SERVER_ERROR"
+    else:
+        category = "CLIENT_OR_RESULT_PARSING_ERROR"
+    return {"status": "EXPLAIN_NOT_AVAILABLE", "category": category,
+            "mysql_errno": errno}
+
+
 EXPECTED = tuple(sorted(FEED_TABLES))
 assert set(DIMENSIONS) == set(FEED_TABLES)
 
@@ -90,9 +110,9 @@ def inspect(conn, *, include_explain=False):
                                 str(p[4]) for p in plans
                             )),
                         }
-                    except Exception:
-                        # Failure to explain must be explicit, not false PASS.
-                        meta["explain"][dim] = {"status": "EXPLAIN_NOT_AVAILABLE"}
+                    except Exception as exc:
+                        # Never disclose SQL, server error text, view bodies, or row data.
+                        meta["explain"][dim] = explain_failure_code(exc)
             result[feed] = meta
     complete = all(item["view_exists_with_employer_ref"] and
                    not item["missing_chart_dimensions"] for item in result.values())
