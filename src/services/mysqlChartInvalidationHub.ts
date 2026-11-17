@@ -4,9 +4,11 @@
  * No source rows, PII, MySQL credentials or PostgreSQL reporting writes.
  */
 import { LOAD_ORDER } from "./reportFormats.js";
+import { type FeedInvalidation, verifyFeedInvalidation } from "./mysqlCommittedFeedGenerations.js";
 
 const ALLOWED = new Set<string>(LOAD_ORDER);
 const NAMESPACE = /^[A-Za-z0-9_-]{1,128}$/;
+const SOURCE_ID = /^[A-Za-z0-9_-]{1,128}$/;
 const MAX_SUBSCRIPTIONS = 200;
 const MAX_LISTENERS_PER_SCOPE = 16;
 
@@ -46,6 +48,7 @@ function key(sourceId: string, tenantId: string, employerRef: string): string {
 export function createChartInvalidationHub() {
   const listeners = new Map<string, Set<(event: ChartInvalidation)=>void>>();
   const generations = new Map<string, number>();
+  const feedGenerations = new Map<string, number>();
   let totalListeners = 0;
 
   function subscribe(
@@ -76,6 +79,10 @@ export function createChartInvalidationHub() {
       if (set.size === 0) {
         listeners.delete(id);
         for (const feed of ALLOWED) generations.delete(JSON.stringify([id, feed]));
+        // Feed-wide generations are bounded to sources with active subscribers.
+        if (![...listeners.keys()].some(k => JSON.parse(k)[0] === scope.sourceId)) {
+          for (const feed of ALLOWED) feedGenerations.delete(JSON.stringify([scope.sourceId,feed]));
+        }
       }
     };
   }
@@ -105,5 +112,37 @@ export function createChartInvalidationHub() {
     }
     return subscribers.size;
   }
-  return {subscribe,notify};
+  /**
+   * Fan out a VERIFIED feed-wide invalidation, never an employer-specific
+   * claim. Subscribers were already authorized for their own employer by the
+   * Fastify SSE route; the event reveals only canonical feed + generation.
+   * This is local fanout, NOT a durable cross-process notification service.
+   */
+  function notifyFeed(sourceId: string, event: FeedInvalidation): number {
+    if (!SOURCE_ID.test(sourceId) || !verifyFeedInvalidation(event))
+      throw new Error("CDC_CHART_FEED_EVENT_INVALID");
+    const id=JSON.stringify([sourceId,event.feed]);
+    const previous=feedGenerations.get(id)??0;
+    if(event.generation<=previous) return 0;
+    const affected=[...listeners.entries()]
+      .filter(([k])=>JSON.parse(k)[0]===sourceId);
+    if(!affected.length)return 0;
+    if (feedGenerations.size >= MAX_SUBSCRIPTIONS * LOAD_ORDER.length &&
+        !feedGenerations.has(id))
+      throw new Error("CDC_CHART_FEED_GENERATION_CAPACITY_EXCEEDED");
+    feedGenerations.set(id,event.generation);
+    const notice:ChartInvalidation=Object.freeze({
+      type:"MYSQL_CHART_INVALIDATION",feed:event.feed,
+      generation:event.generation,
+    });
+    let count=0;
+    for(const [,subscriberSet] of affected){
+      for(const handler of subscriberSet){
+        try{handler(notice);}catch{/* One disconnected browser cannot block others. */}
+        count++;
+      }
+    }
+    return count;
+  }
+  return {subscribe,notify,notifyFeed};
 }
