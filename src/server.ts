@@ -40,6 +40,7 @@ import { readMysqlChart } from "./services/ingestStageMysqlChartQuery.js";
 import { mysqlChartPreviewEnabled, mysqlChartPreviewSettings } from "./services/mysqlChartPreviewSettings.js";
 import { acquirePooledMysqlChart } from "./services/mysqlChartPool.js";
 import { createChartInvalidationHub } from "./services/mysqlChartInvalidationHub.js";
+import { testStagingCdcConnection } from "./services/stagingCdcConnectionPreflight.js";
 import { railwayCdcObserverConfig, createRailwayCdcObserver } from "./services/railwayCdcGenerationObserver.js";
 import { listPartners, createPartner, updatePartner, deletePartner, assignUserToPartner, assignEmployerToPartner, themeForUser, themeForEmployer, themeForSlug } from "./services/partnerService.js";
 import { login, resolveSession, destroySession, destroySessionById, destroyAllSessionsForUser, canViewEmployer, canAccessModule, allowedEmployerIds, AuthUser, isAdminRole } from "./services/authService.js";
@@ -1443,6 +1444,20 @@ app.post<{ Body: Record<string, unknown> }>("/api/admin/integration/preview-swit
   const result = await previewSourceSwitch((req.body || {}) as any);
   return reply.code(result.ok ? 200 : 400).send(result);
 });
+
+// Third integration mode: CDC inspection only. This route has no Prisma
+// calls, source activation, credentials persistence or PostgreSQL sync.
+app.post<{Body:{host?:string;port?:number;database?:string;username?:string;password?:string}}>(
+  "/api/admin/cdc/connection/test", async(req,reply)=>{
+    const admin=await requireAdmin(req,reply);
+    if(!admin)return;
+    if(admin.role!=="SUPERADMIN")
+      return reply.code(403).send({error:"superadmin only"});
+    reply.header("Cache-Control","private, no-store");
+    const result=await testStagingCdcConnection(req.body??{});
+    return reply.code(result.ok?200:422).send(result);
+  },
+);
 
 app.post<{ Body: Record<string, unknown> }>("/api/admin/integration/test", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
