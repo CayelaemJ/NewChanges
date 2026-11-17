@@ -19,6 +19,7 @@ CREATE TABLE fixer_cdc_meta.cdc_checkpoint (
   binlog_file VARCHAR(128) NOT NULL,
   binlog_position BIGINT UNSIGNED NOT NULL,
   generation BIGINT UNSIGNED NOT NULL,
+  fence_epoch BIGINT UNSIGNED NOT NULL,
   updated_at_utc DATETIME(6) NOT NULL,
   CHECK (generation >= 0)
 ) ENGINE=InnoDB;
@@ -32,9 +33,20 @@ CREATE TABLE fixer_cdc_meta.cdc_feed_generation (
     REFERENCES fixer_cdc_meta.cdc_checkpoint(source_id)
 ) ENGINE=InnoDB;
 
+-- Proposal only: retain each verified source XID digest for idempotent replay.
+CREATE TABLE fixer_cdc_meta.cdc_commit_digest (
+  source_id VARCHAR(100) NOT NULL,
+  binlog_file VARCHAR(128) NOT NULL,
+  binlog_position BIGINT UNSIGNED NOT NULL,
+  digest CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  PRIMARY KEY (source_id, binlog_file, binlog_position),
+  CONSTRAINT fk_digest_checkpoint FOREIGN KEY (source_id)
+    REFERENCES fixer_cdc_meta.cdc_checkpoint(source_id)
+) ENGINE=InnoDB;
+
 -- Production design must additionally specify:
 --  * approved baseline (source UUID, canonical schema fingerprint, binlog origin)
---  * leader lease fencing and takeover
+--  * leader lease fencing and takeover (fence_epoch must be DB-enforced)
 --  * idempotent committed transaction digest / event deduplication
 --  * atomic checkpoint and feed increments in one InnoDB transaction
 --  * schema migration version, backups, retention, and disaster recovery
@@ -74,3 +86,24 @@ the atomic commit contract and failover behavior are satisfied.
 
 **Current status:** implementation and offline tests only. Neither a shared
 MySQL metadata schema nor a live binlog producer has been deployed by this PR.
+
+## Proposed metadata writer (offline code only)
+
+`mysqlCdcCommitPlan.ts` validates a source-scoped committed-XID intent
+and the ten canonical feed names before any connection is opened.
+`mysqlCdcMetadataWriter.ts` uses a single InnoDB transaction with
+`SELECT ... FOR UPDATE`, verifies the current `fence_epoch` and checkpoint
+generation, checks an immutable commit digest, increments the affected feed
+generations, and updates the checkpoint atomically.
+
+**Important:** An upstream leader-election service must assign a monotonic
+`fence_epoch` using database-enforced leasing. A caller-provided epoch alone
+is not security or leadership proof. Binlog transaction boundaries and source
+lineage must be verified independently. The writer intentionally has no
+production connector or startup registration. A failed or uncertain COMMIT
+must be reconciled by reading the durable digest before replaying; do not
+publish an unverified notification.
+
+Neither this sketch nor the offline SQLite store should be used for a live
+cutover without an approved bootstrap, migrations, storage controls, and
+crash/recovery tests.
