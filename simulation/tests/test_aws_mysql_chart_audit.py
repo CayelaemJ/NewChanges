@@ -80,6 +80,7 @@ class NativeChartAuditTests(unittest.TestCase):
     def test_explain_failure_redacts_sensitive_driver_messages(self):
         for errno, expected in [
             (1142, "MYSQL_PERMISSION_DENIED"),
+            (1345, "MYSQL_VIEW_EXPLAIN_PRIVILEGE_RESTRICTION"),
             (1356, "MYSQL_VIEW_DEFINER_OR_REFERENCE"),
             (1064, "MYSQL_QUERY_CONTRACT"),
             (2013, "MYSQL_CONNECTION_OR_TIMEOUT"),
