@@ -48,8 +48,8 @@ def inspect(conn, *, include_explain=False):
         )
         indexes = cur.fetchall()
         indexed = {t: [] for t in EXPECTED}
-        for table, _index_name, _seq, col in indexes:
-            if table in indexed:
+        for table, index_name, seq, col in indexes:
+            if table in indexed and int(seq) == 1:
                 indexed[table].append(col)
         available = {t: set() for t in EXPECTED}
         for view, column in column_rows:
@@ -63,7 +63,7 @@ def inspect(conn, *, include_explain=False):
                 "view_exists_with_employer_ref": "employer_ref" in cols,
                 "available_chart_dimensions": [d for d, yes in dimensions.items() if yes],
                 "missing_chart_dimensions": [d for d, yes in dimensions.items() if not yes],
-                "base_table_employer_ref_indexed": "employer_ref" in indexed[feed],
+                "base_table_employer_ref_leading_index": "employer_ref" in indexed[feed],
                 "explain": {},
             }
             # Never run EXPLAIN for missing columns or nonexistent views.
@@ -96,9 +96,15 @@ def inspect(conn, *, include_explain=False):
             result[feed] = meta
     complete = all(item["view_exists_with_employer_ref"] and
                    not item["missing_chart_dimensions"] for item in result.values())
+    explain_complete = (not include_explain or all(
+        all(isinstance(detail, dict) and "estimated_rows_total" in detail
+            for detail in item["explain"].values()) and
+        len(item["explain"]) == len(item["available_chart_dimensions"])
+        for item in result.values()
+    ))
     return {
         "mode": "AWS_MYSQL_CHART_CONTRACT_AND_PLAN_READONLY",
-        "status": "PASS" if complete else "REVIEW_REQUIRED",
+        "status": "PASS" if complete and explain_complete else "REVIEW_REQUIRED",
         "explain_requested": bool(include_explain),
         "explain_analyze_executed": False,
         "source_rows_read": False,
