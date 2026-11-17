@@ -2,7 +2,7 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
-from ops.aws_mysql_chart_runtime_probe import SQL, probe, main
+from ops.aws_mysql_chart_runtime_probe import SQL, DISCOVER_SQL, probe, main
 
 
 class ChartRuntimeProbeTests(unittest.TestCase):
@@ -42,6 +42,34 @@ class ChartRuntimeProbeTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "AUTHORIZED_EMPLOYER"):
                 probe(conn, value)
         cur.execute.assert_not_called()
+
+
+    def test_auto_sample_uses_hidden_fixture_employer_and_parameterized_aggregate(self):
+        conn, cur = self.make_connection([])
+        cur.fetchall.side_effect = [
+            [("PRIVATE_SOURCE_EMPLOYER",)],
+            [("COMPLETED", 12)],
+        ]
+        output = probe(conn)
+        self.assertEqual(output["status"], "PASS")
+        self.assertEqual(output["groups"], 1)
+        self.assertEqual(output["employer_selection"], "AUTO_SYNTHETIC_FIXTURE")
+        self.assertNotIn("PRIVATE_SOURCE_EMPLOYER", str(output))
+        self.assertEqual(cur.execute.call_args_list[-2].args, (DISCOVER_SQL,))
+        self.assertEqual(cur.execute.call_args_list[-1].args,
+                         (SQL, ("PRIVATE_SOURCE_EMPLOYER",)))
+
+    def test_auto_sample_with_no_journeys_is_inconclusive(self):
+        conn, cur = self.make_connection([])
+        output = probe(conn)
+        self.assertEqual(output["status"], "NO_JOURNEY_EMPLOYER_INCONCLUSIVE")
+        self.assertEqual(cur.execute.call_args_list[-1].args, (DISCOVER_SQL,))
+
+    def test_auto_sample_rejects_invalid_hidden_employer(self):
+        conn, cur = self.make_connection([("",)])
+        with self.assertRaisesRegex(ValueError, "CHART_DISCOVERY_RESULT_INVALID"):
+            probe(conn)
+        self.assertEqual(cur.execute.call_args_list[-1].args, (DISCOVER_SQL,))
 
     def test_default_off_main_refuses_before_connect(self):
         with patch.dict("os.environ", {}, clear=True):
