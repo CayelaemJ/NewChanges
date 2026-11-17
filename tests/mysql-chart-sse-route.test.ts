@@ -32,6 +32,9 @@ test("event stream omits employer identifiers and limits its lifetime",()=>{
   assert(route.includes("clearInterval(heartbeat)"));
   assert(route.includes("unsubscribe?.()"));
   assert(route.includes('event: chart-invalidated'));
+  assert(route.includes(String.raw`event: chart-invalidated\ndata:`));
+  assert(!route.includes(String.raw`event: chart-invalidated\\ndata:`));
+  assert(route.includes(String.raw`retry: 3000\n\n: connected\n\n`));
   assert(!route.includes("prisma."));
   assert(!route.includes("sourceRows"));
   assert(!route.includes("INSERT INTO"));
