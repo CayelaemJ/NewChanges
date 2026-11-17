@@ -205,6 +205,9 @@ export async function readCdcMysqlView(
     // Do not claim a complete feed until every result passed the budget/scope checks.
     await db.query("ROLLBACK");
     inTransaction = false;
+    // A successful read must also close cleanly before publication is allowed.
+    await db.end();
+    db = null;
     return { sourceId: scope.sourceId, tenantId: scope.tenantId,
       feed, employerRef, records, complete: true, source: "MYSQL_READ_ONLY" };
   } catch {
@@ -215,7 +218,8 @@ export async function readCdcMysqlView(
       if (inTransaction) {
         try { await db.query("ROLLBACK"); } catch { /* Connection will be closed. */ }
       }
-      try { await db.end(); } catch { throw new Error("CDC_MYSQL_VIEW_READ_FAILED"); }
+      // On failure, cleanup is best-effort; never override the redacted read error.
+      try { await db.end(); } catch { /* Original failure is already redacted. */ }
     }
   }
 }
