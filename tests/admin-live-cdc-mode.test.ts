@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import {test} from "node:test";
 import {readFileSync} from "node:fs";
-import {validateStagingCdcConnection,testStagingCdcConnection} from "../src/services/stagingCdcConnectionPreflight.js";
+import {validateStagingCdcConnection,testStagingCdcConnection,classifyCdcConnectionFailure} from "../src/services/stagingCdcConnectionPreflight.js";
 
 const admin=readFileSync(new URL("../public/admin.html",import.meta.url),"utf8");
 const server=readFileSync(new URL("../src/server.ts",import.meta.url),"utf8");
@@ -44,6 +44,24 @@ test("disabled or unapproved preflight returns a safe result without contacting 
   assert.deepEqual(await testStagingCdcConnection({...input,host:"other.example"},environment,neverConnect),
     {ok:false,code:"CDC_PREFLIGHT_CANDIDATE_INVALID_OR_HOST_NOT_APPROVED",cdcActive:false});
   assert.equal(calls,0);
+});
+test("CDC connection diagnostics identify network, TLS, authentication and database problems without revealing secrets",async()=>{
+  const examples=[
+    ["ER_ACCESS_DENIED_ERROR","CDC_PREFLIGHT_AUTH_FAILED"],
+    ["ER_BAD_DB_ERROR","CDC_PREFLIGHT_DATABASE_UNAVAILABLE"],
+    ["ENOTFOUND","CDC_PREFLIGHT_DNS_UNAVAILABLE"],
+    ["ETIMEDOUT","CDC_PREFLIGHT_NETWORK_UNAVAILABLE"],
+    ["UNABLE_TO_VERIFY_LEAF_SIGNATURE","CDC_PREFLIGHT_TLS_FAILED"],
+    ["unexpected","CDC_PREFLIGHT_CONNECTION_UNAVAILABLE"],
+  ];
+  for(const [code,expected] of examples){
+    assert.equal(classifyCdcConnectionFailure({code,message:"private password"}),expected);
+    const connector=(async()=>{throw Object.assign(Error("private password"),{code});}) as any;
+    const result=await testStagingCdcConnection(input,environment,connector);
+    assert.equal(result.ok,false);
+    assert.equal(result.code,expected);
+    assert(!JSON.stringify(result).includes("private password"));
+  }
 });
 test("staging preflight uses only fixed read-only MySQL statement, no PostgreSQL writes",()=>{
   const route=server.slice(server.indexOf('"/api/admin/cdc/connection/test"'),
