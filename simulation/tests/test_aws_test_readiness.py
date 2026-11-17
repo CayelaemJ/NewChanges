@@ -1,5 +1,6 @@
 """Unit-only safety and inventory tests; no AWS network requests."""
 import os
+import ssl
 import tempfile
 import unittest
 from unittest.mock import MagicMock, patch
@@ -76,6 +77,15 @@ class AwsReadinessTests(unittest.TestCase):
             safe_failure_code(RuntimeError("password=secret db.example.com")),
             "RDS_READONLY_PROBE_FAILED_UNCLASSIFIED"
         )
+        wrapped_tls = ssl.SSLCertVerificationError(1, "sensitive hostname")
+        wrapped = Exception(2003, "MySQL connection failed")
+        wrapped.__cause__ = wrapped_tls
+        self.assertEqual(safe_failure_code(wrapped),
+                         "RDS_TLS_CERTIFICATE_VERIFICATION_FAILED")
+        tls = ssl.SSLError(1, "certificate sensitive details")
+        wrapped.__cause__ = tls
+        self.assertEqual(safe_failure_code(wrapped),
+                         "RDS_TLS_CERTIFICATE_OR_HANDSHAKE_FAILED")
         for number, expected in (
             (1045, "RDS_AUTHENTICATION_OR_DATABASE_ACCESS_DENIED"),
             (2003, "RDS_NETWORK_DNS_OR_CONNECTION_FAILED"),
