@@ -24,6 +24,8 @@ test("frontend keeps legacy dashboard while mounting independent MySQL chart pre
 
 test("chart preview refetches only journeys after verified event notification",()=>{
   assert(preview.includes('new EventSource('));
+  assert(preview.includes("!capabilities.cdcAutoRefreshConnected"));
+  assert(preview.includes("CDC producer not connected; on-demand preview only"));
   assert(preview.includes('source.addEventListener("chart-invalidated",onInvalidation)'));
   assert(preview.includes('message.feed!=="journeys"'));
   assert(preview.includes('message.generation<=generation.current'));
