@@ -40,6 +40,7 @@ import { readMysqlChart } from "./services/ingestStageMysqlChartQuery.js";
 import { mysqlChartPreviewEnabled, mysqlChartPreviewSettings } from "./services/mysqlChartPreviewSettings.js";
 import { acquirePooledMysqlChart } from "./services/mysqlChartPool.js";
 import { createChartInvalidationHub } from "./services/mysqlChartInvalidationHub.js";
+import { railwayCdcObserverConfig, createRailwayCdcObserver } from "./services/railwayCdcGenerationObserver.js";
 import { listPartners, createPartner, updatePartner, deletePartner, assignUserToPartner, assignEmployerToPartner, themeForUser, themeForEmployer, themeForSlug } from "./services/partnerService.js";
 import { login, resolveSession, destroySession, destroySessionById, destroyAllSessionsForUser, canViewEmployer, canAccessModule, allowedEmployerIds, AuthUser, isAdminRole } from "./services/authService.js";
 import { createUser, listUsers, updateUser, resetPassword, completeSetup, deactivateSelf, listRevokedUsers, deleteUserPermanently, requestPasswordReset } from "./services/userService.js";
@@ -1645,6 +1646,21 @@ app.get<{Params:{employerId:string};Querystring:{feed?:string;dimension?:string}
 // Process-local chart notifications. No CDC worker publishes into this hub
 // yet: do not advertise this SSE stream as a live AWS binlog connection.
 const mysqlChartInvalidations = createChartInvalidationHub();
+let railwayCdcObserver:ReturnType<typeof createRailwayCdcObserver>|null=null;
+/** Read-only and default-off; never declares the binlog producer connected. */
+function startRailwayCdcObserver(){
+  try{
+    const config=railwayCdcObserverConfig();
+    if(!config)return;
+    railwayCdcObserver=createRailwayCdcObserver(config,mysqlChartInvalidations);
+    railwayCdcObserver.start(code=>app.log.warn({code},"Staging CDC generation observer read failed"));
+    app.log.info("Staging read-only CDC generation observer enabled");
+  }catch{
+    app.log.error("Staging CDC generation observer not started (invalid configuration)");
+  }
+}
+app.addHook("onClose",async()=>{railwayCdcObserver?.stop();});
+
 app.get<{Params:{employerId:string}}>(
   "/api/reporting/mysql/events/:employerId", async (req, reply) => {
     const user = await requireUser(req, reply);
@@ -2586,6 +2602,9 @@ app.listen({ port: PORT, host: "0.0.0.0" })
   .then(async () => {
     // Standby instances must not run independent scheduled imports, mail or
     // daily purges. Keep these disabled unless explicitly enabled.
+    // Subscriber relay is independent of background source-sync schedules.
+    // It only reads approved shared MySQL metadata when separately enabled.
+    startRailwayCdcObserver();
     const standby = process.env.STANDBY_MODE === "true";
     if (!standby) {
       await bootstrapAdmin();
