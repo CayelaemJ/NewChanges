@@ -38,7 +38,14 @@ export async function testStagingCdcConnection(
   input:CdcConnectionInput,env:NodeJS.ProcessEnv=process.env,
   connector:typeof mysql.createConnection=mysql.createConnection,
 ){
-  const options=validateStagingCdcConnection(input,env);
+  let options:ReturnType<typeof validateStagingCdcConnection>;
+  try{
+    options=validateStagingCdcConnection(input,env);
+  }catch(error){
+    // Expected operator gating and input errors must not become HTTP 500.
+    const code=error instanceof Error?error.message:"CDC_PREFLIGHT_CANDIDATE_INVALID_OR_HOST_NOT_APPROVED";
+    return {ok:false,code,cdcActive:false};
+  }
   let db:Awaited<ReturnType<typeof mysql.createConnection>>|null=null;
   try {
     db=await connector({
