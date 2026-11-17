@@ -73,6 +73,38 @@ STATIC_SQL = {
 }
 EVENTS = ("insert", "update", "delete")
 
+VIEW_QUERIES = {
+    "employers": "SELECT COUNT(*),COALESCE(SUM(fixture_amount),0),MAX(fixture_status) FROM v_employers WHERE employer_ref='SYN-DEMO'",
+    "workforce_snapshots": "SELECT COUNT(*),COALESCE(SUM(fixture_amount),0),MAX(fixture_status) FROM v_workforce_snapshots WHERE employer_ref='SYN-DEMO'",
+    "employees": "SELECT COUNT(*),COALESCE(SUM(fixture_amount),0),MAX(fixture_status) FROM v_employees WHERE employer_ref='SYN-DEMO'",
+    "platform_users": "SELECT COUNT(*),COALESCE(SUM(fixture_amount),0),MAX(fixture_status) FROM v_platform_users WHERE employer_ref='SYN-DEMO'",
+    "journeys": "SELECT COUNT(*),COALESCE(SUM(fixture_amount),0),MAX(fixture_status) FROM v_journeys WHERE employer_ref='SYN-DEMO'",
+    "debt_accounts": "SELECT COUNT(*),COALESCE(SUM(fixture_amount),0),MAX(fixture_status) FROM v_debt_accounts WHERE employer_ref='SYN-DEMO'",
+    "policies": "SELECT COUNT(*),COALESCE(SUM(fixture_amount),0),MAX(fixture_status) FROM v_policies WHERE employer_ref='SYN-DEMO'",
+    "ratings": "SELECT COUNT(*),COALESCE(SUM(fixture_amount),0),MAX(fixture_status) FROM v_ratings WHERE employer_ref='SYN-DEMO'",
+    "referrals": "SELECT COUNT(*),COALESCE(SUM(fixture_amount),0),MAX(fixture_status) FROM v_referrals WHERE employer_ref='SYN-DEMO'",
+    "salary_advances": "SELECT COUNT(*),COALESCE(SUM(fixture_amount),0),MAX(fixture_status) FROM v_salary_advances WHERE employer_ref='SYN-DEMO'",
+}
+
+def verify_views(source, phase):
+    expected_rows = 0 if phase == "delete" else 1
+    snapshot = {}
+    with source.cursor() as cursor:
+        for feed in FEEDS:
+            cursor.execute(VIEW_QUERIES[feed])
+            count, amount, status = cursor.fetchone()
+            if int(count) != expected_rows:
+                raise RuntimeError("TEN_FEED_VIEW_ROW_PARITY_FAILED")
+            if feed == "debt_accounts" and phase != "delete":
+                expected = Decimal("1000.00") if phase == "insert" else Decimal("750.00")
+                if Decimal(str(amount)) != expected:
+                    raise RuntimeError("TEN_FEED_VIEW_AMOUNT_PARITY_FAILED")
+            snapshot[feed] = {"rows": int(count)}
+    return snapshot
+
+
+
+
 
 def require_isolation():
     expected = {
@@ -186,6 +218,8 @@ def drive(delay_seconds=2):
             except Exception:
                 src.rollback()
                 raise
+            views = verify_views(src, phase)
+            src.rollback()
             # The isolated MySQL server emits one committed XID for all ten.
             consumed = run_local_binlog(
                 sink_db=sink, handoff=handoff, hmac_secret=HMAC_SECRET,
@@ -198,6 +232,7 @@ def drive(delay_seconds=2):
             summary = verify_cycle(sink, phase, ordinal, previous, current, generations)
             summary.update(kind="ten_feed_cycle",
                            source="DISPOSABLE_MYSQL_FIXTURE_NOT_LIVE_RDS",
+                           reporting_views=views,
                            checkpoint_advanced=True,
                            source_timestamp_expected_stale=(phase == "update"))
             print(json.dumps(summary), flush=True)
