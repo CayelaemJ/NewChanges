@@ -1,0 +1,10 @@
+# Local-only override. Inherits the isolated MySQL service with no host ports.
+services:
+  test:
+    command:
+      - sh
+      - -c
+      - >-
+        python ops/setup_local.py &&
+        python -m ops.local_bootstrap_probe &&
+        python -m ops.ten_feed_cdc_demo --delay-seconds 2
