@@ -2,7 +2,7 @@
 import os
 import unittest
 from unittest.mock import patch
-from ops.ten_feed_cdc_demo import FEEDS, STATIC_SQL, require_isolation, verify_cycle, drive
+from ops.ten_feed_cdc_demo import FEEDS, STATIC_SQL, VIEW_QUERIES, require_isolation, verify_cycle, drive
 from runtime.ingest_stage_contract import FEED_TABLES
 
 APPROVED = {
@@ -24,6 +24,17 @@ class TenFeedDemoContract(unittest.TestCase):
                 self.assertIn(feed, sql)
                 self.assertIn("%s", sql)
                 self.assertTrue(sql.upper().startswith(action.upper()))
+
+    def test_all_ten_views_have_read_only_contract(self):
+        self.assertEqual(set(VIEW_QUERIES), FEED_TABLES)
+        for feed, sql in VIEW_QUERIES.items():
+            self.assertEqual(sql.count("SELECT"), 1)
+            self.assertIn("v_" + feed, sql)
+            self.assertIn("SYN-DEMO", sql)
+        from pathlib import Path
+        fixture = Path("schema/004_ingest_stage_fixture.sql").read_text()
+        for feed in FEEDS:
+            self.assertIn("CREATE VIEW v_" + feed + " AS", fixture)
 
     def test_refuse_nonlocal_or_missing_approval(self):
         for key, value in (("SIM_ENV", "production"), ("SIM_DB_HOST", "rds.example"),
