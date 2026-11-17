@@ -31,7 +31,7 @@ class NativeChartAuditTests(unittest.TestCase):
         self.assertEqual(cur.execute.call_count, 2)
         for call in cur.execute.call_args_list:
             self.assertIn("information_schema", call.args[0])
-        self.assertTrue(all(not f["base_table_employer_ref_indexed"] for f in result["feeds"].values()))
+        self.assertTrue(all(not f["base_table_employer_ref_leading_index"] for f in result["feeds"].values()))
 
     def test_missing_dimension_flags_review_and_never_claims_speed(self):
         conn, _ = database(missing=True)
@@ -53,6 +53,28 @@ class NativeChartAuditTests(unittest.TestCase):
             self.assertTrue(call.args[0].startswith("EXPLAIN SELECT"))
             self.assertNotIn("EXPLAIN ANALYZE", call.args[0])
             self.assertEqual(call.args[1], ("__CDC_EXPLAIN_NONMATCHING_SCOPE__",))
+
+
+    def test_unavailable_explain_never_claims_pass(self):
+        conn, cur = database()
+        columns, indexes = cur.fetchall.side_effect
+        cur.fetchall.side_effect = [columns, indexes]
+        output = inspect(conn, include_explain=True)
+        self.assertEqual(output["status"], "REVIEW_REQUIRED")
+        self.assertEqual(
+            output["feeds"]["journeys"]["explain"]["status"]["status"],
+            "EXPLAIN_NOT_AVAILABLE",
+        )
+
+    def test_employer_index_must_be_first_column(self):
+        conn, cur = database()
+        columns, indexes = cur.fetchall.side_effect
+        indexes.append(("employees", "idx_nonleading", 2, "employer_ref"))
+        cur.fetchall.side_effect = [columns, indexes]
+        output = inspect(conn)
+        self.assertFalse(
+            output["feeds"]["employees"]["base_table_employer_ref_leading_index"]
+        )
 
 
 if __name__ == "__main__":
