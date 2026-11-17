@@ -84,10 +84,10 @@ def inspect(conn, *, include_explain=False):
                         meta["explain"][dim] = {
                             "plan_rows": len(plans),
                             "estimated_rows_total": sum(
-                                max(0, int(p[8] or 0)) for p in plans
+                                max(0, int(p[9] or 0)) for p in plans
                             ),
                             "access_types": sorted(set(
-                                str(p[3]) for p in plans
+                                str(p[4]) for p in plans
                             )),
                         }
                     except Exception:
