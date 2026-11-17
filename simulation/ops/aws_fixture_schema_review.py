@@ -37,10 +37,10 @@ def inspect_fixture_feasibility(conn):
         )
         constraints = cur.fetchall()
         cur.execute(
-            "SELECT TABLE_NAME,COUNT(*) FROM information_schema.TRIGGERS "
+            "SELECT EVENT_OBJECT_TABLE,COUNT(*) FROM information_schema.TRIGGERS "
             "WHERE EVENT_OBJECT_SCHEMA=%s AND EVENT_OBJECT_TABLE IN ("
             + ",".join(["%s"] * len(FEED_TABLES)) + ") "
-            "GROUP BY TABLE_NAME",
+            "GROUP BY EVENT_OBJECT_TABLE",
             ("ingest_stage", *sorted(FEED_TABLES)),
         )
         triggers = dict(cur.fetchall())
