@@ -71,6 +71,44 @@ class ChartRuntimeProbeTests(unittest.TestCase):
             probe(conn)
         self.assertEqual(cur.execute.call_args_list[-1].args, (DISCOVER_SQL,))
 
+
+    def test_three_repetitions_reuse_one_discovered_employer_and_do_not_log_values(self):
+        conn, cur = self.make_connection([])
+        cur.fetchall.side_effect = [
+            [("SECRET_EMPLOYER",)],
+            [("SECRET_BUCKET", 12)],
+            [("SECRET_BUCKET", 12)],
+            [("SECRET_BUCKET", 12)],
+        ]
+        output = probe(conn, repeats=3)
+        self.assertEqual(output["status"], "PASS")
+        self.assertEqual(output["groups"], 1)
+        self.assertEqual(len(output["aggregation_samples_ms"]), 3)
+        self.assertGreaterEqual(output["aggregation_mean_ms"], 0)
+        self.assertIn("discovery_ms", output)
+        self.assertIn("transaction_setup_ms", output)
+        self.assertNotIn("SECRET", str(output))
+        self.assertEqual(
+            [call.args for call in cur.execute.call_args_list if call.args[0] == SQL],
+            [(SQL, ("SECRET_EMPLOYER",))] * 3,
+        )
+        self.assertEqual(
+            sum(call.args[0] == DISCOVER_SQL for call in cur.execute.call_args_list), 1
+        )
+
+    def test_three_repetitions_fail_closed_on_inconsistent_aggregates(self):
+        conn, cur = self.make_connection([])
+        cur.fetchall.side_effect = [[("X", 1)], [("X", 1)], [("X", 2)]]
+        with self.assertRaisesRegex(ValueError, "CHART_REPEAT_RESULT_CHANGED"):
+            probe(conn, "EMPLOYER", repeats=3)
+
+    def test_repetitions_are_bounded_before_sql_execution(self):
+        for n in (0, 4, -1, True, 1.1):
+            conn, cur = self.make_connection([])
+            with self.assertRaisesRegex(ValueError, "CHART_REPETITION_BUDGET_INVALID"):
+                probe(conn, "EMPLOYER", repeats=n)
+            cur.execute.assert_not_called()
+
     def test_default_off_main_refuses_before_connect(self):
         with patch.dict("os.environ", {}, clear=True):
             self.assertEqual(main(), 1)
