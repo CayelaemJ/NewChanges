@@ -46,8 +46,10 @@ export FIXER_AWS_TEST_READONLY_APPROVED=YES_METADATA_ONLY
 export FIXER_RDS_TEST_HOST='<approved RDS endpoint from AWS>'
 export FIXER_RDS_TEST_USER='<dedicated metadata-only account>'
 export FIXER_RDS_TEST_CA='<path to official RDS CA bundle>'
-export FIXER_RDS_TEST_PASSWORD='<obtain securely from your environment/secret store>'
+read -rsp 'Read-only RDS password: ' FIXER_RDS_TEST_PASSWORD; echo
+export FIXER_RDS_TEST_PASSWORD
 python3 -m ops.aws_test_readiness
+unset FIXER_RDS_TEST_PASSWORD
 ```
 
 **Do not paste credentials into ChatGPT, GitHub or terminal logs.** Prefer a local secret manager, environment injection or a hidden prompt. The code requires a TLS CA and host ending `.rds.amazonaws.com`, rejects administrator usernames, and does not connect without explicit read-only approval. It queries only `information_schema.TABLES`, `information_schema.COLUMNS` and MySQL global variables; it makes **zero** data-row queries or mutations. Its output intentionally never prints hosts, usernames, credentials or SQL definitions.
