@@ -2265,7 +2265,14 @@ async function bootstrapAdmin() {
       return;
     }
     const { hashPassword } = await import("./services/authService.js");
-    await prisma.user.create({ data: { email: email.toLowerCase(), name: "Administrator", role: "ADMIN", passwordHash: hashPassword(password) } });
+    // Elevated first-user bootstrap is explicitly restricted to the isolated
+    // Railway CDC staging project. The production project's environment and
+    // the ordinary ADMIN_EMAIL bootstrap remain unchanged.
+    const stagingSuperadmin = process.env.STAGING_SUPERADMIN_BOOTSTRAP === "YES_ISOLATED_RAILWAY_STAGING" &&
+      process.env.RAILWAY_PROJECT_ID === "f2f1bc4f-5de8-436e-9414-5dc125650e96" &&
+      process.env.RAILWAY_ENVIRONMENT_ID === "9ff830b6-24c3-4319-bee1-82b6a74db270";
+    await prisma.user.create({ data: { email: email.toLowerCase(), name: "Administrator",
+      role: stagingSuperadmin ? "SUPERADMIN" : "ADMIN", passwordHash: hashPassword(password) } });
     app.log.info(`Bootstrapped first admin: ${email}`);
   } catch (e) { app.log.error(e); }
 }
