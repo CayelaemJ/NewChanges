@@ -65,7 +65,7 @@ function safeEmployerRef(value: unknown): value is string {
     value.length <= 200 && value === value.trim();
 }
 
-function validateSettings(settings: CdcMysqlReaderSettings): void {
+export function validateSettings(settings: CdcMysqlReaderSettings): void {
   if (settings.featureEnabled !== true ||
       settings.accessReviewed !== true ||
       settings.snapshotVerified !== true)
@@ -91,7 +91,7 @@ function validateSettings(settings: CdcMysqlReaderSettings): void {
     throw new Error("CDC_MYSQL_REPORT_BUDGET_INVALID");
 }
 
-function validateRequest(feed: string, employerRef: string, scope: VerifiedEmployerScope,
+export function validateRequest(feed: string, employerRef: string, scope: VerifiedEmployerScope,
                          settings: CdcMysqlReaderSettings): void {
   if (!ALLOWED.has(feed) || !getFormat(feed))
     throw new Error("CDC_MYSQL_FEED_NOT_ALLOWLISTED");
@@ -107,7 +107,7 @@ function validateRequest(feed: string, employerRef: string, scope: VerifiedEmplo
     throw new Error("CDC_MYSQL_EMPLOYER_SCOPE_DENIED");
 }
 
-async function connectReadOnly(settings: CdcMysqlReaderSettings): Promise<CdcMysqlQueryConnection> {
+export async function connectReadOnly(settings: CdcMysqlReaderSettings): Promise<CdcMysqlQueryConnection> {
   // No driver connection is created until all gates and tenant scope pass.
   const ca = await readFile(settings.caCertificatePath, "utf8");
   if (!ca.includes("BEGIN CERTIFICATE")) throw new Error("CDC_MYSQL_CA_INVALID");
@@ -132,7 +132,7 @@ async function connectReadOnly(settings: CdcMysqlReaderSettings): Promise<CdcMys
   return connection as unknown as CdcMysqlQueryConnection;
 }
 
-function columnNames(rows: unknown): Set<string> {
+export function columnNames(rows: unknown): Set<string> {
   if (!Array.isArray(rows) ||
       rows.some(row => !row || typeof row !== "object" ||
         typeof row.COLUMN_NAME !== "string"))
