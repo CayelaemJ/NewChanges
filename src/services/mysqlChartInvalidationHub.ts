@@ -73,7 +73,10 @@ export function createChartInvalidationHub() {
       active = false;
       set.delete(handler);
       totalListeners--;
-      if (set.size === 0) listeners.delete(id);
+      if (set.size === 0) {
+        listeners.delete(id);
+        for (const feed of ALLOWED) generations.delete(JSON.stringify([id, feed]));
+      }
     };
   }
 
