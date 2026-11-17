@@ -38,6 +38,7 @@ import { buildDataSourceControlOverview } from "./services/dataSourceControlCent
 import {reportOperationalFailure} from "./services/operationalFailureService.js";
 import { readMysqlChart } from "./services/ingestStageMysqlChartQuery.js";
 import { mysqlChartPreviewEnabled, mysqlChartPreviewSettings } from "./services/mysqlChartPreviewSettings.js";
+import { acquirePooledMysqlChart } from "./services/mysqlChartPool.js";
 import { listPartners, createPartner, updatePartner, deletePartner, assignUserToPartner, assignEmployerToPartner, themeForUser, themeForEmployer, themeForSlug } from "./services/partnerService.js";
 import { login, resolveSession, destroySession, destroySessionById, destroyAllSessionsForUser, canViewEmployer, canAccessModule, allowedEmployerIds, AuthUser, isAdminRole } from "./services/authService.js";
 import { createUser, listUsers, updateUser, resetPassword, completeSetup, deactivateSelf, listRevokedUsers, deleteUserPermanently, requestPasswordReset } from "./services/userService.js";
@@ -1620,7 +1621,7 @@ app.get<{Params:{employerId:string};Querystring:{feed?:string;dimension?:string}
         sourceId:settings.sourceId,
         tenantId:"portal",
         authorizedEmployerRefs:[req.params.employerId],
-      },settings);
+      },settings,acquirePooledMysqlChart);
     } catch {
       // No raw SQL, RDS details or source row values in browser errors.
       return reply.code(503).send({error:"MySQL reporting query unavailable"});
