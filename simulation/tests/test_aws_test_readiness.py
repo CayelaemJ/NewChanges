@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from unittest.mock import MagicMock, patch
 
-from ops.aws_test_readiness import FEED_TABLES, inspect, validate_environment
+from ops.aws_test_readiness import FEED_TABLES, inspect, validate_environment, safe_failure_code
 
 
 class AwsReadinessTests(unittest.TestCase):
@@ -62,3 +62,26 @@ class AwsReadinessTests(unittest.TestCase):
         self.assertTrue(all(not any(token in sql for token in
                             ("INSERT INTO", "UPDATE ", "DELETE FROM", "DROP ", "CREATE ", "CALL "))
                             for sql in statements))
+
+    def test_safe_diagnostic_codes_never_echo_server_exception_text(self):
+        self.assertEqual(
+            safe_failure_code(ModuleNotFoundError("No module named pymysql")),
+            "PYMYSQL_NOT_INSTALLED_IN_ACTIVE_PYTHON"
+        )
+        self.assertEqual(
+            safe_failure_code(RuntimeError("AWS_TEST_TLS_CA_MISSING")),
+            "AWS_TEST_TLS_CA_MISSING"
+        )
+        self.assertEqual(
+            safe_failure_code(RuntimeError("password=secret db.example.com")),
+            "RDS_READONLY_PROBE_FAILED_UNCLASSIFIED"
+        )
+        for number, expected in (
+            (1045, "RDS_AUTHENTICATION_OR_DATABASE_ACCESS_DENIED"),
+            (2003, "RDS_NETWORK_DNS_OR_CONNECTION_FAILED"),
+            (2026, "RDS_TLS_CERTIFICATE_OR_HANDSHAKE_FAILED"),
+            (1142, "RDS_METADATA_QUERY_PRIVILEGE_DENIED"),
+        ):
+            with self.subTest(number=number):
+                exc = Exception(number, "secret and db hostname")
+                self.assertEqual(safe_failure_code(exc), expected)
