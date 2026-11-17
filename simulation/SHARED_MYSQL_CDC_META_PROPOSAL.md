@@ -107,3 +107,30 @@ publish an unverified notification.
 Neither this sketch nor the offline SQLite store should be used for a live
 cutover without an approved bootstrap, migrations, storage controls, and
 crash/recovery tests.
+
+## Disposable, actual InnoDB integration test (local Docker only)
+
+After installing Docker and dependencies, explicitly opt in:
+
+```bash
+FIXER_CDC_RUN_DISPOSABLE_MYSQL=yes npm run check:cdc-mysql-disposable
+```
+
+This starts a fresh `mysql:8.4` Docker container with a random localhost-only
+published port and random local-only password, creates the proposed metadata
+tables **inside that container**, exercises the actual metadata writer and
+read-only generation reader, and destroys the container on exit.
+
+The integration exercises real database transaction visibility, two changed
+feeds, digest replay and conflict, checkpoint progression, stale fencing
+rejection, and process-local fanout for authorized employers. It does not
+modify AWS RDS, the customer's MySQL database, or PostgreSQL.
+
+**Limitations:** This integration uses a synthetic committed-XID plan. It does
+not yet verify an actual MySQL ROW/FULL binlog consumer, lease elections,
+multi-host notification publication, browser SSE transport, or automated
+source-to-chart latency. These remain explicit release blockers.
+
+This command is deliberately absent from `check:cdc-dashboard` and the default
+CI/test pipeline because it requires local Docker and creates temporary DB
+objects. It should never be run with production credentials.
