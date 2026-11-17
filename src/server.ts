@@ -1669,7 +1669,7 @@ app.get<{Params:{employerId:string}}>(
         authorizedEmployerRefs:[req.params.employerId],
       },event=>{
         if (!ready || reply.raw.destroyed) return;
-        if (!reply.raw.write(`event: chart-invalidated\\ndata: ${JSON.stringify(event)}\\n\\n`))
+        if (!reply.raw.write(`event: chart-invalidated\ndata: ${JSON.stringify(event)}\n\n`))
           reply.raw.end();
       });
     } catch {
@@ -1685,9 +1685,9 @@ app.get<{Params:{employerId:string}}>(
       "Connection":"keep-alive",
     });
     ready=true;
-    reply.raw.write("retry: 3000\\n\\n: connected\\n\\n");
+    reply.raw.write("retry: 3000\n\n: connected\n\n");
     const heartbeat=setInterval(()=>{
-      if (!reply.raw.write(": heartbeat\\n\\n")) reply.raw.end();
+      if (!reply.raw.write(": heartbeat\n\n")) reply.raw.end();
     },15_000);
     // Reauthorization on reconnect; live streams cannot outlive their session.
     const expiry=setTimeout(()=>reply.raw.end(),60_000);
