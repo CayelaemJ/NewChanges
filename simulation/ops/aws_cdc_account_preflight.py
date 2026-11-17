@@ -29,7 +29,7 @@ def audit_cdc_account(connection):
         return any(name in grant and "ON *.*" in grant for grant in grants)
 
     has_schema_select = any(
-        "SELECT" in grant and ("ON \`INGEST_STAGE\`.*" in grant or
+        "SELECT" in grant and ("ON `INGEST_STAGE`.*" in grant or
                                "ON INGEST_STAGE.*" in grant)
         for grant in grants
     )
