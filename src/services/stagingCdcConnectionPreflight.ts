@@ -34,6 +34,24 @@ export function validateStagingCdcConnection(input:CdcConnectionInput,env:NodeJS
     throw Error("CDC_PREFLIGHT_CANDIDATE_INVALID_OR_HOST_NOT_APPROVED");
   return {host,port,database,username,password};
 }
+/** Safe, bounded error categories: do not expose DB host, usernames or driver text. */
+export function classifyCdcConnectionFailure(error:unknown):string{
+  const err=error as {code?:unknown;errno?:unknown}|null;
+  const code=typeof err?.code==="string"?err.code:"";
+  if(["ER_ACCESS_DENIED_ERROR","ER_DBACCESS_DENIED_ERROR"].includes(code))
+    return "CDC_PREFLIGHT_AUTH_FAILED";
+  if(["ER_BAD_DB_ERROR","ER_BAD_FIELD_ERROR"].includes(code))
+    return "CDC_PREFLIGHT_DATABASE_UNAVAILABLE";
+  if(["ENOTFOUND","EAI_AGAIN"].includes(code))
+    return "CDC_PREFLIGHT_DNS_UNAVAILABLE";
+  if(["ETIMEDOUT","PROTOCOL_SEQUENCE_TIMEOUT","ECONNREFUSED","EHOSTUNREACH","ENETUNREACH"].includes(code))
+    return "CDC_PREFLIGHT_NETWORK_UNAVAILABLE";
+  if(["HANDSHAKE_SSL_ERROR","CERT_HAS_EXPIRED","UNABLE_TO_VERIFY_LEAF_SIGNATURE",
+      "SELF_SIGNED_CERT_IN_CHAIN","DEPTH_ZERO_SELF_SIGNED_CERT","ERR_TLS_CERT_ALTNAME_INVALID"].includes(code))
+    return "CDC_PREFLIGHT_TLS_FAILED";
+  return "CDC_PREFLIGHT_CONNECTION_UNAVAILABLE";
+}
+
 export async function testStagingCdcConnection(
   input:CdcConnectionInput,env:NodeJS.ProcessEnv=process.env,
   connector:typeof mysql.createConnection=mysql.createConnection,
@@ -69,8 +87,8 @@ export async function testStagingCdcConnection(
     // never that the CDC worker/metadata writer/SSE is live.
     return {ok:true,code:"CDC_SOURCE_PREFLIGHT_OK",cdcActive:false,
       note:"Read-only MySQL connection established; ROW/FULL binlog prerequisites confirmed. No settings or data saved."};
-  }catch{
-    return {ok:false,code:"CDC_PREFLIGHT_CONNECTION_UNAVAILABLE"};
+  }catch(error){
+    return {ok:false,code:classifyCdcConnectionFailure(error),cdcActive:false};
   }finally{
     try{await db?.end();}catch{}
   }
