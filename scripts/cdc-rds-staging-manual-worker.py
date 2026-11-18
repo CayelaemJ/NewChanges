@@ -161,6 +161,59 @@ def commit(writer, start, xid_pos, feeds, digest, generation, fence):
         raise
 
 
+
+def consume_events(events, writer, initial_file, generation, fence, on_commit=None):
+    """Consume already-decoded binlog events; do not handle or persist row values.
+
+    Always fail closed when an event source terminates, including with a
+    partially accumulated transaction. A real service must explicitly supervise
+    stream restarts, never interpret EOF as a healthy completion.
+    """
+    if not FILE_NAME.fullmatch(initial_file):
+        raise RuntimeError("INITIAL_BINLOG_FILE_INVALID")
+    pending=[]
+    active_file=initial_file
+    for event in events:
+        kind=type(event).__name__
+        if kind=="RotateEvent":
+            if pending:
+                raise RuntimeError("ROTATION_WITH_PENDING_TRANSACTION")
+            next_file=event.next_binlog
+            if isinstance(next_file,bytes):
+                next_file=next_file.decode("ascii")
+            if not isinstance(next_file,str) or not FILE_NAME.fullmatch(next_file):
+                raise RuntimeError("BINLOG_ROTATION_INVALID")
+            if next_file < active_file:
+                raise RuntimeError("BINLOG_ROTATION_REGRESSION")
+            active_file=next_file
+            continue
+        if kind in {"WriteRowsEvent","UpdateRowsEvent","DeleteRowsEvent"}:
+            if event.schema!=SCHEMA or event.table not in FEEDS:
+                raise RuntimeError("UNEXPECTED_SOURCE")
+            # Never read or serialize event.rows values (personal information).
+            pending.append((kind,event.table,active_file,event.packet.log_pos))
+            if len(pending)>1000:
+                raise RuntimeError("TRANSACTION_EVENT_BUDGET_EXCEEDED")
+            continue
+        if kind=="XidEvent" and pending:
+            if any(item[2]!=active_file for item in pending):
+                raise RuntimeError("CROSS_FILE_TRANSACTION_REJECTED")
+            xid_pos=event.packet.log_pos
+            digest=hashlib.sha256(json.dumps({
+                "source":SOURCE_ID,"file":active_file,"xid_pos":xid_pos,
+                "events":pending,
+            },sort_keys=True,separators=(",",":")).encode()).hexdigest()
+            impacted={item[1] for item in pending}
+            commit(writer,active_file,xid_pos,impacted,digest,generation,fence)
+            generation+=1
+            if on_commit is not None:
+                on_commit(generation,impacted)
+            pending=[]
+    if pending:
+        raise RuntimeError("REPLICATION_STREAM_ENDED_WITH_PENDING_TRANSACTION")
+    raise RuntimeError("REPLICATION_STREAM_ENDED")
+
+
 def run():
     if os.environ.get("FIXER_CDC_WORKER_ACTIVATE") != APPROVE:
         raise RuntimeError("WORKER_MANUALLY_DISABLED")
@@ -205,44 +258,10 @@ def run():
                          XidEvent,RotateEvent],
             freeze_schema=True,
         )
-        pending=[]
-        active_file=file_name
-        for event in stream:
-            kind=type(event).__name__
-            if kind=="RotateEvent":
-                # Rotation can occur between source transactions; never resume
-                # a pending transaction at a different file without validation.
-                if pending:
-                    raise RuntimeError("ROTATION_WITH_PENDING_TRANSACTION")
-                next_file=event.next_binlog
-                if isinstance(next_file,bytes):
-                    next_file=next_file.decode("ascii")
-                if not FILE_NAME.fullmatch(next_file):
-                    raise RuntimeError("BINLOG_ROTATION_INVALID")
-                active_file=next_file
-                continue
-            if kind in {"WriteRowsEvent","UpdateRowsEvent","DeleteRowsEvent"}:
-                if event.schema!=SCHEMA or event.table not in FEEDS:
-                    raise RuntimeError("UNEXPECTED_SOURCE")
-                # Avoid reading event.rows values; count is not persisted.
-                pending.append((kind,event.table,active_file,event.packet.log_pos))
-                if len(pending)>1000:
-                    raise RuntimeError("TRANSACTION_EVENT_BUDGET_EXCEEDED")
-                continue
-            if kind=="XidEvent" and pending:
-                if any(item[2]!=active_file for item in pending):
-                    raise RuntimeError("CROSS_FILE_TRANSACTION_REJECTED")
-                xid_pos=event.packet.log_pos
-                digest=hashlib.sha256(json.dumps({
-                    "source":SOURCE_ID,"file":active_file,"xid_pos":xid_pos,
-                    "events":pending,
-                },sort_keys=True,separators=(",",":")).encode()).hexdigest()
-                commit(writer,active_file,xid_pos,{item[1] for item in pending},
-                       digest,generation,fence)
-                generation+=1
-                print("COMMITTED generation=",generation,"feeds=",
-                      ",".join(sorted({item[1] for item in pending})),flush=True)
-                pending=[]
+        consume_events(stream, writer, file_name, generation, fence,
+                       on_commit=lambda gen, feeds: print(
+                           "COMMITTED generation=", gen, "feeds=",
+                           ",".join(sorted(feeds)), flush=True))
     finally:
         if stream:
             try:stream.close()
