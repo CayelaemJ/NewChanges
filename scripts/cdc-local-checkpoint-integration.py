@@ -164,7 +164,61 @@ def main():
             assert str(exc)=="STALE_WORKER_OR_GENERATION"
         assert_state(next_db,2,1,1,2)
         print("PASS: stale fencing epoch rejected by real InnoDB checkpoint",flush=True)
-        print("LIMITATION: ambiguous COMMIT reconciliation and binlog rotation still require testing.")
+        # Simulate a lost COMMIT response *before* the server commits.
+        # The worker must rollback, and the durable checkpoint stays at gen 2.
+        class BeforeCommitFailure:
+            def __init__(self, underlying):
+                self.db=underlying
+            def cursor(self):
+                return self.db.cursor()
+            def commit(self):
+                raise ConnectionError("simulated response failure before commit")
+            def rollback(self):
+                return self.db.rollback()
+
+        try:
+            worker.commit(BeforeCommitFailure(next_db),
+                          filename,300,{"journeys"},"f"*64,2,2)
+            raise AssertionError("pre-commit failure unexpectedly succeeded")
+        except ConnectionError:
+            pass
+        assert_state(next_db,2,1,1,2)
+        print("PASS: failed pre-COMMIT response leaves durable metadata unchanged",
+              flush=True)
+
+        # Simulate MySQL committing durably but losing the acknowledgement.
+        # Recovery must inspect the persisted checkpoint, NOT blindly retry
+        # the same transaction or publish another generation.
+        class AfterCommitFailure(BeforeCommitFailure):
+            def commit(self):
+                self.db.commit()
+                raise ConnectionError("simulated lost COMMIT acknowledgement")
+
+        try:
+            worker.commit(AfterCommitFailure(next_db),
+                          filename,320,{"journeys"},"g"*64,2,2)
+            raise AssertionError("ambiguous post-commit result unexpectedly succeeded")
+        except ConnectionError:
+            pass
+        row=assert_state(next_db,3,2,1,3)
+        assert int(row[1])==320
+        next_db.close()
+        next_db=None
+
+        # A fresh connection sees the committed checkpoint and takes epoch 3.
+        next_db=pymysql.connect(host="127.0.0.1",port=port,user="root",
+            password=password,autocommit=False,connect_timeout=3)
+        worker.acquire_lock(next_db)
+        persisted=sql(next_db,"SELECT source_id,binlog_file,binlog_position,"
+                      "generation,fence_epoch FROM fixer_cdc_meta.cdc_checkpoint "
+                      "WHERE source_id=%s",(worker.SOURCE_ID,))[0]
+        resumed=worker.resume(next_db,persisted)
+        assert resumed==(filename,320,3,3)
+        assert_state(next_db,3,2,1,3)
+        print("PASS: lost COMMIT acknowledgement reconciles from durable checkpoint "
+              "without duplicate generation",flush=True)
+        print("LIMITATION: actual binlog rotation, daemon lifecycle and network "
+              "disconnects still require integration tests.",flush=True)
         print("NO AWS/RDS CONNECTIONS. NO REPORTING RECORDS COPIED.",flush=True)
     finally:
         if db is not None:
