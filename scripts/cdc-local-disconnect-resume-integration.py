@@ -34,6 +34,10 @@ def query(db,sql,args=()):
         return cur.fetchall()
 
 def state(db):
+    # The admin connection uses autocommit=False (MySQL REPEATABLE READ).
+    # End any older read snapshot before inspecting a worker commit; otherwise
+    # this test can falsely report a stale checkpoint after a successful replay.
+    db.commit()
     rows=query(db,"SELECT binlog_file,binlog_position,generation,fence_epoch "
         "FROM fixer_cdc_meta.cdc_checkpoint WHERE source_id=%s",(worker.SOURCE_ID,))
     if len(rows)!=1:raise AssertionError("CHECKPOINT_CARDINALITY_INVALID")
@@ -188,7 +192,8 @@ def main():
         stream=None
         after=state(admin)
         if int(after[2])!=2 or int(after[3])!=3:
-            raise AssertionError("RESTART_DURABLE_CHECKPOINT_INCORRECT")
+            raise AssertionError("RESTART_DURABLE_CHECKPOINT_INCORRECT:"
+                "generation="+str(after[2])+",fence="+str(after[3]))
         feed_generation=query(admin,"SELECT generation FROM fixer_cdc_meta.cdc_feed_generation "
             "WHERE source_id=%s AND feed='journeys'",(worker.SOURCE_ID,))[0][0]
         digests=query(admin,"SELECT COUNT(*) FROM fixer_cdc_meta.cdc_commit_digest")[0][0]
