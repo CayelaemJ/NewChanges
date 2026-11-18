@@ -162,6 +162,20 @@ def commit(writer, start, xid_pos, feeds, digest, generation, fence):
 
 
 
+def stream_connection_settings(reader_password):
+    """Bound an idle/dead replication socket; heartbeat should arrive first.
+
+    Failure is intentionally fatal for this run. Recovery must restart from
+    the durable MySQL checkpoint under a new fencing epoch.
+    """
+    return {
+        "host":HOST, "port":3306,
+        "user":"fixer_cdc_reader", "passwd":reader_password,
+        "ssl":{"ca":str(CA.resolve()),"check_hostname":True},
+        "connect_timeout":10, "read_timeout":35, "write_timeout":15,
+    }
+
+
 def consume_events(events, writer, initial_file, generation, fence, on_commit=None):
     """Consume already-decoded binlog events; do not handle or persist row values.
 
@@ -257,13 +271,10 @@ def run():
         print("WORKER_LOCKED source=",SOURCE_ID,"epoch=",fence,"generation=",generation,
               "binlog=",file_name, "position=",pos, flush=True)
         stream=BinLogStreamReader(
-            connection_settings={
-                "host":HOST,"port":3306,"user":"fixer_cdc_reader","passwd":reader_pwd,
-                "ssl":{"ca":str(CA.resolve()),"check_hostname":True},
-                "connect_timeout":10,
-            },
+            connection_settings=stream_connection_settings(reader_pwd),
             server_id=secrets.randbelow(600_000_000)+1_300_000_000,
             log_file=file_name,log_pos=pos,resume_stream=True,blocking=True,
+            slave_heartbeat=10,
             only_schemas=[SCHEMA],only_tables=list(FEEDS),
             only_events=[WriteRowsEvent,UpdateRowsEvent,DeleteRowsEvent,
                          XidEvent,RotateEvent,QueryEvent],
