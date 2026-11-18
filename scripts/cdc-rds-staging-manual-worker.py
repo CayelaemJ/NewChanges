@@ -162,6 +162,47 @@ def commit(writer, start, xid_pos, feeds, digest, generation, fence):
 
 
 
+def advance_idle_rotation(writer, previous_file, next_file, generation, fence):
+    """Persist a proven RotateEvent boundary without incrementing feed generations.
+
+    A real RotateEvent is only handled outside a pending row transaction.
+    Restart at offset 4 of the next binlog, ahead of the format-description
+    event but before any source transaction in that file. Coordinates remain
+    monotonic and fenced by the existing source advisory lock.
+    """
+    if (not FILE_NAME.fullmatch(previous_file)
+            or not FILE_NAME.fullmatch(next_file)
+            or next_file <= previous_file):
+        raise RuntimeError("IDLE_ROTATION_COORDINATE_INVALID")
+    try:
+        with writer.cursor() as cur:
+            assert_lock_owner(cur)
+            cur.execute("SELECT binlog_file,binlog_position,generation,fence_epoch "
+                        "FROM fixer_cdc_meta.cdc_checkpoint WHERE source_id=%s FOR UPDATE",
+                        (SOURCE_ID,))
+            row=cur.fetchone()
+            if not row or int(row[2]) != generation or int(row[3]) != fence:
+                raise RuntimeError("IDLE_ROTATION_STALE_WORKER")
+            # The durable checkpoint may be behind the active streaming file
+            # because an earlier rotation did not include a relevant row.
+            # It must never already be in or beyond the new file.
+            if not FILE_NAME.fullmatch(row[0]) or row[0] > previous_file:
+                raise RuntimeError("IDLE_ROTATION_CHECKPOINT_FILE_INVALID")
+            if (next_file,4) <= (row[0],int(row[1])):
+                raise RuntimeError("IDLE_ROTATION_COORDINATE_REGRESSION")
+            cur.execute("UPDATE fixer_cdc_meta.cdc_checkpoint "
+                        "SET binlog_file=%s,binlog_position=4,"
+                        "updated_at_utc=UTC_TIMESTAMP(6) "
+                        "WHERE source_id=%s AND generation=%s AND fence_epoch=%s",
+                        (next_file,SOURCE_ID,generation,fence))
+            if cur.rowcount != 1:
+                raise RuntimeError("IDLE_ROTATION_CHECKPOINT_WRITE_STALE")
+        writer.commit()
+    except Exception:
+        writer.rollback()
+        raise
+
+
 def stream_connection_settings(reader_password):
     """Bound an idle/dead replication socket; heartbeat should arrive first.
 
@@ -199,6 +240,10 @@ def consume_events(events, writer, initial_file, generation, fence, on_commit=No
                 raise RuntimeError("BINLOG_ROTATION_INVALID")
             if next_file < active_file:
                 raise RuntimeError("BINLOG_ROTATION_REGRESSION")
+            if next_file > active_file:
+                advance_idle_rotation(writer,active_file,next_file,generation,fence)
+            # An initial synthetic RotateEvent commonly points at the active
+            # file, and must not mutate the durable checkpoint.
             active_file=next_file
             continue
         if kind=="QueryEvent":
