@@ -24,6 +24,8 @@ SERVICE="""[Unit]
 Description=The Fixer MySQL CDC staging metadata worker
 After=network-online.target
 Wants=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
 
 [Service]
 Type=simple
@@ -37,8 +39,6 @@ ExecStart=/opt/fixer-cdc/venv/bin/python /opt/fixer-cdc/worker.py
 Restart=on-failure
 RestartSec=30s
 RestartPreventExitStatus=1
-StartLimitIntervalSec=300
-StartLimitBurst=5
 TimeoutStopSec=20
 NoNewPrivileges=true
 ProtectSystem=strict
