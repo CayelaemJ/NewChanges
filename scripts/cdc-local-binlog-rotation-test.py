@@ -75,10 +75,9 @@ def main():
             only_events=[WriteRowsEvent,RotateEvent,XidEvent],
             freeze_schema=True,
         )
-        files=set()
-        rows_seen=set()
-        committed=0
-        pending=set()
+        committed_files=[]
+        pending_rows=0
+        active_file=start_file
         rotate_seen=False
         for i,event in enumerate(stream):
             if i>250:
@@ -89,22 +88,27 @@ def main():
                     target=target.decode("ascii")
                 if target==end_file:
                     rotate_seen=True
-                files.add(target)
+                if pending_rows:
+                    raise AssertionError("ROTATION_DURING_PENDING_ROW_TRANSACTION")
+                active_file=target
             elif isinstance(event,WriteRowsEvent):
                 if event.schema!="cdc_rotation_test" or event.table!="probe":
                     raise AssertionError("UNEXPECTED_ROW_SOURCE")
-                for row in event.rows:
-                    record=row.get("values",{})
-                    # Data here is synthetic and exists only in local Docker.
-                    pending.add(int(record["id"]))
-            elif isinstance(event,XidEvent) and pending:
-                committed+=1
-                rows_seen.update(pending)
-                pending.clear()
+                # Count row events without relying on library-specific decoded
+                # column names (UNKNOWN_COL* is valid without FULL metadata).
+                pending_rows+=len(event.rows)
+            elif isinstance(event,XidEvent) and pending_rows:
+                if pending_rows!=1:
+                    raise AssertionError("UNEXPECTED_COMMITTED_ROW_COUNT")
+                committed_files.append(active_file)
+                pending_rows=0
         if not rotate_seen:
             raise AssertionError("ROTATION_EVENT_NOT_OBSERVED")
-        if rows_seen!={1,2} or committed!=2:
-            raise AssertionError("CROSS_ROTATION_COMMIT_INCOMPLETE")
+        if committed_files!=[start_file,end_file]:
+            raise AssertionError(
+                "CROSS_ROTATION_COMMIT_INCOMPLETE: "
+                + repr(committed_files)
+            )
         print("PASS: replication reader observed binlog RotateEvent",flush=True)
         print("PASS: both committed local transactions seen across rotation",flush=True)
         print("NO RDS WRITES. NO CDC BASELINE. NO EC2 WORKER ENABLED.",flush=True)
