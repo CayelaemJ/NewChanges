@@ -301,9 +301,28 @@ def run():
             except Exception:pass
 
 
+def worker_exit_code(error):
+    """Only clearly transient transport failures qualify for supervised retry.
+
+    An application guard, DDL drift, stale checkpoint or authorization failure
+    exits 1 and must not be automatically restarted by systemd.
+    """
+    import socket
+    import pymysql
+    if isinstance(error, (
+        pymysql.err.OperationalError,
+        pymysql.err.InterfaceError,
+        ConnectionError,
+        TimeoutError,
+        socket.timeout,
+    )):
+        return 75
+    return 1
+
+
 if __name__=="__main__":
     try:run()
     except Exception as exc:
         safe=str(exc) if isinstance(exc,RuntimeError) else type(exc).__name__
         print("CDC_WORKER_STOPPED:",safe,file=sys.stderr)
-        sys.exit(1)
+        sys.exit(worker_exit_code(exc))
