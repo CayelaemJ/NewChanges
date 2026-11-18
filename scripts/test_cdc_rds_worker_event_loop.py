@@ -108,6 +108,31 @@ class FullLoopTests(TestCase):
                                       object(),FIRST,0,7)
             commit.assert_not_called()
 
+    def test_network_errors_are_retryable(self):
+        import pymysql
+        for error in (
+            pymysql.err.OperationalError(2006,"server went away"),
+            pymysql.err.InterfaceError(0,"connection closed"),
+            ConnectionError("connection reset"),
+            TimeoutError("socket timed out"),
+        ):
+            with self.subTest(error=type(error).__name__):
+                self.assertEqual(worker.worker_exit_code(error),75)
+
+    def test_schema_drift_and_checkpoint_errors_are_permanent(self):
+        for reason in (
+            "BINLOG_QUERY_EVENT_REQUIRES_SCHEMA_REVIEW",
+            "CHECKPOINT_BINLOG_PURGED_OR_INVALID",
+            "WORKER_MANUALLY_DISABLED",
+            "STALE_WORKER_OR_GENERATION",
+            "RDS_IDENTITY_MISMATCH",
+        ):
+            with self.subTest(reason=reason):
+                self.assertEqual(worker.worker_exit_code(RuntimeError(reason)),1)
+
+    def test_unexpected_errors_do_not_restart_automatically(self):
+        self.assertEqual(worker.worker_exit_code(ValueError("unexpected state")),1)
+
     def test_replication_connection_uses_heartbeat_and_bounded_timeout(self):
         settings=worker.stream_connection_settings("test-only-secret")
         self.assertEqual(settings["read_timeout"],35)
