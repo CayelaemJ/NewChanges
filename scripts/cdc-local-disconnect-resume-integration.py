@@ -202,6 +202,85 @@ def main():
         print("PASS: outage transaction caught up from durable checkpoint",flush=True)
         print("PASS: exactly two committed digests and feed-generation increments",flush=True)
         print("PASS: restart advanced fencing epoch and recovered without duplicate",flush=True)
+
+        # Rotate binlog without an allowlisted row transaction. A safe
+        # RotateEvent must advance only the checkpoint coordinate, preserving
+        # both the global and per-feed generations.
+        snapshot=query(writer,"SELECT source_id,binlog_file,binlog_position,generation,fence_epoch "
+            "FROM fixer_cdc_meta.cdc_checkpoint WHERE source_id=%s",(worker.SOURCE_ID,))[0]
+        file,pos,gen,fence=worker.resume(writer,snapshot)
+        if (gen,fence)!=(2,4):
+            raise AssertionError("IDLE_ROTATION_RESUME_FENCE_INVALID")
+        query(admin,"FLUSH BINARY LOGS")
+        admin.commit()
+        rotated_file=query(admin,"SHOW BINARY LOG STATUS")[0][0]
+        if rotated_file<=file:
+            raise AssertionError("DISPOSABLE_IDLE_ROTATION_NOT_ADVANCED")
+        idle_seen=threading.Event()
+        stream=make_stream(file,pos,91729987)
+        real_advance=worker.advance_idle_rotation
+        def track_advance(*args):
+            result=real_advance(*args)
+            if args[2]==rotated_file:
+                idle_seen.set()
+            return result
+        def idle_consumer():
+            try:
+                with patch.object(worker,"advance_idle_rotation",side_effect=track_advance):
+                    worker.consume_events(stream,writer,file,gen,fence)
+            except Exception as error:
+                outcome["idle"]=type(error).__name__
+        idle_thread=threading.Thread(target=idle_consumer,daemon=True)
+        idle_thread.start()
+        if not idle_seen.wait(20):
+            raise AssertionError("IDLE_ROTATE_EVENT_NOT_CHECKPOINTED")
+        stream.close()
+        idle_thread.join(timeout=10)
+        if idle_thread.is_alive():
+            raise AssertionError("IDLE_STREAM_DID_NOT_STOP")
+        stream=None
+        idle_state=state(admin)
+        if (idle_state[0],int(idle_state[1]),int(idle_state[2]),int(idle_state[3]))!=(
+            rotated_file,4,2,4):
+            raise AssertionError("IDLE_ROTATION_CHECKPOINT_INCORRECT")
+        print("PASS: idle binlog rotation advanced checkpoint to new file offset 4",flush=True)
+        print("PASS: idle rotation preserved transaction generation and fencing",flush=True)
+
+        # The next source change must resume from the idle rotation
+        # checkpoint; it must not lose or duplicate an earlier generation.
+        resumed=query(writer,"SELECT source_id,binlog_file,binlog_position,generation,fence_epoch "
+            "FROM fixer_cdc_meta.cdc_checkpoint WHERE source_id=%s",(worker.SOURCE_ID,))[0]
+        file,pos,gen,fence=worker.resume(writer,resumed)
+        if (gen,fence)!=(2,5):
+            raise AssertionError("POST_ROTATION_RESUME_FENCE_INVALID")
+        third_seen=threading.Event()
+        stream=make_stream(file,pos,91729990)
+        def on_third(g,feeds):
+            if g==3 and feeds=={"journeys"}:third_seen.set()
+        def third_consumer():
+            try:
+                worker.consume_events(stream,writer,file,gen,fence,on_commit=on_third)
+            except Exception as error:
+                outcome["third"]=type(error).__name__
+        third_thread=threading.Thread(target=third_consumer,daemon=True)
+        third_thread.start()
+        query(admin,"INSERT INTO ingest_stage.journeys VALUES (3,'after_idle_rotation')")
+        admin.commit()
+        if not third_seen.wait(20):
+            raise AssertionError("POST_IDLE_ROTATION_COMMIT_NOT_RECEIVED")
+        stream.close()
+        third_thread.join(timeout=10)
+        if third_thread.is_alive():
+            raise AssertionError("POST_ROTATION_STREAM_DID_NOT_STOP")
+        stream=None
+        final_checkpoint=state(admin)
+        final_feed=query(admin,"SELECT generation FROM fixer_cdc_meta.cdc_feed_generation "
+            "WHERE source_id=%s AND feed='journeys'",(worker.SOURCE_ID,))[0][0]
+        final_digests=query(admin,"SELECT COUNT(*) FROM fixer_cdc_meta.cdc_commit_digest")[0][0]
+        if (int(final_checkpoint[2]),int(final_checkpoint[3]),
+            int(final_feed),int(final_digests))!=(3,5,3,3):
+            raise AssertionError("POST_IDLE_ROTATION_EXACTLY_ONCE_INVALID")
+        print("PASS: next transaction after idle rotation recovered exactly once",flush=True)
         print("NO AWS/RDS/RAILWAY ACCESS. NO REAL CDC BASELINE. NO EC2 ACTIVATION.",flush=True)
     finally:
         if stream is not None:
