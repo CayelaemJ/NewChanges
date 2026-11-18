@@ -7,7 +7,7 @@ SHA256 digests reach fixer_cdc_meta (on the same RDS MySQL instance).
 
 Exactly one worker per source must hold the dedicated MySQL advisory lock;
 the database checkpoint fencing epoch increments on each acquisition.
-Do not run on EC2 until operational controls, recovery tests and DDL handling
+Baseline is initialized by a separate approved admin procedure; restricted\nmetadata writer cannot INSERT checkpoint/feed rows.\nDo not run on EC2 until operational controls, recovery tests and DDL handling
 are approved. This pilot is intentionally disabled by default.
 """
 import hashlib
@@ -211,9 +211,8 @@ def run():
         acquire_lock(writer)
         row=verify_source(reader,writer)
         if row is None:
-            file_name,pos,generation,fence=bootstrap(writer,reader)
-        else:
-            file_name,pos,generation,fence=resume(writer,row)
+            raise RuntimeError("BASELINE_MISSING_RUN_SEPARATE_APPROVED_BOOTSTRAP")
+        file_name,pos,generation,fence=resume(writer,row)
         print("WORKER_LOCKED source=",SOURCE_ID,"epoch=",fence,"generation=",generation,
               "binlog=",file_name, "position=",pos, flush=True)
         stream=BinLogStreamReader(
