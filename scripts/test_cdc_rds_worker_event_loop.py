@@ -53,6 +53,29 @@ class FullLoopTests(TestCase):
         )
         self.assertTrue(all(len(x[-1])==64 for x in observed))
 
+    def test_accepts_begin_query_before_committed_row_event(self):
+        sequence=[event("QueryEvent",query=b"BEGIN"),
+                  row("WriteRowsEvent","journeys",110),xid(150)]
+        with patch.object(worker,"commit") as commit:
+            with self.assertRaisesRegex(RuntimeError,"REPLICATION_STREAM_ENDED"):
+                worker.consume_events(sequence,object(),FIRST,0,7)
+            commit.assert_called_once()
+
+    def test_rejects_schema_change_query(self):
+        sequence=[event("QueryEvent",query=b"ALTER TABLE ingest_stage.journeys ADD COLUMN x INT"),
+                  row("WriteRowsEvent","journeys",110),xid(150)]
+        with patch.object(worker,"commit") as commit:
+            with self.assertRaisesRegex(RuntimeError,"BINLOG_QUERY_EVENT_REQUIRES_SCHEMA_REVIEW"):
+                worker.consume_events(sequence,object(),FIRST,0,7)
+            commit.assert_not_called()
+
+    def test_rejects_unknown_statement_query_even_outside_allowlist(self):
+        with patch.object(worker,"commit") as commit:
+            with self.assertRaisesRegex(RuntimeError,"BINLOG_QUERY_EVENT_REQUIRES_SCHEMA_REVIEW"):
+                worker.consume_events([event("QueryEvent",query="CREATE VIEW v AS SELECT 1")],
+                                      object(),FIRST,0,7)
+            commit.assert_not_called()
+
     def test_rejects_rotation_with_pending_transaction(self):
         sequence=[row("WriteRowsEvent","journeys",110),rotate(SECOND)]
         with patch.object(worker,"commit") as commit:
