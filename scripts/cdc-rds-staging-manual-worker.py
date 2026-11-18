@@ -187,6 +187,17 @@ def consume_events(events, writer, initial_file, generation, fence, on_commit=No
                 raise RuntimeError("BINLOG_ROTATION_REGRESSION")
             active_file=next_file
             continue
+        if kind=="QueryEvent":
+            # BEGIN is emitted for ordinary row-based transactions. All
+            # other SQL query events are suspicious until explicitly audited:
+            # DDL and statement-format operations can invalidate frozen
+            # table schemas or alter views without row events.
+            query=event.query
+            if isinstance(query,bytes):
+                query=query.decode("utf8",errors="replace")
+            if not isinstance(query,str) or query.strip().upper()!="BEGIN":
+                raise RuntimeError("BINLOG_QUERY_EVENT_REQUIRES_SCHEMA_REVIEW")
+            continue
         if kind in {"WriteRowsEvent","UpdateRowsEvent","DeleteRowsEvent"}:
             if event.schema!=SCHEMA or event.table not in FEEDS:
                 raise RuntimeError("UNEXPECTED_SOURCE")
@@ -229,7 +240,7 @@ def run():
         raise RuntimeError("RDS_IDENTITY_MISMATCH")
     from pymysqlreplication import BinLogStreamReader
     from pymysqlreplication.row_event import WriteRowsEvent, UpdateRowsEvent, DeleteRowsEvent
-    from pymysqlreplication.event import XidEvent, RotateEvent
+    from pymysqlreplication.event import XidEvent, RotateEvent, QueryEvent
 
     reader_pwd=password("fixer_cdc_reader")
     writer_pwd=password("fixer_cdc_writer")
@@ -255,7 +266,7 @@ def run():
             log_file=file_name,log_pos=pos,resume_stream=True,blocking=True,
             only_schemas=[SCHEMA],only_tables=list(FEEDS),
             only_events=[WriteRowsEvent,UpdateRowsEvent,DeleteRowsEvent,
-                         XidEvent,RotateEvent],
+                         XidEvent,RotateEvent,QueryEvent],
             freeze_schema=True,
         )
         consume_events(stream, writer, file_name, generation, fence,
