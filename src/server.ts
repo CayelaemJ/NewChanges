@@ -36,7 +36,14 @@ import { activateEquivalentSource, bootstrapExistingSource } from "./services/so
 import { startDailyRefresh } from "./services/dailyRefresh.js";
 import { getConfig as getSyncConfig, saveConfig as saveSyncConfig, publicConfig as publicSyncConfig, testConnection as testSyncConnection, runSync, recoverSourceSyncState, recentSyncLogs, detectSourceChanges, pendingDashboardRetryDue, previewSourceSwitch, SOURCE_CHANGE_POLL_SECONDS } from "./services/syncService.js";
 import { recordSourceWatch, sourceWatchPublicStatus } from "./services/sourceWatchHealth.js";
+import { buildDataSourceControlOverview } from "./services/dataSourceControlCenter.js";
 import {reportOperationalFailure} from "./services/operationalFailureService.js";
+import { readMysqlChart } from "./services/ingestStageMysqlChartQuery.js";
+import { mysqlChartPreviewEnabled, mysqlChartPreviewSettings } from "./services/mysqlChartPreviewSettings.js";
+import { acquirePooledMysqlChart } from "./services/mysqlChartPool.js";
+import { createChartInvalidationHub } from "./services/mysqlChartInvalidationHub.js";
+import { testStagingCdcConnection } from "./services/stagingCdcConnectionPreflight.js";
+import { railwayCdcObserverConfig, createRailwayCdcObserver } from "./services/railwayCdcGenerationObserver.js";
 import { listPartners, createPartner, updatePartner, deletePartner, assignUserToPartner, assignEmployerToPartner, themeForUser, themeForEmployer, themeForSlug } from "./services/partnerService.js";
 import { login, resolveSession, destroySession, destroySessionById, destroyAllSessionsForUser, canViewEmployer, canAccessModule, allowedEmployerIds, AuthUser, isAdminRole } from "./services/authService.js";
 import { createUser, listUsers, updateUser, resetPassword, completeSetup, deactivateSelf, listRevokedUsers, deleteUserPermanently, requestPasswordReset } from "./services/userService.js";
@@ -1368,6 +1375,21 @@ app.get("/api/admin/database-status", async (req, reply) => {
   }
 });
 
+// Administrative connector/CDC inventory. Read-only: no source database
+// connection, no credential, no cutover, and no production CDC worker.
+app.get("/api/admin/data-sources/overview", async (req, reply) => {
+  if (!(await requireAdmin(req, reply))) return;
+  const [config, generations] = await Promise.all([
+    getSyncConfig(), listSourceGenerations(),
+  ]);
+  const safe = publicSyncConfig(config);
+  const watcher = sourceWatchPublicStatus(
+    Boolean(safe.changeDetectionEnabled && safe.sourceChangeSchedulerEnabled),
+    SOURCE_CHANGE_POLL_SECONDS,
+  );
+  return buildDataSourceControlOverview(safe, generations, watcher);
+});
+
 // ── External integration (API or direct SQL pull & sync) — admin only ──
 app.get("/api/admin/integration", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
@@ -1566,6 +1588,20 @@ app.post<{ Body: Record<string, unknown> }>("/api/admin/integration/preview-swit
   return reply.code(result.ok ? 200 : 400).send(result);
 });
 
+// Third integration mode: CDC inspection only. This route has no Prisma
+// calls, source activation, credentials persistence or PostgreSQL sync.
+app.post<{Body:{host?:string;port?:number;database?:string;username?:string;password?:string}}>(
+  "/api/admin/cdc/connection/test", async(req,reply)=>{
+    const admin=await requireAdmin(req,reply);
+    if(!admin)return;
+    if(admin.role!=="SUPERADMIN")
+      return reply.code(403).send({error:"superadmin only"});
+    reply.header("Cache-Control","private, no-store");
+    const result=await testStagingCdcConnection(req.body??{});
+    return reply.code(result.ok?200:422).send(result);
+  },
+);
+
 app.post<{ Body: Record<string, unknown> }>("/api/admin/integration/test", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
   return testSyncConnection((req.body || {}) as any);
@@ -1720,6 +1756,126 @@ app.get("/api/admin/integration/logs", async (req, reply) => {
   if (!(await requireAdmin(req, reply))) return;
   return recentSyncLogs(10);
 });
+
+// Low-cost, authenticated browser feature discovery. Never returns RDS details
+// and does not claim a binlog consumer is publishing chart invalidations.
+app.get("/api/reporting/mysql/capabilities", async (req, reply) => {
+  const user=await requireUser(req,reply);
+  if(!user)return;
+  if(!canAccessModule(user,"dashboard"))
+    return reply.code(403).send({error:"dashboard access required"});
+  reply.header("Cache-Control","private, no-store");
+  return {chartPreviewEnabled:mysqlChartPreviewEnabled(),
+    cdcAutoRefreshConnected:false};
+});
+
+// Independent MySQL reporting pilot: default-off, no PostgreSQL report writes.
+// The application DB is used only by the existing session/employer authorization.
+app.get<{Params:{employerId:string};Querystring:{feed?:string;dimension?:string}}>(
+  "/api/reporting/mysql/charts/:employerId", async (req, reply) => {
+    const user = await requireUser(req, reply);
+    if (!user) return;
+    if (!canAccessModule(user, "dashboard") ||
+        !canViewEmployer(user, req.params.employerId))
+      return reply.code(403).send({error:"no access to this employer"});
+    // Must not open a MySQL connection when rollout gates are off.
+    if (!mysqlChartPreviewEnabled())
+      return reply.code(503).send({error:"MySQL reporting preview is not enabled"});
+    const feed = req.query?.feed;
+    const dimension = req.query?.dimension;
+    if (typeof feed !== "string" || typeof dimension !== "string" ||
+        feed.length > 64 || dimension.length > 64 ||
+        typeof req.params.employerId !== "string" || req.params.employerId.length > 200)
+      return reply.code(400).send({error:"invalid reporting chart request"});
+    try {
+      const settings = mysqlChartPreviewSettings();
+      return await readMysqlChart(feed, dimension, req.params.employerId, {
+        sourceId:settings.sourceId,
+        tenantId:"portal",
+        authorizedEmployerRefs:[req.params.employerId],
+      },settings,acquirePooledMysqlChart);
+    } catch {
+      // No raw SQL, RDS details or source row values in browser errors.
+      return reply.code(503).send({error:"MySQL reporting query unavailable"});
+    }
+  },
+);
+
+// Process-local chart notifications. No CDC worker publishes into this hub
+// yet: do not advertise this SSE stream as a live AWS binlog connection.
+const mysqlChartInvalidations = createChartInvalidationHub();
+let railwayCdcObserver:ReturnType<typeof createRailwayCdcObserver>|null=null;
+/** Read-only and default-off; never declares the binlog producer connected. */
+function startRailwayCdcObserver(){
+  try{
+    const config=railwayCdcObserverConfig();
+    if(!config)return;
+    railwayCdcObserver=createRailwayCdcObserver(config,mysqlChartInvalidations);
+    railwayCdcObserver.start(code=>app.log.warn({code},"Staging CDC generation observer read failed"));
+    app.log.info("Staging read-only CDC generation observer enabled");
+  }catch{
+    app.log.error("Staging CDC generation observer not started (invalid configuration)");
+  }
+}
+app.addHook("onClose",async()=>{railwayCdcObserver?.stop();});
+
+app.get<{Params:{employerId:string}}>(
+  "/api/reporting/mysql/events/:employerId", async (req, reply) => {
+    const user = await requireUser(req, reply);
+    if (!user) return;
+    if (!canAccessModule(user,"dashboard") ||
+        !canViewEmployer(user,req.params.employerId))
+      return reply.code(403).send({error:"no access to this employer"});
+    if (!mysqlChartPreviewEnabled())
+      return reply.code(503).send({error:"MySQL reporting preview is not enabled"});
+    if (typeof req.params.employerId !== "string" ||
+        req.params.employerId.length === 0 ||
+        req.params.employerId.length > 200)
+      return reply.code(400).send({error:"invalid employer reference"});
+    let sourceId: string;
+    try {sourceId=mysqlChartPreviewSettings().sourceId;}
+    catch {return reply.code(503).send({error:"MySQL reporting preview unavailable"});}
+    let ready=false;
+    let unsubscribe: (()=>void)|null;
+    try {
+      unsubscribe=mysqlChartInvalidations.subscribe({
+        sourceId, tenantId:"portal",employerRef:req.params.employerId,
+        authorizedEmployerRefs:[req.params.employerId],
+      },event=>{
+        if (!ready || reply.raw.destroyed) return;
+        if (!reply.raw.write(`event: chart-invalidated\ndata: ${JSON.stringify(event)}\n\n`))
+          reply.raw.end();
+      });
+    } catch {
+      return reply.code(400).send({error:"invalid chart subscription"});
+    }
+    if (!unsubscribe)
+      return reply.code(503).send({error:"Chart stream capacity reached; retry with polling"});
+    reply.hijack();
+    reply.raw.writeHead(200,{
+      "Content-Type":"text/event-stream; charset=utf-8",
+      "Cache-Control":"private, no-store, no-transform",
+      "X-Accel-Buffering":"no",
+      "Connection":"keep-alive",
+    });
+    ready=true;
+    reply.raw.write("retry: 3000\n\n: connected\n\n");
+    const heartbeat=setInterval(()=>{
+      if (!reply.raw.write(": heartbeat\n\n")) reply.raw.end();
+    },15_000);
+    // Reauthorization on reconnect; live streams cannot outlive their session.
+    const expiry=setTimeout(()=>reply.raw.end(),60_000);
+    let cleaned=false;
+    const cleanup=()=>{
+      if (cleaned) return;
+      cleaned=true;
+      clearInterval(heartbeat);clearTimeout(expiry);
+      unsubscribe?.();
+    };
+    reply.raw.once("close",cleanup);
+    req.raw.once("aborted",cleanup);
+  },
+);
 
 // ── Enterprise operations and analytics placement ──
 app.get("/api/admin/enterprise/overview", async (req, reply) => {
@@ -2271,6 +2427,41 @@ app.post<{ Params: { employerId: string }; Body: { period: string } }>(
 // ── first-run: create an admin from env vars if no users exist ──
 async function bootstrapAdmin() {
   try {
+    // One-time staging-only credential recovery. Never runs on other Railway
+    // projects, environments, or without all three explicit operator gates.
+    const recoveryRequested =
+      process.env.STAGING_SUPERADMIN_REPAIR === "YES_RECOVER_STAGING_ADMIN" &&
+      process.env.RAILWAY_PROJECT_ID === "f2f1bc4f-5de8-436e-9414-5dc125650e96" &&
+      process.env.RAILWAY_ENVIRONMENT_ID === "9ff830b6-24c3-4319-bee1-82b6a74db270";
+    if (recoveryRequested) {
+      const recoveryEmail=process.env.ADMIN_EMAIL?.toLowerCase().trim();
+      const recoveryPassword=process.env.ADMIN_PASSWORD;
+      if (!recoveryEmail || !recoveryPassword || recoveryPassword.length<12 ||
+          !/[A-Z]/.test(recoveryPassword) || !/[a-z]/.test(recoveryPassword) ||
+          !/[0-9]/.test(recoveryPassword))
+        throw new Error("STAGING_ADMIN_RECOVERY_CONFIG_INVALID");
+      // Optional one-time email correction: identify the exact existing
+      // staging admin, never create a second account or elevate a third party.
+      const previousEmail=process.env.STAGING_ADMIN_PREVIOUS_EMAIL?.toLowerCase().trim();
+      if (previousEmail && previousEmail!=="cabosolutionsza@gmail.com")
+        throw new Error("STAGING_ADMIN_PREVIOUS_IDENTITY_INVALID");
+      const user=await prisma.user.findUnique({
+        where:{email:previousEmail || recoveryEmail},
+      });
+      if (!user) throw new Error("STAGING_ADMIN_RECOVERY_TARGET_MISSING");
+      if (user.role!=="ADMIN" && user.role!=="SUPERADMIN")
+        throw new Error("STAGING_ADMIN_RECOVERY_ROLE_INVALID");
+      if (previousEmail && recoveryEmail!==previousEmail) {
+        const existingTarget=await prisma.user.findUnique({where:{email:recoveryEmail}});
+        if (existingTarget) throw new Error("STAGING_ADMIN_RECOVERY_EMAIL_CONFLICT");
+      }
+      await resetPassword(user.id,recoveryPassword);
+      await prisma.user.update({where:{id:user.id},data:{
+        email:recoveryEmail,role:"SUPERADMIN",active:true,
+      }});
+      app.log.info("Isolated staging administrator credentials and identity repaired; disable repair variables.");
+      return;
+    }
     const count = await prisma.user.count();
     if (count > 0) return;
     const email = process.env.ADMIN_EMAIL, password = process.env.ADMIN_PASSWORD;
@@ -2283,7 +2474,14 @@ async function bootstrapAdmin() {
       return;
     }
     const { hashPassword } = await import("./services/authService.js");
-    await prisma.user.create({ data: { email: email.toLowerCase(), name: "Administrator", role: "ADMIN", passwordHash: hashPassword(password) } });
+    // Elevated first-user bootstrap is explicitly restricted to the isolated
+    // Railway CDC staging project. The production project's environment and
+    // the ordinary ADMIN_EMAIL bootstrap remain unchanged.
+    const stagingSuperadmin = process.env.STAGING_SUPERADMIN_BOOTSTRAP === "YES_ISOLATED_RAILWAY_STAGING" &&
+      process.env.RAILWAY_PROJECT_ID === "f2f1bc4f-5de8-436e-9414-5dc125650e96" &&
+      process.env.RAILWAY_ENVIRONMENT_ID === "9ff830b6-24c3-4319-bee1-82b6a74db270";
+    await prisma.user.create({ data: { email: email.toLowerCase(), name: "Administrator",
+      role: stagingSuperadmin ? "SUPERADMIN" : "ADMIN", passwordHash: hashPassword(password) } });
     app.log.info(`Bootstrapped first admin: ${email}`);
   } catch (e) { app.log.error(e); }
 }
@@ -2562,6 +2760,9 @@ app.listen({ port: PORT, host: "0.0.0.0" })
   .then(async () => {
     // Standby instances must not run independent scheduled imports, mail or
     // daily purges. Keep these disabled unless explicitly enabled.
+    // Subscriber relay is independent of background source-sync schedules.
+    // It only reads approved shared MySQL metadata when separately enabled.
+    startRailwayCdcObserver();
     const standby = process.env.STANDBY_MODE === "true";
     if (!standby) {
       await bootstrapAdmin();

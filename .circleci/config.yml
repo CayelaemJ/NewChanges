@@ -211,6 +211,9 @@ jobs:
             npm run check:contract
             npm run check:neon-egress
             npm run check:source-sync-safety
+            # Read-only RDS reader + metadata-only CDC publication contracts.
+            # All test connectors are mocked; never open AWS/MySQL here.
+            npm run check:cdc-dashboard
             node --max-old-space-size=192 --import tsx tests/bounded-source-feed.test.ts
             node --import tsx tests/interrupted-sync-recovery.test.ts
             npm run check:admin-ui

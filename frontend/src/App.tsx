@@ -1,5 +1,7 @@
 import { Component, type CSSProperties, type PropsWithChildren, useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "./components/ui/badge";
+import { DataSourcesControlCenter } from "./components/DataSourcesControlCenter";
+import { MysqlChartPreview } from "./components/MysqlChartPreview";
 import { Button } from "./components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./components/ui/card";
 import { Progress } from "./components/ui/progress";
@@ -317,6 +319,7 @@ function DashboardView({me}:{me:Me}) {
           </div>
         </div>
       </div>
+      <MysqlChartPreview key={employer.id} employerId={employer.id} />
       <div className="exec-band reveal">
         <div className="exec-head">
           <div className="exec-pulse"></div>
@@ -417,7 +420,7 @@ function DashboardView({me}:{me:Me}) {
 }
 
 function AdminView({me}:{me:Me}) {
-  const [tab,setTab]=useState<"overview"|"users"|"integrations"|"imports"|"audit"|"compliance"|"mlops">("overview");
+  const [tab,setTab]=useState<"overview"|"users"|"integrations"|"sources"|"imports"|"audit"|"compliance"|"mlops">("overview");
   const [users,setUsers]=useState<any[]>([]);
   const [security,setSecurity]=useState<any>(null);
   const [ops,setOps]=useState<any>(null);
@@ -478,7 +481,7 @@ function AdminView({me}:{me:Me}) {
   const roleOptions=isSuper?["ADMIN","SUPERADMIN","EMPLOYER_MANAGER","PORTFOLIO_MANAGER","VIEWER"]:["EMPLOYER_MANAGER","PORTFOLIO_MANAGER","VIEWER"];
 
   const nav=[
-    ["overview","Overview"],["users","Users & roles"],["integrations","Live integrations"],
+    ["overview","Overview"],["users","Users & roles"],["integrations","Live integrations"],["sources","Data sources & CDC"],
     ["imports","Data governance"],["audit","Audit history"],["compliance","POPIA"],["mlops","MLOps"]
   ] as const;
 
@@ -502,6 +505,7 @@ function AdminView({me}:{me:Me}) {
           <Card><CardHeader><SectionHeading title="Critical operational audit" description="Highest-priority operational changes, with full history retained separately."/></CardHeader><CardContent>{critical.length?<div className="space-y-2">{critical.map((e:any,i)=><div className="grid gap-1 rounded-md border border-slate-200 p-3" key={e.id||i}><div className="flex justify-between gap-3"><b className="text-xs">{e.action||"Event"}</b><span className="text-[10px] text-slate-500">{e.createdAt?new Date(e.createdAt).toLocaleString("en-ZA"):""}</span></div><p className="break-words text-[11px] text-slate-600">{e.message||e.detail||"Operational event recorded."}</p></div>)}</div>:<p className="text-sm text-slate-500">No critical operational events in the returned history.</p>}<Button className="mt-4" variant="outline" onClick={()=>setTab("audit")}>Open full audit</Button></CardContent></Card>
         </section>}
 
+        {tab==="sources"&&<DataSourcesControlCenter />}
         {tab==="users"&&<section className="mt-5 grid gap-4">
           <Card><CardHeader><SectionHeading title="Users & roles" description="Role is authority. Employer and portfolio assignments define access scope."/></CardHeader><CardContent>
             <div className="overflow-x-auto rounded-md border border-slate-200"><table className="w-full min-w-[760px] text-left text-xs"><thead className="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500"><tr><th className="p-3">User</th><th className="p-3">Role</th><th className="p-3">Status</th><th className="p-3">Scope</th><th className="p-3">Action</th></tr></thead><tbody className="divide-y divide-slate-100">{users.map((u:any)=><tr key={u.id}><td className="p-3"><b>{u.name||"Unnamed"}</b><span className="mt-1 block text-slate-500">{u.email}</span></td><td className="p-3"><Badge>{roleLabels[u.role]||u.role||"Unknown"}</Badge></td><td className="p-3">{u.active===false?<span className="text-red-700">Inactive</span>:<span className="text-emerald-700">Active</span>}</td><td className="p-3 break-words">{number(Array.isArray(u.employers)?u.employers.length:u.employerIds?.length)} employer assignments</td><td className="p-3"><Select aria-label={"Change role for "+(u.name||u.email)} value={u.role||""} onChange={e=>{const next=e.target.value;if(!roleOptions.includes(next))return;action("role",()=>api("/api/users/"+u.id,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({role:next,reason:"Role updated from React administration"})}))}}><option value={u.role}>{roleLabels[u.role]||u.role}</option>{roleOptions.filter(r=>r!==u.role).map(r=><option key={r} value={r}>{roleLabels[r]}</option>)}</Select></td></tr>)}</tbody></table></div>

@@ -234,7 +234,7 @@
     .client-preview-app .snap-nav{display:none}
   }
 
-  .source-mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:820px;margin-bottom:16px;}
+  .source-mode-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;max-width:820px;margin-bottom:16px;}
   .source-mode-card{display:flex;align-items:flex-start;gap:12px;text-align:left;border:1px solid var(--line);background:#fff;border-radius:13px;padding:15px 16px;cursor:pointer;font-family:inherit;color:var(--ink);transition:.16s;}
   .source-mode-card:hover{border-color:#cdb8f3;background:#fcfbff;}
   .source-mode-card.on{border-color:var(--blue);background:var(--ice);}
@@ -456,6 +456,10 @@
               <span class="source-mode-icon">DB</span>
               <span><strong>Database integration</strong><small>Connect directly to approved read-only PostgreSQL, SQL Server, MySQL or MariaDB views.</small></span>
             </button>
+            <button class="source-mode-card" id="source-tab-cdc" type="button" role="tab" aria-selected="false" onclick="setIntegMode('CDC')">
+              <span class="source-mode-icon">CDC</span>
+              <span><strong>Live CDC (MySQL)</strong><small>Test a direct MySQL connection without importing reporting rows or saving credentials to PostgreSQL.</small></span>
+            </button>
           </div>
           <div style="max-width:820px;margin-bottom:14px;">
             <label style="display:block;font-size:12.5px;font-weight:700;color:#5b6b7a;max-width:390px;">Heartbeat reconciliation every (hours)
@@ -553,6 +557,12 @@
             <div style="grid-column:span 2;font-size:12px;color:#8497a7;line-height:1.5;">SQL mode expects 10 read-only canonical views named <b>v_employers</b>, <b>v_workforce_snapshots</b>, … <b>v_salary_advances</b> (or the configured prefix). The connection test checks every view and its contracted columns.</div>
           </div>
 
+          <div id="integ-cdc-panel" style="display:none;max-width:820px;margin-top:12px;padding:14px;border:1px solid #b5d9c9;border-radius:12px;background:#f2faf6;">
+            <strong style="color:#116652;">Live CDC · connection preflight only</strong>
+            <p style="font-size:12px;line-height:1.6;margin:8px 0 12px;">Enter the MySQL host, port (usually 3306), database, read-only username and password in the Database Connection fields above. This mode never invokes the legacy Sync now, Save settings, Stage source or PostgreSQL ingestion endpoints. The connection test inspects MySQL ROW/FULL binlog prerequisites only; it does not start the CDC worker or save credentials anywhere.</p>
+            <button type="button" class="btn" onclick="testLiveCdc()">Test Live CDC connection (no save)</button>
+            <p class="muted" style="font-size:11px;margin-top:10px;">Staging-only: the server must independently approve this exact MySQL host. Password is transmitted over HTTPS for this one test, kept only in request memory and cleared afterward. Persisted connection management and production CDC activation are separate, gated steps.</p>
+          </div>
           <div style="margin-top:16px;padding:14px;border:1px solid var(--line);border-radius:12px;background:#fbfaff;max-width:820px;">
             <div style="font-size:13px;font-weight:800;color:var(--brand-primary);">Analytics query placement</div>
             <div style="font-size:11.5px;color:#617486;line-height:1.5;margin-top:4px;">Do not run heavy dashboard workloads on a production MySQL primary. Use source-side reporting views or a read replica for approved aggregations, then keep the portal's governed read model in PostgreSQL.</div>
@@ -574,11 +584,11 @@
             <div id="integ-analytics-note" style="font-size:11px;color:#8497a7;margin-top:8px;">Read-only is enforced by the server. Arbitrary SQL is never accepted from the browser.</div>
           </div>
 
-          <label style="margin-top:16px;display:flex;align-items:center;gap:9px;font-size:13px;font-weight:700;color:#32217c;cursor:pointer;">
+          <label id="integ-sync-enabled-row" style="margin-top:16px;display:flex;align-items:center;gap:9px;font-size:13px;font-weight:700;color:#32217c;cursor:pointer;">
             <input id="integ-enabled" type="checkbox" style="width:17px;height:17px;"> Allow automatic source synchronization
           </label>
 
-          <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
+          <div id="integ-legacy-actions" style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
             <button class="btn" onclick="saveInteg()">Save settings</button>
             <button class="btn btn-ghost" onclick="testInteg()">Test source</button>
             <button class="btn btn-ghost" onclick="previewCandidateSource()">Preview new source</button>
@@ -858,13 +868,30 @@ function addNav(me){
 }
 // ── live data integration (API or direct SQL) ──
 function setIntegMode(mode){
-  mode=String(mode||'API').toUpperCase()==='SQL'?'SQL':'API';
+  mode=String(mode||'API').toUpperCase();
+  if(!['API','SQL','CDC'].includes(mode))mode='API';
   $('#integ-mode').value=mode;
   $('#integ-api-panel').style.display = mode === 'API' ? 'grid' : 'none';
-  $('#integ-sql-panel').style.display = mode === 'SQL' ? 'grid' : 'none';
-  const api=$('#source-tab-api'), sql=$('#source-tab-sql');
-  if(api){ api.classList.toggle('on',mode==='API'); api.setAttribute('aria-selected',String(mode==='API')); }
-  if(sql){ sql.classList.toggle('on',mode==='SQL'); sql.setAttribute('aria-selected',String(mode==='SQL')); }
+  $('#integ-sql-panel').style.display = mode === 'SQL' || mode === 'CDC' ? 'grid' : 'none';
+  $('#integ-cdc-panel').style.display = mode === 'CDC' ? 'block' : 'none';
+  $('#integ-legacy-actions').style.display = mode === 'CDC' ? 'none' : 'flex';
+  $('#integ-sync-enabled-row').style.display = mode === 'CDC' ? 'none' : 'flex';
+  $('#integ-sql-dialect').disabled = mode === 'CDC';
+  if(mode === 'CDC'){
+    $('#integ-sql-dialect').value='MYSQL';
+    $('#integ-sql-port').value='3306';
+    $('#integ-sql-trust').checked=false;
+    $('#integ-sql-ssl').checked=true;
+    $('#integ-sql-trust').disabled=true;
+    $('#integ-sql-ssl').disabled=true;
+  }else{
+    $('#integ-sql-trust').disabled=false;
+    $('#integ-sql-ssl').disabled=false;
+  }
+  for(const which of ['api','sql','cdc']){
+    const tab=$('#source-tab-'+which);
+    if(tab){tab.classList.toggle('on',mode===which.toUpperCase());tab.setAttribute('aria-selected',String(mode===which.toUpperCase()));}
+  }
 }
 function toggleIntegMode(){ setIntegMode($('#integ-mode')?.value || 'API'); }
 function setSqlPortDefault(force=false){
@@ -1049,7 +1076,41 @@ function integrationDraft(){
   const sqlPassword = $('#integ-sql-password').value.trim(); if(sqlPassword) body.sqlPassword = sqlPassword;
   return body;
 }
+function requireLegacyIntegMode(){
+  if($('#integ-mode').value==='CDC'){
+    $('#integ-result').textContent='Live CDC cannot save or synchronize data into PostgreSQL. Use the dedicated read-only connection test.';
+    return false;
+  }
+  return true;
+}
+async function testLiveCdc(){
+  if($('#integ-mode').value!=='CDC')return;
+  const payload={
+    host:$('#integ-sql-host').value.trim(),
+    port:Number($('#integ-sql-port').value)||3306,
+    database:$('#integ-sql-database').value.trim(),
+    username:$('#integ-sql-user').value.trim(),
+    password:$('#integ-sql-password').value,
+  };
+  $('#integ-result').textContent='Testing MySQL connectivity and ROW/FULL binlog settings (read-only)…';
+  try{
+    const response=await fetch(`${API}/api/admin/cdc/connection/test`,{
+      method:'POST',credentials:'same-origin',cache:'no-store',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),
+    });
+    const result=await response.json().catch(()=>({}));
+    $('#integ-result').textContent=result.ok
+      ?'✓ MySQL connection and ROW/FULL preflight passed. No data or credentials saved. CDC worker not enabled.'
+      :'✕ '+String(result.code||result.error||'CDC connection preflight unavailable');
+  }catch{
+    $('#integ-result').textContent='✕ MySQL preflight request failed. No source data was imported.';
+  }finally{
+    $('#integ-sql-password').value='';
+    payload.password='';
+  }
+}
 async function saveInteg(){
+  if(!requireLegacyIntegMode())return;
   const hours=Number(document.getElementById('integ-hours')?.value);
   if(!Number.isInteger(hours)||hours<1||hours>168){
     document.getElementById('integ-result').textContent='Choose a heartbeat of 1–168 whole hours.';
@@ -1068,6 +1129,7 @@ async function saveInteg(){
   }catch(e){ $('#integ-result').innerHTML = `<div class="banner err">✕ ${esc(e.message)}</div>`; }
 }
 async function previewCandidateSource(){
+  if(!requireLegacyIntegMode())return;
   $('#integ-result').innerHTML='<div class="banner ok">Validating candidate source without switching databases or rewriting facts…</div>';
   try{
     const r=await fetch(`${API}/api/admin/integration/preview-switch`,{
@@ -1080,6 +1142,7 @@ async function previewCandidateSource(){
   }catch(e){$('#integ-result').innerHTML=`<div class="banner err">✕ ${esc(e.message)}</div>`;}
 }
 async function stageCandidateSource(){
+  if(!requireLegacyIntegMode())return;
   $('#integ-result').innerHTML='<div class="banner ok">Staging candidate source. Current dashboard and connection remain active…</div>';
   try{
     const r=await fetch(`${API}/api/admin/integration/stage-source`,{
@@ -1093,6 +1156,7 @@ async function stageCandidateSource(){
   }catch(e){$('#integ-result').innerHTML=`<div class="banner err">✕ ${esc(e.message)}</div>`;}
 }
 async function testInteg(){
+  if(!requireLegacyIntegMode())return;
   const body=integrationDraft();
   const label=body.sourceMode==='SQL'?'database':'API';
   $('#integ-result').innerHTML = `<div class="banner ok">Testing ${label} connection and contract…</div>`;
@@ -1103,6 +1167,7 @@ async function testInteg(){
   }catch(e){ $('#integ-result').innerHTML = `<div class="banner err">✕ ${esc(e.message)}</div>`; }
 }
 async function syncNow(){
+  if(!requireLegacyIntegMode())return;
   if(!await verifySourceAction())return;
   const mode = ($('#integ-mode').value || 'API').toUpperCase();
   $('#integ-result').innerHTML = `<div class="banner ok">Saving settings…</div>`;
