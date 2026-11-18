@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Read-only reporting-view dependency audit for The Fixer staging RDS.
- * Uses SHOW CREATE VIEW when permitted, otherwise information_schema.VIEWS.
+ * Uses existing staging admin credential only for SHOW CREATE VIEW metadata.\n * No grants or runtime CDC reader privileges are modified.
  * Dependency extraction is conservative: ambiguous SQL fails audit.
  * No data rows read, no checkpoint writes, no baseline.
  */
@@ -21,11 +21,12 @@ try {
   const account=JSON.parse(run(["sts","get-caller-identity","--output","json"])).Account;
   if(account!=="805068224616")throw Error("ACCOUNT_MISMATCH");
   const pw=run(["ssm","get-parameter","--region","eu-north-1",
-    "--name","/fixer/staging/mysql/fixer-cdc-reader-password",
+    "--name","/fixer/staging/mysql/admin-password",
     "--with-decryption","--query","Parameter.Value","--output","text"]);
-  db=await mysql.createConnection({host,port:3306,user:"fixer_cdc_reader",
+  db=await mysql.createConnection({host,port:3306,user:"fixeradmin",
     password:pw,ssl:{ca:readFileSync(".local/certs/rds-global-bundle.pem"),
     rejectUnauthorized:true},connectTimeout:9000,multipleStatements:false});
+  await db.query("SET SESSION TRANSACTION READ ONLY");
   const summaries=[];
   for(const feed of feeds){
     const view="v_"+feed;
@@ -36,16 +37,8 @@ try {
       sql=String(rows[0]?.["Create View"]??"");
       origin="SHOW_CREATE_VIEW";
     } catch (err){
-      // Metadata visibility is role-dependent. Never assume inaccessible
-      // definitions imply one-to-one dependencies.
-      if(!["ER_TABLEACCESS_DENIED_ERROR","ER_SPECIFIC_ACCESS_DENIED_ERROR","ER_DBACCESS_DENIED_ERROR"].includes(err?.code)){
-        throw Error("VIEW_DEFINITION_UNAVAILABLE_"+view+"_"+(err?.code??"UNKNOWN"));
-      }
-      const [rows]=await db.execute(
-        "SELECT VIEW_DEFINITION FROM information_schema.VIEWS WHERE TABLE_SCHEMA=? AND TABLE_NAME=?",
-        [schema,view]);
-      sql=String(rows[0]?.VIEW_DEFINITION??"");
-      origin="INFORMATION_SCHEMA";
+      // Do not widen the CDC reader grants; fail closed on missing metadata.
+      throw Error("ADMIN_VIEW_DEFINITION_UNAVAILABLE_"+view+"_"+(err?.code??"UNKNOWN"));
     }
     if(!sql){
       summaries.push({view,source:origin,dependencies:"UNKNOWN",status:"UNVERIFIED"});
