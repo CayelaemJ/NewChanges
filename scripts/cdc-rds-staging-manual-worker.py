@@ -7,7 +7,9 @@ SHA256 digests reach fixer_cdc_meta (on the same RDS MySQL instance).
 
 Exactly one worker per source must hold the dedicated MySQL advisory lock;
 the database checkpoint fencing epoch increments on each acquisition.
-Baseline is initialized by a separate approved admin procedure; restricted\nmetadata writer cannot INSERT checkpoint/feed rows.\nDo not run on EC2 until operational controls, recovery tests and DDL handling
+Baseline is initialized by a separate approved admin procedure; restricted
+metadata writer cannot INSERT checkpoint/feed rows.
+Do not run on EC2 until operational controls, recovery tests and DDL handling
 are approved. This pilot is intentionally disabled by default.
 """
 import hashlib
@@ -91,6 +93,7 @@ def resume(writer, row):
         raise RuntimeError("FENCE_EPOCH_EXHAUSTED")
     try:
         with writer.cursor() as cur:
+            assert_lock_owner(cur)
             cur.execute("UPDATE fixer_cdc_meta.cdc_checkpoint "
                         "SET fence_epoch=fence_epoch+1,updated_at_utc=UTC_TIMESTAMP(6) "
                         "WHERE source_id=%s AND fence_epoch=%s",
@@ -109,6 +112,14 @@ def resume(writer, row):
     return name, int(pos), int(generation), int(old_epoch)+1
 
 
+def assert_lock_owner(cursor):
+    """Fail closed if this connection no longer owns the exclusive source lock."""
+    cursor.execute("SELECT IS_USED_LOCK(%s), CONNECTION_ID()", (LOCK_NAME,))
+    owner, current = cursor.fetchone()
+    if owner is None or int(owner) != int(current):
+        raise RuntimeError("CDC_SOURCE_LOCK_LOST")
+
+
 def commit(writer, start, xid_pos, feeds, digest, generation, fence):
     file_name = start
     if not FILE_NAME.fullmatch(file_name) or int(xid_pos) < 4:
@@ -117,6 +128,7 @@ def commit(writer, start, xid_pos, feeds, digest, generation, fence):
         raise RuntimeError("UNAPPROVED_FEED")
     try:
         with writer.cursor() as cur:
+            assert_lock_owner(cur)
             cur.execute("SELECT binlog_file,binlog_position,generation,fence_epoch "
                         "FROM fixer_cdc_meta.cdc_checkpoint WHERE source_id=%s FOR UPDATE",
                         (SOURCE_ID,))
