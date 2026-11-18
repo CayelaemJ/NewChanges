@@ -125,6 +125,47 @@ class CheckpointTransactionTests(unittest.TestCase):
         db.commit.assert_not_called()
         db.rollback.assert_called_once()
 
+    def test_idle_rotation_checkpoint_only_no_generation_increment(self):
+        db,cur=self.harness(row=("mysql-bin-changelog.003465",150,0,7))
+        worker.advance_idle_rotation(
+            db,"mysql-bin-changelog.003465","mysql-bin-changelog.003466",0,7)
+        statements=[c.args[0] for c in cur.execute.call_args_list]
+        self.assertEqual(len(statements),3)
+        self.assertIn("IS_USED_LOCK",statements[0])
+        self.assertIn("FOR UPDATE",statements[1])
+        self.assertIn("binlog_position=4",statements[2])
+        self.assertNotIn("generation=generation+1",statements[2])
+        self.assertNotIn("cdc_feed_generation",str(statements))
+        self.assertNotIn("cdc_commit_digest",str(statements))
+        db.commit.assert_called_once()
+        db.rollback.assert_not_called()
+
+    def test_idle_rotation_rejects_stale_fence(self):
+        db,cur=self.harness(row=("mysql-bin-changelog.003465",150,0,8))
+        with self.assertRaisesRegex(RuntimeError,"IDLE_ROTATION_STALE_WORKER"):
+            worker.advance_idle_rotation(
+                db,"mysql-bin-changelog.003465","mysql-bin-changelog.003466",0,7)
+        db.commit.assert_not_called()
+        db.rollback.assert_called_once()
+        self.assertEqual(cur.execute.call_count,2)
+
+    def test_idle_rotation_rejects_regressed_coordinate(self):
+        db,cur=self.harness(row=("mysql-bin-changelog.003466",150,0,7))
+        with self.assertRaisesRegex(RuntimeError,"IDLE_ROTATION_CHECKPOINT_FILE_INVALID"):
+            worker.advance_idle_rotation(
+                db,"mysql-bin-changelog.003465","mysql-bin-changelog.003466",0,7)
+        db.commit.assert_not_called()
+        db.rollback.assert_called_once()
+
+    def test_idle_rotation_rejects_lost_lock(self):
+        db,cur=self.harness(lock=(None,431))
+        with self.assertRaisesRegex(RuntimeError,"CDC_SOURCE_LOCK_LOST"):
+            worker.advance_idle_rotation(
+                db,"mysql-bin-changelog.003465","mysql-bin-changelog.003466",0,7)
+        db.commit.assert_not_called()
+        db.rollback.assert_called_once()
+        self.assertEqual(cur.execute.call_count,1)
+
     def test_resume_increments_fence_only_once(self):
         db=MagicMock()
         cur=MagicMock()
