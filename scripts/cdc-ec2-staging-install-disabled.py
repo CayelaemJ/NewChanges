@@ -34,7 +34,11 @@ Environment=AWS_DEFAULT_REGION=eu-north-1
 Environment=AWS_PAGER=
 # Deliberately omit FIXER_CDC_WORKER_ACTIVATE; default fails closed.
 ExecStart=/opt/fixer-cdc/venv/bin/python /opt/fixer-cdc/worker.py
-Restart=no
+Restart=on-failure
+RestartSec=30s
+RestartPreventExitStatus=1
+StartLimitIntervalSec=300
+StartLimitBurst=5
 TimeoutStopSec=20
 NoNewPrivileges=true
 ProtectSystem=strict
@@ -66,7 +70,9 @@ def main():
     if not WORKER.is_file():
         raise RuntimeError("WORKER_FILE_MISSING")
     source=WORKER.read_bytes()
-    if b"WORKER_MANUALLY_DISABLED" not in source or b"I_APPROVE_MANUAL_CDC_WORKER" not in source:
+    if (b"WORKER_MANUALLY_DISABLED" not in source
+            or b"I_APPROVE_MANUAL_CDC_WORKER" not in source
+            or b"worker_exit_code" not in source):
         raise RuntimeError("WORKER_ACTIVATION_GUARD_MISSING")
     sha=hashlib.sha256(source).hexdigest()
     encoded=base64.b64encode(source).decode("ascii")
