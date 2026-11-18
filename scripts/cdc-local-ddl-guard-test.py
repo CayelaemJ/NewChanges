@@ -7,6 +7,7 @@ worker and confirms a real ALTER TABLE is not silently ignored.
 """
 import importlib.util
 import os
+import re
 import secrets
 import subprocess
 import sys
@@ -96,7 +97,14 @@ def main():
                     verb=query.strip().split(None,1)[0].upper() if isinstance(query,str) and query.strip() else "EMPTY"
                     query_types[verb]=query_types.get(verb,0)+1
                 yield event
-        with patch.object(worker,"commit",side_effect=capture):
+        # The actual AWS RDS worker is intentionally restricted to
+        # mysql-bin-changelog.NNNNNN; local Docker uses mysql-bin.NNNNNN.
+        # Patch the pattern for this test only. Do not loosen production code.
+        if not re.fullmatch(r"mysql-bin\.[0-9]{6}",start_file):
+            raise AssertionError("UNEXPECTED_DISPOSABLE_BINLOG_NAME")
+        with patch.object(worker,"FILE_NAME",
+                          re.compile(r"^mysql-bin\.[0-9]{6}$")), \
+             patch.object(worker,"commit",side_effect=capture):
             try:
                 worker.consume_events(observed_events(),object(),start_file,0,7)
             except RuntimeError as error:
