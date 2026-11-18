@@ -108,6 +108,32 @@ class FullLoopTests(TestCase):
                                       object(),FIRST,0,7)
             commit.assert_not_called()
 
+    def test_replication_connection_uses_heartbeat_and_bounded_timeout(self):
+        settings=worker.stream_connection_settings("test-only-secret")
+        self.assertEqual(settings["read_timeout"],35)
+        self.assertEqual(settings["connect_timeout"],10)
+        self.assertEqual(settings["write_timeout"],15)
+        self.assertEqual(settings["ssl"]["check_hostname"],True)
+        self.assertEqual(settings["user"],"fixer_cdc_reader")
+
+    def test_disconnect_before_transaction_fails_without_commit(self):
+        def disconnected():
+            raise ConnectionError("simulated disconnected socket")
+            yield
+        with patch.object(worker,"commit") as commit:
+            with self.assertRaises(ConnectionError):
+                worker.consume_events(disconnected(),object(),FIRST,0,7)
+            commit.assert_not_called()
+
+    def test_disconnect_during_transaction_fails_without_commit(self):
+        def disconnected():
+            yield row("WriteRowsEvent","journeys",110)
+            raise ConnectionError("simulated disconnected socket")
+        with patch.object(worker,"commit") as commit:
+            with self.assertRaises(ConnectionError):
+                worker.consume_events(disconnected(),object(),FIRST,0,7)
+            commit.assert_not_called()
+
     def test_commit_error_does_not_increment_generation(self):
         sequence=[row("WriteRowsEvent","journeys",110),xid(150),
                   row("WriteRowsEvent","employees",160),xid(200)]
