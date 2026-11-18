@@ -42,9 +42,12 @@ class FullLoopTests(TestCase):
         observed=[]
         def record(db,file,pos,feeds,digest,generation,fence):
             observed.append((file,pos,feeds,generation,fence,digest))
-        with patch.object(worker,"commit",side_effect=record):
+        with patch.object(worker,"commit",side_effect=record), \
+             patch.object(worker,"advance_idle_rotation") as advance:
             with self.assertRaisesRegex(RuntimeError,"REPLICATION_STREAM_ENDED"):
                 worker.consume_events(sequence,object(),FIRST,0,7)
+            advance.assert_called_once_with(
+                advance.call_args.args[0],FIRST,SECOND,1,7)
         self.assertEqual(len(observed),2)
         self.assertEqual(
             [(x[0],x[1],x[2],x[3],x[4]) for x in observed],
@@ -52,6 +55,30 @@ class FullLoopTests(TestCase):
              (SECOND,90,{"employees"},1,7)]
         )
         self.assertTrue(all(len(x[-1])==64 for x in observed))
+
+    def test_idle_rotation_preserves_generation(self):
+        with patch.object(worker,"advance_idle_rotation") as advance, \
+             patch.object(worker,"commit") as commit:
+            with self.assertRaisesRegex(RuntimeError,"REPLICATION_STREAM_ENDED"):
+                worker.consume_events([rotate(SECOND)],object(),FIRST,4,9)
+            self.assertEqual(advance.call_count,1)
+            self.assertEqual(advance.call_args.args[1:],(FIRST,SECOND,4,9))
+            commit.assert_not_called()
+
+    def test_initial_same_file_rotate_does_not_advance_checkpoint(self):
+        with patch.object(worker,"advance_idle_rotation") as advance:
+            with self.assertRaisesRegex(RuntimeError,"REPLICATION_STREAM_ENDED"):
+                worker.consume_events([rotate(FIRST)],object(),FIRST,0,7)
+            advance.assert_not_called()
+
+    def test_rotation_checkpoint_failure_prevents_later_transaction(self):
+        sequence=[rotate(SECOND),row("WriteRowsEvent","journeys",50),xid(90)]
+        with patch.object(worker,"advance_idle_rotation",
+                          side_effect=RuntimeError("IDLE_ROTATION_STALE_WORKER")), \
+             patch.object(worker,"commit") as commit:
+            with self.assertRaisesRegex(RuntimeError,"IDLE_ROTATION_STALE_WORKER"):
+                worker.consume_events(sequence,object(),FIRST,0,7)
+            commit.assert_not_called()
 
     def test_accepts_begin_query_before_committed_row_event(self):
         sequence=[event("QueryEvent",query=b"BEGIN"),
