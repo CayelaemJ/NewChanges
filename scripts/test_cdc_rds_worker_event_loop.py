@@ -1,0 +1,100 @@
+#!/usr/bin/env python3
+"""Offline full-loop CDC worker tests: real control flow, synthetic events, no AWS."""
+import importlib.util
+from pathlib import Path
+from types import SimpleNamespace
+from unittest import TestCase, main
+from unittest.mock import patch
+
+path=Path(__file__).resolve().parent/"cdc-rds-staging-manual-worker.py"
+spec=importlib.util.spec_from_file_location("cdc_worker_under_test",path)
+worker=importlib.util.module_from_spec(spec)
+spec.loader.exec_module(worker)
+
+FIRST="mysql-bin-changelog.003478"
+SECOND="mysql-bin-changelog.003479"
+
+
+def event(kind, **attrs):
+    return type(kind, (), {})( ) if not attrs else type(kind, (), {"__init__": lambda self: self.__dict__.update(attrs)})()
+
+
+def row(kind, table, position):
+    return event(kind,schema=worker.SCHEMA,table=table,
+                 packet=SimpleNamespace(log_pos=position))
+
+
+def rotate(name):
+    return event("RotateEvent",next_binlog=name.encode("ascii"))
+
+
+def xid(pos):
+    return event("XidEvent",packet=SimpleNamespace(log_pos=pos))
+
+
+class FullLoopTests(TestCase):
+    def test_commit_before_and_after_rotation(self):
+        sequence=[
+            row("WriteRowsEvent","journeys",110),xid(150),
+            rotate(SECOND),
+            row("UpdateRowsEvent","employees",50),xid(90),
+        ]
+        observed=[]
+        def record(db,file,pos,feeds,digest,generation,fence):
+            observed.append((file,pos,feeds,generation,fence,digest))
+        with patch.object(worker,"commit",side_effect=record):
+            with self.assertRaisesRegex(RuntimeError,"REPLICATION_STREAM_ENDED"):
+                worker.consume_events(sequence,object(),FIRST,0,7)
+        self.assertEqual(len(observed),2)
+        self.assertEqual(
+            [(x[0],x[1],x[2],x[3],x[4]) for x in observed],
+            [(FIRST,150,{"journeys"},0,7),
+             (SECOND,90,{"employees"},1,7)]
+        )
+        self.assertTrue(all(len(x[-1])==64 for x in observed))
+
+    def test_rejects_rotation_with_pending_transaction(self):
+        sequence=[row("WriteRowsEvent","journeys",110),rotate(SECOND)]
+        with patch.object(worker,"commit") as commit:
+            with self.assertRaisesRegex(RuntimeError,"ROTATION_WITH_PENDING_TRANSACTION"):
+                worker.consume_events(sequence,object(),FIRST,0,7)
+            commit.assert_not_called()
+
+    def test_rejects_partial_transaction_at_stream_end(self):
+        with patch.object(worker,"commit") as commit:
+            with self.assertRaisesRegex(RuntimeError,"REPLICATION_STREAM_ENDED_WITH_PENDING_TRANSACTION"):
+                worker.consume_events([row("DeleteRowsEvent","policies",200)],
+                                      object(),FIRST,0,7)
+            commit.assert_not_called()
+
+    def test_rejects_binlog_rotation_regression(self):
+        with patch.object(worker,"commit") as commit:
+            with self.assertRaisesRegex(RuntimeError,"BINLOG_ROTATION_REGRESSION"):
+                worker.consume_events([rotate("mysql-bin-changelog.003477")],
+                                      object(),FIRST,0,7)
+            commit.assert_not_called()
+
+    def test_rejects_bad_binlog_filename(self):
+        with self.assertRaisesRegex(RuntimeError,"BINLOG_ROTATION_INVALID"):
+            worker.consume_events([rotate("other-bin.000001")],object(),FIRST,0,7)
+
+    def test_rejects_nonallowlisted_source(self):
+        with patch.object(worker,"commit") as commit:
+            with self.assertRaisesRegex(RuntimeError,"UNEXPECTED_SOURCE"):
+                worker.consume_events([row("WriteRowsEvent","secret",110)],
+                                      object(),FIRST,0,7)
+            commit.assert_not_called()
+
+    def test_commit_error_does_not_increment_generation(self):
+        sequence=[row("WriteRowsEvent","journeys",110),xid(150),
+                  row("WriteRowsEvent","employees",160),xid(200)]
+        def failed_commit(*args):
+            raise ConnectionError("simulated disconnect")
+        with patch.object(worker,"commit",side_effect=failed_commit) as commit:
+            with self.assertRaises(ConnectionError):
+                worker.consume_events(sequence,object(),FIRST,0,7)
+            self.assertEqual(commit.call_count,1)
+
+
+if __name__=="__main__":
+    main(verbosity=2)
