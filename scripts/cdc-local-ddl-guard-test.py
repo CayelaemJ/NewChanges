@@ -92,7 +92,7 @@ def main():
                 raise AssertionError("WORKER_DID_NOT_REJECT_DDL")
         if len(observed_commits)!=1:
             raise AssertionError("WORKER_DID_NOT_CAPTURE_PRE_DDL_COMMIT")
-        if observed_commits[0][4]!=0 or observed_commits[0][2]!={"journeys"}:
+        if observed_commits[0][5]!=0 or observed_commits[0][3]!={"journeys"}:
             raise AssertionError("INCORRECT_PRE_DDL_CHECKPOINT")
         print("PASS: committed pre-DDL row transaction processed",flush=True)
         print("PASS: real MySQL ALTER TABLE QueryEvent triggers fail-closed guard",flush=True)
