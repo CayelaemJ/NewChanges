@@ -82,41 +82,6 @@ def acquire_lock(writer):
     writer.commit()
 
 
-def bootstrap(writer, reader):
-    # Get the starting binlog boundary BEFORE metadata initialization. Events
-    # after this coordinate will be replayed; earlier source rows are already
-    # served by direct reporting views, not copied into a replica store.
-    with reader.cursor() as cur:
-        cur.execute("SHOW BINARY LOG STATUS")
-        file_name, pos, *_ = cur.fetchone()
-    if not FILE_NAME.fullmatch(file_name) or int(pos) < 4:
-        raise RuntimeError("INVALID_BASELINE_COORDINATE")
-    try:
-        with writer.cursor() as cur:
-            cur.execute("SELECT COUNT(*) FROM fixer_cdc_meta.cdc_checkpoint")
-            if cur.fetchone()[0] != 0:
-                raise RuntimeError("EXISTING_CHECKPOINT_REQUIRES_RECONCILIATION")
-            cur.execute("SELECT COUNT(*) FROM fixer_cdc_meta.cdc_feed_generation")
-            if cur.fetchone()[0] != 0:
-                raise RuntimeError("EXISTING_FEEDS_REQUIRES_RECONCILIATION")
-            cur.execute("SELECT COUNT(*) FROM fixer_cdc_meta.cdc_commit_digest")
-            if cur.fetchone()[0] != 0:
-                raise RuntimeError("EXISTING_DIGESTS_REQUIRES_RECONCILIATION")
-            cur.execute("INSERT INTO fixer_cdc_meta.cdc_checkpoint "
-                        "(source_id,binlog_file,binlog_position,generation,fence_epoch,updated_at_utc) "
-                        "VALUES (%s,%s,%s,0,1,UTC_TIMESTAMP(6))",
-                        (SOURCE_ID, file_name, pos))
-            cur.executemany("INSERT INTO fixer_cdc_meta.cdc_feed_generation "
-                            "(source_id,feed,generation) VALUES (%s,%s,0)",
-                            [(SOURCE_ID, f) for f in FEEDS])
-        writer.commit()
-    except Exception:
-        writer.rollback()
-        raise
-    print("BASELINE_INITIALIZED: notification-only; no historical source rows copied.",
-          flush=True)
-    return file_name, int(pos), 0, 1
-
 
 def resume(writer, row):
     source, name, pos, generation, old_epoch = row
