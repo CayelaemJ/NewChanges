@@ -82,13 +82,33 @@ def main():
         observed_commits=[]
         def capture(*args):
             observed_commits.append(args)
+        events_seen={}
+        query_types={}
+        def observed_events():
+            for event in stream:
+                kind=type(event).__name__
+                events_seen[kind]=events_seen.get(kind,0)+1
+                if kind=="QueryEvent":
+                    query=event.query
+                    if isinstance(query,bytes):
+                        query=query.decode("utf8",errors="replace")
+                    # Only expose the SQL verb, never SQL statements or values.
+                    verb=query.strip().split(None,1)[0].upper() if isinstance(query,str) and query.strip() else "EMPTY"
+                    query_types[verb]=query_types.get(verb,0)+1
+                yield event
         with patch.object(worker,"commit",side_effect=capture):
             try:
-                worker.consume_events(stream,object(),start_file,0,7)
+                worker.consume_events(observed_events(),object(),start_file,0,7)
             except RuntimeError as error:
                 if str(error)!="BINLOG_QUERY_EVENT_REQUIRES_SCHEMA_REVIEW":
-                    raise AssertionError("WORKER_FAILED_WITH_UNEXPECTED_REASON")
+                    print("OBSERVED_EVENT_TYPES:",sorted(events_seen.items()),flush=True)
+                    print("OBSERVED_QUERY_VERBS:",sorted(query_types.items()),flush=True)
+                    print("PRE_DDL_COMMIT_COUNT:",len(observed_commits),flush=True)
+                    raise AssertionError(
+                        "WORKER_FAILED_WITH_UNEXPECTED_REASON:"+str(error))
             else:
+                print("OBSERVED_EVENT_TYPES:",sorted(events_seen.items()),flush=True)
+                print("OBSERVED_QUERY_VERBS:",sorted(query_types.items()),flush=True)
                 raise AssertionError("WORKER_DID_NOT_REJECT_DDL")
         if len(observed_commits)!=1:
             raise AssertionError("WORKER_DID_NOT_CAPTURE_PRE_DDL_COMMIT")
