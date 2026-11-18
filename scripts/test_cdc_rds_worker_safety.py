@@ -73,7 +73,7 @@ class CheckpointTransactionTests(unittest.TestCase):
         worker.commit(db,"mysql-bin-changelog.003465",220,
                       {"journeys"},"a"*64,0,7)
         statements=[call.args[0] for call in cur.execute.call_args_list]
-        self.assertEqual(len(statements),6)
+        self.assertEqual(len(statements),5)
         self.assertIn("IS_USED_LOCK",statements[0])
         self.assertIn("FOR UPDATE",statements[1])
         self.assertIn("cdc_commit_digest",statements[2])
